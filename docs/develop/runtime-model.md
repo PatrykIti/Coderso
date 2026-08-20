@@ -90,11 +90,11 @@ The runtime directory defaults to `plugins-runtime/` next to the repo root, over
 ### Core source → CI build
 
 Any change to core source — `core/server`, `core/admin`, `core/services`, the
-historically named compatibility renderers in `core/widgets`, Dashboard widget
+surviving render contracts in `core/services/renderContracts`, Dashboard widget
 code, the public runtime in `core/site`, or the SDK in `packages/sdk` — must go
-through CI. The `core/widgets` path does not define a non-dashboard authoring
-surface; Pages, templates, forms, menus, posts, and screens use their owning
-section/block models. The build produces the dist artifacts:
+through CI. The v1 `core/widgets` kernel was removed with TASK-580; Pages,
+templates, forms, menus, posts, and screens use their owning section/block
+models. The build produces the dist artifacts:
 
 ```
 vite build --outDir dist/client

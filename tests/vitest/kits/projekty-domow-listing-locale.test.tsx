@@ -1,5 +1,5 @@
-import type { ComponentType } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import Ajv from "ajv";
+import { describe, expect, it } from "vitest";
 
 import {
   createDefaultPageDocumentV2,
@@ -14,16 +14,12 @@ import {
 import { renderPublicPageV2RuntimeHtml } from "../../../core/site/renderPublicPage";
 import {
   LISTING_FILTERS_COPY_MAX_LENGTH,
-  createListingFiltersWidget,
   listingFiltersCopyKeys,
   listingFiltersSchema,
   normalizeListingFiltersCopy,
   type ListingFiltersCopy,
   type ListingFiltersData,
-} from "../../../core/widgets/core/listingFilters";
-import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
-import type { WidgetEditorProps } from "../../../core/widgets/types";
-import { normalizeWidgetBlock } from "../../../core/widgets/validator";
+} from "../../../core/services/renderContracts/listingFiltersContract";
 
 const POLISH_FILTER_COPY = {
   configurationAriaLabel: "Konfiguracja filtrów wyników",
@@ -59,18 +55,9 @@ const POLISH_PAGE_FILTER_COPY = {
   copy: POLISH_FILTER_COPY,
 };
 
-const StubEditor: ComponentType<WidgetEditorProps<ListingFiltersData>> = () => null;
-
-afterEach(() => clearWidgets());
-
-const registerListingFilters = () =>
-  registerWidget(
-    createListingFiltersWidget({
-      wizard: StubEditor,
-      visual: StubEditor,
-      advanced: StubEditor,
-    })
-  );
+const validateListingFilters = new Ajv({ allErrors: true, strict: true }).compile(
+  listingFiltersSchema
+);
 
 const createListingDocument = (input?: {
   searchLabel?: string;
@@ -236,24 +223,17 @@ describe("FormaDom listing locale contract", () => {
     expect(normalizeListingFiltersCopy(normalized)).toEqual(normalized);
   });
 
-  it("rejects unknown, wrong-type and overlong copy at the real widget boundary", () => {
-    registerListingFilters();
-    const normalizeCopy = (copy: unknown) =>
-      normalizeWidgetBlock({
-        id: "localized-filters",
-        type: "listing-filters",
-        variant: "default",
-        data: { listingQueryId: "published-projects", copy } as ListingFiltersData,
-      });
+  it("rejects unknown, wrong-type and overlong copy at the real schema boundary", () => {
+    const validateCopy = (copy: unknown) =>
+      validateListingFilters({
+        listingQueryId: "published-projects",
+        copy,
+      } as unknown as ListingFiltersData);
 
-    const normalized = normalizeCopy(POLISH_FILTER_COPY);
-    expect((normalized.data as ListingFiltersData).copy).toEqual(POLISH_FILTER_COPY);
-    expect(normalizeWidgetBlock(normalized)).toEqual(normalized);
-    expect(() => normalizeCopy({ ...POLISH_FILTER_COPY, unknownLabel: "no" })).toThrow(
-      /additional properties/i
-    );
-    expect(() => normalizeCopy({ loadingLabel: 1 })).toThrow(/string/i);
-    expect(() => normalizeCopy({ loadingLabel: "x".repeat(241) })).toThrow(/240|length/i);
+    expect(validateCopy(POLISH_FILTER_COPY)).toBe(true);
+    expect(validateCopy({ ...POLISH_FILTER_COPY, unknownLabel: "no" })).toBe(false);
+    expect(validateCopy({ ...POLISH_FILTER_COPY, loadingLabel: 1 })).toBe(false);
+    expect(validateCopy({ ...POLISH_FILTER_COPY, loadingLabel: "x".repeat(241) })).toBe(false);
   });
 
   it("localizes filter chrome while preserving authored labels and all query data", async () => {

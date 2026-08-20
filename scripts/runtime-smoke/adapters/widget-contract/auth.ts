@@ -27,7 +27,7 @@ export async function requestAdminJson<T>({
   adminUrl: string;
   sessionValue: string;
   path: string;
-  method?: "GET" | "POST" | "PATCH" | "PUT";
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
   csrfToken?: string;
 }): Promise<T> {

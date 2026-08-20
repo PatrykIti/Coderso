@@ -64,7 +64,6 @@ const aliasPrefixes: Array<{ from: string; to: string }> = [
   { from: "/content-types", to: "/advanced/engine" },
   { from: "/entries", to: "/advanced/entries" },
   { from: "/content", to: "/advanced/entries" },
-  { from: "/widgets", to: "/advanced/widgets" },
   { from: "/forms", to: "/advanced/forms" },
   { from: "/custom-screens", to: "/advanced/custom-screens" },
   { from: "/listings", to: "/advanced/listings" },

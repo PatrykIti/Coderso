@@ -13,7 +13,7 @@ import {
   type PostRuntimeMappedDocument,
 } from "../services/posts/runtime/postBlockRuntimeMapper";
 import { PostBlockRuntimeRenderer } from "../services/posts/runtime/postBlockRuntimeRenderer";
-import { ContentListPager } from "../widgets/core/contentList";
+import { ContentListPager } from "../services/renderContracts/contentListRenderer";
 import { splitGoogleAnalyticsHeadSnippet } from "../services/integrations/analyticsRuntime";
 import { buildPublicDocumentShell } from "./publicDocumentShell";
 

@@ -46,7 +46,7 @@ vi.mock("@/components/ui/input", () => ({
   ),
 }));
 
-import { SharedColorControl } from "../../../core/admin/ui/widgets/editors/SharedColorControl";
+import { SharedColorControl } from "../../../core/admin/ui/shared/SharedColorControl";
 import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

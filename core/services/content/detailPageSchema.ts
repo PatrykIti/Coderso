@@ -1,12 +1,17 @@
-import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
-import { normalizeWidgetBlocks } from "../../widgets/validator";
+import { normalizeSection } from "../pages/pageSectionNormalizerV2";
+import type {
+  BlockNormalizationContext,
+  NormalizeMode,
+} from "../pages/pageDocumentV2Normalization";
 import { normalizePageLayoutSettings } from "../pages/layoutSettings";
+import { convertDetailPageDocumentV1ToV2 } from "./detailPageV2Conversion";
 import type {
   DetailPageBinding,
   DetailPageBindingTransform,
   DetailPageComputedResolver,
   DetailPageBindingSource,
   DetailPageDocument,
+  DetailPageDocumentV1,
   DetailPageIdentityRole,
   DetailPageMetaField,
   DetailPageRelatedSource,
@@ -248,27 +253,20 @@ const normalizeFallback = (value: unknown) => {
   throw new Error("detail_page_document_invalid");
 };
 
-const collectBlockIds = (blocks: Array<Record<string, unknown>>, seen = new Set<string>()) => {
-  for (const block of blocks) {
-    const id = normalizeText(block.id);
-    if (!id || seen.has(id)) throw new Error("detail_page_document_invalid");
-    seen.add(id);
-
-    const slots = isRecord(block.slots) ? block.slots : {};
-    for (const nested of Object.values(slots)) {
-      if (!Array.isArray(nested)) continue;
-      collectBlockIds(nested as Array<Record<string, unknown>>, seen);
-    }
-  }
-  return seen;
-};
-
-const normalizeBlocks = (value: unknown) => {
+const normalizeSections = (
+  value: unknown,
+  mode: NormalizeMode
+): { sections: DetailPageDocument["sections"]; blockIds: Set<string> } => {
   if (!Array.isArray(value)) throw new Error("detail_page_document_invalid");
-  ensureRuntimeWidgetsRegistered();
-  const blocks = normalizeWidgetBlocks(value as DetailPageDocument["blocks"]);
-  collectBlockIds(blocks as Array<Record<string, unknown>>);
-  return blocks;
+  const blockContext: BlockNormalizationContext = {
+    mode,
+    blockIds: new Set(),
+    visiting: new WeakSet(),
+  };
+  const sections = value.map((section, index) =>
+    normalizeSection(section, index, mode, blockContext)
+  );
+  return { sections, blockIds: blockContext.blockIds };
 };
 
 const normalizeSeo = (value: unknown): DetailPageSeo | undefined => {
@@ -472,7 +470,65 @@ export const buildDeterministicDetailPageId = (input: {
 
 export const normalizeDetailPageId = (value: unknown) => normalizeUuid(value);
 
-export const normalizeDetailPageDocument = (
+const DETAIL_PAGE_WRITE_ALLOWLIST = [
+  "schemaVersion",
+  "id",
+  "name",
+  "contentTypeId",
+  "contentTypeSlug",
+  "status",
+  "titlePattern",
+  "seo",
+  "settings",
+  "sections",
+  "bindings",
+  "related",
+];
+
+const isV1DetailPageDocument = (input: Record<string, unknown>): boolean =>
+  input.schemaVersion !== 2 &&
+  (Array.isArray(input.blocks) || input.schemaVersion === 1 || input.schemaVersion === undefined);
+
+const normalizeDetailPageDocumentV2 = (
+  input: Record<string, unknown>,
+  mode: NormalizeMode,
+  overrides?: {
+    id?: string | null;
+    contentTypeId?: string | null;
+    contentTypeSlug?: string | null;
+    status?: DetailPageStatus | null;
+  }
+): DetailPageDocument => {
+  if (mode === "write") rejectUnknownKeys(input, DETAIL_PAGE_WRITE_ALLOWLIST);
+
+  const { sections, blockIds } = normalizeSections(input.sections, mode);
+  const bindings = normalizeBindings(input.bindings, blockIds);
+  const related = normalizeRelatedSources(input.related);
+  const seo = normalizeSeo(input.seo);
+
+  return {
+    schemaVersion: 2,
+    id: normalizeUuid(overrides?.id ?? input.id),
+    name: normalizeRequiredText(input.name),
+    contentTypeId: normalizeUuid(overrides?.contentTypeId ?? input.contentTypeId),
+    contentTypeSlug: normalizeSlug(overrides?.contentTypeSlug ?? input.contentTypeSlug),
+    status: normalizeStatus(overrides?.status ?? input.status),
+    titlePattern: normalizeTitlePattern(input.titlePattern),
+    ...(seo ? { seo } : {}),
+    settings: normalizeSettings(input.settings),
+    sections,
+    bindings,
+    ...(related ? { related } : {}),
+  };
+};
+
+/**
+ * Strict schemaVersion-2 write path. v1 payloads fail closed with
+ * `detail_page_legacy_v1_invalid`; unknown envelope keys are rejected; every
+ * section/block runs through the shared V2 normalizers in write mode, and
+ * bindings must resolve against the resulting section/block id set.
+ */
+export const normalizeDetailPageDocumentForWrite = (
   value: unknown,
   overrides?: {
     id?: string | null;
@@ -482,42 +538,37 @@ export const normalizeDetailPageDocument = (
   }
 ): DetailPageDocument => {
   if (!isRecord(value)) throw new Error("detail_page_document_invalid");
-  rejectUnknownKeys(value, [
-    "schemaVersion",
-    "id",
-    "name",
-    "contentTypeId",
-    "contentTypeSlug",
-    "status",
-    "titlePattern",
-    "seo",
-    "settings",
-    "blocks",
-    "bindings",
-    "related",
-  ]);
-
-  const blocks = normalizeBlocks(value.blocks);
-  const blockIds = collectBlockIds(blocks as Array<Record<string, unknown>>);
-  const bindings = normalizeBindings(value.bindings, blockIds);
-  const related = normalizeRelatedSources(value.related);
-  const seo = normalizeSeo(value.seo);
-
-  const schemaVersion = value.schemaVersion ?? 1;
-  if (schemaVersion !== 1) throw new Error("detail_page_document_invalid");
-
-  return {
-    schemaVersion: 1,
-    id: normalizeUuid(overrides?.id ?? value.id),
-    name: normalizeRequiredText(value.name),
-    contentTypeId: normalizeUuid(overrides?.contentTypeId ?? value.contentTypeId),
-    contentTypeSlug: normalizeSlug(overrides?.contentTypeSlug ?? value.contentTypeSlug),
-    status: normalizeStatus(overrides?.status ?? value.status),
-    titlePattern: normalizeTitlePattern(value.titlePattern),
-    ...(seo ? { seo } : {}),
-    settings: normalizeSettings(value.settings),
-    blocks,
-    bindings,
-    ...(related ? { related } : {}),
-  };
+  if (isV1DetailPageDocument(value)) throw new Error("detail_page_legacy_v1_invalid");
+  return normalizeDetailPageDocumentV2(value, "write", overrides);
 };
+
+/**
+ * Stored-read path: v2 rows are strictly normalized in stored-read mode; v1
+ * rows (including un-backfilled `detail_page_revisions`) are converted to v2
+ * in memory first so every stored row restores through one v2 contract.
+ */
+export const normalizeDetailPageDocumentForRead = (
+  value: unknown,
+  overrides?: {
+    id?: string | null;
+    contentTypeId?: string | null;
+    contentTypeSlug?: string | null;
+    status?: DetailPageStatus | null;
+  }
+): DetailPageDocument => {
+  const input = isRecord(value) ? value : null;
+  if (!input) throw new Error("detail_page_document_invalid");
+  if (input.schemaVersion !== undefined && input.schemaVersion !== 1 && input.schemaVersion !== 2) {
+    throw new Error("detail_page_document_invalid");
+  }
+  const converted = isV1DetailPageDocument(input)
+    ? convertDetailPageDocumentV1ToV2(input as DetailPageDocumentV1)
+    : input;
+  return normalizeDetailPageDocumentV2(converted, "stored-read", overrides);
+};
+
+/**
+ * Backward-compatible alias of the read path (incremental migration for
+ * resolver/service call sites).
+ */
+export const normalizeDetailPageDocument = normalizeDetailPageDocumentForRead;

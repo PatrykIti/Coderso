@@ -153,7 +153,7 @@ test("child env strips DATABASE_URL and DATABASE_DIRECT_URL but inherits everyth
   try {
     const aFiles = [
       "tests/integration/plugins/assets.test.ts",
-      "tests/unit/widgets/validator.test.ts",
+      "tests/unit/adminThemes/tokenValidation.test.ts",
     ];
     const manifestPath = writeManifest(dir, [
       ...aFiles.map((file) => ({ file, bucket: "A", weightMs: 0 })),
@@ -224,7 +224,7 @@ test("a DB-dependent file fails both attempts and the retry's exit propagates ex
 test("a flaky first run is retried once and the retry's exit 0 wins", async () => {
   const dir = makeTempDir("bun-pure-lane-flaky-");
   try {
-    const aFiles = ["tests/unit/widgets/validator.test.ts"];
+    const aFiles = ["tests/unit/adminThemes/tokenValidation.test.ts"];
     const manifestPath = writeManifest(dir, [{ file: aFiles[0], bucket: "A", weightMs: 0 }]);
     const stub = writeFlakyStubBun(dir, 1, 0);
     setLaneEnv(manifestPath, stub.bin);
@@ -251,7 +251,7 @@ test("a flaky first run is retried once and the retry's exit 0 wins", async () =
 test("noRetry keeps attempted at 1 even when the lane fails", async () => {
   const dir = makeTempDir("bun-pure-lane-noretry-");
   try {
-    const aFiles = ["tests/unit/widgets/validator.test.ts"];
+    const aFiles = ["tests/unit/adminThemes/tokenValidation.test.ts"];
     const manifestPath = writeManifest(dir, [{ file: aFiles[0], bucket: "A", weightMs: 0 }]);
     const stub = writeFlakyStubBun(dir, 7, 7);
     setLaneEnv(manifestPath, stub.bin);
@@ -279,7 +279,7 @@ test("a spawn failure rejects with pure_lane_spawn_failed:<bin>", async () => {
   const dir = makeTempDir("bun-pure-lane-spawn-");
   try {
     const manifestPath = writeManifest(dir, [
-      { file: "tests/unit/widgets/validator.test.ts", bucket: "A", weightMs: 0 },
+      { file: "tests/unit/adminThemes/tokenValidation.test.ts", bucket: "A", weightMs: 0 },
     ]);
     const missingBin = path.join(dir, "no-such-binary");
     setLaneEnv(manifestPath, missingBin);

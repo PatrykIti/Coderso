@@ -40,6 +40,11 @@ const ADAPTER_DECLARED_SCREENSHOT_GLOSS = Object.freeze([
     reason: "widget-contract gallery-mosaic evidence path",
     regex: /^_docs\/_workflows\/_smoke\/task-552-[a-z0-9-]+\.png$/u,
   },
+  {
+    adapter: "detail-page-v2",
+    reason: "TASK-580-03-L07 detail-page-v2 evidence root",
+    regex: /^_docs\/_workflows\/_smoke\/detail-page-v2-[a-z0-9-]+\.png$/u,
+  },
 ]);
 
 type Disposition = "canonical" | "adapter-declared" | "archive" | "unreconciled";
@@ -159,5 +164,11 @@ describe("smoke evidence canonical boundary (TASK-577)", () => {
     expect(
       classifyPath("_docs/_workflows/_smoke/evidence/task-554/task-554-fast/report.json", archive)
     ).toBe("canonical");
+    expect(
+      classifyPath(
+        "_docs/_workflows/_smoke/detail-page-v2-wf58003smoke-public-detail-converted.png",
+        archive
+      )
+    ).toBe("adapter-declared");
   });
 });

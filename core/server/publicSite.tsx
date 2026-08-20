@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { DeviceTarget } from "../widgets/types";
+import type { DeviceTarget } from "../services/renderContracts/tokens";
 import { ensureRecord } from "./publicSiteRenderContext";
 import { renderPublicPageV2RuntimeHtml } from "../site/renderPublicPage";
 import {
@@ -29,8 +29,8 @@ import { getSetting } from "../services/settings/settingsService";
 import type { ContentRouteSetting } from "../services/settings/settingsContracts";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import { resolvePublicRedirect } from "../services/redirects/redirectService";
-import { getListingRuntimeClientScript } from "../widgets/core/listingRuntimeScript";
-import { createWidgetRuntimeScriptRegistry } from "../widgets/runtimeScripts";
+import { getListingRuntimeClientScript } from "../services/renderContracts/listingRuntimeScript";
+import { createWidgetRuntimeScriptRegistry } from "../services/renderContracts/runtimeScriptRegistry";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { searchPublicIndex } from "../services/search/searchIndexService";
@@ -580,8 +580,10 @@ export async function handlePublicRequest(req: Request) {
     if (!detailHtml) return new Response("Not Found", { status: 404 });
     const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;
     const canCache = typeof detailHtml === "string" ? true : detailHtml.cacheable;
+    const detailTtlSeconds =
+      typeof detailHtml === "string" ? defaultStoreTtlSeconds : resolveRenderCacheTtl(detailHtml);
     if (shouldUseCache && canCache) {
-      setSiteCacheEntry(cacheKey, html, defaultStoreTtlSeconds);
+      setSiteCacheEntry(cacheKey, html, detailTtlSeconds);
     }
     return buildHtmlResponse(html);
   }

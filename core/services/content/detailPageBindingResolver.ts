@@ -2,8 +2,8 @@ import {
   contentListDefaults,
   type ContentListData,
   type ContentListRuntimeItem,
-} from "../../widgets/core/contentList";
-import type { WidgetBlock } from "../../widgets/types";
+} from "../../services/renderContracts/contentListContract";
+import type { PageBlockV2, PageSectionV2 } from "../pages/pageDocumentV2";
 import type { FormRuntimeResolution } from "../forms/formRuntimeContract";
 import type { ContentRouteSetting } from "../settings/settingsContracts";
 import {
@@ -94,10 +94,12 @@ const collectSchemaFields = (schema: ContentSchema) => {
 
 const readRootFieldName = (path: string) => splitBindingPath(path)[0] ?? null;
 
-const isCuratedExternalImageBinding = (binding: DetailPageBinding) =>
+const isCuratedExternalImageBinding = (binding: DetailPageBinding, block?: PageBlockV2) =>
   binding.source.kind === "entry-field" &&
   curatedExternalImageFieldCandidates.has(readRootFieldName(binding.source.field) ?? "") &&
-  binding.propPath === "media.src";
+  // Legacy v1 docs bind `media.src`; converted v2 docs bind `src` on the
+  // hero image block.
+  (binding.propPath === "media.src" || (binding.propPath === "src" && block?.type === "image"));
 
 const resolveDetailPathPattern = (input: {
   contentTypeSlug: string;
@@ -173,86 +175,63 @@ const applyBindingTransform = (value: unknown, transform: DetailPageBinding["tra
   }
 };
 
-const setBlockBindingValue = (
-  blocks: WidgetBlock[],
-  blockId: string,
-  propPath: string,
-  value: unknown
+const forEachNestedBlock = (
+  blocks: PageBlockV2[],
+  visit: (block: PageBlockV2) => boolean | undefined
 ): boolean => {
   for (const block of blocks) {
-    if (block.id === blockId) {
-      block.data = (writeBindingPathValue(block.data ?? {}, propPath, value) ?? {}) as Record<
-        string,
-        unknown
-      >;
-      return true;
-    }
-
-    if (
-      Array.isArray(block.children) &&
-      setBlockBindingValue(block.children, blockId, propPath, value)
-    ) {
-      return true;
-    }
-
+    if (visit(block)) return true;
     if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
       for (const items of Object.values(block.slots)) {
         if (!Array.isArray(items)) continue;
-        if (setBlockBindingValue(items, blockId, propPath, value)) return true;
+        if (forEachNestedBlock(items, visit)) return true;
       }
     }
   }
-
   return false;
 };
 
-const findBlockById = (blocks: WidgetBlock[], blockId: string): WidgetBlock | null => {
-  for (const block of blocks) {
-    if (block.id === blockId) return block;
-    if (Array.isArray(block.children)) {
-      const nested = findBlockById(block.children, blockId);
-      if (nested) return nested;
-    }
-    if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
-      for (const items of Object.values(block.slots)) {
-        if (!Array.isArray(items)) continue;
-        const nested = findBlockById(items, blockId);
-        if (nested) return nested;
-      }
-    }
-  }
+const setBlockBindingValue = (
+  blocks: PageBlockV2[],
+  blockId: string,
+  propPath: string,
+  value: unknown
+): boolean =>
+  forEachNestedBlock(blocks, (block) => {
+    if (block.id !== blockId) return false;
+    block.props = (writeBindingPathValue(block.props ?? {}, propPath, value) ?? {}) as Record<
+      string,
+      unknown
+    >;
+    return true;
+  });
 
-  return null;
+const findBlockById = (blocks: PageBlockV2[], blockId: string): PageBlockV2 | null => {
+  let found: PageBlockV2 | null = null;
+  forEachNestedBlock(blocks, (block) => {
+    if (block.id === blockId) {
+      found = block;
+      return true;
+    }
+    return false;
+  });
+  return found;
 };
 
-const removeEmptyHeroMedia = (blocks: WidgetBlock[]): WidgetBlock[] => {
-  for (const block of blocks) {
-    const data = isRecord(block.data) ? block.data : null;
-    const media = data && isRecord(data.media) ? data.media : null;
-    const mediaType = toOptionalText(media?.type);
-    const mediaSrc = toOptionalText(media?.src);
-
-    if (block.type === "hero" && (mediaType === "image" || mediaType === "video") && !mediaSrc) {
-      const nextData = { ...(data ?? {}) };
-      delete nextData.media;
-      block.data = nextData;
-      if (block.variant === "split") {
-        block.variant = "centered";
-      }
-    }
-
-    if (Array.isArray(block.children)) {
-      removeEmptyHeroMedia(block.children);
-    }
-
-    if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
-      for (const items of Object.values(block.slots)) {
-        if (Array.isArray(items)) removeEmptyHeroMedia(items);
-      }
+const removeEmptyHeroMedia = (sections: PageSectionV2[]): PageSectionV2[] => {
+  for (const section of sections) {
+    if (section.type !== "hero") continue;
+    const imageIndex = section.blocks.findIndex((block) => block.type === "image");
+    if (imageIndex === -1) continue;
+    const src = section.blocks[imageIndex]?.props?.src;
+    if (typeof src === "string" && src.trim().length > 0) continue;
+    section.blocks.splice(imageIndex, 1);
+    if (section.variant === "split") {
+      section.variant = "centered";
     }
   }
 
-  return blocks;
+  return sections;
 };
 
 const resolveBindingFallbackValue = (binding: DetailPageBinding, value: unknown) =>
@@ -333,7 +312,7 @@ export class DetailPageBindingResolverError extends Error {
 
 type DetailPageResolveBindingInput = DetailPageBindingResolverInput & {
   binding: DetailPageBinding;
-  block: WidgetBlock;
+  block: PageBlockV2;
   schemaFields: Map<string, DetailPageSchemaField>;
 };
 
@@ -399,14 +378,14 @@ export const resolveDetailPageHref = (input: {
     )
   );
 
-const readRelatedSourceId = (block: WidgetBlock) =>
-  toOptionalText(readBindingPathValue(block.data ?? {}, "relatedSourceId")) ??
-  toOptionalText(readBindingPathValue(block.data ?? {}, "source.relatedSourceId")) ??
-  toOptionalText(readBindingPathValue(block.data ?? {}, "sourceId"));
+const readRelatedSourceId = (block: PageBlockV2) =>
+  toOptionalText(readBindingPathValue(block.props ?? {}, "relatedSourceId")) ??
+  toOptionalText(readBindingPathValue(block.props ?? {}, "source.relatedSourceId")) ??
+  toOptionalText(readBindingPathValue(block.props ?? {}, "sourceId"));
 
 const selectRelatedSource = (
   document: DetailPageDocument,
-  block: WidgetBlock,
+  block: PageBlockV2,
   binding: DetailPageBinding
 ) => {
   const sources = document.related ?? [];
@@ -492,12 +471,12 @@ export async function resolveDetailPageFormContext(
   input: DetailPageResolveBindingInput,
   deps: DetailPageBindingResolverDeps = {}
 ) {
-  const formId = toOptionalText(readBindingPathValue(input.block.data ?? {}, "formId"));
+  const formId = toOptionalText(readBindingPathValue(input.block.props ?? {}, "formId"));
   if (!formId) {
     throw new DetailPageBindingResolverError("detail_page_form_context_missing", {
       bindingId: input.binding.id,
       propPath: input.binding.propPath,
-      message: `Detail page binding "${input.binding.id}" needs block.data.formId for formContext.`,
+      message: `Detail page binding "${input.binding.id}" needs block.props.formId for formContext.`,
     });
   }
 
@@ -517,7 +496,7 @@ export async function resolveDetailPageBindingValue(
   switch (binding.source.kind) {
     case "entry-field": {
       const value = readEntryFieldValue(binding.source.field, entry, input.schemaFields, binding);
-      if (isCuratedExternalImageBinding(binding)) {
+      if (isCuratedExternalImageBinding(binding, input.block)) {
         return typeof value === "string" && isCuratedMediaUrl(value) ? value : undefined;
       }
       return value;
@@ -548,12 +527,15 @@ export async function resolveDetailPageBindingValue(
 export async function resolveDetailPageBlocks(
   input: DetailPageBindingResolverInput,
   deps: DetailPageBindingResolverDeps = {}
-) {
-  const blocks = cloneValue(input.document.blocks);
+): Promise<PageSectionV2[]> {
+  const sections = cloneValue(input.document.sections);
   const schemaFields = collectSchemaFields(input.contentType.schema);
 
   for (const binding of input.document.bindings) {
-    const block = findBlockById(blocks, binding.blockId);
+    const block = findBlockById(
+      sections.flatMap((section) => section.blocks),
+      binding.blockId
+    );
     if (!block) {
       throw new DetailPageBindingResolverError("detail_page_binding_invalid", {
         bindingId: binding.id,
@@ -585,7 +567,12 @@ export async function resolveDetailPageBlocks(
       continue;
     }
 
-    const updated = setBlockBindingValue(blocks, binding.blockId, binding.propPath, nextValue);
+    const updated = setBlockBindingValue(
+      sections.flatMap((section) => section.blocks),
+      binding.blockId,
+      binding.propPath,
+      nextValue
+    );
     if (!updated) {
       throw new DetailPageBindingResolverError("detail_page_binding_invalid", {
         bindingId: binding.id,
@@ -595,5 +582,5 @@ export async function resolveDetailPageBlocks(
     }
   }
 
-  return removeEmptyHeroMedia(blocks);
+  return removeEmptyHeroMedia(sections);
 }

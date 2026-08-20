@@ -25,7 +25,6 @@ const jsonResponse = (payload: unknown, status = 200) =>
 const userSettingsResponse = {
   "pages.openAfterCreate": false,
   "media.openAfterUpload": false,
-  "widgets.favorites": [],
   "widgets.hero.presets": [],
   "posts.editor.preferences": {},
   "assistant.mode": null,

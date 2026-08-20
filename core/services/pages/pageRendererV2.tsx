@@ -55,6 +55,7 @@ import {
   usesCompositionTilt,
 } from "./pageDocumentRenderState";
 import { renderPageBlockList, renderPageLayoutBlockContent } from "./pageLayoutBlockRenderer";
+import { LegacyWidgetPlaceholder } from "./legacyWidgetPlaceholder";
 import { PAGE_REVEAL_MOTION_CSS } from "./pageSectionRenderStyles";
 import { PageSectionContentImpl, PageSectionRenderImpl } from "./pageSectionRendererV2";
 import {
@@ -470,6 +471,10 @@ export const renderPageBlockContent = (
         </>
       );
     }
+    // ── TASK-580-03-L01 ── migration-only read-only placeholder: delegates to
+    // the S6-owned placeholder module. `props.data` is NEVER rendered here.
+    case "legacy-widget":
+      return <LegacyWidgetPlaceholder block={block} />;
     default:
       return null;
   }

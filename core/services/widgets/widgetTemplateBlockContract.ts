@@ -1,15 +1,7 @@
-import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
-import type { WidgetBlock } from "../../widgets/types";
-import { normalizeWidgetBlocks } from "../../widgets/validator";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
 
-export function normalizeWidgetTemplateBlocksForRead(blocks?: WidgetBlock[] | null): WidgetBlock[] {
+export function normalizeWidgetTemplateBlocksForRead(
+  blocks?: LegacyWidgetBlock[] | null
+): LegacyWidgetBlock[] {
   return Array.isArray(blocks) ? blocks : [];
-}
-
-export function normalizeWidgetTemplateBlocksForWrite(
-  blocks?: WidgetBlock[] | null
-): WidgetBlock[] {
-  if (!Array.isArray(blocks)) return [];
-  ensureRuntimeWidgetsRegistered();
-  return normalizeWidgetBlocks(blocks);
 }

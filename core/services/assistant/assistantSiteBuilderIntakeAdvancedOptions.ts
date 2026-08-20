@@ -18,8 +18,7 @@ import {
   type AssistantSiteBuilderPageRoleId,
   type AssistantSiteBuilderSectionRoleId,
 } from "./assistantSiteBuilderIntakeTypes";
-import { listWidgetPackMatrix } from "../../widgets/modulePackMatrix";
-import { navigationVariantIds } from "../../widgets/core/navigationContract";
+import { navigationVariantIds } from "../../services/renderContracts/navigationContract";
 
 type AdvancedMenuBehaviorDefinition =
   AssistantSiteBuilderIntakeOptionDefinition<AssistantSiteBuilderAdvancedMenuBehaviorId> & {
@@ -66,17 +65,18 @@ type BuildAdvancedLayoutFactsInput = {
   designSupportedSectionRoleIds?: readonly AssistantSiteBuilderSectionRoleId[];
 };
 
-const supportedWidgetVariantIdsByType: Readonly<Record<string, readonly string[]>> = Object.freeze({
-  navigation: navigationVariantIds,
-  hero: assistantSiteBuilderAdvancedHeroVariantIds,
-  "content-list": ["cards", "list", "compact"],
-  "posts-feed": ["cards", "list", "compact"],
-  testimonials: ["grid", "spotlight", "slider-static"],
-  "faq-accordion": ["single-column", "two-column", "compact"],
-  "form-embed": ["standard"],
-  contact: ["form-left", "form-right", "minimal"],
-  "cta-banner": ["centered", "split", "with-badge"],
-});
+export const supportedWidgetVariantIdsByType: Readonly<Record<string, readonly string[]>> =
+  Object.freeze({
+    navigation: navigationVariantIds,
+    hero: assistantSiteBuilderAdvancedHeroVariantIds,
+    "content-list": ["cards", "list", "compact"],
+    "posts-feed": ["cards", "list", "compact"],
+    testimonials: ["grid", "spotlight", "slider-static"],
+    "faq-accordion": ["single-column", "two-column", "compact"],
+    "form-embed": ["standard"],
+    contact: ["form-left", "form-right", "minimal"],
+    "cta-banner": ["centered", "split", "with-badge"],
+  });
 
 const secretLikeValuePattern =
   /\b(password|token|secret|api[-_\s]?key|authorization|cookie|bearer|csrf|session)\b/iu;
@@ -173,35 +173,13 @@ const assertSectionRole = (
   }
 };
 
-const findAssistantPageSectionMapping = (alias: string) => {
-  for (const pack of listWidgetPackMatrix()) {
-    const mapping = pack.assistantPageSections?.find((section) => section.alias === alias);
-    if (mapping) return { pack, mapping };
-  }
-  return null;
-};
-
-const assertPackBackedSectionVariant = (definition: AdvancedSectionVariantDefinition) => {
+const assertAdvancedSectionVariant = (definition: AdvancedSectionVariantDefinition) => {
   assertSectionRole("advancedSectionVariants", definition.id, definition.sectionRoleId);
   assertWidgetVariantRequirement("advancedSectionVariants", definition.id, {
     widgetType: definition.widgetType,
     module: definition.module,
     variantId: definition.widgetVariantId,
   });
-
-  const packMapping = findAssistantPageSectionMapping(definition.alias);
-  if (
-    !packMapping ||
-    packMapping.pack.module !== definition.module ||
-    packMapping.mapping.widgetType !== definition.widgetType
-  ) {
-    throwAssistantSiteBuilderIntakeError("intake_registry_invalid", {
-      registryName: "advancedSectionVariants",
-      optionId: definition.id,
-      alias: definition.alias,
-      widgetType: definition.widgetType,
-    });
-  }
 };
 
 const toOptionDefinitions = <TId extends string>(
@@ -498,7 +476,7 @@ for (const definition of advancedHeroVariantDefinitions) {
 }
 
 for (const definition of advancedSectionVariantDefinitions) {
-  assertPackBackedSectionVariant(definition);
+  assertAdvancedSectionVariant(definition);
 }
 
 const advancedMenuBehaviorDefinitionsById = new Map(

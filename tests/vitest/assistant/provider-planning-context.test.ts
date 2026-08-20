@@ -128,23 +128,6 @@ const resourceCatalog = {
       status: "warning",
     },
   ],
-  widgets: [
-    {
-      id: "hero",
-      source: "core",
-      name: "Hero",
-      description: "Hero widget",
-      category: "content",
-      module: "content",
-      complexity: "composite",
-      audience: "beginner",
-      variants: ["default"],
-      slots: [],
-      surfaces: ["page-builder"],
-      requires: [],
-      status: "published",
-    },
-  ],
   media: [
     {
       id: "media-hero",
@@ -282,7 +265,6 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.resources?.forms).toHaveLength(1);
   expect(prompt.resources?.menus).toHaveLength(1);
   expect(prompt.resources?.seoDocuments).toHaveLength(1);
-  expect(prompt.resources?.widgets).toHaveLength(1);
   expect(prompt.resources?.media).toHaveLength(1);
   expect(prompt.resources?.commerce.products).toHaveLength(1);
   expect(prompt.resources?.commerce.collections).toHaveLength(1);
@@ -489,17 +471,21 @@ test("buildProviderPlanningPromptPackage reads retrieval-shaped evidence chunks"
 
 test("buildProviderPlanningPromptPackage includes redacted active surface summaries", () => {
   const prompt = buildProviderPlanningPromptPackage({
-    prompt: "Edit current template block",
+    prompt: "Edit current custom screen block",
     context: {
-      page: "/admin/advanced/widgets/templates/template-1",
+      page: "/admin/advanced/custom-screens/screen-1/entries/entry-1",
       activeSurface: {
-        kind: "widget-template",
-        template: {
-          id: "template-1",
-          name: "Contact Template",
-          status: "published",
-          category: "Marketing",
+        kind: "custom-screen",
+        screen: {
+          id: "screen-1",
+          name: "Contact Screen",
+          status: "active",
+          contentTypeId: "ct-leads",
+          showInSidebar: true,
+          sidebarLabel: "Contact",
+          mode: "editor",
         },
+        selectedEntryId: "entry-1",
         selectedBlockId: "cta-1",
         blocks: [
           {
@@ -513,27 +499,24 @@ test("buildProviderPlanningPromptPackage includes redacted active surface summar
             templateName: null,
           },
         ],
-        settings: {
-          wrapperContainer: "default",
-          sectionGap: "md",
-          hasBackgroundMedia: false,
-        },
+        bindings: [],
+        writableBindingFields: [],
         warnings: [],
       },
     },
   });
 
   expect(prompt.activeSurface).toMatchObject({
-    kind: "widget-template",
-    template: {
-      id: "template-1",
-      name: "Contact Template",
+    kind: "custom-screen",
+    screen: {
+      id: "screen-1",
+      name: "Contact Screen",
     },
     selectedBlockId: "cta-1",
   });
   expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
   expect(
-    prompt.activeSurface?.kind === "widget-template" ? prompt.activeSurface.blocks[0]?.label : null
+    prompt.activeSurface?.kind === "custom-screen" ? prompt.activeSurface.blocks[0]?.label : null
   ).toBeNull();
 });
 

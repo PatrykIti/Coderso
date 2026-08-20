@@ -146,6 +146,13 @@ Current implemented guide blueprint:
   - assistant-facing Page sections now emit the Page v2 section/atomic block
     contract owned by `pageDocumentV2.ts`; unsupported aliases stay gated
     instead of inventing a second section catalog
+  - assistant detail-page authoring is schemaVersion 2 sections only: the
+    catalog blueprints emit `detail-page.upsert` documents with a `<key>-detail-hero`
+    section and `heading`/`text`(/`image`) blocks, with bindings remapped to v2
+    prop paths (`title→heading/text`, `summaryField→text/text`,
+    `coverImageUrlField→image/src`, `coverImageAltField→image/alt`). v1
+    `blocks` payloads fail closed on write with `detail_page_legacy_v1_invalid`;
+    stored v1 rows still restore through the read-side conversion adapter.
   - active Page surfaces now carry server-revalidated `schemaVersion: 2`
     section/block summaries with nested block paths and Page capability
     metadata; stale selected section/block/path context is cleared during

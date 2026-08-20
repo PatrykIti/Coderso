@@ -156,6 +156,7 @@ const runRoute = async (
 };
 
 const buildDetailPageDocumentInput = (contentTypeId: string, contentTypeSlug: string) => ({
+  schemaVersion: 2,
   name: "Products detail template",
   contentTypeId,
   contentTypeSlug,
@@ -165,20 +166,45 @@ const buildDetailPageDocumentInput = (contentTypeId: string, contentTypeSlug: st
     template: "detail",
     layout: {},
   },
-  blocks: [
+  sections: [
     {
-      id: "hero",
-      type: "hero",
-      data: {
-        headline: "Products detail",
+      id: "hero-section",
+      type: "content",
+      variant: "default",
+      layout: {
+        columns: 1,
+        align: "start",
+        justify: "start",
+        maxWidth: 1080,
+        stackVertical: false,
       },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+      spacing: { paddingTop: 64, paddingBottom: 64, paddingLeft: 40, paddingRight: 40, gap: 24 },
+      visibility: { visible: true, authOnly: false, anchor: null, startsAt: null, endsAt: null },
+      responsive: {},
+      blocks: [
+        {
+          id: "hero-heading",
+          type: "heading",
+          props: {
+            text: "Products detail",
+          },
+        },
+      ],
     },
   ],
   bindings: [
     {
       id: "binding-title",
-      blockId: "hero",
-      propPath: "headline",
+      blockId: "hero-heading",
+      propPath: "text",
       source: {
         kind: "entry-meta",
         field: "title",
@@ -416,6 +442,67 @@ test("detail page route schemas accept the owner document related field only", (
         ...buildDetailPageDocumentInput(randomUUID(), "products"),
         relatedSources: [],
       },
+    })
+  ).toThrow();
+});
+
+test("detail page route schemas accept schemaVersion-2 documents (TASK-580-03)", () => {
+  const v2Document = {
+    schemaVersion: 2,
+    name: "Products v2 detail template",
+    contentTypeId: randomUUID(),
+    contentTypeSlug: "products",
+    status: "draft",
+    titlePattern: "{{ title }}",
+    settings: { template: "detail", layout: {} },
+    sections: [
+      {
+        id: "hero",
+        type: "hero",
+        name: "Hero",
+        layout: {},
+        style: {},
+        spacing: {},
+        visibility: { visible: true },
+        responsive: {},
+        blocks: [],
+      },
+    ],
+    bindings: [],
+  };
+  expect(() => validateSchema(detailPageCreateSchema, { document: v2Document })).not.toThrow();
+  // The retained v1 shape (blocks, no sections) still validates at the
+  // envelope; the write SERVICE rejects v1 payloads fail-closed.
+  expect(() =>
+    validateSchema(detailPageCreateSchema, {
+      document: {
+        name: "Products v1 detail template",
+        contentTypeId: randomUUID(),
+        contentTypeSlug: "products",
+        status: "draft",
+        titlePattern: "{{ title }}",
+        settings: { template: "detail", layout: {} },
+        blocks: [
+          {
+            id: "hero",
+            type: "hero",
+            data: { headline: "Products detail" },
+          },
+        ],
+        bindings: [
+          {
+            id: "binding-title",
+            blockId: "hero",
+            propPath: "headline",
+            source: { kind: "entry-meta", field: "title" },
+          },
+        ],
+      },
+    })
+  ).not.toThrow();
+  expect(() =>
+    validateSchema(detailPageCreateSchema, {
+      document: { ...v2Document, schemaVersion: 3 },
     })
   ).toThrow();
 });

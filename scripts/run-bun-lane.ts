@@ -26,6 +26,7 @@ const routeSuites = [
   "tests/integration/routes/cors.test.ts",
   "tests/integration/routes/customScreensRoutes.test.ts",
   "tests/integration/routes/dashboard.test.ts",
+  "tests/integration/detailPages/detailPageV2BackfillMigration.test.ts",
   "tests/integration/routes/emailSettings.test.ts",
   "tests/integration/routes/filters.test.ts",
   "tests/integration/routes/formActionsRoutes.test.ts",

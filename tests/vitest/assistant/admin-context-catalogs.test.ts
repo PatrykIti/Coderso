@@ -183,18 +183,6 @@ const createDeps = (overrides: Partial<AssistantResourceCatalogDeps> = {}) => {
         },
       ];
     },
-    listWidgetCatalog: async () => {
-      calls.push("widgets");
-      return [
-        {
-          id: "content-list",
-          source: "core",
-          name: "Content List",
-          category: "content",
-          variants: ["cards"],
-        },
-      ];
-    },
     listMedia: async () => {
       calls.push("media");
       return [
@@ -275,7 +263,6 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
     "posts",
     "seoDocuments",
     "solutionKits",
-    "widgets",
   ]);
   expect(snapshot.generatedAt).toBe("2026-04-11T10:00:00.000Z");
   expect(snapshot.contentTypes[0]?.slug).toBe("products");
@@ -294,7 +281,6 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
   expect(snapshot.forms[0]?.fields[0]?.name).toBe("email");
   expect(snapshot.menus[0]?.items[0]?.label).toBe("Products");
   expect(snapshot.seoDocuments[0]?.slug).toBe("/products");
-  expect(snapshot.widgets[0]?.id).toBe("content-list");
   expect(snapshot.media?.[0]?.originalName).toBe("hero.png");
   expect(snapshot.commerce?.products[0]?.slug).toBe("product");
   expect(snapshot.commerce?.collections[0]?.slug).toBe("featured");
@@ -304,8 +290,8 @@ test("buildAssistantResourceCatalogSnapshot aggregates injected deps", async () 
 
 test("buildAssistantResourceCatalogSnapshot keeps valid groups when one dep fails", async () => {
   const { deps } = createDeps({
-    listWidgetCatalog: async () => {
-      throw new Error("widgets_unavailable");
+    listMedia: async () => {
+      throw new Error("media_unavailable");
     },
   });
 
@@ -317,6 +303,6 @@ test("buildAssistantResourceCatalogSnapshot keeps valid groups when one dep fail
   );
 
   expect(snapshot.contentTypes).toHaveLength(1);
-  expect(snapshot.widgets).toHaveLength(0);
-  expect(snapshot.warnings).toContain("widgets_unavailable");
+  expect(snapshot.media).toHaveLength(0);
+  expect(snapshot.warnings).toContain("media_unavailable");
 });

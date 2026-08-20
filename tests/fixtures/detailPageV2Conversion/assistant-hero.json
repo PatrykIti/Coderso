@@ -1,0 +1,239 @@
+{
+  "case": "assistant-hero",
+  "v1": {
+    "schemaVersion": 1,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "ACME Detail Template",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "acme-product",
+    "status": "published",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "blocks": [
+      {
+        "id": "acme-detail-hero",
+        "type": "hero",
+        "data": {
+          "headline": "ACME Products",
+          "body": "Showcase every catalog entry.",
+          "badge": {
+            "enabled": true,
+            "label": "Catalog",
+            "tone": "primary",
+            "placement": "above-headline"
+          },
+          "primaryCta": {
+            "label": "View",
+            "href": "/acme"
+          },
+          "media": {
+            "type": "image",
+            "source": "external",
+            "src": "",
+            "alt": "",
+            "ratio": "16:9"
+          }
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "id": "acme-title",
+        "blockId": "acme-detail-hero",
+        "propPath": "headline",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      },
+      {
+        "id": "acme-summary",
+        "blockId": "acme-detail-hero",
+        "propPath": "body",
+        "source": {
+          "kind": "entry-field",
+          "field": "summary"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "acme-cover",
+        "blockId": "acme-detail-hero",
+        "propPath": "media.src",
+        "source": {
+          "kind": "entry-field",
+          "field": "coverImageUrl"
+        },
+        "transform": "text",
+        "required": false
+      },
+      {
+        "id": "acme-cover-alt",
+        "blockId": "acme-detail-hero",
+        "propPath": "media.alt",
+        "source": {
+          "kind": "entry-field",
+          "field": "coverImageAlt"
+        },
+        "transform": "text",
+        "required": false
+      }
+    ]
+  },
+  "expected": {
+    "schemaVersion": 2,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "ACME Detail Template",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "acme-product",
+    "status": "published",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "sections": [
+      {
+        "id": "acme-detail-hero",
+        "type": "hero",
+        "name": "Hero",
+        "variant": "centered",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "acme-detail-hero-heading",
+            "type": "heading",
+            "props": {
+              "text": "ACME Products"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "acme-detail-hero-text",
+            "type": "text",
+            "props": {
+              "text": "Showcase every catalog entry."
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "acme-detail-hero-badge",
+            "type": "badge",
+            "props": {
+              "text": "Catalog"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "acme-detail-hero-button",
+            "type": "button",
+            "props": {
+              "label": "View",
+              "href": "/acme"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "acme-detail-hero-image",
+            "type": "image",
+            "props": {
+              "src": "",
+              "alt": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      }
+    ],
+    "bindings": [
+      {
+        "id": "acme-title",
+        "blockId": "acme-detail-hero-heading",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      },
+      {
+        "id": "acme-summary",
+        "blockId": "acme-detail-hero-text",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "summary"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "acme-cover",
+        "blockId": "acme-detail-hero-image",
+        "propPath": "src",
+        "source": {
+          "kind": "entry-field",
+          "field": "coverImageUrl"
+        },
+        "transform": "text",
+        "required": false
+      },
+      {
+        "id": "acme-cover-alt",
+        "blockId": "acme-detail-hero-image",
+        "propPath": "alt",
+        "source": {
+          "kind": "entry-field",
+          "field": "coverImageAlt"
+        },
+        "transform": "text",
+        "required": false
+      }
+    ]
+  },
+  "dropped": []
+}

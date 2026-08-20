@@ -152,10 +152,12 @@ const readNegativeObservation = async (
   return observation;
 };
 
-const readGridColumnTag = (html: string, slotId: string): string => {
-  const escaped = slotId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return html.match(new RegExp(`<[^>]+data-grid-column="${escaped}"[^>]*>`))?.[0] ?? "";
-};
+const readColumnsCountTag = (html: string, count: number): string =>
+  html.match(
+    new RegExp(
+      `<[^>]+data-page-layout-block="columns"[^>]*data-page-layout-columns-count="${count}"[^>]*>`
+    )
+  )?.[0] ?? "";
 
 test("the ineligible-detail validator rejects every nonempty proof array and resolver drift", () => {
   const baseline: IneligibleDetailObservation = {
@@ -236,21 +238,20 @@ test("only Aurora resolves through the installed six-slug detail route with exac
       new URL("/projekty/aurora", installedPublicOrigin).href,
     ]);
     expect(auroraHtml).toContain(aurora.detailLead!);
-    expect(auroraHtml).toContain('data-grid-column="column:hero-art-main"');
-    expect(auroraHtml).toContain('data-grid-column="column:hero-art-accent"');
+    expect(auroraHtml).toContain('data-page-layout-block="columns"');
+    expect(auroraHtml).toContain('data-page-layout-columns-count="2"');
+    expect(auroraHtml).toContain('data-page-layout-columns-count="3"');
     expect(auroraHtml).toContain("var(--color-primary)");
     expect(auroraHtml).toContain("var(--color-secondary)");
     const auroraRuntime = await resolveFixtureDetail(aurora.slug);
-    expect(auroraRuntime?.blocks.map((block) => block.id)).toEqual(PROJECT_DETAIL_BLOCK_IDS);
+    expect(auroraRuntime?.sections.map((section) => section.id)).toEqual(PROJECT_DETAIL_BLOCK_IDS);
 
-    const heroMainTag = readGridColumnTag(auroraHtml, "column:hero-art-main");
-    const heroAccentTag = readGridColumnTag(auroraHtml, "column:hero-art-accent");
-    expect(heroMainTag).toContain("col-span-12");
-    expect(heroMainTag).toContain("md:col-span-12");
-    expect(heroMainTag).toContain("lg:col-span-8");
-    expect(heroAccentTag).toContain("col-span-12");
-    expect(heroAccentTag).toContain("md:col-span-12");
-    expect(heroAccentTag).toContain("lg:col-span-4");
+    const heroColumnsTag = readColumnsCountTag(auroraHtml, 2);
+    const galleryColumnsTag = readColumnsCountTag(auroraHtml, 3);
+    expect(heroColumnsTag).toContain('data-page-layout-block="columns"');
+    expect(heroColumnsTag).toContain('data-page-layout-columns-count="2"');
+    expect(galleryColumnsTag).toContain('data-page-layout-block="columns"');
+    expect(galleryColumnsTag).toContain('data-page-layout-columns-count="3"');
 
     for (const stat of aurora.detailStats ?? []) {
       expect(auroraHtml).toContain(stat.value);
@@ -264,11 +265,11 @@ test("only Aurora resolves through the installed six-slug detail route with exac
     expect(auroraHtml).toContain("Chcę podobny dom");
 
     const materialOrder = [
-      auroraHtml.indexOf('data-grid-column="column:hero-art-main"'),
+      auroraHtml.indexOf('data-section-id="project-hero-art"'),
       auroraHtml.indexOf(aurora.detailStats![0]!.value),
       auroraHtml.indexOf("Chcę podobny dom"),
       auroraHtml.indexOf(aurora.assumptions![0]!.title),
-      auroraHtml.indexOf('data-grid-column="column:gallery-tall"'),
+      auroraHtml.indexOf('data-section-id="project-gallery"'),
     ];
     expect(materialOrder.every((index) => index >= 0)).toBe(true);
     expect(materialOrder).toEqual([...materialOrder].sort((left, right) => left - right));

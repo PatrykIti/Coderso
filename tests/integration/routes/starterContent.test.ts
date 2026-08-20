@@ -21,7 +21,6 @@ import {
   solutionKitInstallItems,
   solutionKitInstallRuns,
   users,
-  widgetTemplates,
 } from "../../../core/db/schema";
 import {
   DEFAULT_STARTER_KIT_DEFINITION,
@@ -58,7 +57,6 @@ const appliedRunIds = new Set<string>();
 let priorSnapshot = {
   homepageId: null as string | null,
   navigationMenuId: null as string | null,
-  footerTemplateId: null as string | null,
 };
 
 // The install run's actor_id has an FK to users.id, so the apply test uses an
@@ -68,7 +66,6 @@ let actorId: string | null = null;
 const readShellSnapshot = async () => ({
   homepageId: (await getSetting("site.homepageId")) as string | null,
   navigationMenuId: (await getSetting("site.navigationMenuId")) as string | null,
-  footerTemplateId: (await getSetting("site.footerTemplateId")) as string | null,
 });
 
 const runIdsForKit = async () => {
@@ -103,7 +100,6 @@ const rollbackStarterContentSettings = async (snapshot: typeof priorSnapshot) =>
   await setSettings({
     "site.homepageId": snapshot.homepageId,
     "site.navigationMenuId": snapshot.navigationMenuId,
-    "site.footerTemplateId": snapshot.footerTemplateId,
   });
 };
 
@@ -128,9 +124,6 @@ afterAll(async () => {
 
   // Restore the exact pre-test shell settings.
   await restoreShell();
-
-  // Delete the seeded footer widget template if it survived (e.g. partial run).
-  await db.delete(widgetTemplates).where(sql`${widgetTemplates.name} = ${"Starter Footer"}`);
 
   // Delete every install run/items row this suite created (incl. dry-run rows)
   // and their audit records — keyed strictly by tracked run id.
@@ -180,14 +173,12 @@ testIfDb(
 
     expect(applyResult.runId).toBeTruthy();
 
-    // The three shell refs are now wired to seeded records.
+    // The two shell refs are now wired to seeded records.
     const afterApply = await readShellSnapshot();
     expect(typeof afterApply.homepageId).toBe("string");
     expect(afterApply.homepageId).toBeTruthy();
     expect(typeof afterApply.navigationMenuId).toBe("string");
     expect(afterApply.navigationMenuId).toBeTruthy();
-    expect(typeof afterApply.footerTemplateId).toBe("string");
-    expect(afterApply.footerTemplateId).toBeTruthy();
 
     // The apply persisted an audit record carrying the run id only (no payload).
     const [auditRow] = await db
@@ -203,14 +194,6 @@ testIfDb(
     const afterRollback = await readShellSnapshot();
     expect(afterRollback.homepageId).toBe(priorSnapshot.homepageId);
     expect(afterRollback.navigationMenuId).toBe(priorSnapshot.navigationMenuId);
-    expect(afterRollback.footerTemplateId).toBe(priorSnapshot.footerTemplateId);
-
-    // The seeded footer template was removed by the rollback.
-    const footerTemplates = await db
-      .select({ id: widgetTemplates.id })
-      .from(widgetTemplates)
-      .where(sql`${widgetTemplates.name} = ${"Starter Footer"}`);
-    expect(footerTemplates.length).toBe(0);
   },
   testTimeoutMs
 );

@@ -12,7 +12,7 @@ import {
   normalizeCustomScreenDefinitionForWrite,
   withCustomScreenEditorViewCompat,
 } from "../../../../core/services/customScreens/customScreenSchemas";
-import type { WidgetBlock } from "../../../../core/widgets/types";
+import type { LegacyWidgetBlock } from "../../../../core/services/renderContracts/legacyWidgetBlock";
 import {
   createPageBlockV2,
   createPageSectionV2,
@@ -41,7 +41,7 @@ export const createTestPageData = (sections: PageSectionV2[] = []) => ({
 });
 
 export const createTestCustomScreenDefinition = (
-  blocks: WidgetBlock[] = [],
+  blocks: LegacyWidgetBlock[] = [],
   bindings: CustomScreenBinding[] = []
 ): CustomScreenDefinition =>
   withCustomScreenEditorViewCompat(normalizeCustomScreenDefinitionForWrite(), {

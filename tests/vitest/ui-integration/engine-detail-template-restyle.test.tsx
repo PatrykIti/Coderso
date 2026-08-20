@@ -16,13 +16,14 @@ test("detail template editor renders restyled editor chrome", () => {
   expect(html).toContain("History");
   expect(html).toContain("Autosave");
 
-  // Existing details Tabs (Template / Data / Widget) survive the restyle.
-  for (const label of ["Template", "Data", "Widget"]) {
+  // Existing details Tabs (Template / Data / Block) survive the restyle.
+  for (const label of ["Template", "Data", "Block"]) {
     expect(html).toContain(label);
   }
 
-  // LibraryPanel region marker (left rail) and the page-builder body still render.
-  expect(html).toContain("Components");
+  // Editor shell region markers and the page-builder body still render.
+  expect(html).toContain("data-editor-shell-center");
+  expect(html).toContain("data-editor-shell-right-panel");
   expect(html).toContain("Loading detail template");
 
   // Token-driven status badge replaces the previous raw-palette pills.

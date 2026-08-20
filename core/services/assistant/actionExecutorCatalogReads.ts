@@ -140,33 +140,12 @@ export const collectListingResourceReferences = async (
     }
   }
 
-  const widgetTemplates = await deps.listWidgetTemplates();
-  for (const template of widgetTemplates) {
-    if (
-      valueReferencesListingResource(template.blocks, target) ||
-      valueReferencesListingResource(template.settings, target)
-    ) {
-      references.push({
-        containerType: "widget-template",
-        containerId: template.id,
-        containerName: template.name,
-        adminHref: `/admin/advanced/widgets/templates/${encodeURIComponent(template.id)}`,
-      });
-    }
-  }
-
   return references;
 };
 
 export const formatListingReferenceSummary = (references: ListingResourceReference[]) => {
   const pageCount = references.filter((entry) => entry.containerType === "page").length;
-  const templateCount = references.filter(
-    (entry) => entry.containerType === "widget-template"
-  ).length;
-  return [
-    pageCount > 0 ? `${pageCount} page${pageCount === 1 ? "" : "s"}` : null,
-    templateCount > 0 ? `${templateCount} widget template${templateCount === 1 ? "" : "s"}` : null,
-  ]
+  return [pageCount > 0 ? `${pageCount} page${pageCount === 1 ? "" : "s"}` : null]
     .filter((entry): entry is string => Boolean(entry))
     .join(" and ");
 };

@@ -15,8 +15,7 @@ export const assistantContractOnlyActionTypes = [
 
 export type AssistantContractOnlyActionType = (typeof assistantContractOnlyActionTypes)[number];
 export type AssistantKnownActionContractType =
-  | AssistantExecutableActionType
-  | AssistantContractOnlyActionType;
+  AssistantExecutableActionType | AssistantContractOnlyActionType;
 
 const contractOnlyActionTypeSet = new Set<string>(assistantContractOnlyActionTypes);
 const executableActionTypeSet = new Set<string>(assistantActionTypes);
@@ -718,52 +717,6 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
-    "widget-template.delete",
-    "widget-template",
-    "core/services/widgets/widgetTemplateService.ts",
-    ["id", "name"],
-    {
-      permissions: {
-        plan: ["widgets:read"],
-        dryRun: ["widgets:read"],
-        execute: ["widgets:write"],
-      },
-      notes: [
-        "Deletes one reusable widget template by id after matching expected name/status/category from active or server-side context.",
-      ],
-    }
-  ),
-  executableContract(
-    "widget-template.update",
-    "widget-template",
-    "core/services/widgets/widgetTemplateService.ts",
-    ["id", "name", "patch"],
-    {
-      permissions: {
-        plan: ["widgets:read"],
-        dryRun: ["widgets:read"],
-        execute: ["widgets:write"],
-      },
-      notes: ["Updates reusable widget template metadata/settings and preserves unrelated blocks."],
-    }
-  ),
-  executableContract(
-    "widget-template.block.patch",
-    "widget-template",
-    "core/services/widgets/widgetTemplateService.ts",
-    ["id", "name", "blockId", "dataPath", "value"],
-    {
-      permissions: {
-        plan: ["widgets:read"],
-        dryRun: ["widgets:read"],
-        execute: ["widgets:write"],
-      },
-      notes: [
-        "Patches one existing reusable template block data path and preserves unrelated blocks.",
-      ],
-    }
-  ),
-  executableContract(
     "site-kit.recommend",
     "site-kit",
     "core/services/assistant/siteBuilderPlanAdapter.ts",
@@ -894,7 +847,6 @@ const readFamily = (value: unknown): AssistantActionContractFamily => {
     "menu",
     "seo",
     "media",
-    "widget-template",
   ]);
   if (!knownFamilies.has(family as AssistantActionContractFamily)) fail();
   return family as AssistantActionContractFamily;

@@ -10,8 +10,11 @@ import {
 } from "../services/settings/detailPageIdContract";
 import type { ContentRouteSetting } from "../services/settings/settingsContracts";
 import type { PreviewTargetType } from "../services/pages/previewService";
-import { contentListLimitMax, resolveContentListSort } from "../widgets/core/contentList";
-import type { DeviceTarget } from "../widgets/types";
+import {
+  contentListLimitMax,
+  resolveContentListSort,
+} from "../services/renderContracts/contentListContract";
+import type { DeviceTarget } from "../services/renderContracts/tokens";
 
 export const resolvePreviewTargetType = (value: string | null): PreviewTargetType | null => {
   if (value === "page") return "page";

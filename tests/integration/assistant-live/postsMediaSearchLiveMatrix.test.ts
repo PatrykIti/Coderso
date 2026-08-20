@@ -140,7 +140,6 @@ const runPostsMediaSearchForProvider = async (provider: LiveProviderRuntime) => 
           forms: [],
           menus: [],
           seoDocuments: [],
-          widgets: [],
           warnings: [],
         },
       },

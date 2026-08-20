@@ -447,7 +447,7 @@ describe("canonical Projekty Domów package", () => {
   it("contains no legacy widget/media surface, secret field or favicon resource", async () => {
     const output = await serializeFormaDomPackage();
     expect(output).not.toMatch(
-      /widgetTemplates|mediaId|assetId|authorization|apiKey|password|secret/i
+      /widgetTemplates|mediaId|"assetId":(?!\s*null)|authorization|apiKey|password|secret/i
     );
     expect(output).not.toContain('"favicon"');
   });

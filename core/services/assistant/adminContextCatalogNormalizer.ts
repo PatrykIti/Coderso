@@ -23,8 +23,6 @@ import type {
   AssistantSeoDocumentSummary,
   AssistantSolutionKitSummary,
   AssistantTemplateSectionReferenceSummary,
-  AssistantWidgetSlotSummary,
-  AssistantWidgetSummary,
 } from "./adminContextTypes";
 import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettings";
 import { normalizePageCollectionLink } from "../pages/pageCollectionLink";
@@ -41,7 +39,6 @@ export type AssistantResourceCatalogRawInput = {
   forms?: unknown;
   menus?: unknown;
   seoDocuments?: unknown;
-  widgets?: unknown;
   media?: unknown;
   commerceProducts?: unknown;
   commerceCollections?: unknown;
@@ -522,56 +519,6 @@ const normalizeSeoDocument = (
   };
 };
 
-const normalizeVariantIds = (value: unknown) =>
-  readArray(value)
-    .map((entry) => {
-      if (typeof entry === "string") return readString(entry);
-      if (isRecord(entry)) return readString(entry.id);
-      return null;
-    })
-    .filter((entry): entry is string => Boolean(entry))
-    .sort((left, right) => left.localeCompare(right));
-
-const normalizeWidgetSlots = (value: unknown): AssistantWidgetSlotSummary[] =>
-  readRecordArray(value)
-    .map((slot): AssistantWidgetSlotSummary | null => {
-      const id = readString(slot.id);
-      if (!id) return null;
-      return {
-        id,
-        label: readString(slot.label) ?? id,
-        kind: slot.kind === "repeatable" ? "repeatable" : "fixed",
-        allowedTypes: readStringArray(slot.allowedTypes),
-        minItems: readNumber(slot.minItems),
-        maxItems: readNumber(slot.maxItems),
-      };
-    })
-    .filter((slot): slot is AssistantWidgetSlotSummary => Boolean(slot))
-    .sort((left, right) => left.id.localeCompare(right.id));
-
-const normalizeWidget = (value: Record<string, unknown>): AssistantWidgetSummary | null => {
-  const source = value.source === "template" ? "template" : "core";
-  const id = readString(value.id) ?? readString(value.type);
-  const name = readString(value.name) ?? readString(value.title);
-  if (!id || !name) return null;
-
-  return {
-    id,
-    source,
-    name,
-    description: readString(value.description),
-    category: readString(value.category) ?? "uncategorized",
-    module: readString(value.module) ?? (source === "template" ? "templates" : "general"),
-    complexity: readString(value.complexity) ?? "composite",
-    audience: readString(value.audience) ?? "beginner",
-    variants: normalizeVariantIds(value.variants),
-    slots: normalizeWidgetSlots(value.slots),
-    surfaces: readStringArray(value.surfaces),
-    requires: readStringArray(value.requires),
-    status: value.status === "draft" ? "draft" : "published",
-  };
-};
-
 const normalizeMedia = (value: Record<string, unknown>): AssistantMediaSummary | null => {
   const id = readString(value.id);
   const originalName = readString(value.originalName) ?? readString(value.key);
@@ -1023,15 +970,6 @@ export function normalizeAssistantResourceCatalog(
     ),
     "seo_documents"
   );
-  const widgets = clamp(
-    sortByKey(
-      readRecordArray(raw.widgets)
-        .map(normalizeWidget)
-        .filter((entry): entry is AssistantWidgetSummary => Boolean(entry)),
-      (entry) => `${entry.source}:${entry.id}`
-    ),
-    "widgets"
-  );
   const media = clamp(
     sortByKey(
       readRecordArray(raw.media)
@@ -1086,7 +1024,6 @@ export function normalizeAssistantResourceCatalog(
     forms,
     menus,
     seoDocuments,
-    widgets,
     media,
     commerce: {
       products: commerceProducts,

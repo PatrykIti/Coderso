@@ -16,7 +16,6 @@ import type {
   AssistantSiteBuilderPageRoleId,
   AssistantSiteBuilderSectionRoleId,
 } from "./assistantSiteBuilderIntakeTypes";
-import { listWidgetPackMatrix } from "../../widgets/modulePackMatrix";
 
 export type AssistantSiteBuilderBasicWidgetCandidate = {
   sectionRoleId: AssistantSiteBuilderSectionRoleId;
@@ -86,8 +85,8 @@ const basicReviewInputStepIds = Object.freeze([
   "media-policy",
 ] as const satisfies readonly AssistantSiteBuilderIntakeStepId[]);
 
-const widgetAliasDefinitions = (() => {
-  const definitions = new Map<
+const widgetAliasDefinitions: Readonly<
+  Record<
     string,
     {
       alias: string;
@@ -97,23 +96,89 @@ const widgetAliasDefinitions = (() => {
       pagePresetIds: string[];
       sectionPresetIds: string[];
     }
-  >();
-
-  for (const pack of listWidgetPackMatrix()) {
-    for (const section of pack.assistantPageSections ?? []) {
-      definitions.set(section.alias, {
-        alias: section.alias,
-        widgetType: section.widgetType,
-        module: pack.module,
-        label: pack.label,
-        pagePresetIds: [...(section.pagePresets ?? [])],
-        sectionPresetIds: [...(section.sectionPresets ?? [])],
-      });
-    }
-  }
-
-  return definitions;
-})();
+  >
+> = {
+  hero: {
+    alias: "hero",
+    widgetType: "hero",
+    module: "content",
+    label: "Content",
+    pagePresetIds: ["content:landing-home"],
+    sectionPresetIds: ["content:hero-benefits"],
+  },
+  cta: {
+    alias: "cta",
+    widgetType: "cta-banner",
+    module: "content",
+    label: "Content",
+    pagePresetIds: ["content:landing-home"],
+    sectionPresetIds: ["content:proof-cta"],
+  },
+  process: {
+    alias: "process",
+    widgetType: "feature-grid",
+    module: "content",
+    label: "Content",
+    pagePresetIds: ["content:landing-home"],
+    sectionPresetIds: ["content:hero-benefits"],
+  },
+  "form-embed": {
+    alias: "form-embed",
+    widgetType: "form-embed",
+    module: "forms",
+    label: "Forms",
+    pagePresetIds: ["forms:lead-capture"],
+    sectionPresetIds: ["forms:intake-inline"],
+  },
+  contact: {
+    alias: "contact",
+    widgetType: "contact",
+    module: "forms",
+    label: "Forms",
+    pagePresetIds: ["forms:lead-capture"],
+    sectionPresetIds: ["forms:contact-split"],
+  },
+  "listing-filters": {
+    alias: "listing-filters",
+    widgetType: "listing-filters",
+    module: "listings",
+    label: "Listings",
+    pagePresetIds: ["listings:directory-index"],
+    sectionPresetIds: ["listings:grid-filters"],
+  },
+  "content-list": {
+    alias: "content-list",
+    widgetType: "content-list",
+    module: "listings",
+    label: "Listings",
+    pagePresetIds: ["listings:directory-index"],
+    sectionPresetIds: ["listings:teaser-stack"],
+  },
+  "posts-feed": {
+    alias: "posts-feed",
+    widgetType: "posts-feed",
+    module: "listings",
+    label: "Listings",
+    pagePresetIds: ["listings:directory-index"],
+    sectionPresetIds: ["listings:teaser-stack"],
+  },
+  faq: {
+    alias: "faq",
+    widgetType: "faq-accordion",
+    module: "engagement",
+    label: "Engagement",
+    pagePresetIds: ["engagement:trust-loop"],
+    sectionPresetIds: ["engagement:faq-proof"],
+  },
+  testimonials: {
+    alias: "testimonials",
+    widgetType: "testimonials",
+    module: "engagement",
+    label: "Engagement",
+    pagePresetIds: ["engagement:trust-loop"],
+    sectionPresetIds: ["engagement:testimonials-cta"],
+  },
+};
 
 const unique = <T extends string>(values: readonly T[]): T[] => [...new Set(values)];
 
@@ -193,7 +258,7 @@ const buildWidgetCandidate = (
   sectionRoleId: AssistantSiteBuilderSectionRoleId,
   alias: string
 ): AssistantSiteBuilderBasicWidgetCandidate | null => {
-  const definition = widgetAliasDefinitions.get(alias);
+  const definition = widgetAliasDefinitions[alias];
   if (!definition) return null;
 
   return {

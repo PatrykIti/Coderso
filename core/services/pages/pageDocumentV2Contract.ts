@@ -172,6 +172,9 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   // ── TASK-534 ── declarative-interactivity blocks.
   switcher: ["tabs", "activeIndex", "variant", "ariaLabel"],
   scrollHint: ["label", "glyph"],
+  // TASK-580-03-L01: migration-only read-only placeholder (strict reject-unknown
+  // on write; both keys are always present in the stored shape).
+  "legacy-widget": ["legacyWidgetType", "data"],
 };
 
 export type PageBlockRuntimeRendererState = "real" | "placeholder" | "unsupported";
@@ -262,6 +265,11 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   // + scrollHint (renderer case 534-02-L03, CSS-keyframe only) are real renderers.
   "switcher",
   "scrollHint",
+  // TASK-580-03-L01: the legacy-widget block HAS a real runtime renderer — the
+  // read-only placeholder (pageRendererV2.tsx case → LegacyWidgetPlaceholder).
+  // Deliberately NOT editor-insertable / data-bound / layout-host: it is a
+  // migration-only surface (converted detail-page documents only).
+  "legacy-widget",
 ]);
 const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "filters", "form", "embed"]);
 // ── TASK-534 ── switcher is a SLOT HOST (panel:1..6). It MUST live in
@@ -467,4 +475,9 @@ export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown
     variant: "pill",
   },
   scrollHint: { label: "Scroll", glyph: "dot" },
+  // ── TASK-580-03-L01 ── legacy-widget: migration-only read-only placeholder.
+  // The fail-closed stored-read shape ("unknown" type + empty data) is the
+  // default so `createPageBlockV2("legacy-widget")` and props-less blocks
+  // stay safe without authoring anything.
+  "legacy-widget": { legacyWidgetType: "unknown", data: {} },
 };

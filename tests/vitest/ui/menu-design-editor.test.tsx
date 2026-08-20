@@ -317,7 +317,7 @@ import {
 } from "../../../core/services/menus/menuDocumentV2";
 import { MenuDesignEditorPage } from "../../../core/admin/ui/menus/MenuDesignEditorPage";
 import { PageEditor, type PageEditorHost } from "../../../core/admin/ui/pages/PageEditor";
-import { loadFullTimelineIcons } from "../../../core/widgets/core/timeline";
+import { loadFullTimelineIcons } from "../../../core/services/renderContracts/timelineIcons";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -2191,8 +2191,7 @@ test("B-controls fork per device (Mobile ⇒ sparse override) and the Default se
   await flush();
   const override = (
     readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps as
-      | { levelStyles?: Record<string, Record<string, unknown>> }
-      | undefined
+      { levelStyles?: Record<string, Record<string, unknown>> } | undefined
   )?.levelStyles;
   expect(override?.[1]).toEqual({ indicator: "overline" });
   // Base props untouched by the mobile fork.
@@ -2291,8 +2290,7 @@ test("R1(b) linkAlign forks per device (Mobile ⇒ sparse override + Reset), bas
   await flush();
   const override = (
     readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps as
-      | { levelStyles?: Record<string, Record<string, unknown>> }
-      | undefined
+      { levelStyles?: Record<string, Record<string, unknown>> } | undefined
   )?.levelStyles;
   expect(override?.[1]).toEqual({ linkAlign: "right" });
   // Desktop base never mutated by the mobile fork; tablet never inherits mobile.

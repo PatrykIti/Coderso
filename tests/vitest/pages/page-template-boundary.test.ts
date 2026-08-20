@@ -80,10 +80,12 @@ describe("page template boundary", () => {
     const legacySurfaceKinds: PageTemplateBoundarySurfaceKind[] = [
       "widget-template",
       "custom-screen",
-      "detail-page",
     ];
 
     expect(resolveSurfaceDocumentContract("page")).toBe(PAGE_V2_SECTION_BLOCK_CONTRACT);
+    // TASK-580-03-L04: detail pages are Page V2 documents after the render
+    // cutover, so the detail-page surface resolves to the v2 contract too.
+    expect(resolveSurfaceDocumentContract("detail-page")).toBe(PAGE_V2_SECTION_BLOCK_CONTRACT);
     for (const surfaceKind of legacySurfaceKinds) {
       expect(resolveSurfaceDocumentContract(surfaceKind)).toBe(LEGACY_WIDGET_BLOCK_CONTRACT);
       expect(() =>
@@ -93,11 +95,14 @@ describe("page template boundary", () => {
   });
 
   test("rejects Page v2 documents at legacy widget surface boundaries", () => {
-    for (const surfaceKind of ["widget-template", "custom-screen", "detail-page"] as const) {
+    for (const surfaceKind of ["widget-template", "custom-screen"] as const) {
       expect(() => assertLegacyWidgetSurfaceBoundary(surfaceKind, pageDocument())).toThrow(
         "legacy_widget_surface_page_v2_document_invalid"
       );
     }
+    expect(() => assertLegacyWidgetSurfaceBoundary("detail-page", pageDocument())).toThrow(
+      "legacy_widget_surface_kind_invalid"
+    );
     expect(() => assertLegacyWidgetSurfaceBoundary("page", legacyWidgetDocument)).toThrow(
       "legacy_widget_surface_kind_invalid"
     );

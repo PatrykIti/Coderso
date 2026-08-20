@@ -1,4 +1,4 @@
-import type { WidgetBlock } from "../../widgets/types";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
 
 import { type CustomScreenBinding, type CustomScreenDefinition } from "./customScreenSchemas";
 import { isBindingWriteAllowed, resolveCustomScreenBindingContracts } from "./bindingResolver";
@@ -21,7 +21,7 @@ export type CustomScreenCapabilities = {
 };
 
 export function resolveCustomScreenCapabilities(input: {
-  blocks?: WidgetBlock[] | null;
+  blocks?: LegacyWidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
   definition?: CustomScreenDefinition | null;
   listView?: CustomScreenDefinition["listView"] | null;

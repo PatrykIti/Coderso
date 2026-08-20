@@ -196,6 +196,10 @@ export const pageBlockRenderDefaults: Record<PageBlockType, PageBlockRenderDefau
   // carry no baked typography — frame defaults only, mirroring customSvg:194.
   switcher: { ...frameRenderDefaults },
   scrollHint: { ...frameRenderDefaults },
+  // TASK-580-03-L01: legacy-widget is a migration-only read-only placeholder
+  // with no baked typography — frame defaults only. Entry required by the
+  // exhaustive Record<PageBlockType,…> (a missing member breaks root tsc).
+  "legacy-widget": { ...frameRenderDefaults },
 };
 
 /**

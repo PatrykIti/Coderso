@@ -59,8 +59,6 @@ testIfDb(
     expect(defaultFormsOpenAfterCreate).toBe(true);
     const defaultMedia = await getUserSetting(userId, "media.openAfterUpload");
     expect(defaultMedia).toBe(false);
-    const defaultFavorites = await getUserSetting(userId, "widgets.favorites");
-    expect(defaultFavorites).toEqual([]);
     const defaultHeroPresets = await getUserSetting(userId, "widgets.hero.presets");
     expect(defaultHeroPresets).toEqual([]);
     const defaultPostEditorPreferences = await getUserSetting(userId, "posts.editor.preferences");
@@ -98,7 +96,6 @@ testIfDb(
     await setUserSetting(userId, "customScreens.openAfterCreate", false);
     await setUserSetting(userId, "forms.openAfterCreate", false);
     await setUserSetting(userId, "media.openAfterUpload", true);
-    await setUserSetting(userId, "widgets.favorites", ["hero", "footer"]);
     await setUserSetting(userId, "widgets.hero.presets", [
       {
         name: "Homepage Hero",
@@ -135,8 +132,6 @@ testIfDb(
     expect(updatedFormsOpenAfterCreate).toBe(false);
     const updatedMedia = await getUserSetting(userId, "media.openAfterUpload");
     expect(updatedMedia).toBe(true);
-    const updatedFavorites = await getUserSetting(userId, "widgets.favorites");
-    expect(updatedFavorites).toEqual(["hero", "footer"]);
     const updatedHeroPresets = (await getUserSetting(userId, "widgets.hero.presets")) as Array<{
       data: Record<string, unknown>;
     }>;
@@ -191,7 +186,6 @@ testIfDb(
     expect(list["customScreens.openAfterCreate"]).toBe(false);
     expect(list["forms.openAfterCreate"]).toBe(false);
     expect(list["media.openAfterUpload"]).toBe(true);
-    expect(list["widgets.favorites"]).toEqual(["hero", "footer"]);
     expect(list["widgets.hero.presets"]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -309,7 +303,7 @@ testIfDb("rejects unknown key", async () => {
   );
 });
 
-testIfDb("rejects invalid widget favorites", async () => {
+testIfDb("rejects the retired widgets.favorites key", async () => {
   const userId = randomUUID();
   cleanupUserIds.push(userId);
 
@@ -320,11 +314,11 @@ testIfDb("rejects invalid widget favorites", async () => {
   });
 
   await expect(setUserSetting(userId, "widgets.favorites", "hero")).rejects.toThrow(
-    "user_settings_value_invalid"
+    "user_settings_key_invalid"
   );
 
-  await expect(setUserSetting(userId, "widgets.favorites", ["", "hero"])).rejects.toThrow(
-    "user_settings_value_invalid"
+  await expect(setUserSetting(userId, "widgets.favorites", ["hero", "footer"])).rejects.toThrow(
+    "user_settings_key_invalid"
   );
 
   await expect(
@@ -333,7 +327,7 @@ testIfDb("rejects invalid widget favorites", async () => {
       "widgets.favorites",
       Array.from({ length: 51 }, (_, index) => `widget-${index}`)
     )
-  ).rejects.toThrow("user_settings_value_invalid");
+  ).rejects.toThrow("user_settings_key_invalid");
 });
 
 testIfDb("rejects invalid hero presets", async () => {

@@ -1,0 +1,34 @@
+{
+  "case": "empty-blocks",
+  "v1": {
+    "schemaVersion": 1,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Fixture detail page",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "fixture-type",
+    "status": "draft",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "blocks": [],
+    "bindings": []
+  },
+  "expected": {
+    "schemaVersion": 2,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Fixture detail page",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "fixture-type",
+    "status": "draft",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "sections": [],
+    "bindings": []
+  },
+  "dropped": []
+}

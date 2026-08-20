@@ -97,7 +97,7 @@ const createDocument = (overrides: Partial<DetailPageDocument> = {}) =>
     ...overrides,
   });
 
-test("resolveDetailPageBlocks writes entry fields into widget props", async () => {
+test("resolveDetailPageBlocks writes entry fields into block props", async () => {
   const document = createDocument({
     bindings: [
       {
@@ -121,8 +121,13 @@ test("resolveDetailPageBlocks writes entry fields into widget props", async () =
     preview: false,
   });
 
-  expect(resolved[0]?.data).toMatchObject({
-    headline: "Bound headline",
+  expect(resolved[0]?.type).toBe("hero");
+  expect(resolved[0]?.blocks[0]).toMatchObject({
+    id: "hero-heading",
+    type: "heading",
+  });
+  expect(resolved[0]?.blocks[0]?.props).toMatchObject({
+    text: "Bound headline",
   });
 });
 
@@ -142,7 +147,7 @@ test("resolveDetailPageBlocks binds entry meta and detail href through the curre
       {
         id: "binding-href",
         blockId: "hero",
-        propPath: "cta.href",
+        propPath: "primaryCta.href",
         source: {
           kind: "computed",
           resolver: "detailHref",
@@ -152,7 +157,7 @@ test("resolveDetailPageBlocks binds entry meta and detail href through the curre
       {
         id: "binding-published-at",
         blockId: "hero",
-        propPath: "meta.publishedAt",
+        propPath: "badge.label",
         source: {
           kind: "entry-meta",
           field: "publishedAt",
@@ -177,10 +182,15 @@ test("resolveDetailPageBlocks binds entry meta and detail href through the curre
     ],
   });
 
-  expect(resolved[0]?.data).toMatchObject({
-    headline: "Sample product",
-    cta: { href: "/products/sample-product" },
-    meta: { publishedAt: "2026-05-08T10:00:00.000Z" },
+  const byId = new Map(resolved[0]?.blocks.map((block) => [block.id, block.props]) ?? []);
+  expect(byId.get("hero-heading")).toMatchObject({
+    text: "Sample product",
+  });
+  expect(byId.get("hero-button")).toMatchObject({
+    href: "/products/sample-product",
+  });
+  expect(byId.get("hero-badge")).toMatchObject({
+    text: "2026-05-08T10:00:00.000Z",
   });
 });
 
@@ -190,7 +200,7 @@ test("resolveDetailPageBlocks uses entry ids for detailHref when the content rou
       {
         id: "binding-href",
         blockId: "hero",
-        propPath: "cta.href",
+        propPath: "primaryCta.href",
         source: {
           kind: "computed",
           resolver: "detailHref",
@@ -215,8 +225,11 @@ test("resolveDetailPageBlocks uses entry ids for detailHref when the content rou
     ],
   });
 
-  expect(resolved[0]?.data).toMatchObject({
-    cta: { href: "/products/entry-1" },
+  const buttonProps = new Map(
+    resolved[0]?.blocks.map((block) => [block.id, block.props]) ?? []
+  ).get("hero-button");
+  expect(buttonProps).toMatchObject({
+    href: "/products/entry-1",
   });
 });
 
@@ -256,7 +269,7 @@ test("resolveDetailPageBlocks uses fallback for optional missing bindings", asyn
       {
         id: "binding-fallback",
         blockId: "hero",
-        propPath: "subhead",
+        propPath: "body",
         source: {
           kind: "entry-field",
           field: "summary",
@@ -274,8 +287,12 @@ test("resolveDetailPageBlocks uses fallback for optional missing bindings", asyn
     preview: false,
   });
 
-  expect(resolved[0]?.data).toMatchObject({
-    subhead: "Fallback summary",
+  expect(resolved[0]?.blocks[1]).toMatchObject({
+    id: "hero-text",
+    type: "text",
+  });
+  expect(resolved[0]?.blocks[1]?.props).toMatchObject({
+    text: "Fallback summary",
   });
 });
 
@@ -330,7 +347,7 @@ test("resolveDetailPageBlocks removes empty optional hero media before public re
   });
 
   expect(resolved[0]?.variant).toBe("centered");
-  expect((resolved[0]?.data as Record<string, unknown> | undefined)?.media).toBeUndefined();
+  expect(resolved[0]?.blocks.some((block) => block.type === "image")).toBe(false);
 });
 
 test("resolveDetailPageBlocks filters non-curated cover image urls before public render", async () => {
@@ -389,7 +406,7 @@ test("resolveDetailPageBlocks filters non-curated cover image urls before public
   });
 
   expect(resolved[0]?.variant).toBe("centered");
-  expect((resolved[0]?.data as Record<string, unknown> | undefined)?.media).toBeUndefined();
+  expect(resolved[0]?.blocks.some((block) => block.type === "image")).toBe(false);
 });
 
 test("detail page bindings reject secret-like field paths during document normalization", () => {
@@ -433,25 +450,31 @@ test("resolveDetailPageBlocks mirrors resolveFormRuntimeData for formContext bin
     blocks: [
       {
         id: "form-block",
-        type: "form-embed",
+        type: "contact",
         data: {
-          formId: "form-1",
+          form: {
+            submission: {
+              formId: "form-1",
+            },
+          },
         },
-      },
-    ],
-    bindings: [
-      {
-        id: "binding-form-context",
-        blockId: "form-block",
-        propPath: "resolved",
-        source: {
-          kind: "computed",
-          resolver: "formContext",
-        },
-        required: true,
       },
     ],
   });
+  // Computed formContext bindings are not part of the v1→v2 binding remap;
+  // inject the binding after conversion so it targets the converted form block.
+  document.bindings = [
+    {
+      id: "binding-form-context",
+      blockId: "form-block-form",
+      propPath: "formId",
+      source: {
+        kind: "computed",
+        resolver: "formContext",
+      },
+      required: true,
+    },
+  ];
 
   const resolved = await resolveDetailPageBlocks(
     {
@@ -468,9 +491,13 @@ test("resolveDetailPageBlocks mirrors resolveFormRuntimeData for formContext bin
   );
 
   expect(resolveFormRuntimeData).toHaveBeenCalledWith("form-1", { preview: false });
-  expect(resolved[0]?.data).toMatchObject({
-    formId: "form-1",
-    resolved: {
+  const formBlock = resolved[0]?.blocks[0];
+  expect(formBlock).toMatchObject({
+    id: "form-block-form",
+    type: "form",
+  });
+  expect(formBlock?.props).toMatchObject({
+    formId: expect.objectContaining({
       formId: "form-1",
       submissionNonce: "nonce-1",
       botProtection: {
@@ -478,7 +505,7 @@ test("resolveDetailPageBlocks mirrors resolveFormRuntimeData for formContext bin
         siteKey: "site-key-1",
         action: "public_write",
       },
-    },
+    }),
   });
 });
 
@@ -539,7 +566,12 @@ test("resolveDetailPageRelatedItems reuses published collection entries and clam
           resolver: "relatedItems",
         },
       },
-      block: document.blocks[0]!,
+      block: {
+        id: "related-block",
+        type: "collection",
+        props: {},
+        visibility: { visible: true },
+      },
       schemaFields: new Map(),
     },
     {

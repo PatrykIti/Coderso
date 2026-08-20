@@ -13,9 +13,6 @@ import {
   findScreenBlockById,
   updateScreenBlock,
 } from "../customScreens/screenDocumentOps";
-import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
-import { normalizeWidgetBlock } from "../../widgets/validator";
-import type { WidgetBlock } from "../../widgets/types";
 import type { AssistantCustomScreenUpdateAction } from "./actionPlanTypes";
 import type { ScreenBlockDataPatchResult } from "./actionExecutorTypes";
 
@@ -199,9 +196,4 @@ export const applyCustomScreenUpdatePatch = (
     showInSidebar: patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
     sidebarLabel: patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
   };
-};
-
-export const normalizeAssistantPagePatchBlock = (block: WidgetBlock) => {
-  ensureRuntimeWidgetsRegistered();
-  return normalizeWidgetBlock(block);
 };

@@ -59,12 +59,6 @@ import {
   upsertSeoDocument,
 } from "../seo/seoService";
 import {
-  deleteWidgetTemplate,
-  getWidgetTemplate,
-  listWidgetTemplates,
-  updateWidgetTemplate,
-} from "../widgets/widgetTemplateService";
-import {
   countFormSubmissions,
   createForm,
   deleteForm,
@@ -153,10 +147,6 @@ const defaultDeps: ActionExecutorDeps = {
   updatePage,
   publishPage,
   unpublishPage,
-  getWidgetTemplate,
-  listWidgetTemplates,
-  deleteWidgetTemplate,
-  updateWidgetTemplate,
   getForm,
   listForms,
   countFormSubmissions,

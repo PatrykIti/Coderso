@@ -48,8 +48,6 @@ const breadcrumbHrefByLabel: Record<string, string> = {
   Entries: "/advanced/entries",
   Screens: "/advanced/custom-screens",
   "Custom Screens": "/advanced/custom-screens",
-  Widgets: "/advanced/widgets",
-  Library: "/advanced/widgets",
   "Page Templates": "/advanced/page-templates",
   Listings: "/advanced/listings",
   Filters: "/advanced/filters",

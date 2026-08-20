@@ -18,13 +18,7 @@ export type GuidedSiteBuilderPlanInput = SiteBuilderPlanInput & {
 };
 
 export type GuidedSiteBuilderActionTarget =
-  | "settings"
-  | "content_type"
-  | "form"
-  | "page"
-  | "menu"
-  | "template"
-  | "qa";
+  "settings" | "content_type" | "form" | "page" | "menu" | "qa";
 
 export type GuidedSiteBuilderAction = {
   id: string;
@@ -110,14 +104,6 @@ const slugToDisplay = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed || trimmed === "/") return "home";
   return trimmed.replace(/^\/+/, "").replace(/\/+$/, "") || "home";
-};
-
-export const collectGuidedSiteBuilderTemplateKeys = (kit: SolutionKitDefinition) => {
-  const fromPages = kit.resourceBlueprint.pages.map((page) => page.template ?? null);
-  const fromBlueprint = (kit.resourceBlueprint.templates ?? []).map(
-    (template) => template.key ?? null
-  );
-  return normalizeGuidedSiteBuilderList([...fromPages, ...fromBlueprint]);
 };
 
 const buildActionId = (
@@ -228,18 +214,6 @@ const buildActions = (
           slugToDisplay(page.slug),
           `Upsert page: ${page.title}`,
           "Sync page data, publish state, and SEO defaults.",
-          required
-        )
-      );
-    }
-    for (const templateKey of collectGuidedSiteBuilderTemplateKeys(kit)) {
-      actions.push(
-        createAction(
-          "pages",
-          "template",
-          templateKey,
-          `Upsert template seed: ${templateKey}`,
-          "Sync reusable widget template seed for this kit.",
           required
         )
       );

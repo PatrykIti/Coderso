@@ -44,10 +44,7 @@ import type { AssistantSiteKitAdvancedRuntimeOverrides } from "./siteBuilderAdva
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
-  | "docs_question"
-  | "setup_request"
-  | "refinement_request"
-  | "unknown";
+  "docs_question" | "setup_request" | "refinement_request" | "unknown";
 export type AssistantIntentFamily =
   | "catalog_showcase"
   | "product_catalog"
@@ -112,13 +109,7 @@ export type AssistantActionContext = {
 };
 
 export type AssistantAdminRuntimeActionKind =
-  | "navigate"
-  | "create"
-  | "edit"
-  | "publish"
-  | "delete"
-  | "execute"
-  | "configure";
+  "navigate" | "create" | "edit" | "publish" | "delete" | "execute" | "configure";
 
 export type AssistantAdminRuntimeSelectedResource = {
   kind: string;
@@ -162,8 +153,7 @@ export type AssistantAdminRuntimeSnapshot = {
 };
 
 export type AssistantActionRuntimeSnapshot =
-  | AssistantAdminRuntimeSnapshot
-  | AssistantAdminRuntimeSnapshotLegacy;
+  AssistantAdminRuntimeSnapshot | AssistantAdminRuntimeSnapshotLegacy;
 
 export type AssistantActiveSurfaceBlockSummary = {
   id: string;
@@ -218,24 +208,6 @@ export type AssistantActivePageSurfaceContext = {
   selectedBlockId: string | null;
   selectedBlockPath?: string | null;
   sections: AssistantActivePageSectionSummary[];
-  warnings: string[];
-};
-
-export type AssistantActiveWidgetTemplateSurfaceContext = {
-  kind: "widget-template";
-  template: {
-    id: string;
-    name: string;
-    status: string;
-    category: string;
-  };
-  selectedBlockId: string | null;
-  blocks: AssistantActiveSurfaceBlockSummary[];
-  settings: {
-    wrapperContainer: string | null;
-    sectionGap: string | null;
-    hasBackgroundMedia: boolean;
-  };
   warnings: string[];
 };
 
@@ -297,7 +269,6 @@ export type AssistantActiveDetailPageSurfaceContext = {
 
 export type AssistantActiveSurfaceContext =
   | AssistantActivePageSurfaceContext
-  | AssistantActiveWidgetTemplateSurfaceContext
   | AssistantActiveCustomScreenSurfaceContext
   | AssistantActiveDetailPageSurfaceContext;
 
@@ -1057,58 +1028,6 @@ export type AssistantPageDeleteAction = {
   };
 };
 
-export type AssistantWidgetTemplateDeleteAction = {
-  id: string;
-  type: "widget-template.delete";
-  title: string;
-  description: string;
-  input: {
-    id: string;
-    name: string;
-    expectedStatus?: string | null;
-    expectedCategory?: string | null;
-  };
-};
-
-export type AssistantWidgetTemplateUpdateAction = {
-  id: string;
-  type: "widget-template.update";
-  title: string;
-  description: string;
-  input: {
-    id: string;
-    name: string;
-    expectedStatus?: string | null;
-    expectedCategory?: string | null;
-    patch: {
-      name?: string;
-      description?: string | null;
-      category?: string;
-      status?: "draft" | "published";
-      settings?: {
-        wrapperContainer?: "default" | "narrow" | "full";
-        sectionGap?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
-      };
-    };
-  };
-};
-
-export type AssistantWidgetTemplateBlockPatchAction = {
-  id: string;
-  type: "widget-template.block.patch";
-  title: string;
-  description: string;
-  input: {
-    id: string;
-    name: string;
-    expectedStatus?: string | null;
-    blockId: string;
-    expectedBlockType?: string | null;
-    dataPath: string[];
-    value: string | number | boolean | null;
-  };
-};
-
 export type AssistantSiteKitRecommendAction = {
   id: string;
   type: "site-kit.recommend";
@@ -1181,9 +1100,6 @@ export type AssistantPlannedAction =
   | AssistantDetailPageUpsertAction
   | AssistantPageUpdateAction
   | AssistantPageDeleteAction
-  | AssistantWidgetTemplateDeleteAction
-  | AssistantWidgetTemplateUpdateAction
-  | AssistantWidgetTemplateBlockPatchAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction
   | AssistantSiteKitValidateAction;
@@ -1204,8 +1120,7 @@ export type AssistantActionContractFamily =
   | "entry"
   | "menu"
   | "seo"
-  | "media"
-  | "widget-template";
+  | "media";
 
 export type AssistantActionPermissionModel = {
   plan: readonly string[];
@@ -1245,7 +1160,6 @@ export type AssistantBlueprintCompositionResourceKind =
   | "form"
   | "menu"
   | "seo"
-  | "widget-template"
   | "site-kit";
 
 export type AssistantBlueprintCompositionConflictMetadata = {
@@ -1424,11 +1338,7 @@ export type AssistantPlanningState = {
 };
 
 export type AssistantActionPlanResponseKind =
-  | "action_plan"
-  | "inspection"
-  | "needs_input"
-  | "docs"
-  | "gated";
+  "action_plan" | "inspection" | "needs_input" | "docs" | "gated";
 
 export type AssistantActionPlan = {
   id: string;

@@ -1,4 +1,4 @@
-import type { WidgetBlock } from "../../widgets/types";
+import type { LegacyWidgetBlock } from "../../services/renderContracts/legacyWidgetBlock";
 import type { ContentRouteSetting } from "../../services/settings/settingsContracts";
 import { getSetting } from "../../services/settings/settingsService";
 import { matchContentRoute } from "../contentRouteMatcher";
@@ -11,7 +11,7 @@ export type SiteCacheEntry = {
   expiresAt: number;
 };
 
-const hasRuntimeSubmissionNonce = (block: WidgetBlock): boolean => {
+const hasRuntimeSubmissionNonce = (block: LegacyWidgetBlock): boolean => {
   const blockData =
     block.data && typeof block.data === "object" && !Array.isArray(block.data)
       ? (block.data as Record<string, unknown>)
@@ -207,9 +207,6 @@ export const getSiteCacheEntry = (key: string, now?: number) => cache.get(key, n
 export const setSiteCacheEntry = (key: string, value: string, ttlSeconds: number, now?: number) => {
   cache.set(key, value, ttlSeconds, now);
 };
-
-export const blocksAllowSiteHtmlCache = (blocks: WidgetBlock[]) =>
-  !blocks.some(hasRuntimeSubmissionNonce);
 
 export const clearSiteCache = () => {
   cache.clear();

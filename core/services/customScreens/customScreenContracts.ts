@@ -1,4 +1,4 @@
-import type { WidgetBlock } from "../../widgets/types";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
 
 export const customScreenBindingModes = ["read", "write", "readwrite"] as const;
 
@@ -64,7 +64,7 @@ export type ScreenFieldBinding = {
 
 export type CustomScreenDefinitionV1 = {
   schemaVersion: 1;
-  blocks: WidgetBlock[];
+  blocks: LegacyWidgetBlock[];
   bindings: CustomScreenBinding[];
 };
 
@@ -112,7 +112,7 @@ export type CustomScreenListViewDefinitionV2 = CustomScreenListViewDefinition & 
 };
 
 export type CustomScreenEditorViewDefinition = {
-  blocks: WidgetBlock[];
+  blocks: LegacyWidgetBlock[];
   bindings: CustomScreenBinding[];
   saveMode: "entry";
   interactionMode: "inline";
@@ -125,9 +125,9 @@ export type ScreenBlockV1 = {
   variant?: string;
   style?: ScreenBlockStyleV1;
   data: Record<string, unknown>;
-  layout?: WidgetBlock["layout"];
-  visibility?: WidgetBlock["visibility"];
-  editor?: WidgetBlock["editor"];
+  layout?: LegacyWidgetBlock["layout"];
+  visibility?: LegacyWidgetBlock["visibility"];
+  editor?: LegacyWidgetBlock["editor"];
   legacyWidgetType?: string;
   children?: ScreenBlockV1[];
   slots?: Record<string, ScreenBlockV1[]>;
@@ -138,8 +138,8 @@ export type ScreenSectionV1 = {
   type: "section";
   label?: string;
   data: Record<string, unknown>;
-  layout?: WidgetBlock["layout"];
-  visibility?: WidgetBlock["visibility"];
+  layout?: LegacyWidgetBlock["layout"];
+  visibility?: LegacyWidgetBlock["visibility"];
   style?: ScreenSectionStyleV1;
   blocks: ScreenBlockV1[];
 };
@@ -160,7 +160,7 @@ export type CustomScreenDefinitionV2 = {
   schemaVersion: 2;
   listView: CustomScreenListViewDefinitionV2;
   editorView: {
-    blocks: WidgetBlock[];
+    blocks: LegacyWidgetBlock[];
     bindings: CustomScreenBinding[];
     saveMode: "entry";
   };
@@ -181,9 +181,7 @@ export type CustomScreenDefinitionV4 = {
 export type CustomScreenDefinition = CustomScreenDefinitionV4;
 
 export type CustomScreenLegacyDefinition =
-  | CustomScreenDefinitionV1
-  | CustomScreenDefinitionV2
-  | CustomScreenDefinitionV3;
+  CustomScreenDefinitionV1 | CustomScreenDefinitionV2 | CustomScreenDefinitionV3;
 
 export type CustomScreenSidebarConfig = {
   showInSidebar: boolean;

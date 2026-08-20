@@ -72,7 +72,7 @@ test("static registry reserves exactly thirteen fixed adapters", async () => {
     "task-492",
     "task-511",
     "task-517",
-    "task-467",
+    "detail-page-v2",
   ]);
   expect(staticSmokeRegistry.require("task-540").adapterPath).toBe(
     "scripts/runtime-smoke/adapters/task-540.ts"
@@ -89,10 +89,12 @@ test("static registry reserves exactly thirteen fixed adapters", async () => {
   const task554 = await staticSmokeRegistry.require("task-554").loadFixedAdapter(process.cwd());
   expect(task554.suiteId).toBe("task-554");
   expect(task554.supportedProfiles).toEqual(["fast", "certification"]);
-  expect(staticSmokeRegistry.require("task-467").adapterPath).toBe(
-    "scripts/runtime-smoke/adapters/task-467.ts"
+  expect(staticSmokeRegistry.require("detail-page-v2").adapterPath).toBe(
+    "scripts/runtime-smoke/adapters/detail-page-v2.ts"
   );
-  const task467 = await staticSmokeRegistry.require("task-467").loadFixedAdapter(process.cwd());
-  expect(task467.suiteId).toBe("task-467");
-  expect(task467.supportedProfiles).toEqual(["fast"]);
+  const detailPageV2 = await staticSmokeRegistry
+    .require("detail-page-v2")
+    .loadFixedAdapter(process.cwd());
+  expect(detailPageV2.suiteId).toBe("detail-page-v2");
+  expect(detailPageV2.supportedProfiles).toEqual(["fast"]);
 });

@@ -1,6 +1,9 @@
 import { resolveMenuItemSettings } from "../menus/menuItemSettings";
-import type { NavigationItem, NavigationItemMeta } from "../../widgets/core/navigation";
-import { normalizeWidgetSafeHref } from "../../widgets/core/widgetSafeHref";
+import type {
+  NavigationItem,
+  NavigationItemMeta,
+} from "../../services/renderContracts/navigationRenderer";
+import { normalizeWidgetSafeHref } from "../../services/renderContracts/widgetSafeHref";
 
 export type NavigationMenuNodeLike = {
   label: string;

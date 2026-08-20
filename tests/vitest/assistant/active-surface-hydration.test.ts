@@ -272,20 +272,21 @@ test("hydrateAssistantActiveSurfaceContext drops missing active resources", asyn
   const context = await hydrateAssistantActiveSurfaceContext(
     {
       activeSurface: {
-        kind: "widget-template",
-        template: {
+        kind: "custom-screen",
+        screen: {
           id: "missing",
           name: "Missing",
-          status: "draft",
-          category: "Marketing",
+          status: "active",
+          contentTypeId: "type-1",
+          showInSidebar: true,
+          sidebarLabel: "Missing",
+          mode: "editor",
         },
+        selectedEntryId: null,
         selectedBlockId: null,
         blocks: [],
-        settings: {
-          wrapperContainer: "default",
-          sectionGap: "md",
-          hasBackgroundMedia: false,
-        },
+        bindings: [],
+        writableBindingFields: [],
         warnings: [],
       },
     },

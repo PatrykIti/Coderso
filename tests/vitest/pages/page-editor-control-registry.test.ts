@@ -76,7 +76,7 @@ import {
   getPageSectionVariantOptions,
   pageSectionTemplateRegistry,
 } from "../../../core/services/pages/pageSectionTemplates";
-import { FORM_EMBED_SUCCESS_BEHAVIORS } from "../../../core/widgets/core/formEmbedContract";
+import { FORM_EMBED_SUCCESS_BEHAVIORS } from "../../../core/services/renderContracts/formEmbedContract";
 import { blockOptionCopy } from "../../../core/admin/ui/pages/editor/pageEditorOptions";
 
 const validSectionPaths = new Set([
@@ -545,8 +545,12 @@ describe("page editor control registry", () => {
     // this set (renderer case + palette + controls shipped). TASK-534 promoted
     // "gallery" out (filter/layout controls shipped). Any further promotion
     // requires an explicit capability change and follow-on task, exactly like those.
+    // TASK-580-03-L01: "legacy-widget" joins the gated set BY DESIGN — it is a
+    // migration-only read-only placeholder, never editor-insertable (reason
+    // "unsupported", the derived default).
     const gatedBlockReasons = {
       embed: "embed-editor-controls-pending",
+      "legacy-widget": "unsupported",
     } as const;
 
     expect(pageBlockTypes.filter((type) => !pageBlockCapabilities[type].editorInsertable)).toEqual(

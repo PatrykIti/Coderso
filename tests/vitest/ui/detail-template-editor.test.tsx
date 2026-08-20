@@ -12,10 +12,15 @@ import type { ContentTypeSummary } from "../../../core/admin/services/contentTyp
 import type { EntrySummary } from "../../../core/admin/services/entriesClient";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import {
-  normalizeDetailTemplateBlocks,
+  buildDetailTemplateDocumentUpdate,
   normalizeDetailTemplateDocument,
 } from "../../../core/admin/ui/content-types/detailTemplateEditorModel";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
+import {
+  createPageBlockV2,
+  createPageSectionV2,
+  type PageSectionV2,
+} from "../../../core/services/pages/pageDocumentV2";
 
 type CacheEvent = {
   key: string;
@@ -185,6 +190,15 @@ vi.mock("@/services/contentTypesClient", () => ({
   listContentTypesCached: detailTemplateState.listContentTypesCached,
 }));
 
+vi.mock("@/services/formsClient", () => ({
+  getCachedForms: () => null,
+}));
+
+vi.mock("@/services/listingsClient", () => ({
+  getCachedListingQueries: () => null,
+  getCachedListingTemplates: () => null,
+}));
+
 vi.mock("@/services/apiClient", () => ({
   isApiClientError: (error: unknown) =>
     Boolean(error && typeof error === "object" && "kind" in error),
@@ -334,102 +348,12 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
     ) : null,
 }));
 
-vi.mock("@/ui/pages/builder/BlockList", () => ({
-  BlockList: ({
-    blocks,
-    selectedId,
-    onSelect,
-    onDuplicate,
-    onDelete,
-  }: {
-    blocks: Array<{ id: string; type: string }>;
-    selectedId?: string | null;
-    onSelect: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onDelete: (id: string) => void;
-  }) => (
-    <div>
-      <span>{`block-count:${blocks.length}`}</span>
-      <span>{`block-types:${blocks.map((block) => block.type).join(",")}`}</span>
-      <span>{`selected-block:${selectedId ?? "none"}`}</span>
-      <button type="button" onClick={() => onSelect(blocks[0]?.id ?? "missing")}>
-        select-first-block
-      </button>
-      <button type="button" onClick={() => onDuplicate(blocks[0]?.id ?? "missing")}>
-        duplicate-first-block
-      </button>
-      <button type="button" onClick={() => onDelete(blocks[0]?.id ?? "missing")}>
-        delete-first-block
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("@/ui/pages/builder/BlockSettings", () => ({
-  BlockSettings: ({
-    block,
-    widget,
-    onChange,
-  }: {
-    block?: { id: string; type: string } | null;
-    widget?: { type: string } | null;
-    onChange: (next: { id: string; type: string }) => void;
-  }) => (
-    <div>
-      <span>{`settings-block:${block?.type ?? "none"}`}</span>
-      <span>{`settings-widget:${widget?.type ?? "none"}`}</span>
-      <button
-        type="button"
-        onClick={() => {
-          if (!block) return;
-          onChange({ ...block, type: "compare-timeline" });
-        }}
-      >
-        mutate-selected-block
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("@/ui/pages/builder/LibraryPanel", () => ({
-  LibraryPanel: ({
-    onAddWidget,
-    onAddForm,
-  }: {
-    onAddWidget: (type: string) => void;
-    onAddForm: (form: { id: string; name: string }) => void;
-  }) => (
-    <div>
-      <button type="button" onClick={() => onAddWidget("hero")}>
-        add-widget
-      </button>
-      <button type="button" onClick={() => onAddForm({ id: "form-1", name: "Lead Form" })}>
-        add-form
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("@/ui/pages/builder/widgetRegistry", () => ({
-  getWidgetRegistry: () => [
-    { type: "hero" },
-    { type: "compare-timeline" },
-    { type: "template-section" },
-    { type: "form-embed" },
-  ],
-}));
-
-vi.mock("../../../core/widgets/validator", () => ({
-  normalizeWidgetBlock: <T,>(block: T) => block,
-}));
-
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import {
   clearActiveAssistantSurfaceContext,
   getActiveAssistantSurfaceContext,
 } from "../../../core/admin/ui/assistant/activeSurfaceContext";
 import { DetailTemplateEditorPage } from "../../../core/admin/ui/content-types/DetailTemplateEditorPage";
-import { buildDetailTemplateDocumentUpdate } from "../../../core/admin/ui/content-types/detailTemplateEditorModel";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -454,11 +378,50 @@ const layout = {
   applyDefaultsToNewBlocks: false,
 } satisfies DetailPageDocument["settings"]["layout"];
 
+const createSection = (overrides: Partial<PageSectionV2> = {}): PageSectionV2 =>
+  createPageSectionV2("hero", {
+    id: "section-hero",
+    name: "Hero section",
+    variant: "centered",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "block-heading",
+        props: { text: "Product heading", level: "h2", align: "left" },
+      }),
+      createPageBlockV2("button", {
+        id: "block-cta",
+        props: {
+          label: "Shop now",
+          href: "/shop",
+          target: "_self",
+          variant: "primary",
+          size: "md",
+        },
+      }),
+    ],
+    ...overrides,
+  });
+
+const createLegacySection = (): PageSectionV2 =>
+  createPageSectionV2("custom", {
+    id: "section-legacy",
+    name: "Legacy section",
+    blocks: [
+      createPageBlockV2("legacy-widget", {
+        id: "block-legacy",
+        props: {
+          legacyWidgetType: "totally-custom-widget",
+          data: { note: "preserved verbatim" },
+        },
+      }),
+    ],
+  });
+
 const createDocument = (overrides: Partial<DetailPageDocument> = {}): DetailPageDocument => ({
-  schemaVersion: 1,
-  id: "detail-products",
+  schemaVersion: 2,
+  id: "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
   name: "Product detail template",
-  contentTypeId: "ct-products",
+  contentTypeId: "6f9619ff-8b86-4a11-b42d-00c04fc964f0",
   contentTypeSlug: "products",
   status: "draft",
   titlePattern: "{title}",
@@ -466,14 +429,7 @@ const createDocument = (overrides: Partial<DetailPageDocument> = {}): DetailPage
     template: "detail",
     layout,
   },
-  blocks: [
-    {
-      id: "block-hero",
-      type: "hero",
-      data: { headline: "Product" },
-      editor: { mode: "visual", wizardCompleted: true },
-    },
-  ],
+  sections: [createSection()],
   bindings: [],
   ...overrides,
 });
@@ -485,8 +441,8 @@ const createRecord = (overrides: Partial<DetailPageRecord> = {}): DetailPageReco
       status: overrides.status ?? "draft",
     });
   return {
-    id: "detail-products",
-    contentTypeId: "ct-products",
+    id: "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
+    contentTypeId: "6f9619ff-8b86-4a11-b42d-00c04fc964f0",
     contentTypeSlug: "products",
     name: currentDocument.name,
     status: currentDocument.status,
@@ -502,7 +458,7 @@ const createRecord = (overrides: Partial<DetailPageRecord> = {}): DetailPageReco
 
 const createEntry = (overrides: Partial<EntrySummary> = {}): EntrySummary => ({
   id: "entry-product-1",
-  typeId: "ct-products",
+  typeId: "6f9619ff-8b86-4a11-b42d-00c04fc964f0",
   title: "Sample Product",
   slug: "sample-product",
   status: "published",
@@ -515,7 +471,7 @@ const createEntry = (overrides: Partial<EntrySummary> = {}): EntrySummary => ({
 });
 
 const createContentType = (overrides: Partial<ContentTypeSummary> = {}): ContentTypeSummary => ({
-  id: "ct-products",
+  id: "6f9619ff-8b86-4a11-b42d-00c04fc964f0",
   name: "Products",
   slug: "products",
   status: "published",
@@ -538,7 +494,7 @@ const createRevision = (
   overrides: Partial<DetailPageRevisionSummary> = {}
 ): DetailPageRevisionSummary => ({
   id: "rev-1",
-  detailPageId: "detail-products",
+  detailPageId: "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
   version: 1,
   kind: "publish",
   createdAt: "2026-05-10T10:00:00.000Z",
@@ -587,7 +543,6 @@ const flush = async () => {
   await React.act(async () => {
     await Promise.resolve();
     await Promise.resolve();
-    await Promise.resolve();
   });
 };
 
@@ -598,6 +553,14 @@ const clickButton = (container: HTMLElement, label: string) => {
   if (!button) throw new Error(`Missing button: ${label}`);
   React.act(() => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const clickBySelector = (container: HTMLElement, selector: string) => {
+  const element = container.querySelector<HTMLElement>(selector);
+  if (!element) throw new Error(`Missing element: ${selector}`);
+  React.act(() => {
+    element.click();
   });
 };
 
@@ -612,103 +575,164 @@ const changeSelect = (container: HTMLElement, optionValue: string) => {
   });
 };
 
-test("detail template normalization treats legacy blocks without editor state as setup-complete", () => {
-  const [legacyBlock] = normalizeDetailTemplateBlocks([
-    {
-      id: "block-faq",
-      type: "faq-accordion",
-      data: {},
-    },
-  ]);
-  const [incompleteBlock] = normalizeDetailTemplateBlocks([
-    {
-      id: "block-new-faq",
-      type: "faq-accordion",
-      data: {},
-      editor: { mode: "wizard", wizardCompleted: false },
-    },
-  ]);
+const changeAddBlockSelect = (container: HTMLElement, blockType: string) => {
+  const select = container.querySelector<HTMLSelectElement>("[data-detail-template-add-block]");
+  if (!select) throw new Error("Missing add-block select");
+  React.act(() => {
+    select.value = blockType;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
 
-  expect(legacyBlock?.editor).toEqual({ mode: "visual", wizardCompleted: true });
-  expect(incompleteBlock?.editor).toEqual({ mode: "wizard", wizardCompleted: false });
+const changeInputByLabel = (container: HTMLElement, labelText: string, value: string) => {
+  const label = Array.from(container.querySelectorAll("label")).find((candidate) =>
+    candidate.textContent?.includes(labelText)
+  );
+  const input = label?.querySelector<HTMLInputElement>("input");
+  if (!input) throw new Error(`Missing input for label: ${labelText}`);
+  React.act(() => {
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+};
+
+test("detail template read normalization converts v1 hero widgets to V2 hero sections", () => {
+  const record = createRecord({
+    currentDocument: {
+      schemaVersion: 1,
+      id: "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
+      name: "Product detail template",
+      contentTypeId: "6f9619ff-8b86-4a11-b42d-00c04fc964f0",
+      contentTypeSlug: "products",
+      status: "draft",
+      titlePattern: "{title}",
+      settings: { template: "detail", layout },
+      blocks: [
+        {
+          id: "block-hero",
+          type: "hero",
+          data: {
+            headline: "Product",
+            primaryCta: { label: "Shop now", href: "/shop" },
+          },
+        },
+      ],
+      bindings: [],
+    } as unknown as DetailPageDocument,
+  });
+
+  const document = normalizeDetailTemplateDocument(record);
+  expect(document.schemaVersion).toBe(2);
+  expect(document.sections).toHaveLength(1);
+  expect(document.sections[0]?.type).toBe("hero");
+  const blocks = document.sections[0]?.blocks ?? [];
+  expect(blocks.map((block) => block.type)).toEqual([
+    "heading",
+    "text",
+    "badge",
+    "button",
+    "image",
+  ]);
+  expect(blocks[0]?.props.text).toBe("Product");
+  expect(blocks[3]?.props.label).toBe("Shop now");
+  expect(blocks[3]?.props.href).toBe("/shop");
 });
 
-test("detail template document normalization keeps legacy FAQ out of daily Wizard tabs", () => {
-  const document = normalizeDetailTemplateDocument(
-    createRecord({
-      currentDocument: createDocument({
-        blocks: [
-          {
-            id: "block-faq",
-            type: "faq-accordion",
-            data: {},
-          },
-        ],
-      }),
-    })
-  );
+test("detail template read normalization keeps unmapped v1 widgets as read-only legacy blocks", () => {
+  const record = createRecord({
+    currentDocument: {
+      schemaVersion: 1,
+      id: "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
+      name: "Product detail template",
+      contentTypeId: "6f9619ff-8b86-4a11-b42d-00c04fc964f0",
+      contentTypeSlug: "products",
+      status: "draft",
+      titlePattern: "{title}",
+      settings: { template: "detail", layout },
+      blocks: [
+        {
+          id: "block-custom",
+          type: "totally-custom-widget",
+          data: { note: "kept verbatim" },
+        },
+      ],
+      bindings: [],
+    } as unknown as DetailPageDocument,
+  });
 
-  expect(document.blocks[0]?.editor).toEqual({ mode: "visual", wizardCompleted: true });
+  const document = normalizeDetailTemplateDocument(record);
+  expect(document.sections).toHaveLength(1);
+  expect(document.sections[0]?.type).toBe("custom");
+  const legacyBlock = document.sections[0]?.blocks[0];
+  expect(legacyBlock?.type).toBe("legacy-widget");
+  expect(legacyBlock?.props.legacyWidgetType).toBe("totally-custom-widget");
+  expect(legacyBlock?.props.data).toEqual({ note: "kept verbatim" });
 });
 
 test("detail template editor hydrates cached detail page and bounded sample entries", async () => {
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
     expect(view.container.textContent).toContain("Product detail template");
     expect(view.container.textContent).toContain("/products");
-    expect(view.container.textContent).toContain("block-count:1");
-    expect(view.container.textContent).toContain("settings-block:hero");
+    expect(view.container.querySelector("[data-detail-template-section]")).not.toBeNull();
+    expect(
+      view.container.querySelector('[data-detail-template-block="block-heading"]')
+    ).not.toBeNull();
+    expect(
+      view.container.querySelector('[data-authoring-layer-node="block-heading"]')
+    ).not.toBeNull();
     await flush();
 
     expect(
       view.container.querySelector("[data-active-href]")?.getAttribute("data-active-href")
     ).toBe("/admin/advanced/engine");
-    expect(detailTemplateState.getDetailPageCached).toHaveBeenCalledWith("detail-products", {
-      force: true,
-    });
+    expect(detailTemplateState.getDetailPageCached).toHaveBeenCalledWith(
+      "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
+      {
+        force: true,
+      }
+    );
     expect(detailTemplateState.listEntriesCached).toHaveBeenCalledWith("products");
     expect(getActiveAssistantSurfaceContext()).toMatchObject({
       kind: "detail-page",
       detailPage: {
-        id: "detail-products",
-        contentTypeId: "ct-products",
+        id: "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
+        contentTypeId: "6f9619ff-8b86-4a11-b42d-00c04fc964f0",
         contentTypeSlug: "products",
       },
       sampleEntryId: "entry-product-1",
-      selectedBlockId: "block-hero",
+      selectedBlockId: "block-heading",
     });
   } finally {
     view.cleanup();
   }
 });
 
-test("detail template editor saves shared builder blocks and previews with selected entry", async () => {
+test("detail template editor saves canvas sections through draft payloads", async () => {
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
     await flush();
-    clickButton(view.container, "add-widget");
-    expect(view.container.textContent).toContain("block-count:2");
+    clickBySelector(view.container, '[data-detail-template-add-section="hero"]');
+    expect(view.container.querySelectorAll("[data-detail-template-section]")).toHaveLength(2);
+    changeAddBlockSelect(view.container, "text");
+    expect(
+      view.container
+        .querySelector('[data-detail-template-section="section-hero"]')
+        ?.querySelectorAll("[data-detail-template-block]")
+    ).toHaveLength(3);
 
     clickButton(view.container, "Save draft");
     await flush();
     const savedDocument = detailTemplateState.updateDetailPage.mock.calls.at(-1)?.[1];
-    expect(savedDocument?.blocks).toHaveLength(2);
-
-    clickButton(view.container, "Preview");
-    await flush();
-    expect(detailTemplateState.previewDetailPage).toHaveBeenCalledWith("detail-products", {
-      sampleEntryId: "entry-product-1",
-      ttlMinutes: 30,
-    });
-    expect(view.container.textContent).toContain(
-      "preview-url:/preview?type=detail-page&token=detail-preview-token"
-    );
+    expect(savedDocument?.sections).toHaveLength(2);
+    expect(savedDocument?.sections[0]?.blocks).toHaveLength(3);
+    expect(savedDocument?.sections[1]?.blocks[0]?.type).toBe("heading");
   } finally {
     view.cleanup();
   }
@@ -716,7 +740,7 @@ test("detail template editor saves shared builder blocks and previews with selec
 
 test("detail template editor saves block field bindings with draft payloads", async () => {
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
@@ -729,13 +753,13 @@ test("detail template editor saves block field bindings with draft payloads", as
     const savedDocument = detailTemplateState.updateDetailPage.mock.calls.at(-1)?.[1];
     expect(savedDocument?.bindings).toEqual([
       expect.objectContaining({
-        blockId: "block-hero",
-        propPath: "headline",
+        blockId: "block-heading",
+        propPath: "text",
         source: { kind: "entry-field", field: "headline" },
         transform: "text",
       }),
     ]);
-    expect(savedDocument?.blocks[0]?.data).toEqual({ headline: "Product" });
+    expect(savedDocument?.sections[0]?.blocks[0]?.props.text).toBe("Product heading");
   } finally {
     view.cleanup();
   }
@@ -745,9 +769,9 @@ test("detail template editor removes bindings for deleted blocks", async () => {
   const document = createDocument({
     bindings: [
       {
-        id: "binding-headline",
-        blockId: "block-hero",
-        propPath: "headline",
+        id: "binding-heading",
+        blockId: "block-heading",
+        propPath: "text",
         source: { kind: "entry-field", field: "headline" },
         transform: "text",
       },
@@ -756,17 +780,17 @@ test("detail template editor removes bindings for deleted blocks", async () => {
   detailTemplateState.cachedRecord = createRecord({ currentDocument: document });
   detailTemplateState.remoteRecord = createRecord({ currentDocument: document });
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
     await flush();
-    clickButton(view.container, "delete-first-block");
+    clickBySelector(view.container, '[aria-label="Delete Product heading"]');
     clickButton(view.container, "Save draft");
     await flush();
 
     const savedDocument = detailTemplateState.updateDetailPage.mock.calls.at(-1)?.[1];
-    expect(savedDocument?.blocks).toEqual([]);
+    expect(savedDocument?.sections[0]?.blocks.map((block) => block.type)).toEqual(["button"]);
     expect(savedDocument?.bindings).toEqual([]);
   } finally {
     view.cleanup();
@@ -788,12 +812,12 @@ test("detail template editor saves published templates through draft payloads", 
     publishedAt: "2026-05-10T11:00:00.000Z",
   });
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
     await flush();
-    clickButton(view.container, "add-widget");
+    clickBySelector(view.container, '[data-detail-template-add-section="hero"]');
     clickButton(view.container, "Save draft");
     await flush();
 
@@ -816,7 +840,7 @@ test("buildDetailTemplateDocumentUpdate downgrades published records to draft up
     {
       name: "Product detail template edited",
       titlePattern: "{title}",
-      blocks: publishedDocument.blocks,
+      sections: publishedDocument.sections,
       bindings: publishedDocument.bindings,
     }
   );
@@ -826,19 +850,19 @@ test("buildDetailTemplateDocumentUpdate downgrades published records to draft up
 
 test("detail template editor publishes through detail pages lifecycle", async () => {
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
     await flush();
-    clickButton(view.container, "add-widget");
+    clickBySelector(view.container, '[data-detail-template-add-section="hero"]');
     clickButton(view.container, "Publish");
     await flush();
 
     expect(detailTemplateState.updateDetailPage).toHaveBeenCalled();
     expect(detailTemplateState.publishDetailPage).toHaveBeenCalledWith(
-      "detail-products",
-      "ct-products"
+      "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
+      "6f9619ff-8b86-4a11-b42d-00c04fc964f0"
     );
     expect(view.container.textContent).toContain("Published");
   } finally {
@@ -848,14 +872,16 @@ test("detail template editor publishes through detail pages lifecycle", async ()
 
 test("detail template editor keeps unsaved edits when cache bus reports remote changes", async () => {
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
     await flush();
-    clickButton(view.container, "add-widget");
+    clickBySelector(view.container, '[data-detail-template-add-section="hero"]');
     React.act(() => {
-      detailTemplateState.triggerCacheEvent(cacheKeys.detailPageDetail("detail-products"));
+      detailTemplateState.triggerCacheEvent(
+        cacheKeys.detailPageDetail("6f9619ff-8b86-4a11-b42d-00c04fc964ff")
+      );
     });
 
     expect(view.container.textContent).toContain("Template changed");
@@ -865,31 +891,61 @@ test("detail template editor keeps unsaved edits when cache bus reports remote c
   }
 });
 
+test("detail template editor renders legacy widgets read-only in canvas and inspector", async () => {
+  const document = createDocument({ sections: [createSection(), createLegacySection()] });
+  detailTemplateState.cachedRecord = createRecord({ currentDocument: document });
+  detailTemplateState.remoteRecord = createRecord({ currentDocument: document });
+  const view = mount(
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
+  );
+
+  try {
+    await flush();
+    expect(
+      view.container.querySelector('[data-detail-template-block-type="legacy-widget"]')
+    ).not.toBeNull();
+    expect(
+      view.container.querySelector('[data-legacy-widget="totally-custom-widget"]')
+    ).not.toBeNull();
+    expect(view.container.querySelector('[data-legacy-reauthor-note="true"]')).not.toBeNull();
+    const legacyBlock = view.container.querySelector('[data-detail-template-block="block-legacy"]');
+    expect(legacyBlock?.querySelector('[aria-label^="Delete"]')).toBeNull();
+    expect(legacyBlock?.querySelector('[aria-label^="Duplicate"]')).toBeNull();
+
+    clickBySelector(view.container, '[data-authoring-layer-node="block-legacy"]');
+    expect(view.container.querySelector('[data-legacy-inspector-note="true"]')).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("detail template editor loads revisions and wires restore and discard actions", async () => {
   const view = mount(
-    "/admin/advanced/engine/ct-products/collection/detail-template/detail-products"
+    "/admin/advanced/engine/6f9619ff-8b86-4a11-b42d-00c04fc964f0/collection/detail-template/6f9619ff-8b86-4a11-b42d-00c04fc964ff"
   );
 
   try {
     await flush();
     clickButton(view.container, "History");
     await flush();
-    expect(detailTemplateState.listDetailPageRevisions).toHaveBeenCalledWith("detail-products");
+    expect(detailTemplateState.listDetailPageRevisions).toHaveBeenCalledWith(
+      "6f9619ff-8b86-4a11-b42d-00c04fc964ff"
+    );
     expect(view.container.textContent).toContain("Version 1");
     expect(view.container.textContent).toContain("Draft version");
 
     clickButton(view.container, "Restore");
     await flush();
     expect(detailTemplateState.restoreDetailPageRevision).toHaveBeenCalledWith(
-      "detail-products",
+      "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
       "rev-published",
-      "ct-products"
+      "6f9619ff-8b86-4a11-b42d-00c04fc964f0"
     );
 
     clickButton(view.container, "Discard");
     await flush();
     expect(detailTemplateState.discardDetailPageRevision).toHaveBeenCalledWith(
-      "detail-products",
+      "6f9619ff-8b86-4a11-b42d-00c04fc964ff",
       "rev-autosave"
     );
   } finally {

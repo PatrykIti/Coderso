@@ -8,7 +8,7 @@ import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import type {
   NavigationMobileMode,
   NavigationVariantId,
-} from "../../widgets/core/navigationContract";
+} from "../../services/renderContracts/navigationContract";
 
 export const ASSISTANT_SITE_BUILDER_INTAKE_VERSION = 1 as const;
 

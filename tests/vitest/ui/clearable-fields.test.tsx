@@ -23,7 +23,7 @@ import {
   isPickerRepresentableColorValue,
   resolveColorContrastAdvisory,
   resolveColorPickerValue,
-} from "../../../core/admin/ui/widgets/editors/ClearableFields";
+} from "../../../core/admin/ui/shared/ClearableFields";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 

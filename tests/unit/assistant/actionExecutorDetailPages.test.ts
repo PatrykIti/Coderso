@@ -7,13 +7,113 @@ import {
   executeAssistantActionPlan,
 } from "../../../core/services/assistant/actionExecutorService";
 import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
-import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
+import type {
+  DetailPageDocument,
+  DetailPageDocumentV1,
+} from "../../../core/services/content/detailPageTypes";
+import type { PageLayoutSettings } from "../../../core/services/pages/layoutSettings";
 
 import { createActionExecutorTestDeps } from "./support/actionExecutorTestDeps";
 
 import { hasPageBlockType } from "./support/actionExecutorFixtures";
 
 const createDeps = () => createActionExecutorTestDeps().deps;
+
+const layoutSettings = {
+  wrapper: {
+    container: "default",
+    padding: { top: "md", bottom: "lg" },
+    background: {
+      color: "#ffffff",
+      image: null,
+      media: {
+        type: "none",
+        source: "external",
+        src: null,
+      },
+    },
+  },
+  sections: {
+    gap: "lg",
+    defaults: {
+      container: "default",
+      padding: { top: "xl", bottom: "xl" },
+      margin: { top: "none", bottom: "none" },
+    },
+  },
+  applyDefaultsToNewBlocks: false,
+} satisfies PageLayoutSettings;
+
+// Assistant detail-page authoring is schemaVersion 2 sections only
+// (TASK-580-03-L06); v1 `blocks` payloads fail closed on write.
+const buildV2DetailPageDocument = (input: {
+  id: string;
+  contentTypeId: string;
+  contentTypeSlug: string;
+  name?: string;
+  status?: DetailPageDocument["status"];
+  heroText?: string;
+  bindings?: DetailPageDocument["bindings"];
+}): DetailPageDocument => ({
+  schemaVersion: 2,
+  id: input.id,
+  name: input.name ?? "Products detail template",
+  contentTypeId: input.contentTypeId,
+  contentTypeSlug: input.contentTypeSlug,
+  status: input.status ?? "published",
+  titlePattern: "{{ title }}",
+  settings: {
+    template: "detail",
+    layout: layoutSettings,
+  },
+  sections: [
+    {
+      id: "hero-1",
+      type: "hero",
+      name: "Hero",
+      variant: "centered",
+      layout: {
+        columns: 1,
+        align: "start",
+        justify: "start",
+        maxWidth: 1080,
+        stackVertical: false,
+      },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+      spacing: {
+        paddingTop: 64,
+        paddingBottom: 64,
+        paddingLeft: 40,
+        paddingRight: 40,
+        gap: 24,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: null,
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive: {},
+      blocks: [
+        {
+          id: "hero-1-heading",
+          type: "heading",
+          props: { text: input.heroText ?? "Products detail" },
+          visibility: { visible: true },
+        },
+      ],
+    },
+  ],
+  bindings: input.bindings ?? [],
+});
 
 test("executeAssistantActionPlan upserts detail-page documents through the content-domain seam", async () => {
   const deps = createDeps();
@@ -52,53 +152,12 @@ test("executeAssistantActionPlan upserts detail-page documents through the conte
         title: "Create products detail template",
         description: "Create a products detail template.",
         input: {
-          document: {
-            schemaVersion: 1,
+          document: buildV2DetailPageDocument({
             id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-            name: "Products detail template",
             contentTypeId: contentType.id,
             contentTypeSlug: "stale-products-slug",
-            status: "published",
-            titlePattern: "{{ title }}",
-            settings: {
-              template: "detail",
-              layout: {
-                wrapper: {
-                  container: "default",
-                  padding: { top: "md", bottom: "lg" },
-                  background: {
-                    color: "#ffffff",
-                    image: null,
-                    media: {
-                      type: "none",
-                      source: "external",
-                      src: null,
-                    },
-                  },
-                },
-                sections: {
-                  gap: "lg",
-                  defaults: {
-                    container: "default",
-                    padding: { top: "xl", bottom: "xl" },
-                    margin: { top: "none", bottom: "none" },
-                  },
-                },
-                applyDefaultsToNewBlocks: false,
-              },
-            },
-            blocks: [
-              {
-                id: "hero-1",
-                type: "hero",
-                variant: "centered",
-                data: {
-                  headline: "Products detail",
-                },
-              },
-            ],
-            bindings: [],
-          },
+            heroText: "Products detail",
+          }),
         },
       },
     ],
@@ -178,40 +237,11 @@ test("executeAssistantActionPlan consumes matched existing detail-page ids witho
   deps.__state.contentTypes.push(contentType);
   const existingDetailPageId = "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
   const plannedDetailPageId = "44d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
-  const existingDocument: DetailPageDocument = {
-    schemaVersion: 1,
+  const existingDocument: DetailPageDocument = buildV2DetailPageDocument({
     id: existingDetailPageId,
-    name: "Products detail template",
     contentTypeId: contentType.id,
     contentTypeSlug: "products",
-    status: "published",
-    titlePattern: "{{ title }}",
-    settings: {
-      template: "detail",
-      layout: {
-        wrapper: {
-          container: "default",
-          padding: { top: "md", bottom: "lg" },
-          background: {
-            color: "#ffffff",
-            image: null,
-            media: { type: "none", source: "external", src: null },
-          },
-        },
-        sections: {
-          gap: "lg",
-          defaults: {
-            container: "default",
-            padding: { top: "xl", bottom: "xl" },
-            margin: { top: "none", bottom: "none" },
-          },
-        },
-        applyDefaultsToNewBlocks: false,
-      },
-    },
-    blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-    bindings: [],
-  };
+  });
   deps.__state.detailPages.push({
     id: existingDetailPageId,
     name: existingDocument.name,
@@ -296,7 +326,6 @@ test("executeAssistantActionPlan consumes matched existing detail-page ids witho
       forms: [],
       menus: [],
       seoDocuments: [],
-      widgets: [],
       media: [],
       commerce: { products: [], collections: [] },
       solutionKits: [],
@@ -369,40 +398,13 @@ test("executeAssistantActionPlan fails detail-page upserts that reuse an id acro
     name: "Services detail template",
     contentTypeId: servicesType.id,
     status: "draft",
-    currentDocument: {
-      schemaVersion: 1,
+    currentDocument: buildV2DetailPageDocument({
       id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
       name: "Services detail template",
       contentTypeId: servicesType.id,
       contentTypeSlug: servicesType.slug,
       status: "draft",
-      titlePattern: "{{ title }}",
-      settings: {
-        template: "detail",
-        layout: {
-          wrapper: {
-            container: "default",
-            padding: { top: "md", bottom: "lg" },
-            background: {
-              color: "#ffffff",
-              image: null,
-              media: { type: "none", source: "external", src: null },
-            },
-          },
-          sections: {
-            gap: "lg",
-            defaults: {
-              container: "default",
-              padding: { top: "xl", bottom: "xl" },
-              margin: { top: "none", bottom: "none" },
-            },
-          },
-          applyDefaultsToNewBlocks: false,
-        },
-      },
-      blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-      bindings: [],
-    },
+    }),
     publishedDocument: null,
     createdAt: new Date("2026-04-10T12:00:00.000Z"),
     updatedAt: new Date("2026-04-10T12:00:00.000Z"),
@@ -428,40 +430,12 @@ test("executeAssistantActionPlan fails detail-page upserts that reuse an id acro
         title: "Create products detail template",
         description: "Create a products detail template.",
         input: {
-          document: {
-            schemaVersion: 1,
+          document: buildV2DetailPageDocument({
             id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-            name: "Products detail template",
             contentTypeId: productType.id,
             contentTypeSlug: productType.slug,
             status: "draft",
-            titlePattern: "{{ title }}",
-            settings: {
-              template: "detail",
-              layout: {
-                wrapper: {
-                  container: "default",
-                  padding: { top: "md", bottom: "lg" },
-                  background: {
-                    color: "#ffffff",
-                    image: null,
-                    media: { type: "none", source: "external", src: null },
-                  },
-                },
-                sections: {
-                  gap: "lg",
-                  defaults: {
-                    container: "default",
-                    padding: { top: "xl", bottom: "xl" },
-                    margin: { top: "none", bottom: "none" },
-                  },
-                },
-                applyDefaultsToNewBlocks: false,
-              },
-            },
-            blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-            bindings: [],
-          },
+          }),
         },
       },
     ],
@@ -520,40 +494,12 @@ test("executeAssistantActionPlan fails detail-page upserts with stale expectedEx
         description: "Create a products detail template.",
         input: {
           expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-          document: {
-            schemaVersion: 1,
+          document: buildV2DetailPageDocument({
             id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-            name: "Products detail template",
             contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
             contentTypeSlug: "products",
             status: "draft",
-            titlePattern: "{{ title }}",
-            settings: {
-              template: "detail",
-              layout: {
-                wrapper: {
-                  container: "default",
-                  padding: { top: "md", bottom: "lg" },
-                  background: {
-                    color: "#ffffff",
-                    image: null,
-                    media: { type: "none", source: "external", src: null },
-                  },
-                },
-                sections: {
-                  gap: "lg",
-                  defaults: {
-                    container: "default",
-                    padding: { top: "xl", bottom: "xl" },
-                    margin: { top: "none", bottom: "none" },
-                  },
-                },
-                applyDefaultsToNewBlocks: false,
-              },
-            },
-            blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-            bindings: [],
-          },
+          }),
         },
       },
     ],
@@ -617,4 +563,86 @@ test("executeAssistantActionPlan resolves renamed listing resources from existin
   expect(deps.__state.listingQueries).toHaveLength(1);
   expect(deps.__state.listingTemplates).toHaveLength(1);
   expect(hasPageBlockType(deps.__state.pages[0]?.currentData, "collection")).toBe(true);
+});
+
+test("executeAssistantActionPlan fails closed on v1-shaped detail-page documents", async () => {
+  const deps = createDeps();
+  deps.__state.contentTypes.push({
+    id: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        headline: { type: "string", xFieldType: "text" },
+      },
+    },
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+    updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+  });
+
+  const v1Document: DetailPageDocumentV1 = {
+    schemaVersion: 1,
+    id: "34d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    name: "Products detail template",
+    contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    contentTypeSlug: "products",
+    status: "draft",
+    titlePattern: "{{ title }}",
+    settings: {
+      template: "detail" as const,
+      layout: layoutSettings,
+    },
+    blocks: [
+      {
+        id: "hero-1",
+        type: "hero",
+        variant: "centered",
+        data: { headline: "Products detail" },
+      },
+    ],
+    bindings: [],
+  };
+
+  const plan: AssistantActionPlan = {
+    id: "plan-detail-page-v1-rejected",
+    status: "ready",
+    intentId: "detail-page-v1-rejected",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create detail template",
+    answer: "I can create the detail template.",
+    summary: "Create a products detail template from a legacy v1 document.",
+    confidence: 0.91,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "detail-page-products",
+        type: "detail-page.upsert",
+        title: "Create products detail template",
+        description: "Create a products detail template.",
+        input: {
+          document: v1Document as unknown as DetailPageDocument,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(false);
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_legacy_v1_invalid");
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-detail-page-v1-rejected",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_plan_not_ready");
+  expect(deps.__state.detailPages).toHaveLength(0);
 });

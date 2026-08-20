@@ -70,7 +70,6 @@ export const makeUserSettings = (overrides: Partial<UserSettings> = {}): UserSet
     "customScreens.openAfterCreate": true,
     "forms.openAfterCreate": true,
     "media.openAfterUpload": false,
-    "widgets.favorites": [],
     "widgets.hero.presets": [],
     "posts.editor.preferences": {
       version: 2,

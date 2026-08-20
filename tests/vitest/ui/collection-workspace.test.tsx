@@ -448,12 +448,13 @@ test("collection workspace creates and route-links a missing detail template", a
     expect(collectionWorkspaceState.createDetailPage).toHaveBeenCalledTimes(1);
     const createdDocument = collectionWorkspaceState.createDetailPage.mock.calls[0]?.[0];
     expect(createdDocument).toMatchObject({
+      schemaVersion: 2,
       name: "Products detail template",
       contentTypeId: "ct-products",
       contentTypeSlug: "products",
       status: "draft",
       titlePattern: "{title}",
-      blocks: [],
+      sections: [],
       bindings: [],
     });
     expect(collectionWorkspaceState.updateSiteSettings).toHaveBeenCalledWith({

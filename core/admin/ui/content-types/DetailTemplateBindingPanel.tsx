@@ -12,20 +12,18 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import type { Block } from "@/ui/pages/builder/types";
+import type { PageBlockV2 } from "../../../services/pages/pageDocumentV2";
 import type {
   DetailPageBinding,
   DetailPageBindingSource,
   DetailPageBindingTransform,
 } from "../../../services/content/detailPageTypes";
-import { collectBindingPropPaths } from "../../../services/utils/bindingPropPaths";
-import type { WidgetDefinition } from "../../../widgets/types";
+import { collectV2BlockBindingPropPaths } from "../../../services/utils/bindingPropPaths";
 
 import type { ContentField } from "./SchemaBuilder";
 
 type DetailTemplateBindingPanelProps = {
-  selectedBlock: Block | null;
-  selectedWidget?: WidgetDefinition | null;
+  selectedBlock: PageBlockV2 | null;
   value: DetailPageBinding[];
   fields: ContentField[];
   onChange: (next: DetailPageBinding[]) => void;
@@ -102,35 +100,6 @@ const computedSourceOptions: DetailTemplateSourceOption[] = [
   },
 ];
 
-const preferredBindingPropPaths: Record<string, string[]> = {
-  hero: [
-    "headline",
-    "subhead",
-    "body",
-    "primaryCta.label",
-    "primaryCta.href",
-    "media.src",
-    "media.alt",
-  ],
-  "rich-text-section": ["titleBlock.eyebrow", "titleBlock.title", "body.html"],
-  "cta-banner": ["title", "body", "primaryCta.label", "primaryCta.href"],
-  "entry-teaser": ["resolved.item", "title", "description", "href", "image.src", "image.alt"],
-  "content-list": ["resolved.items", "title", "description"],
-  "feature-grid": ["title", "description", "items.0.title", "items.0.body"],
-};
-
-const hiddenBindingPropPaths = new Set([
-  "align",
-  "style",
-  "style.frameBackground",
-  "style.frameGradient",
-  "style.frameBorderColor",
-  "style.badgeBackground",
-  "style.badgeBorderColor",
-  "style.columnBackground",
-  "style.columnBorderColor",
-]);
-
 const secretLikePattern =
   /\b[\w.-]*(token|secret|password|api[-_]?key|credential|cookie|session|csrf)[\w.-]*\b/i;
 
@@ -204,20 +173,13 @@ const updateBindingRequired = (
 };
 
 const resolveBindingPropPathOptions = (
-  block: Block | null,
-  widget: WidgetDefinition | null,
+  block: PageBlockV2 | null,
   existingBindings: DetailPageBinding[]
 ) => {
-  const detectedPaths = collectBindingPropPaths(block?.data ?? {}).filter(
-    (path) => !hiddenBindingPropPaths.has(path)
-  );
-  const declaredPaths = widget?.bindingTargets?.map((target) => target.propPath) ?? [];
-  const preferredPaths = block ? (preferredBindingPropPaths[block.type] ?? []) : [];
+  const detectedPaths = block ? collectV2BlockBindingPropPaths(block) : [];
   const existingPaths = existingBindings.map((binding) => binding.propPath);
 
-  return Array.from(
-    new Set([...declaredPaths, ...preferredPaths, ...existingPaths, ...detectedPaths])
-  )
+  return Array.from(new Set([...detectedPaths, ...existingPaths]))
     .filter(Boolean)
     .slice(0, 80);
 };
@@ -231,7 +193,6 @@ const buildSavedSourceOption = (source: DetailPageBindingSource): DetailTemplate
 
 export function DetailTemplateBindingPanel({
   selectedBlock,
-  selectedWidget,
   value,
   fields,
   onChange,
@@ -248,8 +209,8 @@ export function DetailTemplateBindingPanel({
     [sourceOptions]
   );
   const propPathSuggestions = useMemo(
-    () => resolveBindingPropPathOptions(selectedBlock, selectedWidget ?? null, selectedBindings),
-    [selectedBindings, selectedBlock, selectedWidget]
+    () => resolveBindingPropPathOptions(selectedBlock, selectedBindings),
+    [selectedBindings, selectedBlock]
   );
 
   const updateBinding = (

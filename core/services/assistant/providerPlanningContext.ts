@@ -86,7 +86,6 @@ export type AssistantProviderPlanningPromptPackage = {
     forms: AssistantResourceCatalogSnapshot["forms"];
     menus: AssistantResourceCatalogSnapshot["menus"];
     seoDocuments: AssistantResourceCatalogSnapshot["seoDocuments"];
-    widgets: AssistantResourceCatalogSnapshot["widgets"];
     media: NonNullable<AssistantResourceCatalogSnapshot["media"]>;
     commerce: {
       products: NonNullable<NonNullable<AssistantResourceCatalogSnapshot["commerce"]>["products"]>;
@@ -238,7 +237,6 @@ const buildResources = (
       "seo_documents_truncated",
       warnings
     ),
-    widgets: clampItems(catalog.widgets, maxItemsPerGroup, "widgets_truncated", warnings),
     media: clampItems(catalog.media ?? [], maxItemsPerGroup, "media_truncated", warnings),
     commerce: {
       products: clampItems(

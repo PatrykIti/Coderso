@@ -53,7 +53,7 @@ import {
 import {
   navigationMobileModeIds,
   navigationVariantIds,
-} from "../../widgets/core/navigationContract";
+} from "../../services/renderContracts/navigationContract";
 import { normalizePageDocumentV2ForWrite, type PageBlockV2 } from "../pages/pageDocumentV2";
 import {
   isAssistantPageBlockOutputAllowed,
@@ -130,7 +130,6 @@ const blueprintCompositionResourceKinds = new Set([
   "form",
   "menu",
   "seo",
-  "widget-template",
   "site-kit",
 ] as const);
 const blueprintCompositionRoles = new Set(["primary", "adjunct", "gated"] as const);
@@ -1843,94 +1842,6 @@ const normalizePageDeleteInput = (input: JsonRecord) => {
   };
 };
 
-const normalizeWidgetTemplateDeleteInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["id", "name", "expectedStatus", "expectedCategory"]));
-  return {
-    id: readText(input.id),
-    name: readText(input.name),
-    ...(input.expectedStatus !== undefined
-      ? { expectedStatus: readOptionalText(input.expectedStatus) }
-      : {}),
-    ...(input.expectedCategory !== undefined
-      ? { expectedCategory: readOptionalText(input.expectedCategory) }
-      : {}),
-  };
-};
-
-const normalizeWidgetTemplateUpdatePatch = (value: unknown) => {
-  const input = assertRecord(value);
-  assertKeys(input, new Set(["name", "description", "category", "status", "settings"]));
-  const settings = input.settings === undefined ? undefined : assertRecord(input.settings);
-  if (settings) assertKeys(settings, new Set(["wrapperContainer", "sectionGap"]));
-  return {
-    ...(input.name !== undefined ? { name: readText(input.name) } : {}),
-    ...(input.description !== undefined
-      ? { description: readOptionalText(input.description) }
-      : {}),
-    ...(input.category !== undefined ? { category: readText(input.category) } : {}),
-    ...(input.status !== undefined
-      ? { status: readEnum(input.status, new Set(["draft", "published"])) }
-      : {}),
-    ...(settings
-      ? {
-          settings: {
-            ...(settings.wrapperContainer !== undefined
-              ? {
-                  wrapperContainer: readEnum(
-                    settings.wrapperContainer,
-                    new Set(["default", "narrow", "full"])
-                  ),
-                }
-              : {}),
-            ...(settings.sectionGap !== undefined
-              ? {
-                  sectionGap: readEnum(
-                    settings.sectionGap,
-                    new Set(["none", "xs", "sm", "md", "lg", "xl", "2xl"])
-                  ),
-                }
-              : {}),
-          },
-        }
-      : {}),
-  };
-};
-
-const normalizeWidgetTemplateUpdateInput = (input: JsonRecord) => {
-  assertKeys(input, new Set(["id", "name", "expectedStatus", "expectedCategory", "patch"]));
-  return {
-    id: readText(input.id),
-    name: readText(input.name),
-    ...(input.expectedStatus !== undefined
-      ? { expectedStatus: readOptionalText(input.expectedStatus) }
-      : {}),
-    ...(input.expectedCategory !== undefined
-      ? { expectedCategory: readOptionalText(input.expectedCategory) }
-      : {}),
-    patch: normalizeWidgetTemplateUpdatePatch(input.patch),
-  };
-};
-
-const normalizeWidgetTemplateBlockPatchInput = (input: JsonRecord) => {
-  assertKeys(
-    input,
-    new Set(["id", "name", "expectedStatus", "blockId", "expectedBlockType", "dataPath", "value"])
-  );
-  return {
-    id: readText(input.id),
-    name: readText(input.name),
-    ...(input.expectedStatus !== undefined
-      ? { expectedStatus: readOptionalText(input.expectedStatus) }
-      : {}),
-    blockId: readText(input.blockId),
-    ...(input.expectedBlockType !== undefined
-      ? { expectedBlockType: readOptionalText(input.expectedBlockType) }
-      : {}),
-    dataPath: normalizeDataPath(input.dataPath),
-    value: normalizePatchValue(input.value),
-  };
-};
-
 const readAdvancedHeroDefinition = (variantId: unknown) => {
   const resolvedId = readEnum(variantId, advancedHeroVariantIds);
   try {
@@ -2208,12 +2119,6 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizePageUpdateInput(record);
     case "page.delete":
       return normalizePageDeleteInput(record);
-    case "widget-template.delete":
-      return normalizeWidgetTemplateDeleteInput(record);
-    case "widget-template.update":
-      return normalizeWidgetTemplateUpdateInput(record);
-    case "widget-template.block.patch":
-      return normalizeWidgetTemplateBlockPatchInput(record);
     case "site-kit.recommend":
       return normalizeSiteKitRecommendInput(record);
     case "site-kit.install":

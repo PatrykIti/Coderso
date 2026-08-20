@@ -40,6 +40,7 @@ type DetailPageFixture = {
   entryData: Record<string, unknown>;
   expectedBoundHeadline: string;
   expectedBoundKpi: string;
+  hasCoverImage: boolean;
 };
 
 const layoutSettings = {
@@ -85,7 +86,43 @@ const createSchema = (fields: Record<string, Record<string, unknown>>) => ({
   properties: fields,
 });
 
+const sectionDefaults = {
+  layout: {
+    columns: 1,
+    align: "start",
+    justify: "start",
+    maxWidth: 1080,
+    stackVertical: false,
+  },
+  style: {
+    background: "#ffffff",
+    backgroundType: "color",
+    backgroundImage: null,
+    accent: "#0d9488",
+    radius: 0,
+    shadow: "none",
+  },
+  spacing: {
+    paddingTop: 64,
+    paddingBottom: 64,
+    paddingLeft: 40,
+    paddingRight: 40,
+    gap: 24,
+  },
+  visibility: {
+    visible: true,
+    authOnly: false,
+    anchor: null,
+    startsAt: null,
+    endsAt: null,
+  },
+} as const;
+
+// Assistant detail-page authoring is schemaVersion 2 sections only
+// (TASK-580-03-L06): hero section with heading/text(/image) blocks, a key-facts
+// content section with a statistic block, and bindings remapped to v2 propPaths.
 const buildDocument = (input: {
+  key: string;
   id: string;
   name: string;
   contentTypeId: string;
@@ -93,13 +130,11 @@ const buildDocument = (input: {
   titlePattern: string;
   staticHeadline: string;
   staticBody: string;
-  sectionTitle: string;
   galleryCaption: string;
-  ctaTitle: string;
-  faqQuestion: string;
+  hasCoverImage: boolean;
 }) =>
   normalizeDetailPageDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: input.id,
     name: input.name,
     contentTypeId: input.contentTypeId,
@@ -110,135 +145,66 @@ const buildDocument = (input: {
       template: "detail",
       layout: layoutSettings,
     },
-    blocks: [
+    sections: [
       {
-        id: "detail-hero",
+        id: `${input.key}-detail-hero`,
         type: "hero",
-        variant: "centered",
-        data: {
-          headline: input.staticHeadline,
-          body: input.staticBody,
-          primaryCta: {
-            label: "Open inquiry",
-            href: "#inquiry",
+        name: "Hero",
+        variant: input.hasCoverImage ? "split" : "centered",
+        layout: { ...sectionDefaults.layout },
+        style: { ...sectionDefaults.style },
+        spacing: { ...sectionDefaults.spacing },
+        visibility: { ...sectionDefaults.visibility },
+        responsive: {},
+        blocks: [
+          {
+            id: `${input.key}-detail-hero-heading`,
+            type: "heading",
+            props: { text: input.staticHeadline, level: "h2", align: "left" },
+            visibility: { visible: true },
           },
-        },
+          {
+            id: `${input.key}-detail-hero-text`,
+            type: "text",
+            props: { text: input.staticBody, format: "plain", align: "left" },
+            visibility: { visible: true },
+          },
+          ...(input.hasCoverImage
+            ? [
+                {
+                  id: `${input.key}-detail-hero-image`,
+                  type: "image" as const,
+                  props: { src: "", alt: "" },
+                  visibility: { visible: true },
+                },
+              ]
+            : []),
+        ],
       },
       {
-        id: "detail-facts",
-        type: "stats-kpi",
-        data: {
-          header: {
-            title: "Key facts",
-            description: "Composer-generated detail facts.",
+        id: `${input.key}-detail-facts`,
+        type: "content",
+        name: "Key facts",
+        layout: { ...sectionDefaults.layout },
+        style: { ...sectionDefaults.style },
+        spacing: { ...sectionDefaults.spacing },
+        visibility: { ...sectionDefaults.visibility },
+        responsive: {},
+        blocks: [
+          {
+            id: `${input.key}-detail-facts-primary`,
+            type: "statistic",
+            props: { value: "TBD", label: "Primary" },
+            visibility: { visible: true },
           },
-          items: [
-            {
-              id: "primary-fact",
-              value: "TBD",
-              label: "Primary",
-              description: "Bound from entry data.",
-            },
-            {
-              id: "secondary-fact",
-              value: "Ready",
-              label: "Status",
-              description: "Static composer value.",
-            },
-          ],
-        },
-      },
-      {
-        id: "detail-section",
-        type: "rich-text-section",
-        data: {
-          titleBlock: {
-            eyebrow: "Detail",
-            title: input.sectionTitle,
-          },
-          body: {
-            blocks: [
-              {
-                id: "section-copy",
-                heading: input.sectionTitle,
-                content: input.staticBody,
-              },
-            ],
-          },
-          options: {
-            outputMode: "blocks-fallback",
-          },
-        },
-      },
-      {
-        id: "detail-gallery",
-        type: "gallery-mosaic",
-        data: {
-          header: {
-            title: "Gallery",
-            description: "Selected visuals.",
-          },
-          items: [
-            {
-              id: "gallery-1",
-              image: "https://cdn.coderso.test/detail-1.jpg",
-              caption: input.galleryCaption,
-              href: "#",
-            },
-            {
-              id: "gallery-2",
-              image: "https://cdn.coderso.test/detail-2.jpg",
-              caption: "Secondary view",
-              href: "#",
-            },
-          ],
-        },
-      },
-      {
-        id: "detail-faq",
-        type: "faq-accordion",
-        data: {
-          items: [
-            {
-              id: "faq-1",
-              question: input.faqQuestion,
-              answer: "The detail page keeps canonical route ownership in site.contentRoutes.",
-            },
-          ],
-        },
-      },
-      {
-        id: "detail-cta",
-        type: "cta-banner",
-        data: {
-          content: {
-            badge: "Next step",
-            title: input.ctaTitle,
-            description: "Use the route-linked detail template for this entry.",
-          },
-          actions: {
-            primaryCta: {
-              label: "Ask now",
-              href: "#inquiry",
-            },
-          },
-        },
-      },
-      {
-        id: "detail-form",
-        type: "form-embed",
-        data: {
-          formId: "fixture-inquiry",
-          title: "Inquiry form",
-          description: "The form adapter is resolved by the forms owner at runtime.",
-        },
+        ],
       },
     ],
     bindings: [
       {
         id: "binding-headline",
-        blockId: "detail-hero",
-        propPath: "headline",
+        blockId: `${input.key}-detail-hero-heading`,
+        propPath: "text",
         source: {
           kind: "entry-field",
           field: "headline",
@@ -248,8 +214,8 @@ const buildDocument = (input: {
       },
       {
         id: "binding-summary",
-        blockId: "detail-hero",
-        propPath: "body",
+        blockId: `${input.key}-detail-hero-text`,
+        propPath: "text",
         source: {
           kind: "entry-field",
           field: "summary",
@@ -259,8 +225,8 @@ const buildDocument = (input: {
       },
       {
         id: "binding-primary-fact",
-        blockId: "detail-facts",
-        propPath: "items.0.value",
+        blockId: `${input.key}-detail-facts-primary`,
+        propPath: "value",
         source: {
           kind: "entry-field",
           field: "primaryFact",
@@ -268,16 +234,21 @@ const buildDocument = (input: {
         transform: "text",
         required: true,
       },
-      {
-        id: "binding-detail-href",
-        blockId: "detail-cta",
-        propPath: "actions.primaryCta.href",
-        source: {
-          kind: "computed",
-          resolver: "detailHref",
-        },
-        transform: "text",
-      },
+      ...(input.hasCoverImage
+        ? [
+            {
+              id: "binding-cover-alt",
+              blockId: `${input.key}-detail-hero-image`,
+              propPath: "alt",
+              source: {
+                kind: "entry-field" as const,
+                field: "galleryCaption",
+              },
+              transform: "text" as const,
+              required: false,
+            },
+          ]
+        : []),
     ],
     related: [
       {
@@ -316,7 +287,10 @@ const fixtures: DetailPageFixture[] = [
     },
     expectedBoundHeadline: "Modern house M42",
     expectedBoundKpi: "from 420k PLN",
+    hasCoverImage: false,
     document: buildDocument({
+      key: "house-project-catalog",
+      hasCoverImage: false,
       id: buildDeterministicDetailPageId({
         contentTypeId: "19000000-0000-5000-8000-000000000101",
         pageRole: "supporting-page",
@@ -328,10 +302,7 @@ const fixtures: DetailPageFixture[] = [
       titlePattern: "{{ title }} | House project",
       staticHeadline: "House project detail",
       staticBody: "Specification, pricing, gallery, CTA and inquiry form.",
-      sectionTitle: "Specification table",
       galleryCaption: "Garden elevation",
-      ctaTitle: "Ask about this house project",
-      faqQuestion: "Can this project be customized?",
     }),
   },
   {
@@ -359,7 +330,10 @@ const fixtures: DetailPageFixture[] = [
     },
     expectedBoundHeadline: "Edge Router Pro",
     expectedBoundKpi: "$799",
+    hasCoverImage: false,
     document: buildDocument({
+      key: "product-catalog",
+      hasCoverImage: false,
       id: buildDeterministicDetailPageId({
         contentTypeId: "19000000-0000-5000-8000-000000000102",
         pageRole: "supporting-page",
@@ -371,10 +345,7 @@ const fixtures: DetailPageFixture[] = [
       titlePattern: "{{ title }} | Product",
       staticHeadline: "Product detail",
       staticBody: "Gallery, product specs and inquiry form.",
-      sectionTitle: "Technical specification",
       galleryCaption: "Ports and casing",
-      ctaTitle: "Ask about this product",
-      faqQuestion: "Is checkout included?",
     }),
   },
   {
@@ -402,7 +373,10 @@ const fixtures: DetailPageFixture[] = [
     },
     expectedBoundHeadline: "Implementation workshop",
     expectedBoundKpi: "2 weeks",
+    hasCoverImage: true,
     document: buildDocument({
+      key: "services-directory",
+      hasCoverImage: true,
       id: buildDeterministicDetailPageId({
         contentTypeId: "19000000-0000-5000-8000-000000000103",
         pageRole: "supporting-page",
@@ -414,10 +388,7 @@ const fixtures: DetailPageFixture[] = [
       titlePattern: "{{ title }} | Service",
       staticHeadline: "Service detail",
       staticBody: "Offer, delivery process, FAQ and CTA.",
-      sectionTitle: "Delivery process",
       galleryCaption: "Workshop process",
-      ctaTitle: "Request this service",
-      faqQuestion: "Can booking be enabled now?",
     }),
   },
   {
@@ -445,7 +416,10 @@ const fixtures: DetailPageFixture[] = [
     },
     expectedBoundHeadline: "Marketplace rebuild",
     expectedBoundKpi: "+64% conversion",
+    hasCoverImage: true,
     document: buildDocument({
+      key: "portfolio-case-study",
+      hasCoverImage: true,
       id: buildDeterministicDetailPageId({
         contentTypeId: "19000000-0000-5000-8000-000000000104",
         pageRole: "supporting-page",
@@ -457,10 +431,7 @@ const fixtures: DetailPageFixture[] = [
       titlePattern: "{{ title }} | Case study",
       staticHeadline: "Case study detail",
       staticBody: "Challenge, solution, result, testimonial, gallery and CTA.",
-      sectionTitle: "Challenge and solution",
       galleryCaption: "Before and after",
-      ctaTitle: "Discuss a similar project",
-      faqQuestion: "Can this be reused for other case studies?",
     }),
   },
 ];
@@ -624,17 +595,22 @@ test.each(fixtures)("composes a valid route-linked detail page for $key", async 
       },
     ],
   });
-  expect(resolved.find((block) => block.id === "detail-hero")?.data).toMatchObject({
-    headline: fixture.expectedBoundHeadline,
-    body: fixture.entryData.summary,
+  const heroSection = resolved.find((section) => section.id === `${fixture.key}-detail-hero`);
+  expect(
+    heroSection?.blocks.find((block) => block.id === `${fixture.key}-detail-hero-heading`)?.props
+  ).toMatchObject({
+    text: fixture.expectedBoundHeadline,
   });
-  expect(resolved.find((block) => block.id === "detail-facts")?.data).toMatchObject({
-    items: expect.arrayContaining([
-      expect.objectContaining({
-        id: "primary-fact",
-        value: fixture.expectedBoundKpi,
-      }),
-    ]),
+  expect(
+    heroSection?.blocks.find((block) => block.id === `${fixture.key}-detail-hero-text`)?.props
+  ).toMatchObject({
+    text: fixture.entryData.summary,
+  });
+  const factsSection = resolved.find((section) => section.id === `${fixture.key}-detail-facts`);
+  expect(
+    factsSection?.blocks.find((block) => block.id === `${fixture.key}-detail-facts-primary`)?.props
+  ).toMatchObject({
+    value: fixture.expectedBoundKpi,
   });
 });
 
@@ -646,8 +622,8 @@ test("detail-page fixture rejects bindings to missing schema fields", async () =
       ...fixture.document.bindings,
       {
         id: "binding-missing-field",
-        blockId: "detail-hero",
-        propPath: "subhead",
+        blockId: `${fixture.key}-detail-hero-heading`,
+        propPath: "text",
         source: {
           kind: "entry-field",
           field: "doesNotExist",
@@ -684,8 +660,8 @@ test("detail-page fixture rejects secret-like entry-field bindings during normal
       bindings: [
         {
           id: "binding-secret-field",
-          blockId: "detail-hero",
-          propPath: "headline",
+          blockId: `${fixture.key}-detail-hero-heading`,
+          propPath: "text",
           source: {
             kind: "entry-field",
             field: "apiToken",

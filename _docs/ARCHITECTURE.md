@@ -15,11 +15,12 @@ jak Next.js oraz doswiadczeniem uzytkownika jak WordPress.
 - Pages, Page Templates, Forms, Menus, Posts i Custom Screens uzywaja
   kontraktow sekcji i blokow nalezacych do danego edytora. Nie istnieje
   wspolna, niedashboardowa biblioteka widgetow ani nowy Widget Template Editor.
-- Nazwy `core/widgets`, `WidgetBlock`, `widget-template` oraz
-  Wizard/Visual/Advanced wystepujace dalej w tym dokumencie oznaczaja
-  historyczne identyfikatory rendererow, adaptery odczytu albo zapis wykonanych
-  taskow, o ile dany akapit nie wskazuje jawnie Admin Dashboard. Nie sa wzorcem
-  dla nowego authoringu.
+- Nazwy `WidgetBlock`, `widget-template` oraz Wizard/Visual/Advanced
+  wystepujace dalej w tym dokumencie oznaczaja historyczne identyfikatory,
+  zapisy wykonanych taskow albo dokumenty-tombstony (np. `_docs/WIDGETS.md`).
+  Kernel v1 `core/widgets` zostal usuniety w TASK-580; pozostale kontrakty
+  renderowania zyja w `core/services/renderContracts/*`. Nie sa wzorcem dla
+  nowego authoringu.
 
 ## Zakres i nie-cele
 
@@ -679,9 +680,26 @@ Aktualnie zaimplementowany business setup surface:
   detail-page ids drop to `null`, and `detail-page` planning context requires
   `content:read` plus `widgets:read`,
 - published content routes that carry `detailPageId` now resolve normalized
-  detail-page documents and render them through the current page-builder
-  runtime shell; missing links continue to fall back to the legacy
-  `renderPublicEntry.tsx` detail renderer,
+  detail-page documents and render them through the Page V2 runtime pipeline;
+  the legacy detail renderer remains only as the fallback for entries whose
+  content type has NO linked detail page. Since TASK-580-03-L04 the
+  detail-page V2 runtime path is:
+  `publicEntryRender.tsx` (public or preview entry render) →
+  `resolvePublishedDetailPageRuntime` / `resolvePreviewDetailPageRuntime`
+  (`core/services/content/detailPageRuntimeResolver.ts`, reads the
+  `current`/`published` document through the v2 normalizer) →
+  `resolveDetailPageBlocks` (`detailPageBindingResolver.ts`, applies
+  `bindings[]` onto the converted v2 `sections[]`) →
+  `buildDetailPageRenderDocument` + `preparePageRuntimeDocument`
+  (`core/services/content/detailPageV2Conversion.ts` /
+  `core/services/pages/pageRuntimeDataPreparation.ts`) →
+  `renderPublicPageV2RuntimeHtml` (`core/site/renderPublicPage.tsx`, the V2
+  render host). Detail-page preview tokens (`/preview?type=detail-page`)
+  render the CURRENT (draft) document through the same pipeline,
+- detail-page documents are Page V2 documents (schemaVersion 2,
+  `sections[]`/`bindings[]`) since TASK-580-03; stored v1 rows are backfilled
+  by migration 0079 and any remaining v1 row is converted in memory by the
+  read adapter,
 - lead capture oraz product inquiry packs moga tworzyc public inquiry forms przez istniejacy Forms runtime,
 - portfolio case-study pack dodaje result/testimonial fields,
 - editorial content hub tworzy public hub page z `posts-feed` bez mutowania post records,

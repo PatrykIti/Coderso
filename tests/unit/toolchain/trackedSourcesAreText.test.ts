@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -114,7 +114,13 @@ function trackedPaths(): readonly string[] {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
   });
-  return stdout.split(GIT_RECORD_SEPARATOR).filter((entry) => entry.length > 0);
+  return (
+    stdout
+      .split(GIT_RECORD_SEPARATOR)
+      .filter((entry) => entry.length > 0)
+      // Working tree is authoritative: uncommitted deletions still sit in the index.
+      .filter((entry) => existsSync(path.join(ROOT, entry)))
+  );
 }
 
 const isBinaryExtension = (relativePath: string): boolean =>

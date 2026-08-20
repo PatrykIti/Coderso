@@ -17,7 +17,6 @@ import type {
 } from "../kits/solutionKitsInstallService";
 import {
   buildGuidedSiteBuilderPlanResult,
-  collectGuidedSiteBuilderTemplateKeys,
   defaultSiteBuilderPlanAdapterDeps,
   isSolutionKitId,
   normalizeGuidedSiteBuilderList,
@@ -88,15 +87,6 @@ const isStepId = (value: unknown): value is SiteBuilderPlanStepId =>
 const mergeNotes = (base: string[], extra: string[] | undefined) =>
   normalizeGuidedSiteBuilderList([...(base ?? []), ...(extra ?? [])]);
 
-const isTemplateSummary = (
-  value: unknown
-): value is { total: number; success: number; failed: number; planned: number } =>
-  isRecord(value) &&
-  typeof value.total === "number" &&
-  typeof value.success === "number" &&
-  typeof value.failed === "number" &&
-  typeof value.planned === "number";
-
 const deriveValidationStatus = (checks: GuidedSiteBuilderValidationCheck[]) => {
   if (checks.some((check) => check.status === "failed")) return "failed" as const;
   if (checks.some((check) => check.status === "warning")) return "warning" as const;
@@ -108,7 +98,6 @@ const buildValidation = (input: {
   items: SolutionKitInstallItemRecord[];
   selectedKit: SolutionKitDefinition | null;
   enabledStepIds: SiteBuilderPlanStepId[];
-  templateSummary: { total: number; success: number; failed: number; planned: number } | null;
 }): GuidedSiteBuilderValidationResult => {
   const checks: GuidedSiteBuilderValidationCheck[] = [];
   const unresolvedItems: string[] = [];
@@ -217,29 +206,6 @@ const buildValidation = (input: {
         details: `${pageCount} page operation(s) completed.`,
       });
     }
-
-    const expectedTemplates = collectGuidedSiteBuilderTemplateKeys(kit).length;
-    if (expectedTemplates > 0) {
-      if (input.templateSummary && input.templateSummary.failed > 0) {
-        const detail = `${input.templateSummary.failed} template operation(s) failed.`;
-        checks.push({
-          id: "step.templates",
-          label: "Template seeds",
-          status: "warning",
-          details: detail,
-        });
-        unresolvedItems.push(detail);
-      } else {
-        checks.push({
-          id: "step.templates",
-          label: "Template seeds",
-          status: "ok",
-          details: input.templateSummary
-            ? `${input.templateSummary.success + input.templateSummary.planned} template operation(s) recorded.`
-            : "Template summary unavailable for this run.",
-        });
-      }
-    }
   }
 
   if (kit && enabled.has("navigation") && kit.resourceBlueprint.menus.length > 0) {
@@ -295,15 +261,6 @@ const readEnabledStepsFromRunOptions = (value: unknown): SiteBuilderPlanStepId[]
 
   const normalized = [...new Set([...fromAssistant, ...fromWizard].filter(isStepId))];
   return normalized.length > 0 ? normalized : [...siteBuilderPlanStepIds];
-};
-
-const readTemplateSummaryFromRunOptions = (
-  value: unknown
-): { total: number; success: number; failed: number; planned: number } | null => {
-  if (!isRecord(value)) return null;
-  const installer = isRecord(value.kitInstaller) ? value.kitInstaller : null;
-  const summary = installer?.templateInstallSummary;
-  return isTemplateSummary(summary) ? summary : null;
 };
 
 export const previewGuidedSiteBuilderPlan = (
@@ -366,7 +323,6 @@ export const executeGuidedSiteBuilder = async (
     items: execution.items,
     selectedKit,
     enabledStepIds: preview.enabledStepIds,
-    templateSummary: execution.templateInstall ? execution.templateInstall.summary : null,
   });
 
   return {
@@ -394,13 +350,11 @@ export const validateGuidedSiteBuilderRun = async (
   const kit = kitId ? deps.getKitById(kitId) : null;
 
   const enabledStepIds = readEnabledStepsFromRunOptions(run.options);
-  const templateSummary = readTemplateSummaryFromRunOptions(run.options);
 
   return buildValidation({
     run,
     items,
     selectedKit: kit,
     enabledStepIds,
-    templateSummary,
   });
 };

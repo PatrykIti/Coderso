@@ -55,7 +55,6 @@ const resourceKinds = new Set([
   "form",
   "menu",
   "seo",
-  "widget-template",
   "site-kit",
 ] as const);
 

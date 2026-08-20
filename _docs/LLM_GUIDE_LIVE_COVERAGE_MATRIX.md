@@ -52,7 +52,6 @@ report provider gating without trusting provider-authored executable actions.
 | /admin/advanced/engine | Engine | live-execute | TASK-184-03 | Content type inspect/delete safety live matrix. |
 | /admin/advanced/entries | Entries | live-execute | TASK-184-03 | Active entry update/delete live matrix. |
 | /admin/advanced/custom-screens | Screens | live-execute | TASK-184-04 | Custom screen search/update/delete live matrix. |
-| /admin/advanced/widgets | Retired Widget Compatibility | legacy-maintenance | TASK-184-07 | Historical inspect/update/block-patch/delete evidence for retained rows only; the route is hidden and must not advertise create/insert authoring. |
 | /admin/advanced/page-templates | Page Templates | live-gated | TASK-420-03 | Page Templates editor advertises no assistant active surface in v1; prompts stay manual-UI gated. |
 | /admin/advanced/forms | Forms | live-execute | TASK-184-05 | Form create/search/update/archive/delete/safety live matrix. |
 | /admin/advanced/listings | Listings | live-execute | TASK-184-06 | Listing query/template inspect/update/delete live matrix. |

@@ -1,4 +1,13 @@
-import { normalizeDetailPageDocument } from "../../../core/services/content/detailPageSchema";
+import { normalizeDetailPageDocumentForWrite } from "../../../core/services/content/detailPageSchema";
+import {
+  convertDetailPageBindingsToV2,
+  convertWidgetBlocksToV2Sections,
+} from "../../../core/services/content/detailPageV2Conversion";
+import type {
+  DetailPageBinding,
+  DetailPageLegacyWidgetBlockV1,
+} from "../../../core/services/content/detailPageTypes";
+import type { PageSectionV2 } from "../../../core/services/pages/pageDocumentV2";
 import { normalizeContentRoutes } from "../../../core/services/settings/settingsContracts";
 import type { JsonObject, PackageRef } from "../../../core/services/kits/fullSitePackage/types";
 import { HOUSE_PROJECT_RESOURCE_KEY } from "./constants";
@@ -47,7 +56,7 @@ const buildSurfaceColumn = (input: {
   },
 });
 
-export const buildProjectDetailBlocks = () =>
+export const buildProjectDetailV1Blocks = () =>
   [
     {
       id: "project-back-link",
@@ -213,6 +222,28 @@ export const buildProjectDetailBlocks = () =>
     },
   ] as const;
 
+/**
+ * Canonical v2 sections for the Aurora detail template (TASK-580-03-L02).
+ * Built through the shared widget→V2 conversion so the seed output is
+ * byte-for-byte the same contract the L03 SQL backfill and the read adapter
+ * produce for stored v1 rows.
+ */
+export const buildProjectDetailSections = (): PageSectionV2[] =>
+  convertWidgetBlocksToV2Sections(
+    buildProjectDetailV1Blocks() as unknown as DetailPageLegacyWidgetBlockV1[]
+  );
+
+/**
+ * v2 binding list for the Aurora detail template: v1 field paths remapped
+ * onto the converted block ids/prop paths by the canonical conversion.
+ */
+export const buildProjectDetailV2Bindings = (): DetailPageBinding[] =>
+  convertDetailPageBindingsToV2(
+    PROJECT_DETAIL_BINDINGS as unknown as DetailPageBinding[],
+    buildProjectDetailV1Blocks() as unknown as DetailPageLegacyWidgetBlockV1[],
+    buildProjectDetailSections()
+  ).bindings;
+
 const entryFieldBinding = (id: string, blockId: string, propPath: string, field: string) => ({
   id,
   blockId,
@@ -298,10 +329,10 @@ const assertRef: (
   }
 };
 
-const compactNormalizedBlocks = (blocks: JsonObject[]): JsonObject[] =>
-  blocks.map((block) => {
+const compactNormalizedSections = (sections: JsonObject[]): JsonObject[] =>
+  sections.map((section) => {
     const compact: JsonObject = {};
-    for (const [key, value] of Object.entries(block)) {
+    for (const [key, value] of Object.entries(section)) {
       if (value !== undefined) compact[key] = value;
     }
     return compact;
@@ -316,8 +347,8 @@ export const buildProjectDetailDesired = (
     { ref: "content_type", key: HOUSE_PROJECT_RESOURCE_KEY },
     "house_project_detail_content_ref_invalid"
   );
-  const normalized = normalizeDetailPageDocument({
-    schemaVersion: 1,
+  const normalized = normalizeDetailPageDocumentForWrite({
+    schemaVersion: 2,
     id: DETAIL_ID,
     name: "Szczegóły projektu domu",
     contentTypeId: CONTENT_ID,
@@ -329,14 +360,14 @@ export const buildProjectDetailDesired = (
       descriptionField: "seoDescription",
     },
     settings: { template: "project-detail", layout: {} },
-    blocks: buildProjectDetailBlocks(),
-    bindings: PROJECT_DETAIL_BINDINGS,
+    sections: buildProjectDetailSections(),
+    bindings: buildProjectDetailV2Bindings(),
   });
-  const { id: _nativeValidationId, blocks, ...withoutDatabaseId } = normalized;
+  const { id: _nativeValidationId, sections, ...withoutDatabaseId } = normalized;
   return cleanJsonObject({
     ...withoutDatabaseId,
     contentTypeId,
-    blocks: compactNormalizedBlocks(blocks as JsonObject[]),
+    sections: compactNormalizedSections(sections as unknown as JsonObject[]),
   });
 };
 

@@ -16,7 +16,10 @@ import { areRevisionSnapshotsEqual } from "./revisionSnapshot";
 import { getSetting } from "../settings/settingsService";
 import type { ContentRouteSetting } from "../settings/settingsContracts";
 import { getContentType, type ContentTypeRecord } from "./typeService";
-import { normalizeDetailPageDocument } from "./detailPageSchema";
+import {
+  normalizeDetailPageDocument,
+  normalizeDetailPageDocumentForWrite,
+} from "./detailPageSchema";
 import type { DetailPageDocument, DetailPageRevisionKind } from "./detailPageTypes";
 import { hashPreviewToken } from "../pages/previewService";
 
@@ -117,8 +120,11 @@ const normalizeDocumentWithResolvedId = (value: unknown, resolvedId?: string) =>
         };
 
   try {
-    return normalizeDetailPageDocument(inputWithId);
-  } catch {
+    return normalizeDetailPageDocumentForWrite(inputWithId);
+  } catch (error) {
+    // Surface the v1-write rejection code so the route boundary maps it; all
+    // other shape failures collapse to the generic invalid code.
+    if (error instanceof Error && error.message === "detail_page_legacy_v1_invalid") throw error;
     throw new Error("detail_page_invalid");
   }
 };
@@ -259,7 +265,7 @@ export async function prepareDetailPageDocumentUpsert(input: {
   existing: DetailPageDocumentRecord | null;
   document: DetailPageDocument;
 }> {
-  const normalized = normalizeDetailPageDocument(input.document);
+  const normalized = normalizeDetailPageDocumentForWrite(input.document);
   if (input.expectedExistingId && input.expectedExistingId !== normalized.id) {
     throw new Error("detail_page_conflict");
   }
@@ -269,7 +275,7 @@ export async function prepareDetailPageDocumentUpsert(input: {
     throw new Error("detail_page_invalid");
   }
 
-  const refreshedDocument = normalizeDetailPageDocument({
+  const refreshedDocument = normalizeDetailPageDocumentForWrite({
     ...normalized,
     contentTypeSlug: contentType.slug,
   });
@@ -349,7 +355,7 @@ const persistDetailPageDocument = async (input: {
   record: DetailPageDocumentRecord;
   contentType: ContentTypeRecord;
 }> => {
-  const normalized = normalizeDetailPageDocument(input.document);
+  const normalized = normalizeDetailPageDocumentForWrite(input.document);
   if (input.expectedExistingId && input.expectedExistingId !== normalized.id) {
     throw new Error("detail_page_conflict");
   }
@@ -362,7 +368,7 @@ const persistDetailPageDocument = async (input: {
         .where(eq(contentTypes.id, normalized.contentTypeId))
         .for("key share");
       if (!contentType) throw new Error("detail_page_invalid");
-      const document = normalizeDetailPageDocument({
+      const document = normalizeDetailPageDocumentForWrite({
         ...normalized,
         contentTypeSlug: contentType.slug,
       });

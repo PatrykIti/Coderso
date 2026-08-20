@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import React, { useMemo, useState } from "react";
+import React from "react";
 
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -15,13 +15,8 @@ import { CustomScreenEditorPage } from "../../../core/admin/ui/custom-screens/Cu
 import { ScreenBlockInspector } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { broadcastCacheEvent } from "../../../core/admin/utils/cacheBus";
-import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../core/admin/components/ui/tabs";
-import { getRegisteredWidget } from "../../../core/admin/ui/widgets/registry";
-import type { Block, WidgetEditorContext } from "../../../core/admin/ui/pages/builder/types";
 import {
   buildScreenFieldBindingId,
-  type CustomScreenBinding,
   type CustomScreenDefinition,
 } from "../../../core/services/customScreens/customScreenSchemas";
 
@@ -72,19 +67,6 @@ vi.mock("@/ui/custom-screens/ScreenAuthoringCanvas", async (importOriginal) => {
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const headerBlock: Block = {
-  id: "header-1",
-  type: "screen-record-header",
-  variant: "card",
-  editor: { mode: "visual", wizardCompleted: true },
-  data: {
-    title: "Untitled project",
-    subtitle: "Overview",
-    description: "Preview details",
-    badge: "Draft",
-  },
-};
-
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -105,77 +87,9 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-function Harness() {
-  const [activeInspectorTab, setActiveInspectorTab] = useState<"screen" | "data" | "widget">(
-    "widget"
-  );
-  // TASK-496-02: the standalone FieldBindingPanel (and its focusedPropPath wiring)
-  // is retired; the binding surface is covered by custom-screen-binding-panel.test
-  // through ScreenBlockInspector. This harness now only asserts that the BlockSettings
-  // widget tab exposes no legacy binding jump controls for retired screen widgets.
-  const [, setFocusedBindingPropPath] = useState<string | null>(null);
-  const [block, setBlock] = useState<Block>(headerBlock);
-  const [bindings] = useState<CustomScreenBinding[]>([
-    {
-      id: "binding-title",
-      widgetId: "header-1",
-      propPath: "title",
-      field: "projectTitle",
-      mode: "read",
-    },
-  ]);
-  const widget = getRegisteredWidget(block.type);
-
-  const editorContext = useMemo<WidgetEditorContext>(
-    () => ({
-      surface: "admin-editor-view",
-      jumpToBindingPropPath: (propPath: string) => {
-        setActiveInspectorTab("data");
-        setFocusedBindingPropPath(propPath);
-      },
-      getBindingState: (propPath: string) =>
-        bindings.some((binding) => binding.widgetId === block.id && binding.propPath === propPath)
-          ? "bound"
-          : "literal",
-    }),
-    [bindings, block.id]
-  );
-
-  return (
-    <Tabs
-      value={activeInspectorTab}
-      onValueChange={(next) => setActiveInspectorTab(next as "screen" | "data" | "widget")}
-    >
-      <TabsList variant="line">
-        <TabsTrigger value="data">Data</TabsTrigger>
-        <TabsTrigger value="widget">Selected Widget</TabsTrigger>
-      </TabsList>
-      <TabsContent value="widget">
-        <BlockSettings
-          block={block}
-          widget={widget ?? undefined}
-          onChange={setBlock}
-          editorContext={editorContext}
-        />
-      </TabsContent>
-    </Tabs>
-  );
-}
-
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
-});
-
-test("retired screen widgets do not expose legacy binding jump controls", () => {
-  const view = mount(<Harness />);
-
-  try {
-    const titleDataButton = view.container.querySelector('button[data-binding-prop-path="title"]');
-    expect(titleDataButton).toBeNull();
-  } finally {
-    view.cleanup();
-  }
 });
 
 test("ScreenBlockInspector renders the flat inline Layout group in place of the retired Background row", () => {

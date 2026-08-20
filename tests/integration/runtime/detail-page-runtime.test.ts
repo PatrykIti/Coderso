@@ -172,7 +172,7 @@ const insertPublishedDetailPageDocument = async (input: {
   documentOverrides?: Partial<DetailPageDocument>;
 }) => {
   const baseDocument: DetailPageDocument = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: input.id,
     name: "Product detail page",
     contentTypeId: input.contentTypeId,
@@ -206,22 +206,51 @@ const insertPublishedDetailPageDocument = async (input: {
         applyDefaultsToNewBlocks: false,
       },
     },
-    blocks: [
+    sections: [
       {
         id: "hero",
         type: "hero",
+        name: "Hero",
         variant: "centered",
-        data: {
-          headline: "Default detail headline",
-          body: "Composed detail template body",
+        layout: {
+          columns: 1,
+          align: "start",
+          justify: "start",
+          maxWidth: 1080,
+          stackVertical: false,
         },
+        style: {
+          background: "#ffffff",
+          backgroundType: "color",
+          backgroundImage: null,
+          accent: "#0d9488",
+          radius: 0,
+          shadow: "none",
+        },
+        spacing: { paddingTop: 64, paddingBottom: 64, paddingLeft: 40, paddingRight: 40, gap: 24 },
+        visibility: { visible: true, authOnly: false, anchor: null, startsAt: null, endsAt: null },
+        responsive: {},
+        blocks: [
+          {
+            id: "hero-heading",
+            type: "heading",
+            props: { text: "Default detail headline", level: "h2", align: "left" },
+            visibility: { visible: true },
+          },
+          {
+            id: "hero-text",
+            type: "text",
+            props: { text: "Composed detail template body", format: "plain", align: "left" },
+            visibility: { visible: true },
+          },
+        ],
       },
     ],
     bindings: [
       {
         id: "binding-headline",
-        blockId: "hero",
-        propPath: "headline",
+        blockId: "hero-heading",
+        propPath: "text",
         source: {
           kind: "entry-field",
           field: "headline",
@@ -382,22 +411,72 @@ testIfDbWithOptions(
 
     const fixture = await createProductFixture("published");
     const detailPageId = randomUUID();
-    const listingQueryId = "detail-query";
-    const searchToken = buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search);
+    // V2 detail-page authoring (TASK-580-03-L06) has no search-box widget; the
+    // listing-filters block hydrates `lq.<id>.__q` state from the query string
+    // against a real saved query, mirroring the v1 search-box runtime contract.
+    const { createListingQuery, deleteListingQuery } =
+      await import("../../../core/services/content/listingQueriesService");
+    const listingQuery = await createListingQuery({
+      name: `Detail runtime filters query ${fixture.token}`,
+      query: {
+        source: "entries",
+        sourceConfig: { contentTypeId: fixture.contentType.id },
+        filters: [],
+        sort: [{ field: "title", dir: "asc" }],
+        pagination: { limit: 20, offset: 0 },
+        fields: ["id", "title", "slug", "status", "publishedAt", "updatedAt"],
+      },
+    });
+    const searchToken = buildListingRuntimeParamName(listingQuery.id, listingRuntimeTokens.search);
     await insertPublishedDetailPageDocument({
       id: detailPageId,
       contentTypeId: fixture.contentType.id,
       contentTypeSlug: fixture.contentType.slug,
       documentOverrides: {
-        blocks: [
+        sections: [
           {
             id: "search",
-            type: "search-box",
-            data: {
-              mode: "listing",
-              listingQueryId,
-              title: "Search detail results",
+            type: "content",
+            name: "Search",
+            variant: "default",
+            layout: {
+              columns: 1,
+              align: "start",
+              justify: "start",
+              maxWidth: 1080,
+              stackVertical: false,
             },
+            style: {
+              background: "#ffffff",
+              backgroundType: "color",
+              backgroundImage: null,
+              accent: "#0d9488",
+              radius: 0,
+              shadow: "none",
+            },
+            spacing: {
+              paddingTop: 64,
+              paddingBottom: 64,
+              paddingLeft: 40,
+              paddingRight: 40,
+              gap: 24,
+            },
+            visibility: {
+              visible: true,
+              authOnly: false,
+              anchor: null,
+              startsAt: null,
+              endsAt: null,
+            },
+            responsive: {},
+            blocks: [
+              {
+                id: "search",
+                type: "filters",
+                props: { queryId: listingQuery.id, showSearch: true, showCount: false },
+                visibility: { visible: true },
+              },
+            ],
           },
         ],
         bindings: [],
@@ -413,14 +492,18 @@ testIfDbWithOptions(
       } satisfies ContentRouteSetting,
     ]);
 
-    const response = await requestPublicPath(
-      `/${fixture.contentType.slug}/${fixture.entry.slug}?${searchToken}=desk`
-    );
+    try {
+      const response = await requestPublicPath(
+        `/${fixture.contentType.slug}/${fixture.entry.slug}?${searchToken}=desk`
+      );
 
-    expect(response.status).toBe(200);
-    const html = await response.text();
-    expect(html).toContain(`name="${searchToken}"`);
-    expect(html).toContain('value="desk"');
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain(`name="${searchToken}"`);
+      expect(html).toContain('value="desk"');
+    } finally {
+      await deleteListingQuery(listingQuery.id);
+    }
   },
   { timeout: dbRuntimeTimeout }
 );

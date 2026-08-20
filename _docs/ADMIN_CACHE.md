@@ -85,7 +85,6 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `commerce:products:list`
 - `commerce:products:detail:<id>`
 - `commerce:collections:list`
-- `widgetCatalog:list`
 - `pageTemplates:list`
 - `pageTemplates:detail:<id>`
 - `media:list`
@@ -445,21 +444,13 @@ admin UI over the existing `commerce:collections:list` family:
   `widgetTemplates:detail:<id>`, `widgetTemplateCategories:list`, their cached
   clients, and the `/advanced/widgets/templates/:id` prefetch/route entries.
 
-### Retired widget-library compatibility cache note
+### Removed: Widget Library + widget-template authoring surface
 
-- The hidden support-only compatibility catalog state is owned by
-  `core/admin/ui/widgets/WidgetLibraryPage.tsx` and is backed by
-  `widgetCatalog:list` and `pages:list` (the catalog is core-widget-only after
-  the Page Templates rewrite).
-- This cache seam must not be reused to add a Page/Form/Menu/Post/Screen
-  authoring flow. Active editors cache their own section/block documents;
-  configurable Dashboard widgets use the Dashboard cache family.
-- The page hydrates catalog and pages from `getCachedWidgetCatalog()` and
-  `getCachedPages()` on first render, then revalidates in the background when a
-  cache entry exists.
-- Cache-bus events for `widgetCatalog:list` and `pages:list` refresh the list
-  model in the background. The section dropdown, table/grid mode, and selected
-  row ids remain shell-owned UI state and are not persisted into browser cache.
+- The Widget Library admin page and the `widgetCatalog:list` browser cache key
+  were deleted in TASK-580-02. The hidden compatibility catalog, its cached
+  clients, and the `/advanced/widgets` route no longer exist.
+- `pages:list`/`pages:detail:<id>` remain active keys owned by the Pages
+  surface; do not reintroduce a widget catalog cache family for them.
 
 ### Media cache note
 

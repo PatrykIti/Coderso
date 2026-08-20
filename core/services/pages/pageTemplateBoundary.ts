@@ -13,19 +13,14 @@ export type PageTemplateRuntimeInput = {
 };
 
 export type PageTemplateBoundarySurfaceKind =
-  | "page"
-  | "widget-template"
-  | "custom-screen"
-  | "detail-page";
+  "page" | "widget-template" | "custom-screen" | "detail-page";
 
 export type PageTemplateBoundaryContract =
-  | typeof PAGE_V2_SECTION_BLOCK_CONTRACT
-  | typeof LEGACY_WIDGET_BLOCK_CONTRACT;
+  typeof PAGE_V2_SECTION_BLOCK_CONTRACT | typeof LEGACY_WIDGET_BLOCK_CONTRACT;
 
 const legacyWidgetSurfaceKinds = new Set<PageTemplateBoundarySurfaceKind>([
   "widget-template",
   "custom-screen",
-  "detail-page",
 ]);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

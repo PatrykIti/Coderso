@@ -7,7 +7,7 @@ import {
   type CustomScreenDefinition,
 } from "../../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../../core/services/settings/settingsService";
-import type { WidgetBlock } from "../../../../core/widgets/types";
+import type { LegacyWidgetBlock } from "../../../../core/services/renderContracts/legacyWidgetBlock";
 
 export const createActionExecutorTestState = () => {
   let contentRoutes: ContentRouteSetting[] = [];
@@ -30,7 +30,7 @@ export const createActionExecutorTestState = () => {
     sidebarLabel: string | null;
     schemaVersion: 4;
     definition: CustomScreenDefinition;
-    blocks: WidgetBlock[];
+    blocks: LegacyWidgetBlock[];
     bindings: CustomScreenBinding[];
     capabilities: CustomScreenCapabilities;
     revision: number;

@@ -1,5 +1,5 @@
 import type { ContentListTemplateProps } from "../site/renderPublicEntry";
-import { ContentListPager } from "../widgets/core/contentList";
+import { ContentListPager } from "../services/renderContracts/contentListRenderer";
 
 export default function ContentListTemplate({
   title,

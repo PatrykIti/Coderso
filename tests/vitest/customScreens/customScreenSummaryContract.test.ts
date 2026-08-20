@@ -211,7 +211,6 @@ describe("lightweight custom screen import graph", () => {
           path: "core/services/customScreens/bindingResolver.ts",
           exact: true,
         },
-        { label: "widget runtime", path: "core/widgets/runtime.tsx", exact: true },
       ],
     });
 

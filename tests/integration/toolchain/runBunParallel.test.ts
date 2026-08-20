@@ -58,11 +58,11 @@ const ROOT = path.resolve(import.meta.dir, "..", "..", "..");
 const RUNNER = "scripts/run-bun-parallel.ts";
 const SETTINGS_TEST = "tests/unit/settings/settingsService.test.ts";
 // Tracks the live migration journal (core/db/migrations/meta/_journal.json),
-// currently 77 entries (0073_smiling_ser_duncan, 0075_form_submissions_export_cursor,
+// currently 78 entries (0073_smiling_ser_duncan, 0075_form_submissions_export_cursor,
 // 0076_content_revisions_version_uniq and 0078_backup_users_staging were appended
 // by concurrent streams; the applier applies the full journal, so this count
 // must equal journal.entries.length).
-const MIGRATION_COUNT = 77;
+const MIGRATION_COUNT = 78;
 const WORKER_SCHEMAS = ["bun_worker_0", "bun_worker_1"];
 
 // Never dialed in fake-worker mode: `assertDirectUrl`/`inspectDatabaseUrl`

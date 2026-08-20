@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 
 import {
@@ -79,6 +79,24 @@ const resolveImportedModule = (importer: string, specifier: string): string | un
   return resolvedPath ? relative(repoRoot, resolvedPath).replaceAll("\\", "/") : undefined;
 };
 
+// Follow pure re-export shims (a file whose entire body is a single
+// `export * from "./target"`) so callers bound through a legacy boundary path
+// are still matched against the single canonical implementation module.
+const resolveCanonicalModulePath = (importer: string, specifier: string): string | undefined => {
+  let resolved = resolveImportedModule(importer, specifier);
+  const seen = new Set<string>();
+  while (resolved && !seen.has(resolved)) {
+    seen.add(resolved);
+    const absolute = resolve(repoRoot, resolved);
+    if (!existsSync(absolute) || !statSync(absolute).isFile()) break;
+    const source = readSource(resolved).trim();
+    const shimMatch = /^\s*export\s+\*\s+from\s+["'](\.[^"']+)["']\s*;\s*$/.exec(source);
+    if (!shimMatch) break;
+    resolved = resolveImportedModule(resolved, shimMatch[1]!);
+  }
+  return resolved;
+};
+
 type ImportedSymbolBindings = Readonly<{
   named: ReadonlySet<string>;
   namespaces: ReadonlySet<string>;
@@ -96,7 +114,7 @@ export const collectImportedSymbolBindings = (
     if (
       !isImportDeclaration(statement) ||
       !isStringLiteral(statement.moduleSpecifier) ||
-      resolveImportedModule(file, statement.moduleSpecifier.text) !== modulePath ||
+      resolveCanonicalModulePath(file, statement.moduleSpecifier.text) !== modulePath ||
       statement.importClause?.isTypeOnly
     ) {
       continue;

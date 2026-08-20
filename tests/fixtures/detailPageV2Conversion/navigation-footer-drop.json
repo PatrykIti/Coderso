@@ -1,0 +1,193 @@
+{
+  "case": "navigation-footer-drop",
+  "v1": {
+    "schemaVersion": 1,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Fixture detail page",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "fixture-type",
+    "status": "draft",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "blocks": [
+      {
+        "id": "nav-1",
+        "type": "navigation",
+        "data": {
+          "items": [
+            {
+              "label": "Home",
+              "href": "/"
+            }
+          ]
+        }
+      },
+      {
+        "id": "footer-1",
+        "type": "footer",
+        "data": {
+          "columns": []
+        }
+      },
+      {
+        "id": "main-hero",
+        "type": "hero",
+        "data": {
+          "headline": "Main"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "id": "b-nav",
+        "blockId": "nav-1",
+        "propPath": "items.0.label",
+        "source": {
+          "kind": "entry-field",
+          "field": "nav"
+        },
+        "transform": "text"
+      },
+      {
+        "id": "b-footer",
+        "blockId": "footer-1",
+        "propPath": "columns.0.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "foot"
+        },
+        "transform": "text"
+      },
+      {
+        "id": "b-main",
+        "blockId": "main-hero",
+        "propPath": "headline",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      }
+    ]
+  },
+  "expected": {
+    "schemaVersion": 2,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Fixture detail page",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "fixture-type",
+    "status": "draft",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "sections": [
+      {
+        "id": "main-hero",
+        "type": "hero",
+        "name": "Hero",
+        "variant": "centered",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "main-hero-heading",
+            "type": "heading",
+            "props": {
+              "text": "Main"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "main-hero-text",
+            "type": "text",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "main-hero-badge",
+            "type": "badge",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "main-hero-button",
+            "type": "button",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "main-hero-image",
+            "type": "image",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      }
+    ],
+    "bindings": [
+      {
+        "id": "b-main",
+        "blockId": "main-hero-heading",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      }
+    ]
+  },
+  "dropped": [
+    {
+      "bindingId": "b-nav",
+      "reason": "dropped_widget_type"
+    },
+    {
+      "bindingId": "b-footer",
+      "reason": "dropped_widget_type"
+    }
+  ]
+}

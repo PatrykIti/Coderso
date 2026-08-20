@@ -149,7 +149,6 @@ const buildScreenContext = async (activeScreenId?: string): Promise<AssistantAct
       forms: [],
       menus: [],
       seoDocuments: [],
-      widgets: [],
       warnings: [],
     },
     runtimeSnapshot: {

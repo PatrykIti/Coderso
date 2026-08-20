@@ -1,21 +1,9 @@
-import { pathToFileURL } from "node:url";
-
 import { renderToString } from "react-dom/server";
 import type { CSSProperties, ReactNode } from "react";
 
-import { createTemplateCache } from "../themes/cache";
-import { createWidgetRuntimeScriptRegistry } from "../widgets/runtimeScripts";
-import type { DeviceTarget, WidgetBlock, WidgetRenderContext } from "../widgets/types";
-import type { PageLayoutSettings } from "../services/pages/layoutSettings";
-import {
-  DEFAULT_PAGE_TEMPLATE_KEY,
-  normalizePageTemplateKey,
-  resolvePageTemplatePath,
-} from "../services/pages/pageTemplateService";
 import { type PageBreakpoint, type PageDocumentV2 } from "../services/pages/pageDocumentV2";
 import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBindingContract";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
-import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
 import {
   buildSiteShellCss,
@@ -27,53 +15,19 @@ import {
 import { splitGoogleAnalyticsHeadSnippet } from "../services/integrations/analyticsRuntime";
 import { buildPublicDocumentShell } from "./publicDocumentShell";
 
-export type PublicPageRenderOptions = {
+export type PublicPageV2RuntimeRenderOptions = {
   title: string;
-  blocks: WidgetBlock[];
+  document: PageDocumentV2 | unknown;
   cssHref?: string | null;
   inlineCss?: string | null;
   devModuleScripts?: string[] | null;
   isPreview?: boolean;
-  previewDevice?: DeviceTarget;
+  previewDevice?: PageBreakpoint;
   metaDescription?: string | null;
   canonicalUrl?: string | null;
   robots?: string | null;
   imageUrl?: string | null;
-  layoutSettings?: PageLayoutSettings;
-  /**
-   * Analytics tracking snippet body (TASK-483-03-L02): the inline IIFE built by
-   * `buildTrackingScript` (already minted with a per-render beacon nonce).
-   * `renderDocument` wraps it in a `<script>` appended before `</body>` on LIVE
-   * renders only — it is skipped whenever `isPreview` is set, so admin preview
-   * traffic never pollutes the analytics tables. Absent/null → no script.
-   */
-  analyticsScriptHtml?: string | null;
-  siteLocale?: unknown;
-  /**
-   * GA4 head snippet (TASK-491-01-L02): the validated `gtag.js` head tag built
-   * by `resolvePublicAnalyticsHead`. Rendered as a raw `<head>` script on LIVE
-   * renders only; skipped whenever `isPreview` is set so preview traffic never
-   * fires GA hits. Absent/null → no tag.
-   */
-  analyticsHeadSnippet?: string | null;
-};
-
-export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
-  themeName?: string | null;
   templateKey?: unknown;
-  responsiveCss?: string | null;
-  siteShell?: SiteShellRenderProps | null;
-  siteName?: string | null;
-  activePath?: string | null;
-};
-
-export type PublicPageV2RuntimeRenderOptions = Omit<
-  PublicPageRenderOptions,
-  "blocks" | "layoutSettings"
-> & {
-  document: PageDocumentV2 | unknown;
-  templateKey?: unknown;
-  previewDevice?: PageBreakpoint;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
   /**
    * Scoped responsive `@media` overrides (TASK-423-02). Emitted for public
@@ -97,26 +51,26 @@ export type PublicPageV2RuntimeRenderOptions = Omit<
   activePath?: string | null;
   /**
    * V2 body-script emission seam (TASK-459-02): the registry-rendered runtime
-   * scripts appended before `</body>`, exactly like the legacy WidgetBlock
-   * path. `publicSite.tsx` provides it only when the prepared runtime
-   * document needs a client script (currently the shared listing runtime
-   * script for live filters blocks); absent/null keeps v2 pages script-free.
+   * scripts appended before `</body>`. `publicSite.tsx` provides it only when
+   * the prepared runtime document needs a client script (currently the shared
+   * listing runtime script for live filters blocks); absent/null keeps v2 pages
+   * script-free.
    */
   renderBodyScripts?: (() => ReactNode) | null;
-};
-
-type TemplateComponent<Props> = (props: Props) => ReactNode;
-
-const loadTemplateComponent = async <Props extends PageTemplateProps>(templatePath: string) => {
-  try {
-    const mod = await import(pathToFileURL(templatePath).href);
-    if (typeof mod.default === "function") {
-      return mod.default as TemplateComponent<Props>;
-    }
-  } catch (error) {
-    console.warn(`Failed to load template ${templatePath}`, error);
-  }
-  return null;
+  /**
+   * Analytics tracking snippet body (TASK-483-03-L02): the inline IIFE built by
+   * `buildTrackingScript` (already minted with a per-render beacon nonce).
+   * Rendered in a `<script>` before `</body>` on LIVE renders only; skipped when
+   * `isPreview` is set. Absent/null → no script.
+   */
+  analyticsScriptHtml?: string | null;
+  siteLocale?: unknown;
+  /**
+   * GA4 head snippet (TASK-491-01-L02): the validated `gtag.js` head tag built
+   * by `resolvePublicAnalyticsHead`. Rendered as a raw `<head>` script on LIVE
+   * renders only; skipped when `isPreview` is set. Absent/null → no tag.
+   */
+  analyticsHeadSnippet?: string | null;
 };
 
 const normalizePageV2TemplateKey = (value: unknown) => {
@@ -330,148 +284,6 @@ const appendSiteShellCss = (
     .filter(Boolean)
     .join("\n");
 };
-
-export function renderPublicPageHtml(options: PublicPageRenderOptions) {
-  const {
-    title,
-    blocks,
-    cssHref,
-    inlineCss,
-    devModuleScripts,
-    isPreview,
-    previewDevice,
-    metaDescription,
-    canonicalUrl,
-    robots,
-    layoutSettings: rawLayoutSettings,
-  } = options;
-
-  const runtimeScripts = createWidgetRuntimeScriptRegistry();
-  const renderContext: WidgetRenderContext = {
-    mode: "public",
-    previewDevice,
-    runtimeScripts,
-  };
-
-  const templateProps: PageTemplateProps = {
-    title,
-    templateKey: DEFAULT_PAGE_TEMPLATE_KEY,
-    blocks,
-    layoutSettings: rawLayoutSettings,
-    isPreview,
-    previewDevice,
-    renderContext,
-  };
-
-  const body = (
-    <PageRuntimeRoot templateKey={templateProps.templateKey} isPreview={isPreview}>
-      <DefaultRuntimePageShell {...templateProps} />
-    </PageRuntimeRoot>
-  );
-
-  return renderDocument(
-    title,
-    body,
-    cssHref,
-    inlineCss,
-    metaDescription,
-    canonicalUrl,
-    robots,
-    options.imageUrl,
-    devModuleScripts,
-    isPreview,
-    () => runtimeScripts.renderScripts(),
-    null, // responsiveCss (legacy path has none)
-    options.analyticsScriptHtml,
-    options.siteLocale,
-    options.analyticsHeadSnippet
-  );
-}
-
-export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRenderOptions) {
-  const {
-    title,
-    blocks,
-    cssHref,
-    inlineCss,
-    devModuleScripts,
-    isPreview,
-    previewDevice,
-    metaDescription,
-    canonicalUrl,
-    robots,
-    layoutSettings: rawLayoutSettings,
-    themeName,
-    templateKey,
-    responsiveCss,
-    siteShell,
-    siteName,
-    activePath,
-  } = options;
-
-  const normalizedTemplateKey = normalizePageTemplateKey(templateKey);
-  const cache = createTemplateCache();
-  const templatePath = await resolvePageTemplatePath({
-    themeName,
-    templateKey,
-    cache,
-  });
-  const Template = templatePath
-    ? await loadTemplateComponent<PageTemplateProps>(templatePath)
-    : null;
-
-  const runtimeScripts = createWidgetRuntimeScriptRegistry();
-  const renderContext: WidgetRenderContext = {
-    mode: "public",
-    previewDevice,
-    runtimeScripts,
-  };
-
-  const templateProps: PageTemplateProps = {
-    title,
-    templateKey: normalizedTemplateKey,
-    blocks,
-    layoutSettings: rawLayoutSettings,
-    isPreview,
-    previewDevice,
-    renderContext,
-  };
-
-  const body = (
-    <PageRuntimeRoot templateKey={templateProps.templateKey} isPreview={isPreview}>
-      <PublicSiteShellFrame
-        siteShell={siteShell}
-        siteName={siteName}
-        activePath={activePath}
-        previewDevice={previewDevice}
-      >
-        {Template ? (
-          <Template {...templateProps} />
-        ) : (
-          <DefaultRuntimePageShell {...templateProps} />
-        )}
-      </PublicSiteShellFrame>
-    </PageRuntimeRoot>
-  );
-
-  return renderDocument(
-    title,
-    body,
-    cssHref,
-    appendSiteShellCss(inlineCss, siteShell),
-    metaDescription,
-    canonicalUrl,
-    robots,
-    options.imageUrl,
-    devModuleScripts,
-    isPreview,
-    () => runtimeScripts.renderScripts(),
-    responsiveCss,
-    options.analyticsScriptHtml,
-    options.siteLocale,
-    options.analyticsHeadSnippet
-  );
-}
 
 export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRenderOptions) {
   const {

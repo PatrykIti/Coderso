@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { SharedColorControl } from "@/ui/widgets/editors/SharedColorControl";
+import { SharedColorControl } from "@/ui/shared/SharedColorControl";
 
 import { FORM_SCHEMA_LIMITS } from "../../../services/forms/formSettings";
 

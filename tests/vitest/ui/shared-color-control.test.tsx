@@ -7,7 +7,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import {
   SharedColorControl,
   describeSharedColorControlState,
-} from "../../../core/admin/ui/widgets/editors/SharedColorControl";
+} from "../../../core/admin/ui/shared/SharedColorControl";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 

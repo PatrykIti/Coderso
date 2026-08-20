@@ -217,7 +217,7 @@ const insertPublishedDetailPageDocument = async (input: {
   contentTypeSlug: string;
 }) => {
   const baseDocument: DetailPageDocument = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: input.id,
     name: "Vis gate detail page",
     contentTypeId: input.contentTypeId,
@@ -247,22 +247,51 @@ const insertPublishedDetailPageDocument = async (input: {
         applyDefaultsToNewBlocks: false,
       },
     },
-    blocks: [
+    sections: [
       {
         id: "hero",
         type: "hero",
+        name: "Hero",
         variant: "centered",
-        data: {
-          headline: "Linked gate detail headline",
-          body: "Linked gate detail body",
+        layout: {
+          columns: 1,
+          align: "start",
+          justify: "start",
+          maxWidth: 1080,
+          stackVertical: false,
         },
+        style: {
+          background: "#ffffff",
+          backgroundType: "color",
+          backgroundImage: null,
+          accent: "#0d9488",
+          radius: 0,
+          shadow: "none",
+        },
+        spacing: { paddingTop: 64, paddingBottom: 64, paddingLeft: 40, paddingRight: 40, gap: 24 },
+        visibility: { visible: true, authOnly: false, anchor: null, startsAt: null, endsAt: null },
+        responsive: {},
+        blocks: [
+          {
+            id: "hero-heading",
+            type: "heading",
+            props: { text: "Linked gate detail headline", level: "h2", align: "left" },
+            visibility: { visible: true },
+          },
+          {
+            id: "hero-text",
+            type: "text",
+            props: { text: "Linked gate detail body", format: "plain", align: "left" },
+            visibility: { visible: true },
+          },
+        ],
       },
     ],
     bindings: [
       {
         id: "binding-headline",
-        blockId: "hero",
-        propPath: "headline",
+        blockId: "hero-heading",
+        propPath: "text",
         source: { kind: "entry-field", field: "headline" },
         transform: "text",
         required: true,

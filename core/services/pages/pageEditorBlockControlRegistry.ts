@@ -39,7 +39,7 @@ import {
 import {
   FORM_EMBED_SUCCESS_BEHAVIORS,
   FORM_EMBED_TEXTAREA_ROWS_LIMITS,
-} from "../../widgets/core/formEmbedContract";
+} from "../../services/renderContracts/formEmbedContract";
 import {
   blockPropControl,
   control,
@@ -541,6 +541,10 @@ export const pageBlockControlRegistry: Record<
       panel: "content",
     }),
   ],
+  // TASK-580-03-L01: legacy-widget is a migration-only read-only placeholder
+  // (never editor-insertable) — the exhaustive Record<PageBlockType,…> needs a
+  // member, but it must expose NO authoring controls.
+  "legacy-widget": [],
 };
 
 export const getPageEditorControlsForTarget = (target: {

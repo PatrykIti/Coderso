@@ -21,7 +21,7 @@ const ADAPTER_PATHS: Readonly<Record<SmokeSuiteId, string>> = Object.freeze({
   "task-492": "scripts/runtime-smoke/adapters/task-492.ts",
   "task-511": "scripts/runtime-smoke/adapters/task-511.ts",
   "task-517": "scripts/runtime-smoke/adapters/task-517.ts",
-  "task-467": "scripts/runtime-smoke/adapters/task-467.ts",
+  "detail-page-v2": "scripts/runtime-smoke/adapters/detail-page-v2.ts",
 });
 
 function adapterDefault(loaded: unknown): unknown {
@@ -72,7 +72,7 @@ const DESCRIPTORS = new Map<SmokeSuiteId, SmokeSuiteDescriptor>([
   ["task-492", descriptor("task-492")],
   ["task-511", descriptor("task-511")],
   ["task-517", descriptor("task-517")],
-  ["task-467", descriptor("task-467")],
+  ["detail-page-v2", descriptor("detail-page-v2")],
 ]);
 
 export const staticSmokeRegistry = Object.freeze({

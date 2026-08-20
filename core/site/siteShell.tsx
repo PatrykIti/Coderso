@@ -10,7 +10,7 @@ import {
   type MenuBlockV2,
   type MenuDocumentV2,
 } from "../services/menus/menuDocumentV2";
-import { lucideKebabIconComponents } from "../widgets/core/timelineLucideIcons";
+import { lucideKebabIconComponents } from "../services/renderContracts/timelineLucideIcons";
 import type { MenuAppearance } from "../services/menus/normalizeMenuAppearance";
 import { sanitizeAuthoringLinkHref } from "../services/pages/pageAuthoringSanitizers";
 import type { PageBlockV2, PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
@@ -19,7 +19,7 @@ import {
   PageBlockFrame,
   PageDocumentRender,
 } from "../services/pages/pageRendererV2";
-import type { NavigationItem } from "../widgets/core/navigation";
+import type { NavigationItem } from "../services/renderContracts/navigationRenderer";
 import { SITE_MENU_DOC_ATTRIBUTE, buildMenuDocumentCss } from "./menuDocumentCss";
 import {
   SITE_FOOTER_ATTRIBUTE,

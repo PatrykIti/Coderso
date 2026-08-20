@@ -229,38 +229,6 @@ const context = buildAssistantAdminContext({
         status: "warning",
       },
     ],
-    widgets: [
-      {
-        id: "widget-template-hero",
-        source: "template",
-        name: "Hero Template",
-        description: null,
-        category: "Marketing",
-        module: "widgets",
-        complexity: "composite",
-        audience: "beginner",
-        variants: [],
-        slots: [],
-        surfaces: ["page-builder"],
-        requires: [],
-        status: "published",
-      },
-      {
-        id: "widget-template-hero-secondary",
-        source: "template",
-        name: "Hero Secondary Template",
-        description: null,
-        category: "Marketing",
-        module: "widgets",
-        complexity: "composite",
-        audience: "beginner",
-        variants: [],
-        slots: [],
-        surfaces: ["page-builder"],
-        requires: [],
-        status: "published",
-      },
-    ],
     warnings: [],
   },
 });
@@ -354,18 +322,6 @@ test("mapCmsOperationToActionPlan maps generic update drafts to existing typed a
   ).toMatchObject({
     type: "seo.document.update",
     input: { id: "seo-products", patch: { description: "Browse products." } },
-  });
-
-  expect(
-    planFor({
-      operation: "update",
-      resourceKind: "widget-template",
-      targetQuery: { exactName: "Hero Template" },
-      mutation: { fieldIntent: "name", value: "Hero Template Updated" },
-    })?.actions[0]
-  ).toMatchObject({
-    type: "widget-template.update",
-    input: { id: "widget-template-hero", patch: { name: "Hero Template Updated" } },
   });
 });
 
@@ -475,15 +431,6 @@ test("mapCmsOperationToActionPlan maps counted destructive prompts for non-page 
         constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
       },
       expectedTypes: ["listing-template.delete", "listing-template.delete"],
-    },
-    {
-      draft: {
-        operation: "delete",
-        resourceKind: "widget-template",
-        targetQuery: { exactName: "Hero" },
-        constraints: { expectedCount: 2, destructive: true, requiresConfirmation: true },
-      },
-      expectedTypes: ["widget-template.delete", "widget-template.delete"],
     },
     {
       draft: {

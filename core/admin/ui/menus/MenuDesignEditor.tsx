@@ -132,8 +132,8 @@ import {
 } from "../../../site/menuDocumentCss";
 import { SHELL_APPEARANCE_DEFAULTS } from "../../../site/siteShellCss";
 import { toMenuCanvasColorCssVariableMap } from "../../../ui/theme/tokenCss";
-import type { NavigationItem } from "../../../widgets/core/navigation";
-import { loadFullTimelineIcons } from "../../../widgets/core/timeline";
+import type { NavigationItem } from "../../../services/renderContracts/navigationRenderer";
+import { loadFullTimelineIcons } from "../../../services/renderContracts/timelineIcons";
 import { DeviceSwitcher } from "../pages/DeviceSwitcher";
 import {
   ColorSwatchControl,
@@ -2635,8 +2635,7 @@ function MenuBlockPanel({
                     navProps.linkPaddingX ??
                     (section
                       ? (resolveMenuControlDefault(section, device, 0, "linkPaddingX").value as
-                          | number
-                          | undefined)
+                          number | undefined)
                       : undefined) ??
                     NAV_LINK_NUMBER_RANGES.paddingX.min
                   }
@@ -2657,8 +2656,7 @@ function MenuBlockPanel({
                     navProps.linkPaddingY ??
                     (section
                       ? (resolveMenuControlDefault(section, device, 0, "linkPaddingY").value as
-                          | number
-                          | undefined)
+                          number | undefined)
                       : undefined) ??
                     NAV_LINK_NUMBER_RANGES.paddingY.min
                   }
@@ -2679,8 +2677,7 @@ function MenuBlockPanel({
                     navProps.linkRadius ??
                     (section
                       ? (resolveMenuControlDefault(section, device, 0, "linkRadius").value as
-                          | number
-                          | undefined)
+                          number | undefined)
                       : undefined) ??
                     NAV_LINK_NUMBER_RANGES.radius.min
                   }

@@ -689,95 +689,6 @@ export const customScreenPolicy: AssistantResourcePolicy = {
   },
 };
 
-export const widgetTemplatePolicy: AssistantResourcePolicy = {
-  kind: "widget-template",
-  label: "Retired Widget Compatibility",
-  aliases: [
-    "widget template",
-    "widget templates",
-    "template widget",
-    "template widgets",
-    "szablon widgetu",
-    "szablon widgetów",
-    "szablony widgetow",
-    "szablony widgetów",
-    "template",
-    "templates",
-    "szablon",
-  ],
-  routes: ["/admin/advanced/widgets"],
-  operations: ["inspect", "find", "update", "delete"],
-  readPermissions: ["widgets:read"],
-  executePermissions: ["widgets:write"],
-  filters: {
-    status: {
-      field: "status",
-      aliases: ["status", "published", "draft"],
-      operators: ["eq", "in"],
-      values: {
-        published: ["published", "opublikowany"],
-        draft: ["draft", "szkic"],
-      },
-    },
-  },
-  fields: {
-    name: {
-      field: "name",
-      aliases: ["name", "nazwa", "nazwe", "nazwę"],
-      valueType: "string",
-      action: { type: "widget-template.update", patchPath: ["name"] },
-    },
-    category: {
-      field: "category",
-      aliases: ["category", "kategoria"],
-      valueType: "string",
-      action: { type: "widget-template.update", patchPath: ["category"] },
-    },
-    status: {
-      field: "status",
-      aliases: ["status"],
-      valueType: "enum",
-      enumValues: ["draft", "published"],
-      action: { type: "widget-template.update", patchPath: ["status"] },
-    },
-    blockData: {
-      field: "blockData",
-      aliases: ["block", "blok", "headline", "title", "label", "description", "text", "tekst"],
-      valueType: "record",
-      action: { type: "widget-template.block.patch", patchPath: ["dataPath"] },
-    },
-  },
-  actions: {
-    update: {
-      operation: "update",
-      type: "widget-template.update",
-      target: "active",
-      mode: "executable",
-    },
-    delete: {
-      operation: "delete",
-      type: "widget-template.delete",
-      target: "active",
-      mode: "executable",
-    },
-    patchBlock: {
-      operation: "update",
-      type: "widget-template.block.patch",
-      target: "active",
-      mode: "executable",
-    },
-  },
-  destructive: filteredDestructivePolicy,
-  secrets: { redacted: true, secretFields: ["settings.secret"], providerAllowed: false },
-  coverage: {
-    state: "legacy-maintenance",
-    task: "TASK-184-07",
-    routes: ["/admin/advanced/widgets"],
-    notes:
-      "Hidden compatibility maintenance for exact retained rows only; no create or insert authoring.",
-  },
-};
-
 export const mediaPolicy: AssistantResourcePolicy = {
   kind: "media",
   label: "Media",
@@ -832,6 +743,5 @@ export const contentScreensWidgetsMediaPolicies = {
   "content-type": contentTypePolicy,
   entry: entryPolicy,
   "custom-screen": customScreenPolicy,
-  "widget-template": widgetTemplatePolicy,
   media: mediaPolicy,
 };

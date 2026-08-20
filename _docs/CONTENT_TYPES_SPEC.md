@@ -497,6 +497,72 @@ Press/Media:
 - draft
 - published
 
+## Detail Page Documents (v2) — TASK-580-03
+
+A content type may own one persisted detail-page document
+(`detail_page_documents`) that renders individual entries on the public front.
+Since TASK-580-03 every stored detail-page document is a Page V2 document with
+`schemaVersion: 2` and a `sections[]`/`bindings[]` envelope (legacy v1
+documents were backfilled by migration 0079 and the read adapter converts any
+remaining v1 row in memory; see `_docs/DATA_MODEL.md`).
+
+V2 envelope shape (canonical emitter:
+`core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
+`buildDetailPageDocument`; strict write/read normalization:
+`core/services/content/detailPageSchema.ts`):
+
+```json
+{
+  "schemaVersion": 2,
+  "id": "<uuid>",
+  "name": "<Content Type> Detail Template",
+  "contentTypeId": "<uuid>",
+  "contentTypeSlug": "<content-type-slug>",
+  "status": "published",
+  "titlePattern": "{{ title }}",
+  "settings": { "template": "detail", "layout": { ... } },
+  "sections": [ { "id": "...", "type": "hero", "blocks": [ ... ] } ],
+  "bindings": [
+    {
+      "id": "...",
+      "blockId": "<section-id>-heading",
+      "propPath": "text",
+      "source": { "kind": "entry-field", "field": "title" },
+      "transform": "text",
+      "required": true
+    }
+  ]
+}
+```
+
+- `sections[]` are Page V2 sections; blocks carry deterministic ids
+  (`<sectionId>-<role>`, e.g. `project-hero-heading`). Write mode rejects
+  unknown envelope keys and v1 payloads (`detail_page_legacy_v1_invalid`).
+- `bindings[]` resolve entry data into block props at render time
+  (`core/services/content/detailPageBindingResolver.ts`). Binding remap
+  semantics from v1: item bindings keyed `type.field` (e.g.
+  `feature-grid.title` → card `title`, `gallery-mosaic.image` → image `src`),
+  static bindings per legacy type (e.g. hero `headline` → heading `text`,
+  `primaryCta.href` → button `href`), and dangling bindings (missing block id
+  or prop path) are dropped during conversion. The canonical remap map lives
+  in `core/services/content/detailPageV2Conversion.ts` and is parity-pinned by
+  `tests/fixtures/detailPageV2Conversion/*.json`.
+- Legacy-widget placeholder semantics: legacy widget types with no Page V2
+  equivalent (e.g. `booking-calendar`) convert to a `custom` section with one
+  read-only `legacy-widget` block (`props.legacyWidgetType` + byte-identical
+  `props.data`). The public renderer shows only a neutral dashed note with
+  `data-legacy-widget="<type>"`; the preserved `data` is never rendered or
+  logged. See `_docs/PAGE_MODEL.md` (legacy-widget block type) and
+  `core/services/pages/legacyWidgetPlaceholder.tsx`.
+
+Kit-seed example (V2): the catalog-family blueprint emits a hero section with
+a `heading` block bound to the entry `title` (`entry-field`) and a `text`
+block bound to the summary field, plus optional `image` cover bindings. The
+exact emitted document is `buildDetailPageDocument(preset)` in
+`catalogFamilyBlueprint.ts`; the converted FormaDom (projekty-domow)
+project-detail shape with hero + feature-grid statistics sections is pinned in
+`tests/fixtures/detailPageV2Conversion/project-detail.json` (`expected`).
+
 ## Rendering (v1)
 
 - Core dostarcza bazowe widoki listy i szczegolu.

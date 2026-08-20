@@ -378,14 +378,19 @@ const legacyDetailPageAdapter: ResourceAdapter = {
         "seo",
         "settings",
         "blocks",
+        "sections",
         "bindings",
         "related",
       ],
-      ["schemaVersion", "name", "contentTypeId", "contentTypeSlug", "status", "blocks"]
+      ["schemaVersion", "name", "contentTypeId", "contentTypeSlug", "status"]
     );
     assertLifecycleStatus(input.desired.status, "detail_page_invalid");
+    const hasSections = Array.isArray(input.desired.sections);
+    const hasBlocks = Array.isArray(input.desired.blocks);
+    if (!hasSections && !hasBlocks) {
+      throw new Error("detail_page_invalid");
+    }
     if (
-      (input.desired.blocks !== undefined && !Array.isArray(input.desired.blocks)) ||
       (input.desired.bindings !== undefined && !Array.isArray(input.desired.bindings)) ||
       (input.desired.related !== undefined && !Array.isArray(input.desired.related))
     ) {
@@ -399,7 +404,7 @@ const legacyDetailPageAdapter: ResourceAdapter = {
     return projectNormalizedDesired(
       input,
       packageDesired,
-      ["schemaVersion", "name", "contentTypeId", "contentTypeSlug", "status", "blocks"],
+      ["schemaVersion", "name", "contentTypeId", "contentTypeSlug", "status", "sections"],
       "detail_page_invalid"
     );
   },

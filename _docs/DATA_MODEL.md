@@ -591,6 +591,54 @@ via download → Import with the passphrase (`backup_restore_superseded` for
 one-click restore-by-id). **Import does not create a `backups` row** — it
 restores from an uploaded archive.
 
+## Detail Page Documents (v2 contract)
+
+`detail_page_documents`
+- id (uuid, pk)
+- name
+- content_type_id (fk content_types)
+- status (draft|published, default draft)
+- current_document (jsonb, not null)
+- published_document (jsonb, nullable)
+- created_at
+- updated_at
+- published_at
+
+`detail_page_revisions`
+- id (uuid, pk)
+- detail_page_id (fk detail_page_documents, on delete cascade)
+- version (int, unique per detail_page_id)
+- kind (publish|draft, default publish)
+- document (jsonb)
+- created_at
+- created_by (fk users, on delete set null)
+
+V2 jsonb contract (schemaVersion 2, TASK-580-03):
+- `current_document` / `published_document` store the v2 envelope:
+  `{ schemaVersion: 2, id, name, contentTypeId, contentTypeSlug, status,
+  titlePattern, settings, sections[], bindings[] }`.
+- Sections carry deterministic block ids (`<blockId>-<role>`); `custom`
+  sections wrap unmapped legacy widgets in a single read-only
+  `legacy-widget` block with byte-identical `props.data`. navigation/footer
+  blocks are dropped (the site shell owns them); dangling bindings are
+  removed and surviving bindings are remapped onto new block ids/prop paths.
+- The canonical conversion map lives in
+  `core/services/content/detailPageV2Conversion.ts` (TASK-580-03-L02) and is
+  parity-pinned by `tests/fixtures/detailPageV2Conversion/*.json`.
+
+Backfill (migration 0079 `detail_page_v2_backfill`, TASK-580-03-L03):
+- Pure data backfill, no DDL. Stored v1 documents are converted in place via
+  a single UPDATE with a WHERE guard (`schemaVersion IS DISTINCT FROM '2'`);
+  rows already at v2 (or with NULL `published_document`) are skipped, so
+  re-running the migration is a no-op. `detail_page_revisions.document` rows
+  are NOT rewritten; the read adapter converts v1 revision rows in memory.
+
+Rollback:
+- Restore from the pre-migration backup to revert; the migration never drops
+  columns or tables. Forward recovery: any row skipped or left at v1 is still
+  served by the read adapter (`normalizeDetailPageDocumentForRead`), so an
+  interrupted or partially applied run is safe to re-run.
+
 ## Optional (v1.1+)
 
 `form_submissions`

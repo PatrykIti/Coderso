@@ -122,6 +122,14 @@ export const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> =
     label: "Scroll hint",
     description: "Animated scroll indicator.",
   },
+  // ── TASK-580-03-L01 ── legacy-widget palette copy. Entry required only by
+  // the exhaustive Record<PageBlockType,…> (a missing member breaks root tsc):
+  // the block is migration-only and NEVER surfaces here — `blockOptions`
+  // filters on `editorInsertable`, which is false for legacy-widget.
+  "legacy-widget": {
+    label: "Legacy widget",
+    description: "Read-only placeholder for a legacy v1 widget.",
+  },
 };
 
 export const blockOptions: BlockOption[] = pageBlockTypes.flatMap((type) =>
@@ -307,9 +315,7 @@ export const deviceScopeReadout = (device: PageBreakpoint) =>
   `${pageEditorDeviceMetadata[device].label} · ${pageEditorDeviceMetadata[device].width}px`;
 
 export type ToolbarLabelTarget =
-  | { kind: "section"; type: PageSectionType }
-  | { kind: "block"; type: PageBlockType }
-  | null;
+  { kind: "section"; type: PageSectionType } | { kind: "block"; type: PageBlockType } | null;
 
 type ResolveToolbarTargetLabelOptions = {
   /**

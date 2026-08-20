@@ -2,11 +2,11 @@ import {
   contentListDefaults,
   mapListingTemplatePresentationToContentList,
   normalizeContentListData,
-} from "../../widgets/core/contentList";
+} from "../../services/renderContracts/contentListContract";
 import {
   normalizeListingFiltersData,
   type ListingFiltersCopy,
-} from "../../widgets/core/listingFilters";
+} from "../../services/renderContracts/listingFiltersContract";
 import { getDefaultFormSettings } from "../forms/formSettings";
 import type { FormRuntimeResolution } from "../forms/formRuntimeContract";
 import type { ContentListResolvedRuntimeData } from "./pageRuntimeBindingContract";

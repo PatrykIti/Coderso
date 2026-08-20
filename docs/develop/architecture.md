@@ -75,7 +75,10 @@ For example, `core/server/routes/menuRoutes.ts` imports from `core/services/menu
 
 ### The `map*Error` convention
 
-Domain errors don't leak directly to clients. Each route file defines a small translator that converts typed service errors into a uniform `ApiError` / HTTP response. `menuRoutes.ts` defines `mapMenuError`; siblings follow the same pattern — `mapMediaError`, `mapPostError`, `mapBookingError`, `mapListingError`, `mapSettingsRouteError`, `mapPageTemplateError`, `mapSolutionKitError`, and so on. Any retained widget-template mapper is legacy data-maintenance compatibility, not a current editor example.
+Domain errors don't leak directly to clients. Each route file defines a small translator that converts typed service errors into a uniform `ApiError` / HTTP response. `menuRoutes.ts` defines `mapMenuError`; siblings follow the same pattern — `mapMediaError`, `mapPostError`, `mapBookingError`, `mapListingError`, `mapSettingsRouteError`, `mapPageTemplateError`, `mapSolutionKitError`, and so on. The widget-template authoring surface was
+removed in TASK-580-02; only the read-path row mapper
+(`mapWidgetTemplateRow` in `core/services/widgets/widgetTemplateService.ts`)
+remains as legacy data-maintenance compatibility, not a current editor example.
 
 When you add a route, put the rules in a service, throw typed errors there, and add a `map*Error` translator at the boundary.
 

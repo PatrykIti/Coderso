@@ -5,11 +5,11 @@ import {
   type ContentListData,
   type ContentListRuntimeItem,
   type ContentListVariantId,
-} from "../../widgets/core/contentList";
+} from "../../services/renderContracts/contentListContract";
 import {
   normalizeListingFiltersData,
   type ListingFiltersData,
-} from "../../widgets/core/listingFilters";
+} from "../../services/renderContracts/listingFiltersContract";
 import {
   normalizeListingRuntimeAliases,
   type ListingRuntimeAliasMap,

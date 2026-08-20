@@ -1,4 +1,4 @@
-import type { WidgetBlock } from "../../widgets/types";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
 import {
   SCREEN_BLOCK_COLLECTION_MAX,
   SCREEN_DOCUMENT_SECTIONS_MAX,
@@ -116,13 +116,13 @@ export const normalizeScreenBlock = (
     ...(style ? { style } : {}),
     data: normalizeScreenBlockData(type, value.data, mode, blockPath),
     ...(value.layout !== undefined
-      ? { layout: normalizeJsonValue(value.layout) as WidgetBlock["layout"] }
+      ? { layout: normalizeJsonValue(value.layout) as LegacyWidgetBlock["layout"] }
       : {}),
     ...(value.visibility !== undefined
-      ? { visibility: normalizeJsonValue(value.visibility) as WidgetBlock["visibility"] }
+      ? { visibility: normalizeJsonValue(value.visibility) as LegacyWidgetBlock["visibility"] }
       : {}),
     ...(value.editor !== undefined
-      ? { editor: normalizeJsonValue(value.editor) as WidgetBlock["editor"] }
+      ? { editor: normalizeJsonValue(value.editor) as LegacyWidgetBlock["editor"] }
       : {}),
     ...(legacyWidgetType ? { legacyWidgetType } : {}),
     ...(children ? { children } : {}),
@@ -181,10 +181,10 @@ export const normalizeScreenSection = (
     ...(label ? { label } : {}),
     data: normalizeScreenData(value.data),
     ...(value.layout !== undefined
-      ? { layout: normalizeJsonValue(value.layout) as WidgetBlock["layout"] }
+      ? { layout: normalizeJsonValue(value.layout) as LegacyWidgetBlock["layout"] }
       : {}),
     ...(value.visibility !== undefined
-      ? { visibility: normalizeJsonValue(value.visibility) as WidgetBlock["visibility"] }
+      ? { visibility: normalizeJsonValue(value.visibility) as LegacyWidgetBlock["visibility"] }
       : {}),
     ...(style ? { style } : {}),
     blocks: normalizeUniqueIds(

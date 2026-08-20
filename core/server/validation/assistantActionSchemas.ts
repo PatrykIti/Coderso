@@ -625,53 +625,6 @@ const activeSurfaceSchema = {
     },
     {
       type: "object",
-      required: ["kind", "template", "selectedBlockId", "blocks", "settings", "warnings"],
-      additionalProperties: false,
-      properties: {
-        kind: { enum: ["widget-template"] },
-        template: {
-          type: "object",
-          required: ["id", "name", "status", "category"],
-          additionalProperties: false,
-          properties: {
-            id: { type: "string", minLength: 1, maxLength: 160 },
-            name: { type: "string", minLength: 1, maxLength: 240 },
-            status: { type: "string", minLength: 1, maxLength: 80 },
-            category: { type: "string", minLength: 1, maxLength: 120 },
-          },
-        },
-        selectedBlockId: {
-          anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
-        },
-        blocks: {
-          type: "array",
-          maxItems: 80,
-          items: activeSurfaceBlockSchema,
-        },
-        settings: {
-          type: "object",
-          required: ["wrapperContainer", "sectionGap", "hasBackgroundMedia"],
-          additionalProperties: false,
-          properties: {
-            wrapperContainer: {
-              anyOf: [{ type: "string", minLength: 1, maxLength: 80 }, { type: "null" }],
-            },
-            sectionGap: {
-              anyOf: [{ type: "string", minLength: 1, maxLength: 80 }, { type: "null" }],
-            },
-            hasBackgroundMedia: { type: "boolean" },
-          },
-        },
-        warnings: {
-          type: "array",
-          maxItems: 20,
-          items: { type: "string", minLength: 1, maxLength: 160 },
-          uniqueItems: true,
-        },
-      },
-    },
-    {
-      type: "object",
       required: [
         "kind",
         "screen",

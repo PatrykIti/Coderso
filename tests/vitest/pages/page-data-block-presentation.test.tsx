@@ -20,7 +20,7 @@ import {
   FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
   FORM_EMBED_SUCCESS_BEHAVIORS,
   FORM_EMBED_TEXTAREA_ROWS_LIMITS,
-} from "../../../core/widgets/core/formEmbedContract";
+} from "../../../core/services/renderContracts/formEmbedContract";
 import { buildFormaDomPages } from "../../../scripts/projekty-domow/pages";
 
 const documentWithBlock = (block: PageBlockV2): PageDocumentV2 => {

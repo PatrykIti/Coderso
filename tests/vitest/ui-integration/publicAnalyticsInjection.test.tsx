@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, test } from "vitest";
 
-import { renderPublicPageHtml } from "../../../core/site/renderPublicPage";
+import { createDefaultPageDocumentV2 } from "../../../core/services/pages/pageDocumentV2";
+import { renderPublicPageV2RuntimeHtml } from "../../../core/site/renderPublicPage";
 import { buildTrackingScript } from "../../../core/services/analytics/trackingSnippet";
 
 // Bun-free render-layer coverage for TASK-483-03-L02: renderDocument appends the
@@ -17,9 +18,9 @@ const renderTestPage = (opts: { analyticsEnabled: boolean; isPreview?: boolean }
   const analyticsScriptHtml = opts.analyticsEnabled
     ? buildTrackingScript({ nonce: "test-nonce-123", collectPath: COLLECT_PATH })
     : null;
-  return renderPublicPageHtml({
+  return renderPublicPageV2RuntimeHtml({
     title: "Home",
-    blocks: [],
+    document: createDefaultPageDocumentV2(),
     isPreview: opts.isPreview,
     analyticsScriptHtml,
   });

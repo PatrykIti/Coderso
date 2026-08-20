@@ -15,7 +15,6 @@ export type UserSettings = {
   "customScreens.openAfterCreate": boolean;
   "forms.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
-  "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSetting[];
   "posts.editor.preferences": StoredPostEditorPreferences;
   "assistant.mode": "docs-only" | "llm-guide" | null;

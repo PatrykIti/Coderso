@@ -3,11 +3,14 @@
 // of core/server/publicSite.tsx for the repo line-limit gate. The entry-visibility
 // seams (gateOrNull / password prompt / unlock context / cache probe) live in
 // ./publicEntryGateUi.tsx; this module owns the render host for entries.
-import type { DeviceTarget } from "../widgets/types";
-import { hydrateRuntimeBlocks } from "./publicSiteRenderContext";
-import { renderPublicPageRuntimeHtml } from "../site/renderPublicPage";
+import type { ReactNode } from "react";
+import type { DeviceTarget } from "../services/renderContracts/tokens";
 import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
-import { blocksAllowSiteHtmlCache } from "../site/cache/siteCache";
+import { renderPublicPageV2RuntimeHtml } from "../site/renderPublicPage";
+import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataPreparation";
+import { buildDetailPageRenderDocument } from "../services/content/detailPageV2Conversion";
+import { getListingRuntimeClientScript } from "../services/renderContracts/listingRuntimeScript";
+import { createWidgetRuntimeScriptRegistry } from "../services/renderContracts/runtimeScriptRegistry";
 import { getEntry, getEntryBySlug, listEntries } from "../services/content/entryService";
 import {
   DEFAULT_POST_CONTENT_SCHEMA,
@@ -32,10 +35,7 @@ import {
   resolvePostRuntimeMetaDescription,
 } from "../services/posts/runtime/postBlockRuntimeMapper";
 import type { PageRuntimeCacheMode } from "../services/pages/pageRuntimeBindingContract";
-import {
-  collectPrehydratedDetailBlockIds,
-  resolveDetailPageRuntimeSeo,
-} from "./publicSiteEntryRuntime";
+import { resolveDetailPageRuntimeSeo } from "./publicSiteEntryRuntime";
 import {
   buildLiveAnalyticsScriptHtml,
   resolvePublicSiteShellContext,
@@ -323,30 +323,39 @@ export const renderEntryDetailHtml = async (
             robots: entryDetail.seo?.robots ?? null,
           },
         });
-    const blocks = await hydrateRuntimeBlocks(detailPage.blocks, {
+    const sections = detailPage.sections;
+    const renderDocument = buildDetailPageRenderDocument(detailPage.document, sections);
+    const prepared = await preparePageRuntimeDocument(renderDocument, {
       preview: options?.preview ?? false,
+      breakpoint: options?.previewDevice ?? "desktop",
       contentRoutes,
       runtimeSearchParams: options?.runtimeSearchParams,
-      runtimeCache: {},
-      prehydratedBlockIds: collectPrehydratedDetailBlockIds(detailPage.document),
     });
     const { siteShell, siteName, responsiveCss } = await resolvePublicSiteShellContext({
       document: null,
       includeResponsiveCss: !options?.previewDevice,
     });
+    // Listing filters register their public fetch-swap runtime only when
+    // needed (same pattern as the public page render in publicSite.tsx).
+    let renderBodyScripts: (() => ReactNode) | undefined;
+    if (prepared.needsListingRuntimeScript) {
+      const runtimeScripts = createWidgetRuntimeScriptRegistry();
+      runtimeScripts.registerScript("listing-runtime", getListingRuntimeClientScript());
+      renderBodyScripts = () => runtimeScripts.renderScripts();
+    }
     return {
-      html: await renderPublicPageRuntimeHtml({
+      html: await renderPublicPageV2RuntimeHtml({
         title:
           detailPage.document.seo?.titlePattern || detailPage.document.titlePattern
             ? detailSeo.title
             : (resolvedSeo.title ?? detailSeo.title),
-        blocks,
+        document: prepared.document,
+        runtimeDataByBlockId: prepared.runtimeDataByBlockId,
         cssHref,
         inlineCss,
         devModuleScripts,
         isPreview: options?.preview ?? false,
         previewDevice: options?.previewDevice,
-        layoutSettings: detailPage.document.settings.layout,
         metaDescription: detailPage.document.seo?.descriptionField
           ? detailSeo.metaDescription
           : resolvedSeo.description,
@@ -362,11 +371,12 @@ export const renderEntryDetailHtml = async (
         siteName,
         activePath: options?.requestPath ?? null,
         siteLocale: await getSetting("site.locale"),
-        themeName: options?.themeName ?? (await resolvePublicThemeName()),
         templateKey: detailPage.document.settings.template,
+        renderBodyScripts,
         analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
       }),
-      cacheable: entryIsGated ? false : blocksAllowSiteHtmlCache(blocks),
+      cacheable: entryIsGated ? false : prepared.cacheable,
+      cacheMode: prepared.cacheMode,
     };
   }
 
@@ -463,21 +473,32 @@ export const renderDetailPagePreviewHtml = async (input: {
     includeResponsiveCss: false,
   });
 
-  return renderPublicPageRuntimeHtml({
+  const sections = detailPage.sections;
+  const renderDocument = buildDetailPageRenderDocument(detailPage.document, sections);
+  const prepared = await preparePageRuntimeDocument(renderDocument, {
+    preview: true,
+    breakpoint: input.previewDevice,
+    contentRoutes,
+    runtimeSearchParams: input.runtimeSearchParams,
+  });
+  // Listing filters register their public fetch-swap runtime only when
+  // needed (same pattern as the public page render in publicSite.tsx).
+  let renderBodyScripts: (() => ReactNode) | undefined;
+  if (prepared.needsListingRuntimeScript) {
+    const runtimeScripts = createWidgetRuntimeScriptRegistry();
+    runtimeScripts.registerScript("listing-runtime", getListingRuntimeClientScript());
+    renderBodyScripts = () => runtimeScripts.renderScripts();
+  }
+
+  return renderPublicPageV2RuntimeHtml({
     title: detailSeo.title,
-    blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
-      preview: true,
-      contentRoutes,
-      runtimeSearchParams: input.runtimeSearchParams,
-      runtimeCache: {},
-      prehydratedBlockIds: collectPrehydratedDetailBlockIds(detailPage.document),
-    }),
+    document: prepared.document,
+    runtimeDataByBlockId: prepared.runtimeDataByBlockId,
     cssHref,
     inlineCss,
     devModuleScripts,
     isPreview: true,
     previewDevice: input.previewDevice,
-    layoutSettings: detailPage.document.settings.layout,
     metaDescription: detailSeo.metaDescription,
     canonicalUrl: detailSeo.canonicalUrl,
     robots: entryDetail.seo?.robots ?? null,
@@ -485,7 +506,7 @@ export const renderDetailPagePreviewHtml = async (input: {
     siteName,
     siteLocale: await getSetting("site.locale"),
     imageUrl: detailSeo.imageUrl,
-    themeName: await resolvePublicThemeName(),
     templateKey: detailPage.document.settings.template,
+    renderBodyScripts,
   });
 };

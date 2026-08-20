@@ -54,7 +54,6 @@ const buildContext = (prefix: string): AssistantActionContext => ({
     ],
     menus: [],
     seoDocuments: [],
-    widgets: [],
     warnings: [],
   },
   planningState: {

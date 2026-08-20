@@ -1,13 +1,14 @@
 import { createElement, type ReactNode } from "react";
 
-import { ContentListBlock } from "../../widgets/core/contentList";
-import { FormEmbedBlock, type FormEmbedData } from "../../widgets/core/formEmbed";
+import { ContentListBlock } from "../../services/renderContracts/contentListRenderer";
+import { FormEmbedBlock } from "../../services/renderContracts/formEmbedRenderer";
+import type { FormEmbedData } from "../../services/renderContracts/formEmbedContract";
 import {
   FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
   FORM_EMBED_SUCCESS_BEHAVIORS,
   FORM_EMBED_TEXTAREA_ROWS_LIMITS,
-} from "../../widgets/core/formEmbedContract";
-import { ListingFiltersBlock } from "../../widgets/core/listingFilters";
+} from "../../services/renderContracts/formEmbedContract";
+import { ListingFiltersBlock } from "../../services/renderContracts/listingFiltersRenderer";
 import type { PageBlockV2 } from "./pageDocumentV2Types";
 import {
   mapPageFiltersBlockToListingFiltersData,

@@ -5,7 +5,10 @@ import { db } from "../../db/client";
 import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { contentTypes, detailPageDocuments, detailPageRevisions, settings } from "../../db/schema";
 import { clearSiteCache } from "../../site/cache/siteCache";
-import { normalizeDetailPageDocument } from "./detailPageSchema";
+import {
+  normalizeDetailPageDocument,
+  normalizeDetailPageDocumentForWrite,
+} from "./detailPageSchema";
 import type { DetailPageDocument, DetailPageRevisionKind } from "./detailPageTypes";
 
 export const DETAIL_PAGE_FULL_SITE_REVISION_SNAPSHOT_LIMIT = 100;
@@ -183,7 +186,7 @@ export const prepareDetailPageDocumentLifecycleNativeTargets = (
   staged: DetailPageDocumentLifecycleNativeSnapshot | null;
   complete: DetailPageDocumentLifecycleNativeSnapshot;
 }> => {
-  const draftDocument = normalizeDetailPageDocument(input.desired, {
+  const draftDocument = normalizeDetailPageDocumentForWrite(input.desired, {
     id: input.id,
     status: "draft",
   });
@@ -199,7 +202,7 @@ export const prepareDetailPageDocumentLifecycleNativeTargets = (
   if (input.desired.status === "draft") {
     return { staged: null, complete: { id: input.id, desired: stagedDesired } };
   }
-  const publishedDocument = normalizeDetailPageDocument(input.desired, {
+  const publishedDocument = normalizeDetailPageDocumentForWrite(input.desired, {
     id: input.id,
     status: "published",
   });
