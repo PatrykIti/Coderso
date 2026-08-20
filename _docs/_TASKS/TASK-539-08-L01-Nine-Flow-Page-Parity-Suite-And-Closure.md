@@ -477,7 +477,7 @@ Create
 using the actual closure date and live changelog convention. Record exact validation
 results, line receipt, audits, nine-flow evidence, screenshots, and owner commit scope
 without secrets. Its Tasks field/index coverage must enumerate TASK-539, all 8 direct
-children, and all 18 physical leaves, including TASK-539-03-L05, before any family
+children, and all 19 physical leaves, including TASK-539-02-L03 and TASK-539-03-L05, before any family
 status is closed.
 
 Only after every required receipt is green: mark leaves terminal, then child tasks,

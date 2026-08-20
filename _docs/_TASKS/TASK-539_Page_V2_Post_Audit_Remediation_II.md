@@ -336,7 +336,7 @@ Update `_docs/PAGE_MODEL.md`, `_docs/SECURITY_SPEC.md`, `_docs/CMS_SPEC.md`,
 `docs/develop/content-and-widgets.md`,
 and `docs/guide/screens/page-editor-preview-settings-and-history.md`. These five
 files are the exhaustive documentation ownership for TASK-539. At closure create
-changelog 1318, enumerate the parent, all 8 children, and all 18 leaves in its task
+changelog 1318, enumerate the parent, all 8 children, and all 19 leaves in its task
 coverage, and close all descendants without reopening TASK-535.
 
 No HIGH or MEDIUM may be deferred. A LOW may be deferred only by linking a concrete
