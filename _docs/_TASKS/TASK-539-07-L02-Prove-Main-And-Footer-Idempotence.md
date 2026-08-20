@@ -16,10 +16,18 @@
 
 Create only:
 
-- `tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx`
+- `tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx` (idempotence,
+  cardinality, WeakSet ownership, failure isolation, reduced motion, and transform
+  custom-property-ownership proofs: items 1-7)
+- `tests/vitest/pages/task-539-page-effects-runtime-replica-and-soft-fail.test.tsx`
+  (replica-safe marquee pre-bind rejection, unsafe one-segment fallbacks, and
+  zero-console soft-fail fixtures: items 8-9)
 
-All production, renderer/site-shell, and L01 test files are read-only. The new suite
-must be independently runnable and no more than 1,000 physical lines.
+The two files are split by cohesive responsibility so the prettier-canonical output
+stays `<=1000` lines per file; each stays independently runnable.
+
+All production, renderer/site-shell, and L01 test files are read-only. The new suites
+must be independently runnable and no more than 1,000 physical lines each.
 
 ## Implementation Pseudocode
 
