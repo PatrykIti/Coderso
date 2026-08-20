@@ -20,6 +20,8 @@
 // touched; the shared pageEditorV2FlowHarness is imported exactly like the
 // sibling split suites.
 
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import React from "react";
 import { describe, expect, test, vi } from "vitest";
 
@@ -325,11 +327,17 @@ describe("TASK-539 seeded responsive overrides stay base-targeted through the re
 
       const saved = lastSaved();
       const savedBlock0 = saved.sections[0]?.blocks[0]!;
-      expect(savedBlock0.props.items).toHaveLength(2);
-      expect(savedBlock0.props.items[0]).toEqual(galleryItem("/media/base.jpg", "Base alt"));
-      expect(savedBlock0.props.layout).toBe("carousel");
-      expect(savedBlock0.props.filterable).toBe(true);
-      expect(savedBlock0.props.filterCategories).toEqual(["news", "promo", "deal"]);
+      const savedBlock0Props = savedBlock0.props as {
+        items: Array<{ src: string; alt: string; caption: string }>;
+        layout: string;
+        filterable: boolean;
+        filterCategories: string[];
+      };
+      expect(savedBlock0Props.items).toHaveLength(2);
+      expect(savedBlock0Props.items[0]).toEqual(galleryItem("/media/base.jpg", "Base alt"));
+      expect(savedBlock0Props.layout).toBe("carousel");
+      expect(savedBlock0Props.filterable).toBe(true);
+      expect(savedBlock0Props.filterCategories).toEqual(["news", "promo", "deal"]);
       // The pre-existing tablet responsive object stays byte-identical.
       expect(savedBlock0.responsive?.tablet).toEqual(tabletLayerBaseline);
       // Base-only commit landed on the desktop base, never the tablet layer.
@@ -834,7 +842,9 @@ const viewSpanGroups = (view: View) =>
 
 describe("TASK-539 split flow suites stay independent discoverable entries", () => {
   test("every page-editor-v2 split suite remains a directly discoverable entry", () => {
-    const suiteKeys = Object.keys(import.meta.glob("./page-editor-v2-*.test.tsx"));
+    const suiteFiles = new Set(
+      readdirSync(join(process.cwd(), "tests", "vitest", "ui")).map((name) => `./${name}`)
+    );
     for (const name of [
       "page-editor-v2-authoring-flow.test.tsx",
       "page-editor-v2-controls-flow.test.tsx",
@@ -845,7 +855,7 @@ describe("TASK-539 split flow suites stay independent discoverable entries", () 
       "page-editor-v2-responsive-flow.test.tsx",
       "page-editor-v2-settings-flow.test.tsx",
     ]) {
-      expect(suiteKeys, name).toContain(`./${name}`);
+      expect(suiteFiles, name).toContain(`./${name}`);
     }
     // Every split suite imports the shared harness at module top, so the
     // beforeEach/afterEach hooks register on each importing file independently

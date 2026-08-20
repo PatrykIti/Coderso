@@ -497,7 +497,8 @@ describe("resolver host/magnetic presence is authored-only; invalid values omit"
     expect(on.dataAttrs["data-magnetic"]).toBe("");
     expect(on.dataAttrs[HOST]).toBe("");
     // Magnetic is a transform-bearing owner: presence implies the host.
-    for (const style of [{}, { magnetic: false }, { hoverEffect: "glow-reveal" }]) {
+    const inertStyles: PageBlockStyleV2[] = [{}, { magnetic: false }, { hoverEffect: "glow-reveal" }];
+    for (const style of inertStyles) {
       const r = resolveBlockCompositionAttrs(style);
       expect(r.dataAttrs).not.toHaveProperty("data-magnetic");
     }
@@ -760,7 +761,13 @@ describe("no-effect / unrelated output byte identity", () => {
   });
 
   test("a section style with only unrelated fields stays empty", () => {
-    const unrelated = { background: "#fff", backgroundType: "color", radius: 0, shadow: "none" };
+    const unrelated = {
+      background: "#fff",
+      backgroundType: "color" as const,
+      accent: "#0ea5e9",
+      radius: 0,
+      shadow: "none" as const,
+    };
     expect(resolveSectionCompositionAttrs(unrelated)).toEqual(
       resolveSectionCompositionAttrs(undefined)
     );

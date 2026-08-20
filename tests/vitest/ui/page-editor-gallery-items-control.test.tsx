@@ -178,7 +178,7 @@ const mountHarness = (props: {
   };
 };
 
-const click = (element: Element | null) => {
+const click = (element: Element | null | undefined) => {
   expect(element).toBeTruthy();
   React.act(() => {
     element?.dispatchEvent(new MouseEvent("click", { bubbles: true }));

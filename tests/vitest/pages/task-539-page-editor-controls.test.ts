@@ -218,7 +218,7 @@ const mountGallery = (props: {
   };
 };
 
-const click = (element: Element | null) => {
+const click = (element: Element | null | undefined) => {
   expect(element).toBeTruthy();
   React.act(() => {
     element?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -422,7 +422,9 @@ describe("TASK-539 dedicated gallery kinds, base-only gates, and z-clamp owner",
       createPageBlockV2("divider", { props: { tone: "neutral", gradient } });
     const sectionBlock = (scrollEffect: string): PageSectionV2 =>
       createPageSectionV2("hero", {
-        style: { scrollEffect: scrollEffect as PageSectionV2["style"]["scrollEffect"] },
+        style: {
+          scrollEffect: scrollEffect as PageSectionV2["style"]["scrollEffect"],
+        } as PageSectionV2["style"],
       });
 
     const filterCategories = pageBlockControlRegistry.gallery.find(

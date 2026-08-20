@@ -841,8 +841,9 @@ test("PageEditor gallery source pins the 2,048/2,049 URL boundary", async () => 
     await flush();
     expect(pageEditorState.updatePage.mock.calls.length).toBe(1);
     let saved = pageEditorState.updatePage.mock.calls.at(-1)?.[1]?.data as PageDocumentV2;
-    let row = saved.sections[0]?.blocks.find((block) => block.id === "blk-gallery")?.props
-      .items?.[0];
+    let row = (saved.sections[0]?.blocks.find((block) => block.id === "blk-gallery")?.props as
+      | { items?: Array<{ src?: string }> }
+      | undefined)?.items?.[0];
     expect(row?.src).toBe("/" + "b".repeat(2047));
     await React.act(async () => {
       vi.advanceTimersByTime(1600);
@@ -864,7 +865,9 @@ test("PageEditor gallery source pins the 2,048/2,049 URL boundary", async () => 
     );
     expect(picker?.getAttribute("data-media-picker-value")).toBe("asset-2048");
     saved = pageEditorState.updatePage.mock.calls.at(-1)?.[1]?.data as PageDocumentV2;
-    row = saved.sections[0]?.blocks.find((block) => block.id === "blk-gallery")?.props.items?.[0];
+    row = (saved.sections[0]?.blocks.find((block) => block.id === "blk-gallery")?.props as
+      | { items?: Array<{ src?: string }> }
+      | undefined)?.items?.[0];
     expect(row?.src).toBe("/" + "b".repeat(2047));
   } finally {
     mediaLibraryState.items = originalItems;
