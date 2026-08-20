@@ -82,3 +82,36 @@ Przykladowa odpowiedz:
   }
 }
 ```
+
+---
+
+## SEO search-performance ingest (TASK-493)
+
+Everything above describes the in-app admin search: Postgres full-text +
+trigram over the CMS's own Pages/entries/media rows, queried live by admins.
+The SEO search-performance pipeline is a **separate, server-side ingest** from
+Google Search Console (GSC) and must not be confused with it:
+
+- **Source:** GSC Search Analytics, pulled through the encrypted
+  `google-search-console` integration credential. It measures how the public
+  site performs in Google Search (impressions, clicks, CTR, average position
+  per URL/query/day) plus per-URL indexing state from the v1 URL Inspection
+  API. It is not a query over CMS content.
+- **Daily-bucket ingest:** metrics and queries are stored in UTC-midnight day
+  buckets in `seo_search_metrics` and `seo_search_queries`, unique per
+  `url+date` and `url+query+date`. Re-syncing the same window overwrites the
+  same buckets (idempotent upserts), so a window can be re-run after GSC data
+  settles. Indexed-page state is stored in `seo_indexed_pages`, unique per
+  `url`, refreshed by the bounded URL Inspection loop (max 50 URLs per run).
+- **Trigger:** admin-driven only. `POST /seo/search-performance/sync`
+  (`settings:write`, CSRF, `admin_write` rate limit) pulls a clamped window
+  (default last 28 inclusive days ending today; GSC retains 16 months) and
+  then inspects sitemap URLs. There is no scheduler and no public ingest
+  endpoint, unlike the public analytics beacon.
+- **Consumption:** the admin SEO Manager reads aggregated totals via
+  `GET /seo/overview` and `GET /seo/search-performance` (`content:read`).
+  These reads do not touch the admin search index at all.
+- **Distinction at a glance:** in-app admin search indexes `pages`,
+  `content_entries`, and `media` for finding CMS records; the SEO ingest
+  indexes GSC performance rows for the admin SEO Manager. They share no
+  tables, no write path, and no query model.

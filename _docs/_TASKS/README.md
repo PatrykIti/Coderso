@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 261 tasks
+- **To Do:** 243 tasks
 - **In Progress:** 6 tasks
-- **Done:** 3524 tasks
+- **Done:** 3542 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -172,7 +172,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-481 | Page Editor Canvas Brand-Token WYSIWYG | Medium | Medium | Brand colors (primary/secondary/accent/border) applied to a block render admin-themed in the canvas (admin `@theme` wins) while previews/front show the site token. Emit site brand `--color-*` on a content-only scope that excludes editor chrome (rings/outlines/tiles), then unify inline+block-level brand previews. Follow-up to TASK-477-02 (neutrals done). 4 subtasks (01–04) + 9 leaves. |
 | TASK-485 | Plugin Store: Real Registry & Install Pipeline | High | Large | FEATURE: the store UI is 100% mock; wire it to the real `core/store` + `installService` + `/plugins` pipeline (browse/install/update/uninstall). 5 subtasks (01–05) + 15 leaves. |
 | TASK-489 | Safe Solution Kit and Full-Site Install Run History, Sanitized Detail, and Exact Engine-Aware Rollback | High | Very Large | Bounded safe history/detail read models for legacy and full-site runs plus exact source-run rollback through the owning engine. No latest fallback, ledger recovery payload, apply, dry-run, rerun, or package-upload UI. Blocked on terminal TASK-414-03-L03, terminal TASK-545 workflow/evidence authority, terminal TASK-548 source/generator receipt, and landed terminal TASK-551 receipts; blocks TASK-555. Changelog 1268 pinned. 3 children + 6 leaves. |
-| TASK-493 | SEO: Indexing & Search-Performance Pipeline | Medium | Large | FEATURE: no indexed-pages/search-performance data today. Full pipeline: sitemap submission/status + Google Search Console integration (indexed-pages/impressions/queries). 6 subtasks (01–06) + 11 leaves. |
 | TASK-406 | Assistant Cross-Industry Reset E2E Handoff | High | Small | No standalone destructive reset or task-local harness. TASK-414-11-L01 owns stronger owner-scoped Guide/Agent/Designer runtime flows and must mark TASK-406 Superseded under changelog 1266 only after they pass. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
@@ -3242,3 +3241,5 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-027-02 | SEO Service and Audit Runner | High | Medium | audit scoring |
 | TASK-027-03 | SEO API Routes | High | Medium | /seo endpoints |
 | TASK-027-04 | SEO UI Wiring | High | Medium | UI -> API |
+
+| TASK-493 | SEO: Indexing & Search-Performance Pipeline | Medium | Large | ✅ Done (2026-08-19): FEATURE: no indexed-pages/search-performance data today. Full pipeline: sitemap submission/status + Google Search Console integration (indexed-pages/impressions/queries). 6 subtasks (01–06) + 11 leaves. |

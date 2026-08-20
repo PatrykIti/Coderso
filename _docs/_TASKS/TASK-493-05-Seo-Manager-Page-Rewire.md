@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-493-04-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -30,7 +30,7 @@ that the TASK-479 reskin also relies on.
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | `seoClient` + `SeoManagerPage` real-data rewire | Vitest (ui-integration) | ⏳ To Do |
+| L01 | `seoClient` + `SeoManagerPage` real-data rewire | Vitest (ui-integration) | ✅ Done |
 
 ---
 

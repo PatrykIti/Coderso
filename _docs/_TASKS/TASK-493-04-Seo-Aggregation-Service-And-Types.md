@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-493-01, TASK-493-03-L02, TASK-493-02-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -31,8 +31,8 @@ stays as the meta-quality signal; this adds index/performance signals beside it.
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | Aggregation service + `seoTypes` extension | Vitest | ⏳ To Do |
-| L02 | SEO routes + validation assembly (5 routes, 3 schemas) | Bun | ⏳ To Do |
+| L01 | Aggregation service + `seoTypes` extension | Vitest | ✅ Done |
+| L02 | SEO routes + validation assembly (5 routes, 3 schemas) | Bun | ✅ Done |
 
 ---
 

@@ -1,0 +1,82 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 8,
+    "playwright-state-load": 4,
+    "task493-dev-host": 1,
+    "task493-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    { "elapsedMs": 2740, "id": "sitemap-xml-served", "pass": true },
+    { "elapsedMs": 1800, "id": "robots-txt-sitemap-directive", "pass": true },
+    { "elapsedMs": 4275, "id": "seo-overview-real-data", "pass": true },
+    { "elapsedMs": 7419, "id": "sitemap-submit-status", "pass": true },
+    { "elapsedMs": 5258, "id": "indexed-pages-sync", "pass": true },
+    { "elapsedMs": 4398, "id": "search-performance-read", "pass": true },
+    { "elapsedMs": 6101, "id": "seo-manager-fifth-card", "pass": true }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-fast/01-sitemap-xml-served.png",
+      "sha256": "2a6e179897ee98a07cb46fdfa61808d0334d45941a933894dd8b00b23459e52a"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-fast/02-robots-txt-sitemap-directive.png",
+      "sha256": "d47f2d9f22c275fc61dd291377010b41bece6192d3f6bf8e6141f2195a2968a3"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-fast/03-seo-overview-real-data.png",
+      "sha256": "67c3b0d0b6b2967f6da46bd050bf1acd9da40444036dbcf811123c7f22e54b58"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-fast/04-sitemap-submit-status.png",
+      "sha256": "b1e227d405daa6334ea501e11cba240107dbd1268ac46e210a73a6d69dce2e3d"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-fast/05-indexed-pages-sync.png",
+      "sha256": "ecf2d96da7de788bdea5311780cb2d5e04382bf2995e3445911660c1f31f47a0"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-fast/06-search-performance-read.png",
+      "sha256": "64f7ec15ed0e86db419bee9a3270c34227786c56129b9a6b498efa0c8c8776f1"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-fast/07-seo-manager-fifth-card.png",
+      "sha256": "b1e227d405daa6334ea501e11cba240107dbd1268ac46e210a73a6d69dce2e3d"
+    }
+  ],
+  "serverUp": true,
+  "session": "task-493-fast",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "databaseBatches": 10,
+    "fixturesAbsent": true,
+    "identitiesAbsent": true,
+    "pageErrors": 0,
+    "repositorySnapshots": 2,
+    "rows": 70,
+    "seoIndexedPagesRemoved": 7,
+    "seoSearchMetricsRemoved": 7,
+    "seoSearchQueriesRemoved": 7,
+    "seoSitemapSubmissionsRemoved": 7,
+    "settingsRestored": true,
+    "statements": 34,
+    "workerRequests": 10,
+    "workerStarts": 1
+  },
+  "suiteId": "task-493",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 643, "failed": 0, "kind": "snapshot", "name": "task493-after" },
+    { "count": 1, "elapsedMs": 349, "failed": 0, "kind": "snapshot", "name": "task493-before" },
+    { "count": 1, "elapsedMs": 59688, "failed": 0, "kind": "suite", "name": "task-493" }
+  ]
+}

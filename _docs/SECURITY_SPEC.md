@@ -534,6 +534,30 @@ Rotacja klucza:
   - trzymane poza frontendem i poza plain text w logach,
   - redagowane w audit metadata oraz error payloadach.
 
+### Google Search Console credential & sync (TASK-493)
+
+- The GSC service-account JSON is stored as an **encrypted integration secret**
+  (`google-search-console`) in the Integrations store, encrypted at rest with
+  the same AES-256-GCM storage-secret scheme as other integration secrets and
+  decrypted only inside `getGscClient` on the server.
+- Outbound calls (OAuth token mint via signed RS256 JWT assertion, Search
+  Console v3 + v1 URL Inspection) are **server-side only**. The credential and
+  the minted access token are held in memory for the client's lifetime and
+  never reach a response body, browser cache, audit metadata, or log; only
+  `siteUrl` and HTTP status codes are exposed. Outbound errors are redacted to
+  machine-readable `gsc_*` codes before any persistence or response.
+- Admin write flows reuse the shared hardening: `POST /seo/search-performance/sync`
+  and `POST /seo/sitemap/submit` require `settings:write`, CSRF, and the
+  `admin_write` rate-limit bucket. The sitemap feedpath is validated as an
+  own-origin relative path (`sitemap_path_invalid` otherwise), so the outbound
+  GSC call can never be pointed at an arbitrary host (no SSRF).
+- Rate-limit buckets: admin reads (`GET /seo/overview`,
+  `GET /seo/search-performance`, `GET /seo/sitemap`) use `admin_read`; the two
+  POSTs above use `admin_write`; the public `GET /sitemap.xml` and
+  `GET /robots.txt` surfaces use `public_read`.
+- GSC rows persist only sanitized URLs, counts, states, and the own-origin
+  feedpath — never credential material or access tokens.
+
 ## Post rich-text rendering
 
 - Post editor previews and public post runtime must not pass raw user HTML to

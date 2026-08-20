@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-493-01, TASK-493-02, TASK-493-03, TASK-493-04, TASK-493-05
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -26,8 +26,8 @@ contract.
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | Pipeline integration + perf/security gate tests | Bun | ⏳ To Do |
-| L02 | Documentation finalization (DATA_MODEL / CMS_API / SEARCH_SPEC / SECURITY_SPEC + changelog 1309) | docs | ⏳ To Do |
+| L01 | Pipeline integration + perf/security gate tests | Bun | ✅ Done |
+| L02 | Documentation finalization (DATA_MODEL / CMS_API / SEARCH_SPEC / SECURITY_SPEC + changelog 1309) | docs | ✅ Done |
 
 ---
 

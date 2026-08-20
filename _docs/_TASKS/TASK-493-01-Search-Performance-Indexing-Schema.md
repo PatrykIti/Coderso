@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-027 (SEO Manager core)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -30,8 +30,8 @@ is `core/db/migrations/0078_backup_users_staging.sql`).
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | Schema tables + domain types/enums/`normalize*` | Vitest | ⏳ To Do |
-| L02 | Full migration artifacts (0079 SQL + snapshot + journal) + apply smoke | Bun | ⏳ To Do |
+| L01 | Schema tables + domain types/enums/`normalize*` | Vitest | ✅ Done |
+| L02 | Full migration artifacts (0079 SQL + snapshot + journal) + apply smoke | Bun | ✅ Done |
 
 ---
 

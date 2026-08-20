@@ -375,10 +375,18 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - SEO manager
   - UI: `core/admin/ui/seo/SeoManagerPage.tsx`
   - Cached APIs: `listSeoCached`, `getCachedSeo`, `getSeoCached`,
-    `getCachedSeoDetail`
+    `getCachedSeoDetail`, `getSeoOverview` (read-through over
+    `cacheKeys.seoOverview`, TTL `list`)
+  - Cache keys: `seo:list`, `seo:detail:<id>`, `seo:overview`
   - Mutations: SEO save/audit update list/detail caches and clear public HTML
-    cache so saved metadata reaches public rendering.
+    cache so saved metadata reaches public rendering. The SEO write actions
+    (`POST /seo/search-performance/sync`, `POST /seo/sitemap/submit`)
+    force-refresh `seo:overview` with `{ force: true }` and bump the local
+    performance refresh key.
   - Cache bus: `seo:list`, `seo:detail:<id>`
+  - Scope: `seo:overview` is scoped to the authenticated admin and cleared by
+    the existing identity-transition + cacheBus rules like the rest of the
+    SEO Manager cache family.
 - Analytics
   - UI: `core/admin/ui/analytics/AnalyticsPage.tsx`
   - Cached APIs: `getOverviewCached`, `getCachedOverview`,

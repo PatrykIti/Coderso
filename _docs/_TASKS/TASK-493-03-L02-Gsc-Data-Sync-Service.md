@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Large
 **Dependencies:** TASK-493-01, TASK-493-02-L01 (provides `collectSitemapUrls()`), TASK-493-03-L01
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 

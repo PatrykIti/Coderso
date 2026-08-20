@@ -48,6 +48,7 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `menus:detail:<id>`
 - `seo:list`
 - `seo:detail:<id>`
+- `seo:overview`
 - `search:recent`
 - `search:results:<queryKey>`
 - `analytics:overview:<rangeDays>`
@@ -380,6 +381,12 @@ Clients update caches and broadcast events on:
   handled by the existing site-kit execution surface.
 - Tools cache event coverage:
   - `seo.document.*` writes `seo:list` and touched `seo:detail:<id>`.
+  - `seo:overview` is a read-through overview cache scoped to the
+    authenticated admin (TTL `list`). The SEO write actions
+    (`POST /seo/search-performance/sync`, `POST /seo/sitemap/submit`)
+    force-refresh it with `{ force: true }` and bump the SEO Manager's local
+    performance refresh key; identity transitions and cacheBus events clear
+    it like the rest of the family.
   - Search recent/results caches are browser-local read caches; explicit search
     calls patch the relevant result key and recent-search list.
   - Analytics overview and Top Content caches are range-scoped read caches and
@@ -779,8 +786,11 @@ admin UI over the existing `commerce:collections:list` family:
 - Tools pages now follow the same cached-first contract as Pages/Posts where
   the resource is safe to cache:
   - Search caches recent searches and query/date-range result payloads.
-  - SEO Manager caches list/detail rows and invalidates public HTML cache after
-    writes.
+  - SEO Manager caches list/detail rows plus the authenticated-admin-scoped
+    `seo:overview` read-through cache and invalidates public HTML cache after
+    writes. Sync/sitemap-submit write actions force-refresh `seo:overview`;
+    identity transitions and cacheBus events clear it like the rest of the
+    family.
   - Analytics caches range-scoped overview and Top Content rows plus the real
     traffic overview and Top Pages rows; CSV export payloads are not cached.
   - Backups caches redacted list/schedule rows, patches create/delete cache

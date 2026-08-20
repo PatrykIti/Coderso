@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-493-01, TASK-493-03-L01 (GSC client, for submission only)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -31,8 +31,8 @@ but nothing for `/sitemap.xml`. This subtask adds it.
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | Sitemap XML builder + public `/sitemap.xml` & `robots.txt` directive | Vitest (builder) + Bun (route) | ⏳ To Do |
-| L02 | Sitemap submission + status tracking (service) | Bun | ⏳ To Do |
+| L01 | Sitemap XML builder + public `/sitemap.xml` & `robots.txt` directive | Vitest (builder) + Bun (route) | ✅ Done |
+| L02 | Sitemap submission + status tracking (service) | Bun | ✅ Done |
 
 ---
 

@@ -5,9 +5,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Large
 **Dependencies:** TASK-027 (SEO Manager core), Integrations registry + secret store (`core/services/integrations/*`, `core/services/security/secretStore.ts`)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -84,12 +84,12 @@ admin.
 
 | NN | Title | Effort | Status |
 |----|-------|--------|--------|
-| 01 | Search-Performance & Indexing Schema (+ full migration) | Medium | ⏳ To Do |
-| 02 | Sitemap Generation, Submission & Status Tracking | Medium | ⏳ To Do |
-| 03 | Google Search Console Integration (credential + fetch) | Large | ⏳ To Do |
-| 04 | SEO Aggregation Service + `seoTypes` Extension | Medium | ⏳ To Do |
-| 05 | SEO Manager Page Rewire to Real Data | Medium | ⏳ To Do |
-| 06 | Tests & Documentation | Medium | ⏳ To Do |
+| 01 | Search-Performance & Indexing Schema (+ full migration) | Medium | ✅ Done |
+| 02 | Sitemap Generation, Submission & Status Tracking | Medium | ✅ Done |
+| 03 | Google Search Console Integration (credential + fetch) | Large | ✅ Done |
+| 04 | SEO Aggregation Service + `seoTypes` Extension | Medium | ✅ Done |
+| 05 | SEO Manager Page Rewire to Real Data | Medium | ✅ Done |
+| 06 | Tests & Documentation | Medium | ✅ Done |
 
 Implementation/dependency order:
 **01 → 03-L01 → 02-L01 → 03-L02 → 02-L02 → 04-L01 → 04-L02 → 05 → 06**

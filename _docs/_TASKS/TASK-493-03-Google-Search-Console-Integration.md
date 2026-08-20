@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Large
 **Dependencies:** TASK-493-01, Integrations registry + secret store
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -31,8 +31,8 @@ and `getIntegrationRuntimeConfig(id)` decrypts **server-side only**.
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | GSC credential definition + server-side auth client | Bun | ⏳ To Do |
-| L02 | GSC data-sync service (indexed pages + analytics) | Bun | ⏳ To Do |
+| L01 | GSC credential definition + server-side auth client | Bun | ✅ Done |
+| L02 | GSC data-sync service (indexed pages + analytics) | Bun | ✅ Done |
 
 ---
 
