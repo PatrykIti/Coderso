@@ -1262,7 +1262,7 @@
                         {
                           "id": "pricing-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -1373,7 +1373,7 @@
                         {
                           "id": "pricing-start-label",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -1449,7 +1449,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -1468,7 +1468,7 @@
                         {
                           "id": "pricing-premium-label",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -1544,7 +1544,7 @@
                       "borderColor": "#8ee8ff",
                       "borderStyle": "solid",
                       "borderWidth": 2,
-                      "glow": { "blur": 48, "color": "rgba(173,255,216,.28)", "spread": 3 },
+                      "glow": { "blur": 48, "color": "rgba(173, 255, 216, 0.28)", "spread": 3 },
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
                       "radius": 24,
                       "shadow": "md",
@@ -1561,7 +1561,7 @@
                         {
                           "id": "pricing-complete-label",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -1642,7 +1642,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -1715,7 +1715,7 @@
               "effects": {
                 "cursorSpotlight": true,
                 "noiseOverlay": true,
-                "spotlightColor": "rgba(142,232,255,.14)",
+                "spotlightColor": "rgba(142, 232, 255, 0.14)",
                 "spotlightSize": 460
               },
               "showInNav": true,
@@ -1744,7 +1744,7 @@
                         {
                           "id": "home-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -1902,7 +1902,7 @@
                               {
                                 "id": "home-chip-glass",
                                 "props": {
-                                  "background": "rgba(142,232,255,.12)",
+                                  "background": "rgba(142, 232, 255, 0.12)",
                                   "icon": null,
                                   "iconPosition": "start",
                                   "shape": "pill",
@@ -1918,7 +1918,7 @@
                               {
                                 "id": "home-chip-energy",
                                 "props": {
-                                  "background": "rgba(142,232,255,.12)",
+                                  "background": "rgba(142, 232, 255, 0.12)",
                                   "icon": null,
                                   "iconPosition": "start",
                                   "shape": "pill",
@@ -1934,7 +1934,7 @@
                               {
                                 "id": "home-chip-vr",
                                 "props": {
-                                  "background": "rgba(142,232,255,.12)",
+                                  "background": "rgba(142, 232, 255, 0.12)",
                                   "icon": null,
                                   "iconPosition": "start",
                                   "shape": "pill",
@@ -1965,9 +1965,9 @@
                                   "value": "3"
                                 },
                                 "style": {
-                                  "background": "rgba(255,255,255,.04)",
+                                  "background": "rgba(255, 255, 255, 0.04)",
                                   "backgroundType": "color",
-                                  "borderColor": "rgba(255,255,255,.14)",
+                                  "borderColor": "rgba(255, 255, 255, 0.14)",
                                   "borderStyle": "solid",
                                   "borderWidth": 1,
                                   "padding": { "bottom": 18, "left": 18, "right": 18, "top": 18 },
@@ -1981,9 +1981,9 @@
                                 "id": "home-metric-days",
                                 "props": { "caption": "", "label": "koncepcja", "value": "21 dni" },
                                 "style": {
-                                  "background": "rgba(255,255,255,.04)",
+                                  "background": "rgba(255, 255, 255, 0.04)",
                                   "backgroundType": "color",
-                                  "borderColor": "rgba(255,255,255,.14)",
+                                  "borderColor": "rgba(255, 255, 255, 0.14)",
                                   "borderStyle": "solid",
                                   "borderWidth": 1,
                                   "padding": { "bottom": 18, "left": 18, "right": 18, "top": 18 },
@@ -2001,9 +2001,9 @@
                                   "value": "96%"
                                 },
                                 "style": {
-                                  "background": "rgba(255,255,255,.04)",
+                                  "background": "rgba(255, 255, 255, 0.04)",
                                   "backgroundType": "color",
-                                  "borderColor": "rgba(255,255,255,.14)",
+                                  "borderColor": "rgba(255, 255, 255, 0.14)",
                                   "borderStyle": "solid",
                                   "borderWidth": 1,
                                   "padding": { "bottom": 18, "left": 18, "right": 18, "top": 18 },
@@ -2036,11 +2036,11 @@
                     "style": {
                       "background": "radial-gradient(circle at 78% 12%, rgba(173,255,216,.22), transparent 48%), linear-gradient(155deg,#0b1628,#07111f)",
                       "backgroundType": "gradient",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "composition": "layered",
-                      "glow": { "blur": 48, "color": "rgba(142,232,255,.28)", "spread": 2 },
+                      "glow": { "blur": 48, "color": "rgba(142, 232, 255, 0.28)", "spread": 2 },
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
                       "radius": 24,
                       "shadow": "md",
@@ -2132,7 +2132,7 @@
                         {
                           "id": "home-intro-ticker-1",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2148,7 +2148,7 @@
                         {
                           "id": "home-intro-ticker-2",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2164,7 +2164,7 @@
                         {
                           "id": "home-intro-ticker-3",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2180,7 +2180,7 @@
                         {
                           "id": "home-intro-ticker-4",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2196,7 +2196,7 @@
                         {
                           "id": "home-intro-ticker-5",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2272,7 +2272,7 @@
                   {
                     "id": "home-services-eyebrow",
                     "props": {
-                      "background": "rgba(142,232,255,.12)",
+                      "background": "rgba(142, 232, 255, 0.12)",
                       "icon": null,
                       "iconPosition": "start",
                       "shape": "pill",
@@ -2328,7 +2328,7 @@
                         {
                           "id": "home-service-individual-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2388,7 +2388,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -2407,7 +2407,7 @@
                         {
                           "id": "home-service-adaptation-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2467,7 +2467,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -2486,7 +2486,7 @@
                         {
                           "id": "home-service-visualization-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2542,7 +2542,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -2615,7 +2615,7 @@
                         {
                           "id": "home-switcher-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -2790,7 +2790,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 24, "left": 24, "right": 24, "top": 24 },
@@ -2857,7 +2857,7 @@
                   {
                     "id": "home-projects-eyebrow",
                     "props": {
-                      "background": "rgba(142,232,255,.12)",
+                      "background": "rgba(142, 232, 255, 0.12)",
                       "icon": null,
                       "iconPosition": "start",
                       "shape": "pill",
@@ -2913,7 +2913,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "hoverEffect": "lift",
@@ -2935,7 +2935,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "hoverEffect": "lift",
@@ -2957,7 +2957,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "hoverEffect": "lift",
@@ -3025,7 +3025,7 @@
                   {
                     "id": "home-process-eyebrow",
                     "props": {
-                      "background": "rgba(142,232,255,.12)",
+                      "background": "rgba(142, 232, 255, 0.12)",
                       "icon": null,
                       "iconPosition": "start",
                       "shape": "pill",
@@ -3081,7 +3081,7 @@
                         {
                           "id": "home-process-brief-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -3124,7 +3124,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -3143,7 +3143,7 @@
                         {
                           "id": "home-process-concept-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -3186,7 +3186,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -3205,7 +3205,7 @@
                         {
                           "id": "home-process-project-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -3248,7 +3248,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -3267,7 +3267,7 @@
                         {
                           "id": "home-process-support-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -3310,7 +3310,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -3378,7 +3378,7 @@
                   {
                     "id": "home-cta-eyebrow",
                     "props": {
-                      "background": "rgba(142,232,255,.12)",
+                      "background": "rgba(142, 232, 255, 0.12)",
                       "icon": null,
                       "iconPosition": "start",
                       "shape": "pill",
@@ -3506,7 +3506,7 @@
               "effects": {
                 "cursorSpotlight": true,
                 "noiseOverlay": true,
-                "spotlightColor": "rgba(142,232,255,.14)",
+                "spotlightColor": "rgba(142, 232, 255, 0.14)",
                 "spotlightSize": 460
               },
               "showInNav": true,
@@ -3535,7 +3535,7 @@
                         {
                           "id": "contact-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -3651,7 +3651,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 32, "left": 32, "right": 32, "top": 32 },
@@ -3726,7 +3726,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -3771,7 +3771,7 @@
                     "style": {
                       "background": "radial-gradient(circle at 78% 12%, rgba(173,255,216,.22), transparent 48%), linear-gradient(155deg,#0b1628,#07111f)",
                       "backgroundType": "gradient",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -3845,7 +3845,7 @@
               "effects": {
                 "cursorSpotlight": true,
                 "noiseOverlay": true,
-                "spotlightColor": "rgba(142,232,255,.14)",
+                "spotlightColor": "rgba(142, 232, 255, 0.14)",
                 "spotlightSize": 460
               },
               "showInNav": true,
@@ -3874,7 +3874,7 @@
                         {
                           "id": "about-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4032,7 +4032,7 @@
                         {
                           "id": "about-value-shape-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4064,7 +4064,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4083,7 +4083,7 @@
                         {
                           "id": "about-value-light-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4115,7 +4115,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4134,7 +4134,7 @@
                         {
                           "id": "about-value-function-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4170,7 +4170,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4189,7 +4189,7 @@
                         {
                           "id": "about-value-premium-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4225,7 +4225,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4329,7 +4329,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4375,7 +4375,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4421,7 +4421,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4494,7 +4494,7 @@
               "effects": {
                 "cursorSpotlight": true,
                 "noiseOverlay": true,
-                "spotlightColor": "rgba(142,232,255,.14)",
+                "spotlightColor": "rgba(142, 232, 255, 0.14)",
                 "spotlightSize": 460
               },
               "showInNav": true,
@@ -4523,7 +4523,7 @@
                         {
                           "id": "offer-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4634,7 +4634,7 @@
                         {
                           "id": "offer-individual-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4709,7 +4709,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4759,7 +4759,7 @@
                   "backgroundImage": null,
                   "backgroundType": "color",
                   "border": {
-                    "bottom": { "color": "rgba(255,255,255,.14)", "style": "solid", "width": 1 }
+                    "bottom": { "color": "rgba(255, 255, 255, 0.14)", "style": "solid", "width": 1 }
                   },
                   "fullBleed": true,
                   "radius": 0,
@@ -4785,7 +4785,7 @@
                         {
                           "id": "offer-adaptation-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4846,7 +4846,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -4896,7 +4896,7 @@
                   "backgroundImage": null,
                   "backgroundType": "color",
                   "border": {
-                    "bottom": { "color": "rgba(255,255,255,.14)", "style": "solid", "width": 1 }
+                    "bottom": { "color": "rgba(255, 255, 255, 0.14)", "style": "solid", "width": 1 }
                   },
                   "fullBleed": true,
                   "radius": 0,
@@ -4922,7 +4922,7 @@
                         {
                           "id": "offer-visualization-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -4983,7 +4983,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5033,7 +5033,7 @@
                   "backgroundImage": null,
                   "backgroundType": "color",
                   "border": {
-                    "bottom": { "color": "rgba(255,255,255,.14)", "style": "solid", "width": 1 }
+                    "bottom": { "color": "rgba(255, 255, 255, 0.14)", "style": "solid", "width": 1 }
                   },
                   "fullBleed": true,
                   "radius": 0,
@@ -5059,7 +5059,7 @@
                         {
                           "id": "offer-plot-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5116,7 +5116,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5166,7 +5166,7 @@
                   "backgroundImage": null,
                   "backgroundType": "color",
                   "border": {
-                    "bottom": { "color": "rgba(255,255,255,.14)", "style": "solid", "width": 1 }
+                    "bottom": { "color": "rgba(255, 255, 255, 0.14)", "style": "solid", "width": 1 }
                   },
                   "fullBleed": true,
                   "radius": 0,
@@ -5192,7 +5192,7 @@
                         {
                           "id": "offer-interiors-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5249,7 +5249,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5299,7 +5299,7 @@
                   "backgroundImage": null,
                   "backgroundType": "color",
                   "border": {
-                    "bottom": { "color": "rgba(255,255,255,.14)", "style": "solid", "width": 1 }
+                    "bottom": { "color": "rgba(255, 255, 255, 0.14)", "style": "solid", "width": 1 }
                   },
                   "fullBleed": true,
                   "radius": 0,
@@ -5320,7 +5320,7 @@
                   {
                     "id": "offer-comparison-eyebrow",
                     "props": {
-                      "background": "rgba(142,232,255,.12)",
+                      "background": "rgba(142, 232, 255, 0.12)",
                       "icon": null,
                       "iconPosition": "start",
                       "shape": "pill",
@@ -5387,7 +5387,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5433,7 +5433,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5479,7 +5479,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5552,7 +5552,7 @@
               "effects": {
                 "cursorSpotlight": true,
                 "noiseOverlay": true,
-                "spotlightColor": "rgba(142,232,255,.14)",
+                "spotlightColor": "rgba(142, 232, 255, 0.14)",
                 "spotlightSize": 460
               },
               "showInNav": true,
@@ -5581,7 +5581,7 @@
                         {
                           "id": "process-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5692,7 +5692,7 @@
                         {
                           "id": "process-step-1-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5735,7 +5735,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5754,7 +5754,7 @@
                         {
                           "id": "process-step-2-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5797,7 +5797,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5816,7 +5816,7 @@
                         {
                           "id": "process-step-3-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5859,7 +5859,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5878,7 +5878,7 @@
                         {
                           "id": "process-step-4-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5921,7 +5921,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -5940,7 +5940,7 @@
                         {
                           "id": "process-step-5-number",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -5983,7 +5983,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 28, "left": 28, "right": 28, "top": 28 },
@@ -6157,7 +6157,7 @@
               "effects": {
                 "cursorSpotlight": true,
                 "noiseOverlay": true,
-                "spotlightColor": "rgba(142,232,255,.14)",
+                "spotlightColor": "rgba(142, 232, 255, 0.14)",
                 "spotlightSize": 460
               },
               "showInNav": true,
@@ -6186,7 +6186,7 @@
                         {
                           "id": "projects-eyebrow",
                           "props": {
-                            "background": "rgba(142,232,255,.12)",
+                            "background": "rgba(142, 232, 255, 0.12)",
                             "icon": null,
                             "iconPosition": "start",
                             "shape": "pill",
@@ -6333,7 +6333,7 @@
                     "style": {
                       "background": "#0b1628",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 24, "left": 24, "right": 24, "top": 24 },
@@ -6354,9 +6354,9 @@
                       "templateId": { "key": "project-cards", "ref": "listing_template" }
                     },
                     "style": {
-                      "background": "rgba(255,255,255,.03)",
+                      "background": "rgba(255, 255, 255, 0.03)",
                       "backgroundType": "color",
-                      "borderColor": "rgba(255,255,255,.14)",
+                      "borderColor": "rgba(255, 255, 255, 0.14)",
                       "borderStyle": "solid",
                       "borderWidth": 1,
                       "padding": { "bottom": 26, "left": 26, "right": 26, "top": 26 },
@@ -6427,7 +6427,7 @@
               "effects": {
                 "cursorSpotlight": true,
                 "noiseOverlay": true,
-                "spotlightColor": "rgba(142,232,255,.14)",
+                "spotlightColor": "rgba(142, 232, 255, 0.14)",
                 "spotlightSize": 460
               },
               "showInNav": true,
