@@ -123,7 +123,8 @@ bun run test:vitest -- \
   tests/vitest/pages/page-renderer-v2-composition.test.tsx \
   tests/vitest/pages/page-renderer-timeline-geometry.test.ts \
   tests/vitest/pages/task-534-interactivity-render.test.tsx \
-  tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
+  tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx \
+  tests/vitest/pages/task-539-renderer-replica-identity.test.tsx
 node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
