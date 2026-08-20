@@ -83,7 +83,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 247 tasks
+- **To Do:** 248 tasks
 - **In Progress:** 6 tasks
 - **Done:** 3538 tasks (including 2 Superseded)
 
