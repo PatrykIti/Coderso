@@ -7,12 +7,15 @@ import {
 } from "../../../core/services/pages/pageEffectsRuntime";
 
 /**
- * TASK-521-02-L03 — behavioral smoke of the section reveal/parallax runtime
- * (owned/emitted by 521-01/521-05, exercised here against the DOM contract
- * 521-02 stamps: `data-page-effect`, `data-parallax`, `[data-parallax-inner]`,
- * the `[data-page-motion]` root, `data-reveal-armed`, `data-revealed`).
- * The runtime source is a STATIC IIFE string executed via `new Function()` in
- * happy-dom; mocks stand in for IntersectionObserver / matchMedia / rAF.
+ * TASK-521-02-L03 / TASK-539-07-L01 — behavioral smoke of the section
+ * reveal/parallax runtime (owned/emitted by 521-01/521-05, exercised here
+ * against the DOM contract 521-02 stamps: `data-page-effect`, `data-parallax`,
+ * `[data-parallax-inner]`, the `[data-page-motion]` root, `data-reveal-armed`,
+ * `data-revealed`). The runtime source is a STATIC IIFE string executed via
+ * `new Function()` in happy-dom; mocks stand in for IntersectionObserver /
+ * matchMedia / rAF. TASK-539-07: the shared controller lives on
+ * `window.__codersoPageEffectsV2`, so BOTH the controller and the legacy
+ * observation flag are reset between tests.
  */
 
 const runRuntime = () => {
@@ -21,7 +24,12 @@ const runRuntime = () => {
 };
 
 type IoEntry = { target: Element; isIntersecting: boolean };
-let ioInstances: Array<{ observe: (el: Element) => void; fire: (e: IoEntry[]) => void }>;
+type MockIoInstance = {
+  observe: (el: Element) => void;
+  fire: (e: IoEntry[]) => void;
+  observed: Element[];
+};
+let ioInstances: MockIoInstance[];
 
 const mockMatchMedia = (reduce: boolean, fine = true) => {
   vi.stubGlobal(
@@ -46,23 +54,30 @@ const mockMatchMedia = (reduce: boolean, fine = true) => {
 beforeEach(() => {
   ioInstances = [];
   document.body.innerHTML = "";
-  // TASK-535: the runtime's per-window idempotence guard sets
-  // `window[PAGE_EFFECTS_RUNTIME_INIT_FLAG]` and early-returns on any 2nd+
-  // invocation against the SAME window. happy-dom shares one `window` across
-  // every test in this file, and `vi.unstubAllGlobals()` does NOT clear a plain
-  // window property — so without this reset the 2nd `runRuntime()` short-circuits
-  // before arming reveal / binding the scroll (parallax) handler (making later
-  // tests fail or pass vacuously). Clear the flag so each `runRuntime()` re-arms
-  // a clean runtime. The production guard is unchanged; this only resets the
+  // TASK-539-07: the controller is stored on `window.__codersoPageEffectsV2`
+  // (its per-binder WeakSets would otherwise survive across tests in the shared
+  // happy-dom window), and the legacy observation flag is written by every copy.
+  // Reset BOTH so each runRuntime() builds a clean controller and re-evaluates
+  // the static source. The production guard is unchanged; this only resets the
   // shared test window.
   delete (window as unknown as Record<string, unknown>)[PAGE_EFFECTS_RUNTIME_INIT_FLAG];
+  delete (window as unknown as Record<string, unknown>)["__codersoPageEffectsV2"];
   class MockIO {
     private cb: (entries: IoEntry[]) => void;
+    observed: Element[] = [];
     constructor(cb: (entries: IoEntry[]) => void) {
       this.cb = cb;
-      ioInstances.push({ observe: () => {}, fire: (e) => this.cb(e) });
+      ioInstances.push({
+        observe: (el) => {
+          this.observed.push(el);
+        },
+        fire: (e) => this.cb(e),
+        observed: this.observed,
+      });
     }
-    observe() {}
+    observe(el: Element) {
+      this.observed.push(el);
+    }
     unobserve() {}
     disconnect() {}
   }
@@ -95,7 +110,7 @@ describe("section scroll-effect runtime (TASK-521-02)", () => {
     expect(section.hasAttribute("data-revealed")).toBe(false);
 
     // Fire an intersection → the section reveals.
-    ioInstances[0].fire([{ target: section, isIntersecting: true }]);
+    ioInstances[0]!.fire([{ target: section, isIntersecting: true }]);
     expect(section.getAttribute("data-revealed")).toBe("true");
   });
 
@@ -140,5 +155,68 @@ describe("section scroll-effect runtime (TASK-521-02)", () => {
     expect(inner.style.transform).toBe("");
     // No IntersectionObserver was constructed either.
     expect(ioInstances.length).toBe(0);
+  });
+});
+
+// TASK-539-07-L01 — replica rejection for the reveal/parallax binders. Reveal and
+// parallax belong to SECTION WRAPPERS and cannot be generated inside a real
+// marquee segment; the runtime suite proves the replica-self/ancestor rejection
+// with minimal fixed DOM owned by this suite (no fake production hooks).
+describe("section scroll-effect replica safety (TASK-539-07-L01)", () => {
+  it("a reveal section inside a marquee replica is never observed; the primary still reveals", () => {
+    mockMatchMedia(false);
+    document.body.innerHTML =
+      "<div data-page-motion>" +
+      '<section data-page-effect="reveal-up" data-primary="true"><p>primary</p></section>' +
+      "</div>" +
+      '<div class="cx-marquee-viewport"><div class="cx-marquee-rail">' +
+      '<div class="cx-marquee-segment">' +
+      '<section data-page-effect="reveal-up" data-primary="true"><p>seg</p></section>' +
+      "</div>" +
+      '<div class="cx-marquee-segment" data-page-marquee-replica aria-hidden="true">' +
+      '<section data-page-effect="reveal-up" data-replica="true"><p>clone</p></section>' +
+      "</div>" +
+      "</div></div>";
+
+    runRuntime();
+
+    const observed = ioInstances.flatMap((inst) => inst.observed);
+    const primary = document.querySelector('section[data-primary="true"]')!;
+    const replica = document.querySelector('section[data-replica="true"]')!;
+    // Only the primary segments are observed; the replica reveal is inert.
+    expect(observed).toContain(primary);
+    expect(observed).not.toContain(replica);
+
+    // The replica element is not armed/observed and never gets data-revealed.
+    ioInstances[0]!.fire([{ target: primary, isIntersecting: true }]);
+    expect(primary.getAttribute("data-revealed")).toBe("true");
+    expect(replica.hasAttribute("data-revealed")).toBe(false);
+  });
+
+  it("a parallax element inside a marquee replica gets no transform; the primary still moves", () => {
+    mockMatchMedia(false);
+    document.body.innerHTML =
+      '<div class="cx-marquee-viewport"><div class="cx-marquee-rail">' +
+      '<div class="cx-marquee-segment">' +
+      '<section data-page-effect="parallax" data-parallax="24" data-primary="true">' +
+      "<div data-parallax-inner><p>seg</p></div></section>" +
+      "</div>" +
+      '<div class="cx-marquee-segment" data-page-marquee-replica aria-hidden="true">' +
+      '<section data-page-effect="parallax" data-parallax="24" data-replica="true">' +
+      "<div data-parallax-inner><p>clone</p></div></section>" +
+      "</div>" +
+      "</div></div>";
+    const primaryInner = document.querySelector(
+      'section[data-primary="true"] [data-parallax-inner]'
+    ) as HTMLElement;
+    const replicaInner = document.querySelector(
+      'section[data-replica="true"] [data-parallax-inner]'
+    ) as HTMLElement;
+
+    runRuntime();
+
+    // The primary parallax channel animates; the replica stays inert.
+    expect(primaryInner.style.transform).toMatch(/^translate3d\(0,-?\d+(\.\d+)?px,0\)$/);
+    expect(replicaInner.style.transform).toBe("");
   });
 });

@@ -7,12 +7,16 @@ import {
 } from "../../../core/services/pages/pageEffectsRuntime";
 
 /**
- * TASK-521-05-L04 — behavioral smoke of the per-page cursor-spotlight runtime
- * (owned by 521-01, emitted at the page root by 521-05). The runtime is a STATIC
- * IIFE string executed via `new Function()` in happy-dom against the DOM contract
- * 521-05 stamps: the `[data-page-spotlight]` root marker + the
- * `--spotlight-x/y` CSS custom properties updated on `pointermove`. Guards:
- * `prefers-reduced-motion: reduce` and a coarse pointer disable it entirely.
+ * TASK-521-05-L04 / TASK-539-07-L01 — behavioral smoke of the per-page
+ * cursor-spotlight runtime (owned by 521-01, emitted at the page root by
+ * 521-05). The runtime is a STATIC IIFE string executed via `new Function()` in
+ * happy-dom against the DOM contract 521-05 stamps: the `[data-page-spotlight]`
+ * root marker + the `--spotlight-x/y` CSS custom properties updated on
+ * `pointermove`. Guards: `prefers-reduced-motion: reduce` and a coarse pointer
+ * disable it entirely. TASK-539-07: the controller lives on
+ * `window.__codersoPageEffectsV2`, so BOTH the controller and the legacy
+ * observation flag are reset between tests; spotlight binds only the exact
+ * `[data-page-spotlight]` root and the overlay merely inherits the values.
  */
 
 const runRuntime = () => {
@@ -45,15 +49,13 @@ const movePointer = (el: Element, clientX: number, clientY: number) => {
 
 beforeEach(() => {
   document.body.innerHTML = "";
-  // TASK-535: the runtime's per-window idempotence guard sets
-  // `window[PAGE_EFFECTS_RUNTIME_INIT_FLAG]` and early-returns on any 2nd+
-  // invocation against the SAME window. happy-dom shares one `window` across
-  // every test in this file, and `vi.unstubAllGlobals()` does NOT clear a plain
-  // window property — so without this reset the 2nd `runRuntime()` short-circuits
-  // before binding pointer listeners (making later tests fail or pass vacuously).
-  // Clear the flag so each `runRuntime()` re-binds a clean runtime. The
-  // production guard is unchanged; this only resets the shared test window.
+  // TASK-539-07: the shared controller and its per-binder WeakSets would survive
+  // across tests in the shared happy-dom window, and the legacy observation flag
+  // is written by every copy. Reset BOTH so each runRuntime() re-binds a clean
+  // runtime. The production controller is unchanged; this only resets the shared
+  // test window.
   delete (window as unknown as Record<string, unknown>)[PAGE_EFFECTS_RUNTIME_INIT_FLAG];
+  delete (window as unknown as Record<string, unknown>)["__codersoPageEffectsV2"];
   // Run rAF callbacks synchronously so sFrame() executes deterministically.
   vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
     cb(0);
@@ -129,5 +131,81 @@ describe("cursor-spotlight runtime (TASK-521-05)", () => {
     movePointer(sp, 120, 80);
 
     expect(sp.style.getPropertyValue("--spotlight-x")).toBe("");
+  });
+});
+
+// TASK-539-07-L01 — spotlight binds ONLY the exact [data-page-spotlight] root,
+// with main/footer root-local updates and no overlay-node binding. The overlay
+// ([data-page-spotlight-overlay]) merely inherits the values; the runtime never
+// queries or binds it, and adds no pointer-leave/reset behavior.
+describe("cursor-spotlight root contract (TASK-539-07-L01)", () => {
+  it("two spotlight roots (main + footer) each update their OWN vars; the overlay node is never bound", () => {
+    mockMatchMedia(false, true);
+    document.body.innerHTML =
+      '<main data-page-spotlight data-motion-root="main">' +
+      '<div data-page-spotlight-overlay aria-hidden="true"></div>' +
+      "<p>main</p></main>" +
+      '<footer data-page-spotlight data-motion-root="footer">' +
+      '<div data-page-spotlight-overlay aria-hidden="true"></div>' +
+      "<p>footer</p></footer>";
+    const mainRoot = document.querySelector('[data-motion-root="main"]') as HTMLElement;
+    const footerRoot = document.querySelector('[data-motion-root="footer"]') as HTMLElement;
+    const mainOverlay = mainRoot.querySelector("[data-page-spotlight-overlay]") as HTMLElement;
+    const footerOverlay = footerRoot.querySelector("[data-page-spotlight-overlay]") as HTMLElement;
+
+    runRuntime();
+
+    movePointer(mainRoot, 120, 80);
+    expect(mainRoot.style.getPropertyValue("--spotlight-x")).toBe("120px");
+    expect(mainRoot.style.getPropertyValue("--spotlight-y")).toBe("80px");
+    // Footer root is untouched by the main-root move (root-local writes).
+    expect(footerRoot.style.getPropertyValue("--spotlight-x")).toBe("");
+
+    movePointer(footerRoot, 640, 500);
+    expect(footerRoot.style.getPropertyValue("--spotlight-x")).toBe("640px");
+    expect(footerRoot.style.getPropertyValue("--spotlight-y")).toBe("500px");
+    expect(mainRoot.style.getPropertyValue("--spotlight-x")).toBe("120px");
+
+    // The overlays only inherit — the runtime never writes vars on them.
+    expect(mainOverlay.style.getPropertyValue("--spotlight-x")).toBe("");
+    expect(footerOverlay.style.getPropertyValue("--spotlight-x")).toBe("");
+  });
+
+  it("a spotlight root inside a marquee replica is never bound; the primary root still tracks", () => {
+    mockMatchMedia(false, true);
+    document.body.innerHTML =
+      "<main data-page-spotlight data-primary='true'><p>primary</p></main>" +
+      '<div class="cx-marquee-viewport"><div class="cx-marquee-rail">' +
+      '<div class="cx-marquee-segment" data-page-marquee-replica aria-hidden="true">' +
+      '<div data-page-spotlight data-replica="true"><p>clone</p></div>' +
+      "</div>" +
+      "</div></div>";
+    const primary = document.querySelector('[data-primary="true"]') as HTMLElement;
+    const replica = document.querySelector('[data-replica="true"]') as HTMLElement;
+
+    runRuntime();
+
+    movePointer(primary, 120, 80);
+    expect(primary.style.getPropertyValue("--spotlight-x")).toBe("120px");
+
+    movePointer(replica, 640, 500);
+    // The replica spotlight never became interactive (no listener attached).
+    expect(replica.style.getPropertyValue("--spotlight-x")).toBe("");
+    expect(replica.style.getPropertyValue("--spotlight-y")).toBe("");
+  });
+
+  it("repeated scans never double-bind a spotlight root (WeakSet skip)", () => {
+    mockMatchMedia(false, true);
+    document.body.innerHTML = "<main data-page-spotlight><p>content</p></main>";
+    const sp = document.querySelector("[data-page-spotlight]") as HTMLElement;
+    sp.getBoundingClientRect = () => ({ left: 0, top: 0 }) as DOMRect;
+
+    runRuntime();
+    runRuntime(); // second copy (footer) rescans the same window
+
+    movePointer(sp, 100, 60);
+    // Exactly one rAF frame per move: the value is written once and correctly.
+    expect(sp.style.getPropertyValue("--spotlight-x")).toBe("100px");
+    expect(sp.style.getPropertyValue("--spotlight-y")).toBe("60px");
   });
 });

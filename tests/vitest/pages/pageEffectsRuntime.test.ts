@@ -8,18 +8,24 @@ import {
   PAGE_EFFECTS_RUNTIME_SOURCE,
   prefersReducedMotion,
 } from "../../../core/services/pages/pageEffectsRuntime";
+import {
+  PAGE_BLOCK_TRANSFORM_VARIABLES,
+  PAGE_MARQUEE_REPLICA_SELECTOR,
+} from "../../../core/services/pages/pageCompositionEffects";
 
-// TASK-521-01-L04 — pure string assertions on the STATIC runtime source. No DOM
-// kernel is executed here (per _docs/TESTING_STRATEGY.md this belongs in the
-// Vitest pure-TS lane), so these assertions guard the security + accessibility
-// invariants purely by inspecting the emitted literal.
+// TASK-539-07-L01 — pure string assertions on the STATIC runtime source plus
+// happy-dom behavioral execution of the emitted controller. No DOM kernel is
+// executed here outside happy-dom (per _docs/TESTING_STRATEGY.md this belongs in
+// the Vitest pure-TS lane), so these assertions guard the security + accessibility
+// invariants both by inspecting the emitted literal and by running it.
 
-describe("pageEffectsRuntime static source (TASK-521-01-L04)", () => {
+describe("pageEffectsRuntime static source (TASK-539-07-L01)", () => {
   const source = PAGE_EFFECTS_RUNTIME_SOURCE;
 
-  test("id is a stable non-empty string", () => {
-    expect(typeof PAGE_EFFECTS_RUNTIME_ID).toBe("string");
+  test("id / flag / reduced-motion-query exports are stable", () => {
     expect(PAGE_EFFECTS_RUNTIME_ID).toBe("page-motion-effects");
+    expect(PAGE_EFFECTS_RUNTIME_INIT_FLAG).toBe("__codersoPageMotionEffectsInit");
+    expect(PAGE_EFFECTS_REDUCED_MOTION_QUERY).toBe("(prefers-reduced-motion: reduce)");
   });
 
   test("source is a non-empty IIFE string", () => {
@@ -29,61 +35,139 @@ describe("pageEffectsRuntime static source (TASK-521-01-L04)", () => {
     expect(source.endsWith("})();")).toBe(true);
   });
 
-  test("reduced-motion guard early-returns before any MOTION observer/listener", () => {
-    expect(source).toContain(`matchMedia("${PAGE_EFFECTS_REDUCED_MOTION_QUERY}")`);
-    const guardReturn = source.indexOf("if(RM&&RM.matches)return;");
-    const observer = source.indexOf("IntersectionObserver");
-    // TASK-534: the FIRST addEventListener is now the switcher/filter INTERACTION
-    // TOGGLE, deliberately placed BEFORE the reduced-motion return (it must run for
-    // reduce users — accessibility). The MOTION listeners (parallax scroll,
-    // spotlight/tilt/magnetic pointermove) still follow the return, so assert the
-    // reveal observer + the parallax scroll listener + the LAST addEventListener
-    // (magnetic pointerleave) are all after the guard.
-    const parallaxScroll = source.indexOf('window.addEventListener("scroll"');
-    const lastListener = source.lastIndexOf("addEventListener");
-    expect(guardReturn).toBeGreaterThan(-1);
-    expect(observer).toBeGreaterThan(guardReturn);
-    expect(parallaxScroll).toBeGreaterThan(guardReturn);
-    expect(lastListener).toBeGreaterThan(guardReturn);
+  test("exposes the exact controller name/shape: window.__codersoPageEffectsV2 with init", () => {
+    expect(source).toContain("window.__codersoPageEffectsV2");
+    expect(source).toContain("createController");
+    expect(source).toContain("typeof state.init!=='function'");
+    expect(source).toContain("init(document)");
   });
 
-  test("arms data-reveal-armed AFTER the reduced-motion return but BEFORE the observe loop (JS-required-to-HIDE)", () => {
-    const guardReturn = source.indexOf("if(RM&&RM.matches)return;");
-    const arm = source.indexOf('setAttribute("data-reveal-armed","true")');
-    const observe = source.indexOf("io.observe(");
-    expect(arm).toBeGreaterThan(guardReturn);
-    expect(observe).toBeGreaterThan(arm);
-    // The marker is read off the page-motion root the render stamps.
-    expect(source).toContain('document.querySelector("[data-page-motion]")');
+  test("old flag is written for compatibility but NEVER read or early-returned on", () => {
+    // The legacy observation flag literal stays stable in the emitted source…
+    expect(source).toContain(`window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}=true;`);
+    // …but the old self-guard (`if(window.__codersoPageMotionEffectsInit)return;`)
+    // is GONE: the source must never read the flag.
+    expect(source).not.toContain(`if(window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}`);
+    expect(source).not.toContain(`${PAGE_EFFECTS_RUNTIME_INIT_FLAG})return`);
+    // Every emitted main/footer copy calls init(document) unconditionally.
+    expect(source).toContain("state.init(document);");
   });
 
-  test("uses IntersectionObserver reveal with a no-IO visible fallback", () => {
-    expect(source).toContain("IntersectionObserver");
-    expect(source).toContain('setAttribute("data-revealed","true")');
+  test("controller owns one WeakSet per binder and no strong element collections", () => {
+    const weakSets = source.match(/new WeakSet\(\)/g) ?? [];
+    expect(weakSets.length).toBe(7);
+    // No global strong collections: no MutationObserver, no retained element
+    // arrays (the legacy `var px=[].slice.call(document.querySelectorAll(...))`
+    // parallax array is gone; the frame re-queries the document each tick).
+    expect(source).not.toContain("MutationObserver");
+    expect(source).not.toContain("var px=[].slice.call(document.querySelectorAll");
+    expect(source).not.toContain("[].slice.call(document.querySelectorAll");
   });
 
-  test("clamps parallax travel to 40px", () => {
-    expect(source).toContain("Math.min(40,");
+  test("init order is switcher/gallery toggles, reduced-motion branch, then motion binders", () => {
+    expect(source).toContain("if(RM&&RM.matches)return;");
+    const initBlock = source.slice(
+      source.indexOf("function init(root){"),
+      source.indexOf("return {init:init};")
+    );
+    const order = [
+      "bindSwitcher(root)",
+      "bindGallery(root)",
+      "if(RM&&RM.matches)return;",
+      "bindReveal(root)",
+      "bindParallax(root)",
+      "bindSpotlight(root)",
+      "bindTilt(root)",
+      "bindMagnetic(root)",
+    ];
+    let last = -1;
+    for (const marker of order) {
+      const at = initBlock.indexOf(marker);
+      expect(at).toBeGreaterThan(last);
+      last = at;
+    }
   });
 
-  test("cursor spotlight only arms on pointer:fine and writes CSS vars", () => {
-    expect(source).toContain('matchMedia("(pointer:fine)")');
-    expect(source).toContain('setProperty("--spotlight-x"');
-    expect(source).toContain('setProperty("--spotlight-y"');
+  test("serializes the marquee replica selector/attribute from the owner (no respelling)", () => {
+    expect(source).toContain(`var REPLICA_SEL=${JSON.stringify(PAGE_MARQUEE_REPLICA_SELECTOR)};`);
+    expect(source).toContain("closest(REPLICA_SEL)");
+    expect(source).toContain("function isReplica(el){");
   });
 
-  test("TASK-529 — spotlight uses raw VIEWPORT clientX/clientY (feeds a position:fixed overlay), not root-rect page coords", () => {
-    // The vars feed a position:fixed inset:0 overlay's radial-gradient, so they
-    // must be viewport-relative. The handler must NOT subtract the root's rect
-    // (which added scrollY and pushed the glow below the fold past screen one).
+  test("tilt/magnetic write ONLY the imported transform custom properties", () => {
+    // The emitted TV literal is exactly the four transform variables this runtime
+    // may write (single source of truth: PAGE_BLOCK_TRANSFORM_VARIABLES).
+    const expectedTv = JSON.stringify({
+      tiltX: PAGE_BLOCK_TRANSFORM_VARIABLES.tiltX,
+      tiltY: PAGE_BLOCK_TRANSFORM_VARIABLES.tiltY,
+      magneticX: PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX,
+      magneticY: PAGE_BLOCK_TRANSFORM_VARIABLES.magneticY,
+    });
+    expect(source).toContain(`var TV=${expectedTv};`);
+    for (const own of ["--cx-tilt-x", "--cx-tilt-y", "--cx-magnetic-x", "--cx-magnetic-y"]) {
+      expect(source).toContain(own);
+    }
+    // No other transform variable may be written by the runtime.
+    for (const foreign of [
+      "--cx-reveal-y",
+      "--cx-decoration-x",
+      "--cx-decoration-y",
+      "--cx-decoration-rotate",
+      "--cx-decoration-scale",
+      "--cx-hover-y",
+      "--cx-hover-scale",
+    ]) {
+      expect(source).not.toContain(foreign);
+    }
+  });
+
+  test("tilt/magnetic/spotlight never write style.transform or clear it", () => {
+    expect(source).not.toContain("el.style.transform");
+    expect(source).not.toContain("style.transform='rotateX");
+    expect(source).not.toContain('style.transform="rotateX');
+    expect(source).not.toContain('style.transform="translate');
+    expect(source).not.toContain("setProperty('transform'");
+    expect(source).not.toContain('setProperty("transform"');
+    expect(source).not.toContain("removeProperty('transform'");
+    expect(source).not.toContain('removeProperty("transform"');
+    // The only transform write left is parallax's separate [data-parallax-inner]
+    // channel (on `inner`, never on the tilt/magnetic host `el`), guarded against
+    // transform hosts.
+    expect(source).toContain("inner.style.transform=");
+    expect(source).toContain("inner.getAttribute&&inner.getAttribute(HOST_ATTR)!=null");
+    expect(source).toContain("[data-parallax-inner]");
+  });
+
+  test("glare writes stay on .cx-glare only", () => {
+    expect(source).toContain("gl.style.setProperty('--glare-x'");
+    expect(source).toContain("gl.style.setProperty('--glare-y'");
+    expect(source).not.toContain("el.style.setProperty('--glare");
+  });
+
+  test("spotlight binds only the root hook with --spotlight-x/y and no leave/reset", () => {
+    expect(source).toContain("collect(root,SEL_SPOTLIGHT)");
+    expect(source).toContain("sp.style.setProperty('--spotlight-x'");
+    expect(source).toContain("sp.style.setProperty('--spotlight-y'");
+    // No pointerleave reset for spotlight, no overlay-node binding.
+    expect(source).not.toContain("sp.addEventListener('pointerleave'");
+    expect(source).not.toContain("data-page-spotlight-overlay");
+    // Viewport coords: raw clientX/clientY (feeds a position:fixed overlay).
     expect(source).toContain("sx=Math.round(ev.clientX);sy=Math.round(ev.clientY);");
     expect(source).not.toContain("ev.clientX-r.left");
-    expect(source).not.toContain("ev.clientY-r.top");
-    // No leftover root-rect read inside the pointermove handler.
-    const spotlightMove = source.indexOf('sp.addEventListener("pointermove"');
-    const nextMove = source.indexOf("addEventListener", spotlightMove + 1);
-    const handlerSlice = source.slice(spotlightMove, nextMove === -1 ? undefined : nextMove);
-    expect(handlerSlice).not.toContain("sp.getBoundingClientRect()");
+  });
+
+  test("fine-pointer gating stays local to spotlight/tilt/magnetic", () => {
+    const gates = source.match(/matchMedia\('\(pointer:fine\)'\)/g) ?? [];
+    expect(gates.length).toBe(3);
+    const switcherIdx = source.indexOf("bindSwitcher(root)");
+    expect(gates.every((g) => source.indexOf(g) === -1 || source.indexOf(g) > switcherIdx)).toBe(
+      true
+    );
+  });
+
+  test("reveal fallback reveals directly when IntersectionObserver is unusable", () => {
+    expect(source).toContain("el.setAttribute('data-revealed','true');");
+    expect(source).toContain("new window.IntersectionObserver");
   });
 
   test("is a static literal — no template interpolation of any caller value", () => {
@@ -97,7 +181,7 @@ describe("pageEffectsRuntime static source (TASK-521-01-L04)", () => {
     expect(/document\.write/.test(source)).toBe(false);
   });
 
-  test("uses passive listeners + rAF + a try/catch page guard", () => {
+  test("uses passive listeners + rAF + try/catch page guard", () => {
     expect(source).toContain("{passive:true}");
     expect(source).toContain("requestAnimationFrame");
     expect(source).toContain("try{");
@@ -110,264 +194,450 @@ describe("pageEffectsRuntime static source (TASK-521-01-L04)", () => {
   });
 });
 
-// TASK-522-01-L05 — generalized block tilt ([data-block-tilt]) appended to the
-// 521 runtime. String assertions guard the seam invariants; a happy-dom exercise
-// (test-only `new Function`, never shipped) proves the binding sets/clears the
-// transform + glare props, self-gates on pointer:fine, and is NOT nested inside
-// the spotlight `sp` block (dead-without-spotlight regression).
-describe("pageEffectsRuntime block tilt (TASK-522-01-L05)", () => {
-  const source = PAGE_EFFECTS_RUNTIME_SOURCE;
-
-  test("source binds [data-block-tilt] with its OWN pointer:fine gate", () => {
-    expect(source).toContain('querySelectorAll("[data-block-tilt]")');
-    // two distinct pointer:fine gates (spotlight + block tilt)
-    const gates = source.match(/matchMedia\("\(pointer:fine\)"\)/g) ?? [];
-    expect(gates.length).toBeGreaterThanOrEqual(2);
-    // the block-tilt binding lives AFTER the spotlight block, at IIFE top level
-    const spotlight = source.indexOf('querySelector("[data-page-spotlight]")');
-    const blockTilt = source.indexOf('querySelectorAll("[data-block-tilt]")');
-    expect(blockTilt).toBeGreaterThan(spotlight);
+// ── behavioral harness: run the emitted IIFE against a fresh happy-dom Window
+// with stubbed matchMedia / rAF / IntersectionObserver (never shipped). ──
+type RuntimeOpts = { reduce?: boolean; fine?: boolean };
+const runRuntime = (html: string, opts: RuntimeOpts = {}) => {
+  const win = new Window();
+  const doc = win.document;
+  doc.body.innerHTML = html;
+  (win as unknown as { matchMedia: (q: string) => unknown }).matchMedia = (q: string) => ({
+    matches: q.includes("(prefers-reduced-motion: reduce)")
+      ? opts.reduce === true
+      : q.includes("(pointer:fine)")
+        ? opts.fine !== false
+        : false,
+    media: q,
+    addEventListener() {},
+    removeEventListener() {},
   });
-
-  test("the global reduced-motion early-return is still present and not bypassed", () => {
-    expect(source).toContain("if(RM&&RM.matches)return;");
-    const guard = source.indexOf("if(RM&&RM.matches)return;");
-    expect(source.indexOf('querySelectorAll("[data-block-tilt]")')).toBeGreaterThan(guard);
-  });
-
-  test("appends no eval / Function / innerHTML sink", () => {
-    expect(/\beval\s*\(/.test(source)).toBe(false);
-    expect(/\bFunction\s*\(/.test(source)).toBe(false);
-    expect(/innerHTML/.test(source)).toBe(false);
-    expect(source.includes("${")).toBe(false);
-  });
-
-  const runRuntime = (opts: { pointerFine: boolean; hasSpotlight?: boolean }) => {
-    const win = new Window();
-    const doc = win.document;
-    doc.body.innerHTML = `${opts.hasSpotlight ? "" : ""}<div id="card" data-block-tilt="subtle"><div class="cx-glare"></div></div>`;
-    const card = doc.querySelector("#card") as unknown as {
-      getBoundingClientRect: () => Record<string, number>;
-      style: CSSStyleDeclaration;
-      dispatchEvent: (e: unknown) => boolean;
-    };
-    card.getBoundingClientRect = () => ({
-      left: 0,
-      top: 0,
-      width: 100,
-      height: 100,
-      right: 100,
-      bottom: 100,
-      x: 0,
-      y: 0,
-    });
-    (win as unknown as { matchMedia: (q: string) => unknown }).matchMedia = (q: string) => ({
-      matches: q.includes("pointer:fine") ? opts.pointerFine : false,
-      media: q,
-      addEventListener() {},
-      removeEventListener() {},
-    });
-    const raf = (cb: () => void) => {
+  (win as unknown as { requestAnimationFrame: (cb: () => void) => number }).requestAnimationFrame =
+    (cb: () => void) => {
       cb();
       return 0;
     };
-    // Params shadow the free `window`/`document`/`requestAnimationFrame` globals
-    // the ES5 source references — inject the happy-dom instances.
-    // eslint-disable-next-line no-new-func
-    const fn = new Function("window", "document", "requestAnimationFrame", source);
-    fn(win, doc, raf);
-    return { win, doc, card };
+  (win as unknown as { IntersectionObserver: unknown }).IntersectionObserver = class {
+    constructor() {}
+    observe() {}
+    unobserve() {}
+    disconnect() {}
   };
+  // eslint-disable-next-line no-new-func
+  const fn = new Function("window", "document", PAGE_EFFECTS_RUNTIME_SOURCE);
+  fn(win, doc);
+  return { win, doc, fn };
+};
 
-  test("pointer:fine → pointermove sets rotateX/rotateY + glare vars; pointerleave clears", () => {
-    const { win, doc, card } = runRuntime({ pointerFine: true });
-    const move = new win.MouseEvent("pointermove", { clientX: 75, clientY: 20 });
-    (card as unknown as { dispatchEvent: (e: unknown) => boolean }).dispatchEvent(move);
-    const transform = (card as unknown as { style: { transform: string } }).style.transform;
-    expect(transform).toContain("rotateX");
-    expect(transform).toContain("rotateY");
-    const glare = doc.querySelector(".cx-glare") as unknown as {
-      style: { getPropertyValue: (p: string) => string };
-    };
-    expect(glare.style.getPropertyValue("--glare-x")).not.toBe("");
-    expect(glare.style.getPropertyValue("--glare-y")).not.toBe("");
+type DispatchTarget = { dispatchEvent: (event: unknown) => boolean };
+const click = (el: unknown, win: Window) =>
+  (el as DispatchTarget).dispatchEvent(new win.MouseEvent("click", { bubbles: true }));
+const move = (el: unknown, win: Window, clientX: number, clientY: number) =>
+  (el as DispatchTarget).dispatchEvent(
+    new win.MouseEvent("pointermove", { clientX, clientY, bubbles: true })
+  );
+const leave = (el: unknown, win: Window) =>
+  (el as DispatchTarget).dispatchEvent(new win.MouseEvent("pointerleave", { bubbles: true }));
 
-    const leave = new win.MouseEvent("pointerleave", {});
-    (card as unknown as { dispatchEvent: (e: unknown) => boolean }).dispatchEvent(leave);
-    expect((card as unknown as { style: { transform: string } }).style.transform).toBe("");
-  });
+const SWITCHER = (label: string) =>
+  "<div data-switcher>" +
+  `<button data-switcher-tab aria-selected="true" tabindex="0">${label}A</button>` +
+  `<button data-switcher-tab aria-selected="false" tabindex="-1">${label}B</button>` +
+  `<div data-switcher-panel data-active="true">${label}PA</div>` +
+  `<div data-switcher-panel data-active="false" hidden>${label}PB</div>` +
+  "</div>";
 
-  test("coarse pointer (pointer:fine=false) → no listener/transform attached", () => {
-    const { win, card } = runRuntime({ pointerFine: false });
-    const move = new win.MouseEvent("pointermove", { clientX: 75, clientY: 20 });
-    (card as unknown as { dispatchEvent: (e: unknown) => boolean }).dispatchEvent(move);
-    expect((card as unknown as { style: { transform: string } }).style.transform).toBe("");
-  });
-
-  test("tilts even on a page WITHOUT a spotlight element (not dead-without-spotlight)", () => {
-    const { win, card } = runRuntime({ pointerFine: true, hasSpotlight: false });
-    const move = new win.MouseEvent("pointermove", { clientX: 60, clientY: 40 });
-    (card as unknown as { dispatchEvent: (e: unknown) => boolean }).dispatchEvent(move);
-    expect((card as unknown as { style: { transform: string } }).style.transform).toContain(
-      "rotateX"
+describe("pageEffectsRuntime controller (TASK-539-07-L01)", () => {
+  test("a second script copy reuses the SAME controller and binds no new window listeners", () => {
+    const { win, doc, fn } = runRuntime(
+      '<div data-page-effect="parallax" data-parallax="20"><div data-parallax-inner></div></div>'
     );
-  });
-});
+    const controller1 = (win as unknown as { __codersoPageEffectsV2: unknown })
+      .__codersoPageEffectsV2;
+    expect(typeof controller1).toBe("object");
+    expect(typeof (controller1 as { init: unknown }).init).toBe("function");
 
-// TASK-535 — idempotence self-guard. A page renders TWO PageDocumentRender
-// documents (the <main> page + the SiteFooter template); when BOTH author motion
-// each emits its own copy of this runtime <script>, and both share one `window`.
-// The IIFE must NO-OP any copy after the first: no re-arm of [data-reveal-armed],
-// no double IntersectionObserver, no double scroll/pointer listeners. String
-// assertions guard the seam; a happy-dom double-run proves the runtime behaviour.
-describe("pageEffectsRuntime idempotence self-guard (TASK-535)", () => {
-  const source = PAGE_EFFECTS_RUNTIME_SOURCE;
+    // The observation flag is set for compatibility observers.
+    expect((win as unknown as Record<string, unknown>)[PAGE_EFFECTS_RUNTIME_INIT_FLAG]).toBe(true);
 
-  test("init flag is a stable non-empty window-key literal", () => {
-    expect(typeof PAGE_EFFECTS_RUNTIME_INIT_FLAG).toBe("string");
-    expect(PAGE_EFFECTS_RUNTIME_INIT_FLAG.length).toBeGreaterThan(0);
-    // The static source hardcodes the SAME key (no interpolation — invariant #1),
-    // so the exported constant and the emitted literal must not drift.
-    expect(source).toContain(`window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}`);
-  });
-
-  test("guard is the FIRST executable statement — checks the flag then sets it, before arm/observe/listen", () => {
-    const check = source.indexOf(`if(window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG})return;`);
-    const set = source.indexOf(`window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}=true;`);
-    const arm = source.indexOf('setAttribute("data-reveal-armed","true")');
-    const observe = source.indexOf("io.observe(");
-    const listen = source.indexOf("addEventListener");
-    // check present, and comes before the flag-set
-    expect(check).toBeGreaterThan(-1);
-    expect(set).toBeGreaterThan(check);
-    // and both precede any arming / observing / listener binding
-    expect(arm).toBeGreaterThan(set);
-    expect(observe).toBeGreaterThan(set);
-    expect(listen).toBeGreaterThan(set);
-    // the reduced-motion early-return still lives AFTER the guard (guard is truly first)
-    expect(source.indexOf("if(RM&&RM.matches)return;")).toBeGreaterThan(set);
-  });
-
-  test("guard adds no eval / Function / interpolation sink", () => {
-    expect(/\beval\s*\(/.test(source)).toBe(false);
-    expect(/\bFunction\s*\(/.test(source)).toBe(false);
-    expect(source.includes("${")).toBe(false);
-  });
-
-  // Run the source N times against the SAME window (mirrors a page that emits the
-  // script twice). Parallax nodes force window scroll/resize listeners; a motion
-  // root proves reveal arming. We count window.addEventListener calls + arm writes.
-  const runTwiceInOneWindow = () => {
-    const win = new Window();
-    const doc = win.document;
-    doc.body.innerHTML =
-      '<div data-page-motion="true">' +
-      '<div data-page-effect="parallax" data-parallax="20"></div>' +
-      "</div>";
-    (win as unknown as { matchMedia: (q: string) => unknown }).matchMedia = (q: string) => ({
-      matches: false, // not reduced-motion, coarse pointer — isolates the parallax/window path
-      media: q,
-      addEventListener() {},
-      removeEventListener() {},
-    });
-    const raf = (cb: () => void) => {
-      cb();
-      return 0;
-    };
-    // Spy on window.addEventListener to count listener bindings across runs.
-    const winEvents: string[] = [];
-    const realAdd = win.addEventListener.bind(win);
+    const seen: string[] = [];
+    const real = win.addEventListener.bind(win);
     (
       win as unknown as { addEventListener: (t: string, ...r: unknown[]) => void }
     ).addEventListener = (type: string, ...rest: unknown[]) => {
-      winEvents.push(type);
-      return (realAdd as (t: string, ...r: unknown[]) => void)(type, ...rest);
+      seen.push(type);
+      return (real as (t: string, ...r: unknown[]) => void)(type, ...rest);
     };
-    // eslint-disable-next-line no-new-func
-    const fn = new Function("window", "document", "requestAnimationFrame", source);
-    const armedAfter = () => {
-      const root = doc.querySelector("[data-page-motion]") as unknown as {
-        getAttribute: (n: string) => string | null;
-      };
-      return root.getAttribute("data-reveal-armed");
-    };
-    fn(win, doc, raf);
-    const afterFirst = { winEvents: [...winEvents], armed: armedAfter() };
-    // Un-arm so a re-arm by the second run would be observable.
-    (
-      doc.querySelector("[data-page-motion]") as unknown as {
-        removeAttribute: (n: string) => void;
-      }
-    ).removeAttribute("data-reveal-armed");
-    fn(win, doc, raf);
-    const afterSecond = { winEvents: [...winEvents], armed: armedAfter() };
-    return { win, doc, afterFirst, afterSecond };
-  };
 
-  test("second script run is a NO-OP: sets the window flag, adds no new listeners, does not re-arm", () => {
-    const { win, afterFirst, afterSecond } = runTwiceInOneWindow();
-    // First run initialised: flag set, reveal armed, and scroll/resize bound.
-    expect((win as unknown as Record<string, unknown>)[PAGE_EFFECTS_RUNTIME_INIT_FLAG]).toBe(true);
-    expect(afterFirst.armed).toBe("true");
-    expect(afterFirst.winEvents).toContain("scroll");
-    expect(afterFirst.winEvents).toContain("resize");
-    // Second run early-returns: NO additional window listeners were bound…
-    expect(afterSecond.winEvents.length).toBe(afterFirst.winEvents.length);
-    // …and it did NOT re-arm the reveal root we cleared before the second run.
-    expect(afterSecond.armed).toBeNull();
-  });
-});
+    fn(win, doc);
 
-// TASK-534 — declarative-interactivity runtime clauses (switcher toggle, gallery
-// filter, magnetic pointer-attract) appended to the ONE runtime source. STATIC
-// string assertions lock the SPLIT placement: the switcher + filter TOGGLE clauses
-// precede the reduced-motion early-return (they must run for reduce users), while
-// the magnetic MOTION clause follows it (suppressed for reduce). Behavioral IIFE
-// exec lives in the content lane (534-05-L01).
-describe("pageEffectsRuntime declarative interactivity (TASK-534)", () => {
-  const source = PAGE_EFFECTS_RUNTIME_SOURCE;
-
-  test("source contains the switcher / gallery-filter / magnetic clause markers", () => {
-    expect(source).toContain('querySelectorAll("[data-switcher]")');
-    expect(source).toContain('querySelectorAll("[data-gallery-filter]")');
-    expect(source).toContain('querySelectorAll("[data-magnetic]")');
-  });
-
-  test("switcher + gallery-filter TOGGLE clauses precede the reduced-motion early-return", () => {
-    const guardReturn = source.indexOf("if(RM&&RM.matches)return;");
-    const switcher = source.indexOf('querySelectorAll("[data-switcher]")');
-    const filter = source.indexOf('querySelectorAll("[data-gallery-filter]")');
-    expect(guardReturn).toBeGreaterThan(-1);
-    expect(switcher).toBeGreaterThan(-1);
-    expect(filter).toBeGreaterThan(-1);
-    // The toggles run for reduce users → they sit BEFORE the whole-IIFE return.
-    expect(switcher).toBeLessThan(guardReturn);
-    expect(filter).toBeLessThan(guardReturn);
-    // …but still AFTER the idempotence flag-set (bound once per page).
-    expect(switcher).toBeGreaterThan(
-      source.indexOf(`window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}=true;`)
+    // Same controller object; the global scroll/resize listener was installed
+    // once and is NOT re-installed by the second copy.
+    expect((win as unknown as { __codersoPageEffectsV2: unknown }).__codersoPageEffectsV2).toBe(
+      controller1
+    );
+    expect(seen).toEqual([]);
+    expect(doc.querySelector("[data-parallax-inner]")!.getAttribute("style")).toContain(
+      "translate3d"
     );
   });
 
-  test("magnetic MOTION clause follows the reduced-motion early-return (suppressed for reduce)", () => {
-    const guardReturn = source.indexOf("if(RM&&RM.matches)return;");
-    const magnetic = source.indexOf('querySelectorAll("[data-magnetic]")');
-    expect(magnetic).toBeGreaterThan(guardReturn);
-    // …and after the 522 block-tilt clause (its documented placement anchor).
-    expect(magnetic).toBeGreaterThan(source.indexOf('querySelectorAll("[data-block-tilt]")'));
+  test("parser-order rescan binds footer nodes exactly once and never re-binds main", () => {
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML = SWITCHER("main-");
+    (win as unknown as { matchMedia: (q: string) => unknown }).matchMedia = (q: string) => ({
+      matches: false,
+      media: q,
+      addEventListener() {},
+      removeEventListener() {},
+    });
+    (
+      win as unknown as { requestAnimationFrame: (cb: () => void) => number }
+    ).requestAnimationFrame = (cb: () => void) => {
+      cb();
+      return 0;
+    };
+    (win as unknown as { IntersectionObserver: unknown }).IntersectionObserver = class {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    // eslint-disable-next-line no-new-func
+    const fn = new Function("window", "document", PAGE_EFFECTS_RUNTIME_SOURCE);
+    fn(win, doc); // main document copy
+
+    // Footer nodes appear after the main script ran (parser order). Append
+    // WITHOUT re-parsing the existing main DOM (innerHTML += would replace the
+    // main nodes, which never happens in production parser-order execution).
+    doc.body.insertAdjacentHTML("beforeend", "<footer>" + SWITCHER("footer-") + "</footer>");
+
+    const countBindings = (root: Element) => {
+      const tab = root.querySelector("[data-switcher-tab]")!;
+      const real = tab.addEventListener.bind(tab);
+      let n = 0;
+      (
+        tab as unknown as {
+          addEventListener: (
+            type: string,
+            listener: EventListenerOrEventListenerObject,
+            options?: boolean | AddEventListenerOptions
+          ) => void;
+        }
+      ).addEventListener = (type, listener, options) => {
+        n += 1;
+        return real(type, listener, options);
+      };
+      return () => n;
+    };
+    const mainTabCount = countBindings(doc.querySelector("body > div") as unknown as Element);
+    const footerTabCount = countBindings(doc.querySelector("footer") as unknown as Element);
+
+    fn(win, doc); // footer document copy
+
+    // Main tab was already bound (WeakSet skip): zero new listeners. Footer tab
+    // gets exactly click + keydown once.
+    expect(mainTabCount()).toBe(0);
+    expect(footerTabCount()).toBe(2);
+
+    const footerTabs = [...doc.querySelectorAll("footer [data-switcher-tab]")];
+    const footerPanels = [
+      ...doc.querySelectorAll("footer [data-switcher-panel]"),
+    ] as unknown as HTMLElement[];
+    click(footerTabs[1]!, win);
+    expect(footerPanels[1]!.hidden).toBe(false);
+    expect(footerPanels[0]!.hidden).toBe(true);
   });
 
-  test("magnetic opens its OWN pointer:fine gate", () => {
-    const magnetic = source.indexOf('querySelectorAll("[data-magnetic]")');
-    const gateAfterMagnetic = source.indexOf('matchMedia("(pointer:fine)")', magnetic);
-    expect(gateAfterMagnetic).toBeGreaterThan(magnetic);
+  test("reduced-motion: toggles stay functional, motion binders never run", () => {
+    const html =
+      SWITCHER("t-") +
+      '<div data-gallery data-gallery-filter><button data-filter="all" aria-pressed="true" tabindex="0">All</button><button data-filter="eco" aria-pressed="false" tabindex="-1">Eco</button><figure data-filter-item data-category="modern">M</figure><figure data-filter-item data-category="eco">E</figure></div>' +
+      '<main data-page-motion><section data-page-effect="reveal-up"></section></main>' +
+      '<div data-block-tilt><div class="cx-glare"></div></div>' +
+      '<a data-magnetic href="#">Go</a>' +
+      "<div data-page-spotlight></div>";
+    const { win, doc } = runRuntime(html, { reduce: true });
+
+    // Toggles work under reduce.
+    const tabs = [...doc.querySelectorAll("[data-switcher-tab]")];
+    click(tabs[1]!, win);
+    expect(
+      (doc.querySelectorAll("[data-switcher-panel]")[1] as unknown as HTMLElement).hidden
+    ).toBe(false);
+
+    const chips = [...doc.querySelectorAll("[data-gallery-filter] [data-filter]")];
+    click(chips[1]!, win);
+    expect(
+      (doc.querySelector("[data-filter-item]") as unknown as HTMLElement).classList.contains(
+        "is-hidden"
+      )
+    ).toBe(true);
+
+    // Motion never armed / bound: no reveal arm, no tilt/magnetic/spotlight writes.
+    expect(doc.querySelector("[data-page-motion]")!.hasAttribute("data-reveal-armed")).toBe(false);
+    const tilt = doc.querySelector("[data-block-tilt]")!;
+    tilt.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as unknown as ReturnType<
+        typeof tilt.getBoundingClientRect
+      >;
+    move(tilt, win, 75, 20);
+    expect((tilt as unknown as HTMLElement).style.getPropertyValue("--cx-tilt-x")).toBe("");
+    const mag = doc.querySelector("[data-magnetic]")!;
+    mag.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 40 }) as unknown as ReturnType<
+        typeof mag.getBoundingClientRect
+      >;
+    move(mag, win, 200, 100);
+    expect((mag as unknown as HTMLElement).style.getPropertyValue("--cx-magnetic-x")).toBe("");
+    const sp = doc.querySelector("[data-page-spotlight]")!;
+    move(sp, win, 120, 80);
+    expect((sp as unknown as HTMLElement).style.getPropertyValue("--spotlight-x")).toBe("");
   });
 
-  test("filter matches data-category by TOKEN split (no substring false-positive, no innerHTML/eval)", () => {
-    expect(source).toContain('cat.split(" ").indexOf(f)');
-    expect(source.includes("${")).toBe(false);
-    expect(/\beval\s*\(/.test(source)).toBe(false);
-    expect(/\bFunction\s*\(/.test(source)).toBe(false);
-    expect(/innerHTML/.test(source)).toBe(false);
+  test("missing APIs (no IntersectionObserver, no matchMedia, no rAF) complete without exception", () => {
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML =
+      "<main data-page-motion>" +
+      '<section data-page-effect="reveal-up"></section>' +
+      '<section data-page-effect="parallax" data-parallax="20"><div data-parallax-inner></div></section>' +
+      "</main>" +
+      "<div data-block-tilt></div>" +
+      '<a data-magnetic href="#">Go</a>';
+    // IntersectionObserver exists as a key but cannot be constructed, matchMedia
+    // and requestAnimationFrame are absent entirely.
+    (win as unknown as { IntersectionObserver: unknown }).IntersectionObserver = undefined;
+    (win as unknown as { matchMedia: unknown }).matchMedia = undefined;
+    (win as unknown as { requestAnimationFrame: unknown }).requestAnimationFrame = undefined;
+
+    // eslint-disable-next-line no-new-func
+    const fn = new Function("window", "document", PAGE_EFFECTS_RUNTIME_SOURCE);
+    expect(() => fn(win, doc)).not.toThrow();
+    // Fail-soft reveal: the section is shown directly (never hidden).
+    expect(doc.querySelector('[data-page-effect="reveal-up"]')!.getAttribute("data-revealed")).toBe(
+      "true"
+    );
+    // Parallax still frames synchronously through the raf fallback.
+    expect(
+      (doc.querySelector("[data-parallax-inner]") as unknown as HTMLElement).style.transform
+    ).toContain("translate3d");
+  });
+
+  test("every binder rejects replica-self and replica-descendant candidates while the primary binds", () => {
+    const marquee = (segment: string, replica: boolean) =>
+      `<div class="cx-marquee-segment"${replica ? ' data-page-marquee-replica aria-hidden="true"' : ""}>` +
+      segment +
+      "</div>";
+    const primarySegment = marquee(
+      SWITCHER("p-") +
+        '<div data-block-tilt><div class="cx-glare"></div></div>' +
+        '<div data-gallery data-gallery-filter><button data-filter="all" aria-pressed="true" tabindex="0">All</button><button data-filter="eco" aria-pressed="false" tabindex="-1">Eco</button><figure data-filter-item data-category="eco">E</figure></div>',
+      false
+    );
+    const replicaSegment = marquee(
+      SWITCHER("r-") +
+        '<div data-block-tilt><div class="cx-glare"></div></div>' +
+        '<div data-gallery data-gallery-filter><button data-filter="all" aria-pressed="true" tabindex="0">All</button><button data-filter="eco" aria-pressed="false" tabindex="-1">Eco</button><figure data-filter-item data-category="eco">E</figure></div>',
+      true
+    );
+    const { win, doc } = runRuntime(
+      '<div class="cx-marquee-viewport"><div class="cx-marquee-rail">' +
+        primarySegment +
+        replicaSegment +
+        "</div></div>"
+    );
+
+    // Primary segment binds: switcher, gallery, tilt.
+    const pTabs = [
+      ...doc.querySelectorAll(
+        ".cx-marquee-segment:not([data-page-marquee-replica]) [data-switcher-tab]"
+      ),
+    ];
+    const pPanels = [
+      ...doc.querySelectorAll(
+        ".cx-marquee-segment:not([data-page-marquee-replica]) [data-switcher-panel]"
+      ),
+    ] as unknown as HTMLElement[];
+    click(pTabs[1]!, win);
+    expect(pPanels[1]!.hidden).toBe(false);
+
+    const pTilt = doc.querySelector(
+      ".cx-marquee-segment:not([data-page-marquee-replica]) [data-block-tilt]"
+    )!;
+    pTilt.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as unknown as ReturnType<
+        typeof pTilt.getBoundingClientRect
+      >;
+    move(pTilt, win, 75, 20);
+    expect((pTilt as unknown as HTMLElement).style.getPropertyValue("--cx-tilt-x")).not.toBe("");
+
+    const pChips = [
+      ...doc.querySelectorAll(
+        ".cx-marquee-segment:not([data-page-marquee-replica]) [data-gallery-filter] [data-filter]"
+      ),
+    ];
+    click(pChips[1]!, win);
+    expect(
+      (
+        doc.querySelector(
+          ".cx-marquee-segment:not([data-page-marquee-replica]) [data-filter-item]"
+        ) as unknown as HTMLElement
+      ).classList.contains("is-hidden")
+    ).toBe(false);
+
+    // Replica segment stays inert: no switcher toggle, no tilt vars, no gallery.
+    const rTabs = [...doc.querySelectorAll("[data-page-marquee-replica] [data-switcher-tab]")];
+    const rPanels = [
+      ...doc.querySelectorAll("[data-page-marquee-replica] [data-switcher-panel]"),
+    ] as unknown as HTMLElement[];
+    click(rTabs[1]!, win);
+    expect(rPanels[1]!.hidden).toBe(true); // untouched
+    expect(rTabs[1]!.getAttribute("aria-selected")).toBe("false");
+
+    const rTilt = doc.querySelector("[data-page-marquee-replica] [data-block-tilt]")!;
+    rTilt.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as unknown as ReturnType<
+        typeof rTilt.getBoundingClientRect
+      >;
+    move(rTilt, win, 75, 20);
+    expect((rTilt as unknown as HTMLElement).style.getPropertyValue("--cx-tilt-x")).toBe("");
+
+    const rChips = [
+      ...doc.querySelectorAll("[data-page-marquee-replica] [data-gallery-filter] [data-filter]"),
+    ];
+    click(rChips[1]!, win);
+    expect(
+      (
+        doc.querySelector(
+          "[data-page-marquee-replica] [data-filter-item]"
+        ) as unknown as HTMLElement
+      ).classList.contains("is-hidden")
+    ).toBe(false); // untouched
+  });
+
+  test("an unsafe one-segment marquee (no replica candidate) binds normally", () => {
+    const { win, doc } = runRuntime(
+      '<div class="cx-marquee-viewport"><div class="cx-marquee-rail"><div class="cx-marquee-segment">' +
+        SWITCHER("s-") +
+        "</div></div></div>"
+    );
+    const tabs = [...doc.querySelectorAll("[data-switcher-tab]")];
+    const panels = [...doc.querySelectorAll("[data-switcher-panel]")] as unknown as HTMLElement[];
+    click(tabs[1]!, win);
+    expect(panels[1]!.hidden).toBe(false);
+  });
+});
+
+// TASK-522-01-L05 / TASK-539-04 — generalized block tilt ([data-block-tilt]).
+// The runtime writes ONLY the imported tilt custom properties (degrees); leave
+// resets ONLY those to 0deg. Never writes style.transform or another effect's var.
+describe("pageEffectsRuntime block tilt (TASK-522-01-L05 / TASK-539-04)", () => {
+  const source = PAGE_EFFECTS_RUNTIME_SOURCE;
+
+  test("source binds [data-block-tilt] with its OWN pointer:fine gate", () => {
+    expect(source).toContain("collect(root,SEL_TILT)");
+    expect(source).toContain("TV.tiltX");
+    expect(source).toContain("TV.tiltY");
+  });
+
+  test("the reduced-motion branch still gates the tilt binding", () => {
+    expect(source).toContain("if(RM&&RM.matches)return;");
+    const initBlock = source.slice(
+      source.indexOf("function init(root){"),
+      source.indexOf("return {init:init};")
+    );
+    expect(initBlock.indexOf("bindTilt(root)")).toBeGreaterThan(
+      initBlock.indexOf("if(RM&&RM.matches)return;")
+    );
+  });
+
+  const runTilt = (opts: { pointerFine: boolean; reduce?: boolean; html?: string }) => {
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML =
+      opts.html ?? '<div id="card" data-block-tilt="subtle"><div class="cx-glare"></div></div>';
+    const card = doc.querySelector("[data-block-tilt]")! as unknown as HTMLElement;
+    card.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect;
+    (win as unknown as { matchMedia: (q: string) => unknown }).matchMedia = (q: string) => ({
+      matches: q.includes("(prefers-reduced-motion: reduce)")
+        ? opts.reduce === true
+        : q.includes("(pointer:fine)")
+          ? opts.pointerFine
+          : false,
+      media: q,
+      addEventListener() {},
+      removeEventListener() {},
+    });
+    (
+      win as unknown as { requestAnimationFrame: (cb: () => void) => number }
+    ).requestAnimationFrame = (cb: () => void) => {
+      cb();
+      return 0;
+    };
+    (win as unknown as { IntersectionObserver: unknown }).IntersectionObserver = class {
+      constructor() {}
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+    // eslint-disable-next-line no-new-func
+    const fn = new Function("window", "document", PAGE_EFFECTS_RUNTIME_SOURCE);
+    fn(win, doc);
+    return { win, doc, card };
+  };
+
+  test("pointer:fine → pointermove writes ONLY --cx-tilt-x/--cx-tilt-y (deg) + glare vars", () => {
+    const { win, doc, card } = runTilt({ pointerFine: true });
+    move(card, win, 75, 20);
+
+    expect(card.style.getPropertyValue("--cx-tilt-x")).toBe("2.10deg");
+    expect(card.style.getPropertyValue("--cx-tilt-y")).toBe("1.75deg");
+    // Never writes transform or another effect's variable.
+    expect(card.style.transform).toBe("");
+    expect(card.style.getPropertyValue("--cx-magnetic-x")).toBe("");
+    expect(card.style.getPropertyValue("--cx-magnetic-y")).toBe("");
+    // Glare vars live on .cx-glare only.
+    const glare = doc.querySelector(".cx-glare") as unknown as HTMLElement;
+    expect(glare.style.getPropertyValue("--glare-x")).toBe("75.0%");
+    expect(glare.style.getPropertyValue("--glare-y")).toBe("20.0%");
+  });
+
+  test("pointerleave resets ONLY the tilt vars to 0deg (glare vars untouched, no transform)", () => {
+    const { win, doc, card } = runTilt({ pointerFine: true });
+    move(card, win, 75, 20);
+    const glare = doc.querySelector(".cx-glare") as unknown as HTMLElement;
+    const glareXAfterMove = glare.style.getPropertyValue("--glare-x");
+
+    leave(card, win);
+
+    expect(card.style.getPropertyValue("--cx-tilt-x")).toBe("0deg");
+    expect(card.style.getPropertyValue("--cx-tilt-y")).toBe("0deg");
+    expect(card.style.transform).toBe("");
+    expect(card.style.getPropertyValue("--cx-magnetic-x")).toBe("");
+    // Leave resets ONLY the tilt vars: glare keeps its own values.
+    expect(glare.style.getPropertyValue("--glare-x")).toBe(glareXAfterMove);
+  });
+
+  test("coarse pointer (pointer:fine=false) → no listener/transform/custom-property attached", () => {
+    const { win, card } = runTilt({ pointerFine: false });
+    move(card, win, 75, 20);
+    expect(card.style.getPropertyValue("--cx-tilt-x")).toBe("");
+    expect(card.style.transform).toBe("");
+  });
+
+  test("reduced motion → no tilt binding", () => {
+    const { win, card } = runTilt({ pointerFine: true, reduce: true });
+    move(card, win, 75, 20);
+    expect(card.style.getPropertyValue("--cx-tilt-x")).toBe("");
+  });
+
+  test("tilts even on a page WITHOUT a spotlight element (not dead-without-spotlight)", () => {
+    const { win, card } = runTilt({
+      pointerFine: true,
+      html: '<div data-block-tilt><div class="cx-glare"></div></div>',
+    });
+    move(card, win, 60, 40);
+    expect(card.style.getPropertyValue("--cx-tilt-x")).toMatch(/-?\d+\.\d+deg$/);
   });
 });

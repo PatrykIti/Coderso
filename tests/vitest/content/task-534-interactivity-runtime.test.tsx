@@ -5,15 +5,21 @@ import {
   PAGE_EFFECTS_RUNTIME_INIT_FLAG,
   PAGE_EFFECTS_RUNTIME_SOURCE,
 } from "../../../core/services/pages/pageEffectsRuntime";
+import { PAGE_BLOCK_TRANSFORM_VARIABLES } from "../../../core/services/pages/pageCompositionEffects";
 
 /**
- * TASK-534-05-L01 — behavioral smoke of the declarative-interactivity runtime
- * clauses (switcher toggle, gallery filter, magnetic pointer-attract) appended to
- * the ONE runtime IIFE. Executes the STATIC source via `new Function()` in happy-dom
- * against the data-attribute contract the renderer (534-02) stamps, then simulates
- * real events. Asserts the SPLIT placement: switcher + filter TOGGLES work even under
- * `prefers-reduced-motion: reduce` (they precede the early-return), while the magnetic
- * MOTION clause is suppressed for reduce / coarse pointer (it follows the return).
+ * TASK-534-05-L01 / TASK-539-07-L01 — behavioral smoke of the declarative-
+ * interactivity runtime clauses (switcher toggle, gallery filter, magnetic
+ * pointer-attract) appended to the ONE runtime IIFE. Executes the STATIC source
+ * via `new Function()` in happy-dom against the data-attribute contract the
+ * renderer (534-02) stamps, then simulates real events. Asserts the SPLIT
+ * placement: switcher + filter TOGGLES work even under
+ * `prefers-reduced-motion: reduce` (they precede the reduced-motion branch),
+ * while the magnetic MOTION clause is suppressed for reduce / coarse pointer.
+ * TASK-539-07: the controller lives on `window.__codersoPageEffectsV2`, so BOTH
+ * the controller and the legacy observation flag are reset between tests; every
+ * binder rejects marquee-replica candidates; magnetic writes ONLY the imported
+ * `--cx-magnetic-x/y` custom properties (never `style.transform`).
  */
 
 const runRuntime = () => {
@@ -78,9 +84,13 @@ const MAGNETIC_DOM = '<a data-magnetic href="#">Go</a>';
 
 beforeEach(() => {
   document.body.innerHTML = "";
-  // TASK-535 idempotence flag is a plain window property vi.unstubAllGlobals does not
-  // clear; reset it so each runRuntime() re-binds a clean runtime (shared happy-dom).
+  // TASK-539-07: the shared controller and its per-binder WeakSets would survive
+  // across tests in the shared happy-dom window, and the legacy observation flag
+  // is written by every copy. Reset BOTH so each runRuntime() re-binds a clean
+  // runtime. The production controller is unchanged; this only resets the shared
+  // test window.
   delete (window as unknown as Record<string, unknown>)[PAGE_EFFECTS_RUNTIME_INIT_FLAG];
+  delete (window as unknown as Record<string, unknown>)["__codersoPageEffectsV2"];
   vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
     cb(0);
     return 1;
@@ -140,7 +150,7 @@ describe("TASK-534 switcher runtime", () => {
 
     click(tabs[1]!);
     // Regression guard: if a future edit moves the toggles below the reduced-motion
-    // whole-IIFE early-return, reduce users lose tabs and THIS assertion fails.
+    // branch, reduce users lose tabs and THIS assertion fails.
     expect(panels[1]!.hidden).toBe(false);
     expect(panels[0]!.hidden).toBe(true);
   });
@@ -216,8 +226,8 @@ describe("TASK-534 gallery filter runtime", () => {
   });
 });
 
-describe("TASK-534 magnetic runtime", () => {
-  it("pointer:fine + no-reduce: pointermove sets a clamped translate transform; leave resets", () => {
+describe("TASK-534 magnetic runtime (TASK-539-07 transform ownership)", () => {
+  it("pointer:fine + no-reduce: pointermove writes ONLY --cx-magnetic-x/y; leave resets ONLY those to 0px", () => {
     mockMatchMedia(false, true);
     document.body.innerHTML = MAGNETIC_DOM;
     const el = document.querySelector("[data-magnetic]") as HTMLElement;
@@ -225,18 +235,22 @@ describe("TASK-534 magnetic runtime", () => {
     runRuntime();
 
     movePointer(el, 200, 100);
-    expect(el.style.transform).toContain("translate(");
-    // Clamped to ±14px.
-    const match = /translate\(([-\d.]+)px,([-\d.]+)px\)/.exec(el.style.transform);
-    expect(match).toBeTruthy();
-    expect(Math.abs(Number(match![1]))).toBeLessThanOrEqual(14);
-    expect(Math.abs(Number(match![2]))).toBeLessThanOrEqual(14);
+    // Exact custom-property ownership: clamped to ±14px, in px, on the imported
+    // magnetic variables ONLY. style.transform is never written.
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX)).toBe("14.0px");
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticY)).toBe("14.0px");
+    expect(el.style.transform).toBe("");
+    // No other transform variable is touched.
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.tiltX)).toBe("");
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.tiltY)).toBe("");
 
     leavePointer(el);
-    expect(el.style.transform).toBe("translate(0.0px,0.0px)");
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX)).toBe("0.0px");
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticY)).toBe("0.0px");
+    expect(el.style.transform).toBe("");
   });
 
-  it("reduced-motion: NO magnetic transform (motion suppressed by the early-return)", () => {
+  it("reduced-motion: NO magnetic transform or variables (motion suppressed by the branch)", () => {
     mockMatchMedia(true, true);
     document.body.innerHTML = MAGNETIC_DOM;
     const el = document.querySelector("[data-magnetic]") as HTMLElement;
@@ -244,10 +258,11 @@ describe("TASK-534 magnetic runtime", () => {
     runRuntime();
 
     movePointer(el, 200, 100);
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX)).toBe("");
     expect(el.style.transform).toBe("");
   });
 
-  it("coarse pointer: NO magnetic transform (pointer:fine gate)", () => {
+  it("coarse pointer: NO magnetic transform or variables (pointer:fine gate)", () => {
     mockMatchMedia(false, false);
     document.body.innerHTML = MAGNETIC_DOM;
     const el = document.querySelector("[data-magnetic]") as HTMLElement;
@@ -255,6 +270,221 @@ describe("TASK-534 magnetic runtime", () => {
     runRuntime();
 
     movePointer(el, 200, 100);
+    expect(el.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX)).toBe("");
     expect(el.style.transform).toBe("");
+  });
+});
+
+// TASK-539-07-L01 — replica rejection + per-element failure isolation.
+describe("TASK-534 replica safety + isolation (TASK-539-07-L01)", () => {
+  it("switcher/gallery/tilt/magnetic inside a marquee replica stay inert while the primary binds", () => {
+    mockMatchMedia(false, true);
+    const segment = (replica: boolean) =>
+      `<div class="cx-marquee-segment"${replica ? ' data-page-marquee-replica aria-hidden="true"' : ""}>` +
+      SWITCHER_DOM +
+      GALLERY_DOM +
+      '<div data-block-tilt><div class="cx-glare"></div></div>' +
+      MAGNETIC_DOM +
+      "</div>";
+    document.body.innerHTML =
+      '<div class="cx-marquee-viewport"><div class="cx-marquee-rail">' +
+      segment(false) +
+      segment(true) +
+      "</div></div>";
+    runRuntime();
+
+    // Primary segment: switcher, gallery, tilt and magnetic all bind.
+    const pSwitcherTabs = [
+      ...document.querySelectorAll(
+        ".cx-marquee-segment:not([data-page-marquee-replica]) [data-switcher-tab]"
+      ),
+    ];
+    const pPanels = [
+      ...document.querySelectorAll(
+        ".cx-marquee-segment:not([data-page-marquee-replica]) [data-switcher-panel]"
+      ),
+    ] as HTMLElement[];
+    click(pSwitcherTabs[1]!);
+    expect(pPanels[1]!.hidden).toBe(false);
+
+    const pChips = [
+      ...document.querySelectorAll(
+        ".cx-marquee-segment:not([data-page-marquee-replica]) [data-gallery-filter] [data-filter]"
+      ),
+    ];
+    click(pChips[2]!); // Eco
+    expect(
+      (
+        document.querySelector(
+          ".cx-marquee-segment:not([data-page-marquee-replica]) [data-filter-item]"
+        ) as HTMLElement
+      ).classList.contains("is-hidden")
+    ).toBe(true);
+
+    const pTilt = document.querySelector(
+      ".cx-marquee-segment:not([data-page-marquee-replica]) [data-block-tilt]"
+    ) as HTMLElement;
+    pTilt.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect;
+    movePointer(pTilt, 75, 20);
+    expect(pTilt.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.tiltX)).not.toBe("");
+
+    const pMag = document.querySelector(
+      ".cx-marquee-segment:not([data-page-marquee-replica]) [data-magnetic]"
+    ) as HTMLElement;
+    pMag.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 40 }) as DOMRect;
+    movePointer(pMag, 200, 100);
+    expect(pMag.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX)).not.toBe("");
+
+    // Replica segment: everything stays inert.
+    const rSwitcherTabs = [
+      ...document.querySelectorAll("[data-page-marquee-replica] [data-switcher-tab]"),
+    ];
+    click(rSwitcherTabs[1]!);
+    expect(rSwitcherTabs[1]!.getAttribute("aria-selected")).toBe("false");
+
+    const rChips = [
+      ...document.querySelectorAll(
+        "[data-page-marquee-replica] [data-gallery-filter] [data-filter]"
+      ),
+    ];
+    click(rChips[2]!);
+    expect(
+      (
+        document.querySelector("[data-page-marquee-replica] [data-filter-item]") as HTMLElement
+      ).classList.contains("is-hidden")
+    ).toBe(false); // untouched
+
+    const rTilt = document.querySelector(
+      "[data-page-marquee-replica] [data-block-tilt]"
+    ) as HTMLElement;
+    rTilt.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect;
+    movePointer(rTilt, 75, 20);
+    expect(rTilt.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.tiltX)).toBe("");
+
+    const rMag = document.querySelector(
+      "[data-page-marquee-replica] [data-magnetic]"
+    ) as HTMLElement;
+    rMag.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 40 }) as DOMRect;
+    movePointer(rMag, 200, 100);
+    expect(rMag.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX)).toBe("");
+  });
+
+  it("an unsafe one-segment marquee (no replica candidate) binds normally", () => {
+    mockMatchMedia(false, true);
+    document.body.innerHTML =
+      '<div class="cx-marquee-viewport"><div class="cx-marquee-rail">' +
+      '<div class="cx-marquee-segment">' +
+      SWITCHER_DOM +
+      "</div>" +
+      "</div></div>";
+    runRuntime();
+    const tabs = [...document.querySelectorAll("[data-switcher-tab]")];
+    const panels = [...document.querySelectorAll("[data-switcher-panel]")] as HTMLElement[];
+
+    click(tabs[1]!);
+    expect(panels[1]!.hidden).toBe(false);
+  });
+
+  it("a failing element binder rolls back partial listeners and does not abort later binders", () => {
+    mockMatchMedia(false, true);
+    // Two switchers + one magnetic: the first switcher's tab[1] addEventListener
+    // throws on the FIRST binding attempt only (click attaches, keydown throws →
+    // partial attach). The runtime must roll the partial click listener back,
+    // leave the root unmarked, bind the second switcher and the magnetic block,
+    // and a later rescan must bind the recovered first switcher cleanly.
+    document.body.innerHTML =
+      '<div data-switcher data-slot="one">' +
+      '<button data-switcher-tab aria-selected="true" tabindex="0">A1</button>' +
+      '<button data-switcher-tab aria-selected="false" tabindex="-1">A2</button>' +
+      '<div data-switcher-panel data-active="true">P1</div>' +
+      '<div data-switcher-panel data-active="false" hidden>P2</div>' +
+      "</div>" +
+      SWITCHER_DOM +
+      MAGNETIC_DOM;
+
+    const firstRoot = document.querySelector('[data-switcher][data-slot="one"]')!;
+    // Patch A2 (tabs[1]) so its KEYDOWN attach throws on the FIRST attempt only:
+    // the specs attach A1-click, A1-keydown, A2-click (partial) then A2-keydown
+    // (throws) → bindOne must roll the A2-click partial listener back and leave
+    // the root unmarked, so a retry can never duplicate it.
+    const firstTab1 = firstRoot.querySelectorAll("[data-switcher-tab]")[1]!;
+    const realFirstTab1 = (
+      firstTab1.addEventListener as unknown as (
+        t: string,
+        f: EventListenerOrEventListenerObject,
+        o?: boolean | AddEventListenerOptions
+      ) => void
+    ).bind(firstTab1);
+    let throwOnBind = true;
+    let removedPartial = 0;
+    (
+      firstTab1 as unknown as {
+        addEventListener: (
+          t: string,
+          f: EventListenerOrEventListenerObject,
+          o?: boolean | AddEventListenerOptions
+        ) => void;
+      }
+    ).addEventListener = (type, listener, options) => {
+      if (type === "keydown" && throwOnBind) {
+        throwOnBind = false;
+        throw new Error("boom");
+      }
+      return realFirstTab1(type, listener, options);
+    };
+    const realFirstTab1Remove = (
+      firstTab1.removeEventListener as unknown as (
+        t: string,
+        f: EventListenerOrEventListenerObject,
+        o?: boolean | EventListenerOptions
+      ) => void
+    ).bind(firstTab1);
+    (
+      firstTab1 as unknown as {
+        removeEventListener: (
+          t: string,
+          f: EventListenerOrEventListenerObject,
+          o?: boolean | EventListenerOptions
+        ) => void;
+      }
+    ).removeEventListener = (type, listener, options) => {
+      removedPartial += 1;
+      return realFirstTab1Remove(type, listener, options);
+    };
+
+    runRuntime();
+
+    // The failing first switcher did NOT abort the others: the second switcher
+    // and the magnetic block bound normally.
+    const secondTabs = [
+      ...document.querySelectorAll('[data-switcher]:not([data-slot="one"]) [data-switcher-tab]'),
+    ];
+    const secondPanels = [
+      ...document.querySelectorAll('[data-switcher]:not([data-slot="one"]) [data-switcher-panel]'),
+    ] as HTMLElement[];
+    click(secondTabs[1]!);
+    expect(secondPanels[1]!.hidden).toBe(false);
+
+    const mag = document.querySelector("[data-magnetic]") as HTMLElement;
+    mag.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 40 }) as DOMRect;
+    movePointer(mag, 200, 100);
+    expect(mag.style.getPropertyValue(PAGE_BLOCK_TRANSFORM_VARIABLES.magneticX)).toBe("14.0px");
+
+    // Partial listeners from the failed attempt were rolled back (the click that
+    // attached before the keydown threw is removed, so a retry cannot duplicate).
+    expect(removedPartial).toBeGreaterThan(0);
+    // The first root was left unmarked, so the rescan binds it cleanly with NO
+    // duplicate listeners: clicking tab A2 once toggles exactly once.
+    runRuntime();
+    const firstTabs = [...firstRoot.querySelectorAll("[data-switcher-tab]")];
+    const firstPanels = [...firstRoot.querySelectorAll("[data-switcher-panel]")] as HTMLElement[];
+    click(firstTabs[1]!);
+    expect(firstPanels[1]!.hidden).toBe(false);
+    expect(firstTabs[1]!.getAttribute("aria-selected")).toBe("true");
+    // And the previously bound second switcher was NOT re-bound (WeakSet skip):
+    // clicking tab 0 after the retry toggles exactly once to the expected state.
+    click(secondTabs[0]!);
+    expect(secondPanels[1]!.hidden).toBe(true);
+    expect(secondPanels[0]!.hidden).toBe(false);
   });
 });
