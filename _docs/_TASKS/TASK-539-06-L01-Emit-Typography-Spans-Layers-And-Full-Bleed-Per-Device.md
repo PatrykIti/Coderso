@@ -26,6 +26,9 @@ This leaf is the only writer of:
 - `tests/vitest/pages/page-responsive-css-fixtures.ts`;
 - `tests/vitest/pages/page-responsive-css-section.test.ts`;
 - `tests/vitest/pages/page-responsive-css-block.test.ts`;
+- `tests/vitest/pages/page-responsive-css-block-behavior.test.ts` (split off the
+  block suite so each file stays `<=1000`; block test pins projection/placement,
+  block-behavior pins layer/typography/paint behavior);
 - `tests/vitest/pages/page-responsive-css-security.test.ts`;
 - `tests/vitest/pages/page-responsive-grid-spans.test.ts` (existing 113-line suite;
   this leaf owns its rebaseline: update the `:is([data-block-id],[data-tilt-parent])`
@@ -276,7 +279,7 @@ Do not move the new TASK-539 cross-contract matrix into these files; L02 alone o
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-responsive-grid-spans.test.ts tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-security.test.ts
+bun run test:vitest -- tests/vitest/pages/page-responsive-grid-spans.test.ts tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-block-behavior.test.ts tests/vitest/pages/page-responsive-css-security.test.ts
 node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
