@@ -831,7 +831,7 @@ describe("stable facade and line receipts", () => {
       ["tests/vitest/pages/task-539-transform-composition.test.ts", 801],
       ["tests/vitest/pages/task-539-page-editor-controls.test.ts", 915],
       ["tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx", 842],
-      ["tests/vitest/pages/task-539-renderer-replica-identity.test.tsx", 627],
+      ["tests/vitest/pages/task-539-renderer-replica-identity.test.tsx", 626],
       ["tests/vitest/pages/pageRendererV2TestFixtures.tsx", 84],
     ];
     for (const [file, expected] of receipts) {
