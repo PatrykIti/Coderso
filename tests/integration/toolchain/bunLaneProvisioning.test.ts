@@ -55,7 +55,9 @@ const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const SCHEMA = "bun_provision_test";
 const CONTROL = "bun_control_schema";
 const SCRATCH = "bun_provision_fail";
-const MIGRATION_COUNT = 77;
+// Live journal has 78 entries; 0079_hot_shadowcat (TASK-493-01-L02) is the
+// newest appended migration (see core/db/migrations/meta/_journal.json).
+const MIGRATION_COUNT = 78;
 
 let sql: postgres.Sql | undefined;
 

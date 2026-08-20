@@ -32,10 +32,11 @@ import { provisionWorkers } from "../../../scripts/bun-lane-provision";
 const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const WORKER_SCHEMAS = ["bun_worker_0", "bun_worker_1"];
 const CONTROL_SCHEMA = "bun_control_schema";
-// Live journal has 77 entries: 0073_smiling_ser_duncan, 0075_form_submissions_export_cursor,
-// 0076_content_revisions_version_uniq and 0078_backup_users_staging were appended
-// by concurrent streams (see core/db/migrations/meta/_journal.json).
-const MIGRATION_COUNT = 77;
+// Live journal has 78 entries: 0073_smiling_ser_duncan, 0075_form_submissions_export_cursor,
+// 0076_content_revisions_version_uniq, 0078_backup_users_staging and
+// 0079_hot_shadowcat (TASK-493-01-L02) were appended by concurrent streams
+// (see core/db/migrations/meta/_journal.json).
+const MIGRATION_COUNT = 78;
 
 let sql: postgres.Sql | undefined;
 

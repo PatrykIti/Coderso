@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T02:41:08.120Z",
+  "generatedAt": "2026-08-19T16:35:47.496Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -409,6 +409,18 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/integration/routes/seo-performance.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/routes/seo-pipeline.test.ts",
+      "bucket": "C",
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": true
+    },
+    {
       "file": "tests/integration/routes/seo.test.ts",
       "bucket": "B",
       "conflictKeys": [],
@@ -437,6 +449,12 @@
       "bucket": "B",
       "conflictKeys": [],
       "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/routes/sitemap.test.ts",
+      "bucket": "C",
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/integration/routes/solutionKitsRoutes.test.ts",
@@ -780,6 +798,12 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/perf/seo-sitemap.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/security/analyticsBeacon.test.ts",
       "bucket": "B",
       "conflictKeys": [],
@@ -793,6 +817,12 @@
     },
     {
       "file": "tests/security/firstAdminRace.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/security/gsc-credential.test.ts",
       "bucket": "B",
       "conflictKeys": [],
       "cWriteGlobal": false
@@ -830,6 +860,24 @@
     {
       "file": "tests/security/sentryDsnRedaction.test.ts",
       "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/security/seo-pipeline.test.ts",
+      "bucket": "C",
+      "conflictKeys": [],
+      "cWriteGlobal": true
+    },
+    {
+      "file": "tests/security/seo-sitemap-submission.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/security/seo-sync-service.test.ts",
+      "bucket": "B",
       "conflictKeys": [],
       "cWriteGlobal": false
     },
@@ -1913,6 +1961,18 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/runtime-smoke/task-493-adapter.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task-493-worker.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/runtime-smoke/task-554-adapter.test.ts",
       "bucket": "B",
       "conflictKeys": [],
@@ -2600,6 +2660,18 @@
     },
     {
       "file": "tests/unit/workflows/smokeEvidenceTask548Bootstrap.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/workflows/task493AuthorAudit.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/workflows/task493WorkflowContracts.test.ts",
       "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false

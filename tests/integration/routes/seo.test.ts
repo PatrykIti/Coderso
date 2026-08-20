@@ -39,8 +39,43 @@ test("registerSeoRoutes wires endpoints", () => {
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
   expect(paths).toEqual(
-    expect.arrayContaining(["GET /seo", "GET /seo/:id", "PATCH /seo/:id", "POST /seo/audit"])
+    expect.arrayContaining([
+      "GET /seo",
+      "GET /seo/:id",
+      "PATCH /seo/:id",
+      "POST /seo/audit",
+      // TASK-493-04-L02: the search-performance + sitemap surface.
+      "GET /seo/overview",
+      "GET /seo/search-performance",
+      "POST /seo/search-performance/sync",
+      "GET /seo/sitemap",
+      "POST /seo/sitemap/submit",
+    ])
   );
+});
+
+test("mapSeoError maps the six GSC sync + sitemap domain codes", () => {
+  const cases: Array<{ message: string; code: string; status: number }> = [
+    { message: "gsc_not_configured", code: "gsc_not_configured", status: 409 },
+    { message: "gsc_credential_invalid", code: "gsc_credential_invalid", status: 400 },
+    { message: "gsc_sync_window_invalid", code: "gsc_sync_window_invalid", status: 400 },
+    { message: "sitemap_path_invalid", code: "sitemap_path_invalid", status: 400 },
+    { message: "sitemap_submit_failed", code: "sitemap_submit_failed", status: 502 },
+  ];
+  for (const entry of cases) {
+    const mapped = mapSeoError(new Error(entry.message));
+    expect(mapped).toBeInstanceOf(ApiError);
+    expect(mapped).toMatchObject({ code: entry.code, status: entry.status });
+  }
+
+  // `gsc_request_failed:<status>` is matched via startsWith, so every status
+  // suffix maps to the stable 502 code; an unknown domain error stays unmapped.
+  for (const status of ["429", "500", "403"]) {
+    const mapped = mapSeoError(new Error(`gsc_request_failed:${status}`));
+    expect(mapped).toBeInstanceOf(ApiError);
+    expect(mapped).toMatchObject({ code: "gsc_request_failed", status: 502 });
+  }
+  expect(mapSeoError(new Error("seo_unknown"))).toBeNull();
 });
 
 test("mapSeoError maps not found to a machine-readable 404", () => {
