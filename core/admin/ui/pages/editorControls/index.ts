@@ -5,8 +5,14 @@ export {
   type ComboboxControlProps,
 } from "./ComboboxControl";
 export { FacetListControl, type FacetListControlProps } from "./FacetListControl";
+export {
+  GalleryCategoryTokensControl,
+  type GalleryCategoryTokensControlProps,
+} from "./GalleryCategoryTokensControl";
+export { GalleryItemsControl, type GalleryItemsControlProps } from "./GalleryItemsControl";
 export { ListItemsControl, type ListItemsControlProps } from "./ListItemsControl";
 export { MediaPickerControl, type MediaPickerControlProps } from "./MediaPickerControl";
+export { MediaUrlControl, type MediaUrlControlProps } from "./MediaUrlControl";
 export { SegmentedControl, type SegmentedControlProps } from "./SegmentedControl";
 export { SliderControl, type SliderControlProps } from "./SliderControl";
 export { SliderStepperControl, type SliderStepperControlProps } from "./SliderStepperControl";
