@@ -17,7 +17,7 @@ import { renderPopup, isSafeHref, SAFE } from "../services/popups/runtime/render
  * from the public `GET /api/popups` endpoint), so it is safe to inject into
  * cached HTML. No secret, token, or session value is ever inlined.
  *
- * Serialization discipline (mirrors `core/widgets/core/listingRuntimeScript.ts`):
+ * Serialization discipline (mirrors `core/services/renderContracts/listingRuntimeScript.ts`):
  * - Every emitted line is `const <name> = <src>;` so the IIFE binds names.
  * - `fn.toString()` on an arrow const yields an anonymous expression, so a
  *   bare join would emit `(m) => {...}` with no binding and throw

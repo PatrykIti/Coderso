@@ -12,7 +12,7 @@ import {
 import {
   FORM_EMBED_SUCCESS_BEHAVIORS,
   FORM_EMBED_TEXTAREA_ROWS_LIMITS,
-} from "../../../core/widgets/core/formEmbedContract";
+} from "../../../core/services/renderContracts/formEmbedContract";
 
 describe("page editor content-block controls", () => {
   test("form block content controls are frozen to the TASK-456 contract", () => {

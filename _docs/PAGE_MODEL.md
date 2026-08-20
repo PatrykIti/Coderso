@@ -742,6 +742,31 @@ at the gap, and `addSection` splices the chosen section at that index instead
 of appending; the persistent top-of-canvas `Add section` button keeps the
 append behavior.
 
+### `legacy-widget` block type (migration-only, read-only) — TASK-580-03
+
+`legacy-widget` is a migration-only Page V2 block type. It is never
+editor-insertable, never assistant-emittable, and never part of the Page
+editor block library. It exists solely so converted detail-page documents
+(TASK-580-03, schemaVersion 2) preserve v1 widget types that have no Page V2
+equivalent.
+
+- Emitted only by the detail-page v1→v2 conversion
+  (`core/services/content/detailPageV2Conversion.ts`, migration 0079, and the
+  read adapter for un-backfilled v1 rows): a `custom` section wraps each
+  unmapped legacy widget in exactly one `legacy-widget` block.
+- Block props: `props.legacyWidgetType` (the original widget type, e.g.
+  `booking-calendar`, bounded 1..64 chars) and `props.data` (the original v1
+  widget data preserved byte-identically for a future re-authoring migration).
+- Render: the public V2 render host (`core/services/pages/
+  legacyWidgetPlaceholder.tsx`) renders ONLY a neutral dashed-border note with
+  `role="note"` and `data-legacy-widget="<type>"`. The preserved `props.data`
+  is never read, rendered, or logged (no XSS surface, no secret leak).
+- Authoring rule: the block cannot be selected, edited, moved, or duplicated
+  in the editor. Re-authoring a legacy section means replacing it with native
+  Page V2 blocks; the `data` payload stays inert in the stored document.
+- Zero emission: documents without legacy-widget blocks emit zero bytes for
+  this surface (no seed, no defaults, byte-identical renders).
+
 ### Modular Authoring Surface (TASK-464)
 
 `PageEditor.tsx` is the host shell for page chrome: loading/saving, preview,
@@ -1560,10 +1585,11 @@ of public content.
 
 Non-Page active editors keep domain-owned section/block contracts. Custom
 Screens V4 own `document.sections[].blocks[]`; Posts and content/detail editors
-own their bounded block documents. Retained widget-template/detail rows may
-still pass through `documentContract: "legacy-widget-block-contract"` and a
-`WidgetBlock[]` read/runtime adapter, but that compatibility label is not an
-authoring surface. The Page Templates contract is frozen by TASK-420-02 in the
+own their bounded block documents. Detail-page documents are Page V2
+documents since TASK-580-03 (schemaVersion 2, `sections[]`/`bindings[]`); the
+legacy v1 detail rows were backfilled and no longer pass through
+`documentContract: "legacy-widget-block-contract"` or the `WidgetBlock[]`
+read/runtime adapter. The Page Templates contract is frozen by TASK-420-02 in the
 "Page Templates (Reusable Page v2 Templates)" section below and implemented by
 TASK-420-03, which also deleted the obsolete widget-template product surface
 (routes, preview target, admin UI, cached clients).

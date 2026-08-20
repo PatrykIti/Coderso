@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { resolveNavigationRuntimeData } from "../../../core/services/navigation/navigationRuntimeResolver";
-import { navigationDefaults } from "../../../core/widgets/core/navigation";
+import { navigationDefaults } from "../../../core/services/renderContracts/navigationContract";
 import type { MenuItemNode } from "../../../core/services/menus/treeBuilder";
 
 test("resolveNavigationRuntimeData keeps manual items when at least one is provided", async () => {

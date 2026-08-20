@@ -21,7 +21,7 @@ import {
   SiteHeaderNav,
   type SiteShellNavigation,
 } from "../../../core/site/siteShell";
-import type { NavigationItem } from "../../../core/widgets/core/navigation";
+import type { NavigationItem } from "../../../core/services/renderContracts/navigationContract";
 
 const navMeta = (variant?: "link" | "button") => ({
   visibility: "all" as const,

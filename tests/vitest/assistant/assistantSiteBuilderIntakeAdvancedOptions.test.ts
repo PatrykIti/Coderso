@@ -12,6 +12,7 @@ import {
   siteBuilderIntakeAdvancedHeroVariantOptionDefinitions,
   siteBuilderIntakeAdvancedMenuBehaviorOptionDefinitions,
   siteBuilderIntakeAdvancedSectionVariantOptionDefinitions,
+  supportedWidgetVariantIdsByType,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeAdvancedOptions";
 import {
   applyAdvancedRuntimeOverridesToKit,
@@ -31,9 +32,7 @@ import {
   assistantSiteBuilderAdvancedMenuBehaviorIds,
   assistantSiteBuilderAdvancedSectionVariantIds,
 } from "../../../core/services/assistant/assistantSiteBuilderIntakeTypes";
-import { listWidgetsForSurface } from "../../../core/widgets/registry";
 import { withConfirmedSiteBuilderIntakeReview } from "../../utils/assistantSiteBuilderIntake";
-import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
 import { solutionKitsCatalog } from "../../../core/services/kits/solutionKitsCatalog";
 import { PAGE_DOCUMENT_SCHEMA_VERSION } from "../../../core/services/pages/pageDocumentV2";
 
@@ -342,18 +341,12 @@ test("Advanced intake derives normalized facts and rejects Basic tampering", () 
   ).toThrow("intake_answer_invalid");
 });
 
-test("Advanced option widget requirements match registered page-builder widgets", () => {
-  ensureRuntimeWidgetsRegistered();
-  const widgetsByType = new Map(
-    listWidgetsForSurface("page-builder").map((widget) => [widget.type, widget])
-  );
-
+test("Advanced option widget requirements match the supported variant catalog", () => {
   for (const requirement of listSiteBuilderIntakeAdvancedWidgetRequirements()) {
-    const widget = widgetsByType.get(requirement.widgetType);
-    expect(widget, requirement.widgetType).toBeTruthy();
-    expect(widget?.module).toBe(requirement.module);
-    expect(widget?.complexity).toBe("composite");
-    expect(widget?.variants.map((variant) => variant.id)).toContain(requirement.variantId);
+    const variantIds = supportedWidgetVariantIdsByType[requirement.widgetType];
+    expect(variantIds, requirement.widgetType).toBeDefined();
+    expect(variantIds).toContain(requirement.variantId);
+    expect(requirement.module.length).toBeGreaterThan(0);
   }
 });
 

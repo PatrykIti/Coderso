@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { userSettings } from "../../db/schema";
-import { normalizeHeroData, type HeroData } from "../../widgets/core/hero";
+import { normalizeHeroData, type HeroData } from "../../services/renderContracts/heroContract";
 import {
   DEFAULT_SCREEN_ENTRY_PREFERENCES_SETTING,
   normalizeScreenEntryPreferencesSetting,
@@ -40,7 +40,6 @@ export type UserSettingValueMap = {
   "customScreens.openAfterCreate": boolean;
   "forms.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
-  "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSettingValue[];
   "posts.editor.preferences": PostEditorPreferencesSettingValue;
   "assistant.mode": AssistantUserMode | null;
@@ -74,7 +73,6 @@ const DEFAULT_USER_SETTINGS: UserSettingValueMap = {
   "customScreens.openAfterCreate": true,
   "forms.openAfterCreate": true,
   "media.openAfterUpload": false,
-  "widgets.favorites": [],
   "widgets.hero.presets": [],
   "posts.editor.preferences": DEFAULT_POST_EDITOR_PREFERENCES,
   "assistant.mode": null,
@@ -122,26 +120,6 @@ export function validateUserSettingValue<K extends UserSettingKey>(
       throw new Error("user_settings_value_invalid");
     }
     return value as UserSettingValueMap[K];
-  }
-  if (key === "widgets.favorites") {
-    if (!Array.isArray(value)) {
-      throw new Error("user_settings_value_invalid");
-    }
-    const normalized = value.map((entry) => {
-      if (typeof entry !== "string") {
-        throw new Error("user_settings_value_invalid");
-      }
-      const trimmed = entry.trim();
-      if (!trimmed) {
-        throw new Error("user_settings_value_invalid");
-      }
-      return trimmed;
-    });
-    const unique = Array.from(new Set(normalized));
-    if (unique.length > 50) {
-      throw new Error("user_settings_value_invalid");
-    }
-    return unique as UserSettingValueMap[K];
   }
   if (key === "widgets.hero.presets") {
     if (!Array.isArray(value)) {

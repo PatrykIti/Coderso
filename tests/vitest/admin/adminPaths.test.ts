@@ -43,7 +43,7 @@ test("resolveAdminRoutePath aliases legacy paths to advanced", () => {
   expect(resolveAdminRoutePath("/entries/articles/entry-1")).toBe(
     "/advanced/entries/articles/entry-1"
   );
-  expect(resolveAdminRoutePath("/widgets/templates/new")).toBe("/advanced/widgets/templates/new");
+  expect(resolveAdminRoutePath("/widgets/templates/new")).toBe("/widgets/templates/new");
   expect(resolveAdminRoutePath("/forms/form-1")).toBe("/advanced/forms/form-1");
   expect(resolveAdminRoutePath("/custom-screens")).toBe("/advanced/custom-screens");
   expect(resolveAdminRoutePath("/custom-screens/screen-1")).toBe(
@@ -71,7 +71,7 @@ test("resolveAdminHref canonicalizes admin links", () => {
   expect(resolveAdminHref("/admin", "/admin/content-types")).toBe("/admin/advanced/engine");
   expect(resolveAdminHref("/admin", "/forms/abc")).toBe("/admin/advanced/forms/abc");
   expect(resolveAdminHref("/admin", "/widgets?view=templates")).toBe(
-    "/admin/advanced/widgets?view=templates"
+    "/admin/widgets?view=templates"
   );
   expect(resolveAdminHref("/admin", "/custom-screens")).toBe("/admin/advanced/custom-screens");
   expect(resolveAdminHref("/admin", "/listings")).toBe("/admin/advanced/listings");

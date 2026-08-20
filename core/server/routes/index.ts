@@ -32,7 +32,6 @@ import { registerEmailSettingsRoutes } from "./emailSettingsRoutes";
 import { registerIntegrationsRoutes } from "./integrationsRoutes";
 import { registerPluginsRoutes } from "./pluginsRoutes";
 import { registerUserSettingsRoutes } from "./userSettingsRoutes";
-import { registerWidgetRoutes } from "./widgetRoutes";
 import { registerPageTemplateRoutes } from "./pageTemplateRoutes";
 import { registerTaxonomyRoutes } from "./taxonomyRoutes";
 import { registerAssistantRoutes } from "./assistantRoutes";
@@ -172,10 +171,6 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
-  registerWidgetRoutes(router, {
-    requirePermission: deps.requirePermission,
-    validate: deps.validate,
-  });
   registerPageTemplateRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,

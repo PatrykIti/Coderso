@@ -74,7 +74,6 @@ export const createCompositionCatalog = (
     forms: [],
     menus: [],
     seoDocuments: [],
-    widgets: [],
     media: [],
     warnings: [],
   };

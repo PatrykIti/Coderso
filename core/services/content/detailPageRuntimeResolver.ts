@@ -44,7 +44,7 @@ async function resolveDetailPageRuntime(input: ResolveDetailPageRuntimeInput) {
     const document = normalizeDetailPageDocument(sourceDocument);
     if (document.contentTypeId !== input.contentType.id) return null;
 
-    const blocks = await resolveDetailPageBlocks({
+    const sections = await resolveDetailPageBlocks({
       document,
       entry: input.entry,
       contentType: input.contentType,
@@ -54,7 +54,9 @@ async function resolveDetailPageRuntime(input: ResolveDetailPageRuntimeInput) {
 
     return {
       document,
-      blocks,
+      // L04 (L02/L04 boundary decision): the transitional `blocks` alias is
+      // removed; consumers read the converted v2 sections directly.
+      sections,
     };
   } catch {
     return null;

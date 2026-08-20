@@ -152,31 +152,6 @@ export type AssistantSeoDocumentSummary = {
   status: string;
 };
 
-export type AssistantWidgetSlotSummary = {
-  id: string;
-  label: string;
-  kind: "fixed" | "repeatable";
-  allowedTypes: string[];
-  minItems: number | null;
-  maxItems: number | null;
-};
-
-export type AssistantWidgetSummary = {
-  id: string;
-  source: "core" | "template";
-  name: string;
-  description: string | null;
-  category: string;
-  module: string;
-  complexity: string;
-  audience: string;
-  variants: string[];
-  slots: AssistantWidgetSlotSummary[];
-  surfaces: string[];
-  requires: string[];
-  status: "draft" | "published";
-};
-
 export type AssistantMediaSummary = {
   id: string;
   title: string;
@@ -268,7 +243,6 @@ export type AssistantResourceCatalogSnapshot = {
   forms: AssistantFormSummary[];
   menus: AssistantMenuSummary[];
   seoDocuments: AssistantSeoDocumentSummary[];
-  widgets: AssistantWidgetSummary[];
   media?: AssistantMediaSummary[];
   commerce?: {
     products: AssistantCommerceProductSummary[];

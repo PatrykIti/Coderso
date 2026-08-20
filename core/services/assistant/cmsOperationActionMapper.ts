@@ -286,26 +286,6 @@ const buildListingTemplateUpdatePatch = (draft: CmsOperationDraft) => {
   return { name: value };
 };
 
-const buildWidgetTemplateUpdatePatch = (
-  draft: CmsOperationDraft
-): Extract<AssistantPlannedAction, { type: "widget-template.update" }>["input"]["patch"] | null => {
-  const value = readMutationText(draft);
-  const field = fieldIntent(draft);
-  const policyField = findPolicyFieldForDraft(draft);
-  if (!value) return null;
-  if (
-    (field === "status" || policyPatchPathStartsWith(policyField, "status")) &&
-    (value === "draft" || value === "published")
-  ) {
-    return { status: value };
-  }
-  if (field === "category" || policyPatchPathStartsWith(policyField, "category")) {
-    return { category: value };
-  }
-  if (field === "description") return { description: value };
-  return { name: value };
-};
-
 const buildMenuItemUpdatePatch = (draft: CmsOperationDraft) => {
   const value = readMutationText(draft);
   if (!value) return null;
@@ -1174,60 +1154,6 @@ const buildActionForExactTarget = (
         name: target.label,
         slug: target.slug,
         expectedLayout: target.status,
-        patch,
-      },
-    };
-  }
-  if (draft.resourceKind === "widget-template" && draft.operation === "delete") {
-    if (!isPolicyActionExecutable(draft, "widget-template.delete")) return null;
-    return {
-      id: actionId("widget-template.delete", target.id),
-      type: "widget-template.delete",
-      title: `Delete ${target.label}`,
-      description: "Delete the active reusable widget template selected from admin context.",
-      input: {
-        id: target.id,
-        name: target.label,
-        expectedStatus: target.status,
-        expectedCategory: readDetailString(target, "category"),
-      },
-    };
-  }
-  if (draft.resourceKind === "widget-template" && draft.operation === "update") {
-    const policyField = findPolicyFieldForDraft(draft);
-    if (policyField?.action?.type === "widget-template.block.patch") {
-      if (!isPolicyActionExecutable(draft, "widget-template.block.patch")) return null;
-      const patch = readBlockPatch(draft);
-      if (!patch) return null;
-      return {
-        id: actionId("widget-template.block.patch", patch.blockId),
-        type: "widget-template.block.patch",
-        title: `Patch ${target.label}`,
-        description: "Patch selected reusable widget template block data.",
-        input: {
-          id: target.id,
-          name: target.label,
-          expectedStatus: target.status,
-          blockId: patch.blockId,
-          expectedBlockType: patch.expectedBlockType,
-          dataPath: patch.dataPath,
-          value: patch.value,
-        },
-      };
-    }
-    if (!isPolicyActionExecutable(draft, "widget-template.update")) return null;
-    const patch = buildWidgetTemplateUpdatePatch(draft);
-    if (!patch) return null;
-    return {
-      id: actionId("widget-template.update", target.id),
-      type: "widget-template.update",
-      title: `Update ${target.label}`,
-      description: "Update a widget template selected from trusted CMS context.",
-      input: {
-        id: target.id,
-        name: target.label,
-        expectedStatus: target.status,
-        expectedCategory: readDetailString(target, "category"),
         patch,
       },
     };

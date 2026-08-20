@@ -11,7 +11,8 @@ import { FormRuntimePreviewDialog } from "../../../core/admin/ui/forms/FormRunti
 import type { FormSettings } from "../../../core/admin/services/formsClient";
 import { FORM_SCHEMA_LIMITS } from "../../../core/services/forms/formSettings";
 import type { FormFormTheme } from "../../../core/services/forms/formTheme";
-import { FormEmbedBlock, type FormEmbedData } from "../../../core/widgets/core/formEmbed";
+import { FormEmbedBlock } from "../../../core/services/renderContracts/formEmbedRenderer";
+import type { FormEmbedData } from "../../../core/services/renderContracts/formEmbedContract";
 import {
   PROJECT_BRIEF_INITIAL_NOTE,
   PROJECT_BRIEF_LOADING_LABEL,

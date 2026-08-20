@@ -307,7 +307,7 @@ const createDocument = (input: {
       },
       {
         id: "detail-facts",
-        type: "stats-kpi",
+        type: "feature-grid",
         data: {
           header: {
             title: `${input.spec.name} facts`,
@@ -316,8 +316,7 @@ const createDocument = (input: {
           items: [
             {
               id: "primary-fact",
-              value: "TBD",
-              label: "Primary",
+              title: "TBD",
               description: "Bound from the published entry.",
             },
           ],
@@ -366,7 +365,7 @@ const createDocument = (input: {
       {
         id: "binding-fact",
         blockId: "detail-facts",
-        propPath: "items.0.value",
+        propPath: "items.0.title",
         source: {
           kind: "entry-field",
           field: "primaryFact",

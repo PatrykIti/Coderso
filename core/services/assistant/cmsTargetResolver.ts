@@ -415,8 +415,6 @@ const detailPageHref = (contentTypeId: string, id: string) =>
 const customScreenHref = (id: string) => `/admin/advanced/custom-screens/${encodeURIComponent(id)}`;
 const formHref = (id: string) => `/admin/advanced/forms/${encodeURIComponent(id)}`;
 const listingHref = (id: string) => `/admin/advanced/listings/${encodeURIComponent(id)}`;
-const widgetTemplateHref = (id: string) =>
-  `/admin/advanced/widgets/templates/${encodeURIComponent(id)}`;
 const mediaHref = (id: string) => `/admin/media/${encodeURIComponent(id)}`;
 const commerceProductHref = (id: string) => `/admin/advanced/commerce/${encodeURIComponent(id)}`;
 const solutionKitHref = (id: string) => `/admin/advanced/solution-kits/${encodeURIComponent(id)}`;
@@ -663,41 +661,6 @@ const candidatesForKind = (
       );
     }
   }
-  if (kind === "widget-template") {
-    for (const widget of (catalog?.widgets ?? []).filter((item) => item.source === "template")) {
-      result.push(
-        candidate({
-          kind,
-          id: widget.id,
-          label: widget.name,
-          slug: null,
-          status: widget.status,
-          adminHref: widgetTemplateHref(widget.id),
-          details: {
-            category: widget.category,
-          },
-        })
-      );
-    }
-    if (context.activeSurface?.kind === "widget-template") {
-      const template = context.activeSurface.template;
-      if (!result.some((item) => item.id === template.id)) {
-        result.push(
-          candidate({
-            kind,
-            id: template.id,
-            label: template.name,
-            slug: null,
-            status: template.status,
-            adminHref: widgetTemplateHref(template.id),
-            details: {
-              category: template.category,
-            },
-          })
-        );
-      }
-    }
-  }
   if (kind === "media") {
     for (const item of catalog?.media ?? []) {
       result.push(
@@ -906,20 +869,6 @@ const activeCandidateForKind = (
         contentTypeId: screen.contentTypeId,
         showInSidebar: screen.showInSidebar,
         sidebarLabel: screen.sidebarLabel,
-      },
-    };
-  }
-  if (kind === "widget-template" && context.activeSurface?.kind === "widget-template") {
-    const template = context.activeSurface.template;
-    return {
-      kind,
-      id: template.id,
-      label: template.name,
-      slug: null,
-      status: template.status,
-      adminHref: widgetTemplateHref(template.id),
-      details: {
-        category: template.category,
       },
     };
   }

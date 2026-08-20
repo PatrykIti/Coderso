@@ -224,7 +224,6 @@ managed-shared~core/services/settings/settingsService.ts~deleteSetting|delete|se
 adjacent-reviewed~core/services/settings/storageSettings.ts~setStorageSettings|delete|settings;setStorageSettings|insert|settings
 managed-shared~core/services/themes/themeProfileService.ts~activateThemeProfile|update|themeProfiles;activateThemeProfile|update|themeProfiles;createThemeProfile|insert|themeProfiles;createThemeProfile|update|themeProfiles;setThemeRoutes|delete|themeRoutes;setThemeRoutes|insert|themeRoutes;setThemeRoutes|update|themeProfiles;updateThemeProfile|update|themeProfiles
 managed-shared~core/services/tools/importExportService.ts~importConfigTx|delete|menus;importConfigTx|delete|redirects;importConfigTx|delete|themeRoutes;importConfigTx|insert|adminThemeProfiles;importConfigTx|insert|adminThemeTemplates;importConfigTx|insert|menus;importConfigTx|insert|redirects;importConfigTx|insert|themeProfiles;importConfigTx|insert|themeRoutes;importConfigTx|update|adminThemeProfiles;importConfigTx|update|adminThemeProfiles;importConfigTx|update|adminThemeTemplates;importConfigTx|update|menus;importConfigTx|update|redirects;importConfigTx|update|themeProfiles;importConfigTx|update|themeProfiles
-adjacent-reviewed~core/services/widgets/widgetTemplateCategoryService.ts~persistCategories|insert|settings
 `);
 
 test("protected Drizzle and raw DML has an exact reviewed disposition", () => {

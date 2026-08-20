@@ -3,13 +3,14 @@ import type {
   ListingQueryUpdateInput,
 } from "../../../../core/services/content/queryBuilderService";
 import type { DetailPageDocument } from "../../../../core/services/content/detailPageTypes";
+import { normalizeDetailPageDocumentForWrite } from "../../../../core/services/content/detailPageSchema";
 import {
   type CustomScreenBinding,
   type CustomScreenCollectionRole,
   type CustomScreenDefinition,
 } from "../../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../../core/services/settings/settingsService";
-import type { WidgetBlock } from "../../../../core/widgets/types";
+import type { LegacyWidgetBlock } from "../../../../core/services/renderContracts/legacyWidgetBlock";
 
 import {
   createTestCustomScreenDefinition,
@@ -49,15 +50,16 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
       document: DetailPageDocument;
       expectedExistingId?: string | null;
     }) => {
-      if (input.expectedExistingId && input.expectedExistingId !== input.document.id) {
+      const normalized = normalizeDetailPageDocumentForWrite(input.document);
+      if (input.expectedExistingId && input.expectedExistingId !== normalized.id) {
         throw new Error("detail_page_conflict");
       }
       const contentType =
-        contentTypes.find((entry) => entry.id === input.document.contentTypeId) ?? null;
+        contentTypes.find((entry) => entry.id === normalized.contentTypeId) ?? null;
       if (!contentType) {
         throw new Error("detail_page_invalid");
       }
-      const existing = detailPages.find((entry) => entry.id === input.document.id) ?? null;
+      const existing = detailPages.find((entry) => entry.id === normalized.id) ?? null;
       if (existing && existing.contentTypeId !== contentType.id) {
         throw new Error("detail_page_content_type_mismatch");
       }
@@ -65,7 +67,7 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
         contentType,
         existing,
         document: {
-          ...input.document,
+          ...normalized,
           contentTypeSlug: contentType.slug,
         },
       };
@@ -74,29 +76,30 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
       document: DetailPageDocument;
       expectedExistingId?: string | null;
     }) => {
+      const normalized = normalizeDetailPageDocumentForWrite(input.document);
       const contentType =
-        contentTypes.find((entry) => entry.id === input.document.contentTypeId) ?? null;
+        contentTypes.find((entry) => entry.id === normalized.contentTypeId) ?? null;
       if (!contentType) {
         throw new Error("detail_page_invalid");
       }
-      if (input.expectedExistingId && input.expectedExistingId !== input.document.id) {
+      if (input.expectedExistingId && input.expectedExistingId !== normalized.id) {
         throw new Error("detail_page_conflict");
       }
-      const existingIndex = detailPages.findIndex((entry) => entry.id === input.document.id);
+      const existingIndex = detailPages.findIndex((entry) => entry.id === normalized.id);
       const now = new Date("2026-04-10T12:00:00.000Z");
       const record = {
-        id: input.document.id,
-        name: input.document.name,
-        contentTypeId: input.document.contentTypeId,
-        status: input.document.status,
+        id: normalized.id,
+        name: normalized.name,
+        contentTypeId: normalized.contentTypeId,
+        status: normalized.status,
         currentDocument: {
-          ...input.document,
+          ...normalized,
           contentTypeSlug: contentType.slug,
         },
         publishedDocument:
-          input.document.status === "published"
+          normalized.status === "published"
             ? {
-                ...input.document,
+                ...normalized,
                 contentTypeSlug: contentType.slug,
               }
             : null,
@@ -117,7 +120,7 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
     createContentType: async (input: { name: string; slug: string; schema: unknown }) => {
       const now = new Date("2026-04-10T12:00:00.000Z");
       const record = {
-        id: `ct-${contentTypes.length + 1}`,
+        id: `00000000-0000-4000-8000-${String(contentTypes.length + 1).padStart(12, "0")}`,
         name: input.name,
         slug: input.slug,
         schema: input.schema,
@@ -155,7 +158,7 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
       definition?: CustomScreenDefinition;
-      blocks?: WidgetBlock[] | null;
+      blocks?: LegacyWidgetBlock[] | null;
       bindings?: CustomScreenBinding[] | null;
     }) => {
       const now = new Date("2026-04-10T12:00:00.000Z");
@@ -195,7 +198,7 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
         showInSidebar?: boolean;
         sidebarLabel?: string | null;
         definition?: CustomScreenDefinition;
-        blocks?: WidgetBlock[] | null;
+        blocks?: LegacyWidgetBlock[] | null;
         bindings?: CustomScreenBinding[] | null;
         expectedRevision?: number;
       }
@@ -378,34 +381,5 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
     },
     getWidgetTemplate: async (id: string) =>
       widgetTemplates.find((entry) => entry.id === id) ?? null,
-    listWidgetTemplates: async () => widgetTemplates,
-    deleteWidgetTemplate: async (id: string) => {
-      const index = widgetTemplates.findIndex((entry) => entry.id === id);
-      if (index < 0) return null;
-      const [deleted] = widgetTemplates.splice(index, 1);
-      return deleted ?? null;
-    },
-    updateWidgetTemplate: async (
-      id: string,
-      input: {
-        name?: string;
-        description?: string | null;
-        category?: string;
-        status?: "draft" | "published";
-        blocks?: Array<Record<string, unknown>>;
-        settings?: Record<string, unknown>;
-      }
-    ) => {
-      const existing = widgetTemplates.find((entry) => entry.id === id) ?? null;
-      if (!existing) return null;
-      if (input.name !== undefined) existing.name = input.name;
-      if (input.description !== undefined) existing.description = input.description;
-      if (input.category !== undefined) existing.category = input.category;
-      if (input.status !== undefined) existing.status = input.status;
-      if (input.blocks !== undefined) existing.blocks = input.blocks;
-      if (input.settings !== undefined) existing.settings = input.settings;
-      existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
-      return existing;
-    },
   };
 };

@@ -53,8 +53,8 @@ If a test proves behavior that should remain independent from the Bun kernel:
 - SDK helpers,
 - domain-owned section/block normalization and render mapping,
 - Admin Dashboard widget contracts,
-- retained `core/widgets` compatibility-renderer normalization and render mapping
-  without runtime adapters,
+- surviving render-contract normalization and render mapping
+  (`core/services/renderContracts/*`) without runtime adapters,
 
 then that test should move to Vitest.
 
@@ -160,8 +160,8 @@ timings belong to the matching closeout receipt.
 - Pure domain-owned section/block logic that can run without Bun runtime
   primitives.
 - Pure Admin Dashboard widget contracts.
-- Retained `core/widgets` compatibility-renderer logic that can run without Bun
-  runtime primitives.
+- Surviving render-contract logic (`core/services/renderContracts/*`) that can
+  run without Bun runtime primitives.
 - Assistant operation policy coverage and route matrix validation, because it is
   pure metadata over admin navigation/configuration and must not import runtime
   services.

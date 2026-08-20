@@ -50,6 +50,12 @@ export const mapDetailPageError = (error: unknown) => {
       return new ApiError("detail_page_not_found", "Detail page not found.", 404);
     case "detail_page_invalid":
       return new ApiError("detail_page_invalid", "Detail page payload is invalid.", 400);
+    case "detail_page_legacy_v1_invalid":
+      return new ApiError(
+        "detail_page_legacy_v1_invalid",
+        "Detail page payload is schemaVersion 1; writes require the v2 sections body.",
+        400
+      );
     case "detail_page_conflict":
       return new ApiError("detail_page_conflict", "Detail page id conflict.", 409);
     case "detail_page_route_conflict":

@@ -51,7 +51,7 @@ import {
   isPickerRepresentableColorValue,
   resolveColorPickerValue,
   resolveColorSwatchValue,
-} from "../../../core/admin/ui/widgets/editors/ClearableFields";
+} from "../../../core/admin/ui/shared/ClearableFields";
 
 test("resolveColorPickerValue extracts parser metadata for every literal kind", () => {
   // 8-digit hex -> base #rrggbb (alpha owned by the slider).

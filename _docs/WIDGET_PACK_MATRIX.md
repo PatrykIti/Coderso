@@ -1,9 +1,10 @@
-# Widget Pack Matrix
+# Widget Pack Matrix (Removed)
 
-> Historical compatibility matrix for retained `core/widgets` registry data.
-> Do not expand it for new Page/Form/Menu/Post/Screen authoring. Active editors
-> use their domain-owned sections/blocks; configurable widgets exist only on
-> Admin Dashboard under `_docs/DASHBOARD_WIDGETS_SPEC.md`.
+> **Tombstone:** the `modulePackMatrix` pack gate and its validation surface were
+> deleted in TASK-580-02, and the v1 render kernel it validated (`core/widgets/**`)
+> was deleted in TASK-580-04. No production code imports or enforces this matrix
+> anymore. Do not reintroduce module-pack entries, presets, pack gates, or the v1
+> widget surface.
 
 The remainder records the former module-level composite coverage contract used
 by legacy validation and assistant compatibility aliases.

@@ -204,8 +204,7 @@ export const resolveResourceKindFromPromptWithPolicy = (
   policy: AssistantOperationPolicy = assistantOperationPolicy
 ): CmsResourceKind | null =>
   (resolveResourcePolicyEntryFromPromptWithPolicy(prompt, policy)?.resource.kind as
-    | CmsResourceKind
-    | undefined) ?? null;
+    CmsResourceKind | undefined) ?? null;
 
 const isCmsResourceKind = (value: unknown): value is CmsResourceKind =>
   typeof value === "string" && (cmsResourceKindValues as readonly string[]).includes(value);
@@ -464,7 +463,6 @@ export const inferActiveResourceKindWithPolicy = (
   if (activeSurface?.kind === "page") return "page";
   if (activeSurface?.kind === "detail-page") return "detail-page";
   if (activeSurface?.kind === "custom-screen") return "custom-screen";
-  if (activeSurface?.kind === "widget-template") return "widget-template";
   const selected = context?.runtimeSnapshot?.selectedResource;
   if (selected?.kind === "entry" || selected?.kind === "custom-screen-entry") return "entry";
   return isCmsResourceKind(selected?.kind) ? selected.kind : null;

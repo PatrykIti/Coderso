@@ -6,7 +6,6 @@ import { SeoAuditDialog } from "../../../core/admin/ui/seo/SeoAuditDialog";
 import { ExportDialog } from "../../../core/admin/ui/shared/ExportDialog";
 import { BackupNowDialog } from "../../../core/admin/ui/backups/BackupNowDialog";
 import { ThemeExportDialog } from "../../../core/admin/ui/themes/ThemeExportDialog";
-import { WidgetInsertDialog } from "../../../core/admin/ui/widgets/WidgetInsertDialog";
 import { IntegrationRequestDialog } from "../../../core/admin/ui/settings/IntegrationRequestDialog";
 
 test("SeoAuditDialog renders audit options", () => {
@@ -52,12 +51,6 @@ test("ThemeExportDialog renders title", () => {
   const html = renderAdminUi(<ThemeExportDialog open onOpenChange={() => undefined} />);
 
   expect(html).toContain("Export Theme Config");
-});
-
-test("WidgetInsertDialog renders title", () => {
-  const html = renderAdminUi(<WidgetInsertDialog open onOpenChange={() => undefined} pages={[]} />);
-
-  expect(html).toContain("Insert Widget");
 });
 
 test("IntegrationRequestDialog renders title", () => {

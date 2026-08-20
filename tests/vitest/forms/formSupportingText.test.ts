@@ -17,7 +17,7 @@ import {
   formEmbedSchema,
   normalizeFormEmbedData,
   resolveFormEmbedFieldPresentation,
-} from "../../../core/widgets/core/formEmbed";
+} from "../../../core/services/renderContracts/formEmbedContract";
 
 const ajv = new Ajv({
   allErrors: true,

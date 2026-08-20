@@ -155,7 +155,6 @@ const buildContext = async (): Promise<AssistantActionContext> => {
         title: doc.title,
         status: doc.status,
       })),
-      widgets: [],
       warnings: [],
     },
     runtimeSnapshot: {

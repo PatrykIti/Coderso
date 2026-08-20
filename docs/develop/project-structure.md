@@ -50,8 +50,8 @@ and the React admin SPA. Key subdirectories:
 | `core/admin/` | React admin SPA. `main.tsx` (client entry), `entry-server.tsx` (SSR entry), `app/`, `ui/`, `components/`, `services/` (admin API clients). |
 | `core/services/` | ~38 business-rule domains (`pages`, `posts`, `content`, `menus`, `media`, `forms`, `commerce`, `auth`, `security`, `seo`, `themes`, `assistant`, `kits`, …). |
 | `core/db/` | Drizzle layer: `client.ts`, `schema.ts`, `migrations/`, `drizzle.config.ts`, `seed.ts`. |
-| `core/site/` | Public runtime: `pageRuntime.tsx` for retained compatibility/detail surfaces, `pageRuntimeV2.tsx` for Page sections/blocks, `renderPublicPage.tsx`, `contentRouteMatcher.ts`, `cache/`. |
-| `core/widgets/` | Historically named compatibility renderers and normalizers. This is not a non-dashboard product authoring registry; active editors own their sections/blocks. |
+| `core/site/` | Public runtime: `pageRuntimeV2.tsx` for Page sections/blocks, `renderPublicPage.tsx` (Page V2), `contentRouteMatcher.ts`, `cache/`. |
+| `core/services/renderContracts/` | Surviving v1-derived render contracts (e.g. legacy widget block placeholder, hero, listing filters, navigation, content list) consumed by the Page V2 pipeline. |
 | `core/plugins/` | Runtime plugin engine: `loader.ts`, `pluginManager.ts`, `installService.ts`, `registry.ts`. |
 | `core/store/` | Client to the Store backend: `client.ts`, `downloader.ts`, `verifier.ts` (ed25519), `updater.ts`. |
 | `core/dist/` | Build output (`dist/client`, `dist/site`). Produced by CI, not committed source. |
@@ -140,7 +140,7 @@ intentionally separate from the assistant corpus and never ingested.
 | Public site rendering | `core/site/` |
 | A Page/Form/Menu/Post/Screen section or block | The owning domain under `core/services/`, its editor under `core/admin/`, and its runtime renderer |
 | An Admin Dashboard widget | `core/services/dashboard/`, Dashboard UI/registry, and `_docs/DASHBOARD_WIDGETS_SPEC.md` |
-| A retained legacy renderer contract | `core/widgets/` plus its compatibility tests; do not expose it as new authoring |
+| A surviving v1-derived render contract | `core/services/renderContracts/` (consumed by the Page V2 pipeline) |
 | The plugin runtime engine | `core/plugins/` |
 | The plugin SDK surface | `packages/sdk/src/` |
 | Security middleware | `core/server/middleware/{cors,csrf,rateLimit,securityHeaders,requestId}.ts` |

@@ -400,32 +400,6 @@ const normalizeActiveSurface = (
         .slice(0, 80)
     : [];
 
-  if (value.kind === "widget-template") {
-    const template = value.template;
-    if (!template || typeof template !== "object" || Array.isArray(template)) return null;
-    const id = normalizeText(template.id, 160);
-    const name = normalizeText(template.name, 240);
-    const status = normalizeText(template.status, 80);
-    const category = normalizeText(template.category, 120);
-    if (!id || !name || !status || !category) return null;
-    const settings =
-      value.settings && typeof value.settings === "object" && !Array.isArray(value.settings)
-        ? (value.settings as Record<string, unknown>)
-        : {};
-    return {
-      kind: "widget-template",
-      template: { id, name, status, category },
-      selectedBlockId: normalizeText(value.selectedBlockId, 120),
-      blocks,
-      settings: {
-        wrapperContainer: normalizeText(settings.wrapperContainer, 80),
-        sectionGap: normalizeText(settings.sectionGap, 80),
-        hasBackgroundMedia: settings.hasBackgroundMedia === true,
-      },
-      warnings: normalizeStringArray(value.warnings, 20, 160),
-    };
-  }
-
   if (value.kind === "custom-screen") {
     const screen = value.screen;
     if (!screen || typeof screen !== "object" || Array.isArray(screen)) return null;

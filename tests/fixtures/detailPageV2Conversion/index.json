@@ -1,0 +1,11 @@
+{
+  "cases": [
+    "project-detail",
+    "assistant-hero",
+    "empty-blocks",
+    "one-of-each-mapped",
+    "one-of-each-placeholder",
+    "navigation-footer-drop",
+    "dangling-binding-drop"
+  ]
+}

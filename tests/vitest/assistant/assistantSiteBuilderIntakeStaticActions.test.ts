@@ -185,7 +185,6 @@ test("buildReviewedSiteKitStaticPlan covers static pages navigation lead capture
     "page",
     "qa",
     "settings",
-    "template",
   ]);
   expect(result.coverage.pageResourceKeys).toEqual(["directory", "home", "submit"]);
   expect(result.coverage.menuResourceKeys).toEqual(["footer", "primary"]);

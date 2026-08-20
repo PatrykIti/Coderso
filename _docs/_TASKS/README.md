@@ -85,7 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 243 tasks
 - **In Progress:** 4 tasks
-- **Done:** 3544 tasks
+- **Done:** 3556 tasks
 
 > 2026-08-19: TASK-105-04 (changelog 1320) and TASK-105-05 (changelog 1321)
 > closed from In Progress to Done; TASK-105-06 stays In Progress deferred to the
@@ -94,6 +94,9 @@ Task board for project work. Keep task files and this board in sync.
 > 2026-08-19: TASK-493 SEO pipeline family (parent + 6 subtasks + 11 leaves)
 > closed to Done with changelog 1309; statistics delta applied on top of the
 > TASK-105 merge: To Do 261 -> 243, Done 3526 -> 3544.
+> 2026-08-20: TASK-580 widget-v1 removal family (parent + 4 subtasks + 7 leaves)
+> closed to Done with changelog 1323; statistics delta applied on top of the
+> TASK-493/TASK-105 state: Done 3544 -> 3556.
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -200,6 +203,18 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-9999 | Permanent Deferred Non-User-Facing Low-Severity Backlog | Low | Very Large | Sole four-digit sentinel and intentionally permanent final board item. Accepts only evidence-backed LOW findings that satisfy the strict zero-user-visible and zero-contract-impact policy in `AGENTS.md`; source tasks must link deduplicated execution-ready leaves with exact rationale. Completed children/leaves retain normal changelog + board/stat closure. Intake closed 2026-08-18: TASK-9999-01 from TASK-540 (naming leaf Done changelog 1302, draft-state leaf superseded) and TASK-9999-02 from the TASK-560 audit sweep (4 docs-only leaves Done: L01 closed-family subtask tables 1303, L02 TASK-540 historical workflow fields 1304, L03 stale TASK-559 benchmark relabel 1305, L04 TASK-547 closure notes 1306). Sentinel remains the open final board item for future deferred LOW intake. |
 ## Done
 
+| TASK-580 | Remove Old Page Widget System V1 | High | Very Large | ✅ Done (2026-08-20): removed the v1 page-widget authoring/render system end to end — `core/widgets/**` kernel, v1 public page runtime (`pageRuntime.tsx`, `renderPublicPageHtml`, `renderPublicPageRuntimeHtml`), per-type hydration, v1 admin widget surface (`admin/ui/widgets/**`, `admin/ui/pages/builder/**`), Widget Library, widget templates, and `modulePackMatrix`; relocated V2-shared contracts to `core/services/renderContracts/*`; migrated stored detail pages to Page V2 (migration 0080) with read-only `legacy-widget` placeholders; retired the `task-467` smoke adapter; rewired tests, added deletion guards, and reduced `_docs/WIDGETS*` + `_docs/_WIDGETS/*` to tombstones. Full Vitest + Bun lanes and admin boundary/bundle guards green. Changelog 1323. 4 children + 7 leaves terminal. |
+| TASK-580-01 | Extract V2 Shared Widget Contracts | High | Large | ✅ Done (2026-08-20): moved V2-shared contracts/renderers/tokens out of `core/widgets/**` into `core/services/renderContracts/*` and rewired surviving importers. Changelog 1323. |
+| TASK-580-02 | Delete Retired Widget Authoring Surfaces | High | Very Large | ✅ Done (2026-08-20): deleted Widget Library admin surface + route graph, catalog API + `widgetCatalog:list` cache family, widget-template authoring stack, `modulePackMatrix` pack gate, assistant widget-kit de-wiring, and `userSettingsService` favorites key; kept the read path + tables. Changelog 1323. |
+| TASK-580-03 | Migrate Entry Detail Pages To PageV2 | High | Very Large | ✅ Done (2026-08-20): replaced `DetailPageBlock = WidgetBlock` with a PageDocumentV2 model (schemaVersion 2, sections/bindings); non-destructive DB backfill (migration 0080); read-only `legacy-widget` placeholders; detail-page V2 render/editor/assistant cutovers. Changelog 1323. 7 leaves terminal. |
+| TASK-580-03-L01 | Legacy-Widget Block Type In Shared Page V2 Contract | Medium | Medium | ✅ Done (2026-08-20): `legacy-widget` block type + normalizer + JSON schema + capabilities + renderer + facade in the shared Page V2 contract. Changelog 1323. |
+| TASK-580-03-L02 | Detail Page V2 Contract Conversion Map And Read Write Adapters | Medium | Large | ✅ Done (2026-08-20): schemaVersion 2 conversion map, binding remap, write/stored-read normalizers, service + route validation, kit seed flip. Changelog 1323. |
+| TASK-580-03-L03 | Detail Page V2 DB Backfill Migration | Medium | Large | ✅ Done (2026-08-20): SQL backfill `0080` + snapshot + journal + DB tests. Changelog 1323. |
+| TASK-580-03-L04 | Public Detail Page V2 Render Cutover | Medium | Large | ✅ Done (2026-08-20): publicEntryRender → V2 pipeline, cache contract, kit runtime tests. Changelog 1323. |
+| TASK-580-03-L05 | Admin Detail Template Editor V2 Cutover | Medium | Very Large | ✅ Done (2026-08-20): detail-owned V2 editor + binding panel + model, file split <1000 lines. Changelog 1323. |
+| TASK-580-03-L06 | Assistant Detail Page V2 Authoring Cutover | Medium | Medium | ✅ Done (2026-08-20): blueprints + screen ops + pageWidgetPatch + catalog reads rewired to V2. Changelog 1323. |
+| TASK-580-03-L07 | Docs Final Validation And Runtime Smoke | Medium | Medium | ✅ Done (2026-08-20): docs updates + ≥5 runtime smoke scenarios + final combined gates. Changelog 1323. |
+| TASK-580-04 | Delete V1 Widget Kernel And Close | High | Very Large | ✅ Done (2026-08-20): deleted the v1 render kernel and remaining authoring/preview surfaces; docs tombstones; board + Statistics sync; changelog 1323; runtime smoke. Changelog 1323. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | ✅ Done (2026-08-18): full feature set was already committed in `205c66a5` with tagged tests; pre-implementation audit confirmed it, so the family closed as implemented without new code. Linked runs now render token-driven underline + link color on front and canvas, the editor has explicit Remove link + seeded URL edit + click-to-select without navigation, and the mark toolbar docks Top/Right/Left so the color picker never covers the text. Changelog 1307. 3 children terminal. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | ✅ Done (2026-08-18): `PAGE_TEXT_LINK_MARK_CLASS` (underline + `--coderso-link` color token + `data-page-text-mark="link"`) applied in `pageStaticBlockRenderers.tsx` link branch. Changelog 1307. |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | ✅ Done (2026-08-19): test-only Vitest closure; themes 99.59/92.66, booking 99.82/95.00, listings 92.15/75.85, forms 97.96/81.33 (lines/branches); every rebaseline regression recovered (FormListPage 73.38→99.28, FormDesignPanel 47.06→100.00, ThemeEditorPage →100.00, BookingPage →100.00, ListingFiltersPage →98.36); oversized splits ≤1000 lines; canonical totals 81.54/73.30/81.18/84.59; changelog 1320. Non-blocking branch-only residue listed in the contract's Wave outcome. |

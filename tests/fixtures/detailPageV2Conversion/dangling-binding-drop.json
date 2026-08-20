@@ -1,0 +1,174 @@
+{
+  "case": "dangling-binding-drop",
+  "v1": {
+    "schemaVersion": 1,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Fixture detail page",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "fixture-type",
+    "status": "draft",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "blocks": [
+      {
+        "id": "d-hero",
+        "type": "hero",
+        "data": {
+          "headline": "D"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "id": "b-ok",
+        "blockId": "d-hero",
+        "propPath": "headline",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      },
+      {
+        "id": "b-unknown-block",
+        "blockId": "missing-widget",
+        "propPath": "headline",
+        "source": {
+          "kind": "entry-field",
+          "field": "x"
+        },
+        "transform": "text"
+      },
+      {
+        "id": "b-unmapped-path",
+        "blockId": "d-hero",
+        "propPath": "unknown.field.path",
+        "source": {
+          "kind": "entry-field",
+          "field": "y"
+        },
+        "transform": "text"
+      }
+    ]
+  },
+  "expected": {
+    "schemaVersion": 2,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Fixture detail page",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "fixture-type",
+    "status": "draft",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "detail",
+      "layout": {}
+    },
+    "sections": [
+      {
+        "id": "d-hero",
+        "type": "hero",
+        "name": "Hero",
+        "variant": "centered",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "d-hero-heading",
+            "type": "heading",
+            "props": {
+              "text": "D"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "d-hero-text",
+            "type": "text",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "d-hero-badge",
+            "type": "badge",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "d-hero-button",
+            "type": "button",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "d-hero-image",
+            "type": "image",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      }
+    ],
+    "bindings": [
+      {
+        "id": "b-ok",
+        "blockId": "d-hero-heading",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      }
+    ]
+  },
+  "dropped": [
+    {
+      "bindingId": "b-unknown-block",
+      "reason": "unknown_widget_block"
+    },
+    {
+      "bindingId": "b-unmapped-path",
+      "reason": "unmapped_prop_path"
+    }
+  ]
+}

@@ -9,7 +9,7 @@ There is one rule that decides everything: **choose a lane by dependency shape, 
 | Lane | Runner | Owns |
 |------|--------|------|
 | **Bun** | `bun test` | Runtime kernel behavior, route/integration/runtime flows, plugin install/upgrade/rollback lifecycle, on-disk plugin activation, runtime security hardening, performance budgets |
-| **Vitest** | `vitest` (project `coderso-vitest`) | Bun-free pure TS: domain services without `Bun.*`, validators/selectors/mappers, schema/DTO validation, admin/UI React components and hooks, SDK/shared contracts, domain-owned section/block logic, Admin Dashboard widget contracts, and retained `core/widgets` compatibility-renderer mapping |
+| **Vitest** | `vitest` (project `coderso-vitest`) | Bun-free pure TS: domain services without `Bun.*`, validators/selectors/mappers, schema/DTO validation, admin/UI React components and hooks, SDK/shared contracts, domain-owned section/block logic, Admin Dashboard widget contracts, and surviving render-contract mapping in `core/services/renderContracts/*` |
 
 ### When to use Bun
 
@@ -31,8 +31,8 @@ Reach for Vitest when your logic is runtime-agnostic:
 - SDK and shared contracts in `packages/sdk/src/*`, pure manifest/schema helpers.
 - Domain-owned section/block normalization and render mapping.
 - Admin Dashboard widget contracts.
-- Retained `core/widgets` compatibility-renderer normalization and render mapping
-  (no runtime adapters).
+- Surviving render-contract normalization and render mapping
+  (`core/services/renderContracts/*`, no runtime adapters).
 - Assistant policy/schema/resolver/mapper coverage — pure metadata that must **not** import runtime services.
 
 Vitest specs live under `tests/vitest/` and are matched by the pattern `tests/vitest/**/*.{test,spec}.{ts,tsx}` (config: `vitest.config.ts`).
@@ -151,7 +151,7 @@ Five mandatory gates back every release; any failure exits non-zero and blocks t
 | Gate | Checks |
 |------|--------|
 | `functional` | lint + selected Bun runtime flows + selected Vitest UI/domain flows |
-| `ux` | domain section/block editor UX + Admin Dashboard widget UX + retained `core/widgets` compatibility-renderer regressions |
+| `ux` | domain section/block editor UX + Admin Dashboard widget UX + surviving render-contract regressions |
 | `performance` | p95 budgets (`tests/perf/codersoPerformanceGate.test.ts`) |
 | `security` | public-write hardening + baseline controls (`tests/security/*`) |
 | `reliability` | install / upgrade / rollback resiliency |

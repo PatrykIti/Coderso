@@ -98,16 +98,28 @@ const bunVi = (
     vi?: { fn: <T>(impl?: T) => any; mock: (id: string, factory: () => unknown) => void };
   }
 ).vi;
-const resolveDetailPageBlocks = bunVi!.fn(async () => [
+const boundSections = () => [
   {
     id: "hero",
     type: "hero",
+    name: "Hero",
     variant: "centered",
-    data: {
-      headline: "Resolved detail block",
-    },
+    layout: {},
+    style: {},
+    spacing: {},
+    visibility: {},
+    responsive: {},
+    blocks: [
+      {
+        id: "hero-heading",
+        type: "heading",
+        props: { text: "Resolved detail block" },
+      },
+    ],
   },
-]);
+];
+
+const resolveDetailPageBlocks = bunVi!.fn(async () => boundSections());
 
 bunVi!.mock("../../../core/db/client", () => ({
   db: {
@@ -131,16 +143,7 @@ const { resolvePreviewDetailPageRuntime, resolvePublishedDetailPageRuntime } =
 beforeEach(() => {
   currentRecords = [];
   resolveDetailPageBlocks.mockClear();
-  resolveDetailPageBlocks.mockImplementation(async () => [
-    {
-      id: "hero",
-      type: "hero",
-      variant: "centered",
-      data: {
-        headline: "Resolved detail block",
-      },
-    },
-  ]);
+  resolveDetailPageBlocks.mockImplementation(async () => boundSections());
 });
 
 afterEach(() => {
@@ -169,12 +172,15 @@ test("resolvePublishedDetailPageRuntime resolves published matching detail-page 
 
   expect(result).not.toBeNull();
   expect(result?.document.id).toBe(document.id);
-  expect(result?.blocks).toEqual([
+  expect(result?.sections).toEqual([
     expect.objectContaining({
       id: "hero",
-      data: expect.objectContaining({
-        headline: "Resolved detail block",
-      }),
+      blocks: [
+        expect.objectContaining({
+          id: "hero-heading",
+          props: expect.objectContaining({ text: "Resolved detail block" }),
+        }),
+      ],
     }),
   ]);
 });

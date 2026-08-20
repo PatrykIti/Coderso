@@ -184,7 +184,7 @@ const insertDetailPageDocument = async (input: {
   documentOverrides?: Partial<DetailPageDocument>;
 }) => {
   const currentDocument = normalizeDetailPageDocument({
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: input.id,
     name: "Preview detail page",
     contentTypeId: input.contentTypeId,
@@ -218,22 +218,51 @@ const insertDetailPageDocument = async (input: {
         applyDefaultsToNewBlocks: false,
       },
     },
-    blocks: [
+    sections: [
       {
         id: "hero",
         type: "hero",
+        name: "Hero",
         variant: "centered",
-        data: {
-          headline: "Default detail headline",
-          body: input.currentBody,
+        layout: {
+          columns: 1,
+          align: "start",
+          justify: "start",
+          maxWidth: 1080,
+          stackVertical: false,
         },
+        style: {
+          background: "#ffffff",
+          backgroundType: "color",
+          backgroundImage: null,
+          accent: "#0d9488",
+          radius: 0,
+          shadow: "none",
+        },
+        spacing: { paddingTop: 64, paddingBottom: 64, paddingLeft: 40, paddingRight: 40, gap: 24 },
+        visibility: { visible: true, authOnly: false, anchor: null, startsAt: null, endsAt: null },
+        responsive: {},
+        blocks: [
+          {
+            id: "hero-heading",
+            type: "heading",
+            props: { text: "Default detail headline", level: "h2", align: "left" },
+            visibility: { visible: true },
+          },
+          {
+            id: "hero-text",
+            type: "text",
+            props: { text: input.currentBody, format: "plain", align: "left" },
+            visibility: { visible: true },
+          },
+        ],
       },
     ],
     bindings: [
       {
         id: "binding-headline",
-        blockId: "hero",
-        propPath: "headline",
+        blockId: "hero-heading",
+        propPath: "text",
         source: {
           kind: "entry-field",
           field: "headline",
@@ -251,15 +280,56 @@ const insertDetailPageDocument = async (input: {
       : normalizeDetailPageDocument({
           ...currentDocument,
           status: "published",
-          blocks: [
+          sections: [
             {
               id: "hero",
               type: "hero",
+              name: "Hero",
               variant: "centered",
-              data: {
-                headline: "Default detail headline",
-                body: input.publishedBody,
+              layout: {
+                columns: 1,
+                align: "start",
+                justify: "start",
+                maxWidth: 1080,
+                stackVertical: false,
               },
+              style: {
+                background: "#ffffff",
+                backgroundType: "color",
+                backgroundImage: null,
+                accent: "#0d9488",
+                radius: 0,
+                shadow: "none",
+              },
+              spacing: {
+                paddingTop: 64,
+                paddingBottom: 64,
+                paddingLeft: 40,
+                paddingRight: 40,
+                gap: 24,
+              },
+              visibility: {
+                visible: true,
+                authOnly: false,
+                anchor: null,
+                startsAt: null,
+                endsAt: null,
+              },
+              responsive: {},
+              blocks: [
+                {
+                  id: "hero-heading",
+                  type: "heading",
+                  props: { text: "Default detail headline", level: "h2", align: "left" },
+                  visibility: { visible: true },
+                },
+                {
+                  id: "hero-text",
+                  type: "text",
+                  props: { text: input.publishedBody, format: "plain", align: "left" },
+                  visibility: { visible: true },
+                },
+              ],
             },
           ],
         } satisfies DetailPageDocument);

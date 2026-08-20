@@ -1,11 +1,4 @@
-import { getWidget } from "../../widgets/registry";
-import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
-import type {
-  WidgetBindingTarget,
-  WidgetBlock,
-  WidgetDataAccess,
-  WidgetDefinition,
-} from "../../widgets/types";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
 import {
   readBindingPathValue,
   splitBindingPath,
@@ -22,13 +15,50 @@ import type {
 
 export { readBindingPathValue, splitBindingPath, writeBindingPathValue };
 
+/**
+ * V4-owned read-only placeholder lookup for legacy v1 widget blocks (TASK-580).
+ * The v1 widget registry is gone; surviving custom-screen documents may still
+ * carry v1 `LegacyWidgetBlock` entries. Retired screen-registry widget types resolve
+ * to no definition (stale write contracts must downgrade to read), while any
+ * other legacy type maps to the read-only placeholder semantics used by the V4
+ * screen runtime leaf blocks. No v1 kernel import.
+ */
+type LegacyWidgetBindingTarget = {
+  propPath: string;
+  label: string;
+  description?: string;
+  modes?: Array<"read" | "write">;
+};
+
+type LegacyWidgetDefinition = {
+  surfaces: readonly string[];
+  dataAccess: { source: string; modes?: Array<"read" | "write"> } | null;
+  bindingTargets: readonly LegacyWidgetBindingTarget[];
+};
+
+const retiredScreenWidgetTypes = new Set([
+  "screen-record-header",
+  "screen-field-value",
+  "screen-field-group",
+  "screen-two-column",
+]);
+
+const LEGACY_WIDGET_PLACEHOLDER: LegacyWidgetDefinition = {
+  surfaces: [],
+  dataAccess: null,
+  bindingTargets: [],
+};
+
+const resolveWidgetDefinition = (type: string): LegacyWidgetDefinition | null =>
+  retiredScreenWidgetTypes.has(type) ? null : LEGACY_WIDGET_PLACEHOLDER;
+
 export type CustomScreenBindingWidgetSource = "screen-registry" | "legacy-fallback" | "unknown";
 
 export type ResolvedCustomScreenBindingContract = {
   widgetId: string;
   widgetType: string;
   widgetSource: CustomScreenBindingWidgetSource;
-  dataAccessSource: WidgetDataAccess["source"] | null;
+  dataAccessSource: string | null;
   bindingTargets: Map<
     string,
     {
@@ -57,8 +87,8 @@ const modeAllowsWrite = (mode: BindingContractCandidate["mode"]) =>
   mode === "write" || mode === "readwrite";
 
 const normalizeTargetModes = (
-  target: WidgetBindingTarget | undefined,
-  widget: WidgetDefinition | null
+  target: LegacyWidgetBindingTarget | undefined,
+  widget: LegacyWidgetDefinition | null
 ) => {
   const requested = target?.modes ?? widget?.dataAccess?.modes ?? ["read"];
   return Array.from(
@@ -68,18 +98,20 @@ const normalizeTargetModes = (
   );
 };
 
-const isScreenRegistryWidget = (widget: WidgetDefinition | null) =>
+const isScreenRegistryWidget = (widget: LegacyWidgetDefinition | null) =>
   Boolean(
     widget?.surfaces?.includes("admin-editor-view") ||
     widget?.surfaces?.includes("custom-screen-builder")
   );
 
-const resolveWidgetSource = (widget: WidgetDefinition | null): CustomScreenBindingWidgetSource => {
+const resolveWidgetSource = (
+  widget: LegacyWidgetDefinition | null
+): CustomScreenBindingWidgetSource => {
   if (!widget) return "unknown";
   return isScreenRegistryWidget(widget) ? "screen-registry" : "legacy-fallback";
 };
 
-const visitBlocks = (blocks: WidgetBlock[], visitor: (block: WidgetBlock) => void) => {
+const visitBlocks = (blocks: LegacyWidgetBlock[], visitor: (block: LegacyWidgetBlock) => void) => {
   blocks.forEach((block) => {
     visitor(block);
     if (Array.isArray(block.children) && block.children.length > 0) {
@@ -96,13 +128,12 @@ const visitBlocks = (blocks: WidgetBlock[], visitor: (block: WidgetBlock) => voi
 };
 
 export function resolveCustomScreenBindingContracts(
-  blocks: WidgetBlock[]
+  blocks: LegacyWidgetBlock[]
 ): Map<string, ResolvedCustomScreenBindingContract> {
-  ensureRuntimeWidgetsRegistered();
   const contracts = new Map<string, ResolvedCustomScreenBindingContract>();
 
   visitBlocks(blocks, (block) => {
-    const widget = getWidget(block.type);
+    const widget = resolveWidgetDefinition(block.type);
     const bindingTargets = new Map<
       string,
       {
@@ -137,7 +168,7 @@ export function resolveCustomScreenBindingContracts(
 }
 
 export function getWidgetBindingTarget(
-  widget: WidgetDefinition | null | undefined,
+  widget: LegacyWidgetDefinition | null | undefined,
   propPath: string
 ) {
   const target = widget?.bindingTargets?.find((item) => item.propPath === propPath);
@@ -151,7 +182,7 @@ export function getWidgetBindingTarget(
 }
 
 export function listSelectedEntryWidgetBindingTargets(input: {
-  widget: WidgetDefinition | null | undefined;
+  widget: LegacyWidgetDefinition | null | undefined;
   existingBindings: CustomScreenBinding[];
 }): WidgetBindingTargetCard[] {
   const widget = input.widget ?? null;
@@ -185,7 +216,7 @@ export function listSelectedEntryWidgetBindingTargets(input: {
 }
 
 const resolveBindingContractsFromInput = (input?: {
-  blocks?: WidgetBlock[] | null;
+  blocks?: LegacyWidgetBlock[] | null;
   contracts?: Map<string, ResolvedCustomScreenBindingContract> | null;
 }) => {
   if (input?.contracts) return input.contracts;
@@ -198,7 +229,7 @@ const resolveBindingContractsFromInput = (input?: {
 export function isBindingWriteModeSupported(
   binding: BindingContractCandidate,
   input?: {
-    blocks?: WidgetBlock[] | null;
+    blocks?: LegacyWidgetBlock[] | null;
     contracts?: Map<string, ResolvedCustomScreenBindingContract> | null;
   }
 ) {
@@ -215,7 +246,7 @@ export function isBindingWriteModeSupported(
 export function isBindingWriteAllowed(
   binding: BindingContractCandidate,
   input?: {
-    blocks?: WidgetBlock[] | null;
+    blocks?: LegacyWidgetBlock[] | null;
     contracts?: Map<string, ResolvedCustomScreenBindingContract> | null;
     fallbackToModeOnly?: boolean;
   }
@@ -283,10 +314,10 @@ export function mergeBindingValuesIntoEntryData(
 }
 
 const applyBindingsToBlock = (
-  block: WidgetBlock,
+  block: LegacyWidgetBlock,
   bindings: CustomScreenBinding[],
   fieldValues: Record<string, unknown>
-): WidgetBlock => {
+): LegacyWidgetBlock => {
   const data = applyBindingsToBlockData(block.data ?? {}, block.id, bindings, fieldValues);
   const slots =
     block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
@@ -312,7 +343,7 @@ const applyBindingsToBlock = (
 };
 
 export function applyBindingsToBlocks(
-  blocks: WidgetBlock[],
+  blocks: LegacyWidgetBlock[],
   bindings: CustomScreenBinding[],
   fieldValues: Record<string, unknown>
 ) {
@@ -322,7 +353,7 @@ export function applyBindingsToBlocks(
 export function collectWritableBindingFields(
   bindings: BindingContractCandidate[],
   input?: {
-    blocks?: WidgetBlock[] | null;
+    blocks?: LegacyWidgetBlock[] | null;
     contracts?: Map<string, ResolvedCustomScreenBindingContract> | null;
     fallbackToModeOnly?: boolean;
   }
@@ -364,7 +395,7 @@ export function isListRowFieldWritable(binding: ScreenFieldBinding | null | unde
 export function sanitizeUnsupportedWriteBindings(
   bindings: CustomScreenBinding[],
   input?: {
-    blocks?: WidgetBlock[] | null;
+    blocks?: LegacyWidgetBlock[] | null;
     contracts?: Map<string, ResolvedCustomScreenBindingContract> | null;
   }
 ) {

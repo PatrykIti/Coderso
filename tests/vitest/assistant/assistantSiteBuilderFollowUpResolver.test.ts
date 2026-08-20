@@ -80,7 +80,6 @@ const baseCatalog = (
   forms: [],
   menus: [],
   seoDocuments: [],
-  widgets: [],
   warnings: [],
   ...overrides,
 });

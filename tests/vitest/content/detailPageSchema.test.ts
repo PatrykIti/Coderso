@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import {
   buildDeterministicDetailPageId,
   normalizeDetailPageDocument,
+  normalizeDetailPageDocumentForWrite,
   normalizeDetailPageId,
 } from "../../../core/services/content/detailPageSchema";
 
@@ -67,11 +68,11 @@ const baseDocument = {
   ],
 };
 
-test("normalizeDetailPageDocument normalizes a valid document deterministically", () => {
+test("normalizeDetailPageDocument converts a valid v1 document to v2 deterministically", () => {
   const normalized = normalizeDetailPageDocument(baseDocument);
 
   expect(normalized).toMatchObject({
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: baseDocument.id,
     contentTypeId: baseDocument.contentTypeId,
     contentTypeSlug: "products",
@@ -83,7 +84,7 @@ test("normalizeDetailPageDocument normalizes a valid document deterministically"
         },
       },
     },
-    blocks: [
+    sections: [
       expect.objectContaining({
         id: "hero",
         type: "hero",
@@ -92,8 +93,8 @@ test("normalizeDetailPageDocument normalizes a valid document deterministically"
     bindings: [
       expect.objectContaining({
         id: "binding-headline",
-        blockId: "hero",
-        propPath: "headline",
+        blockId: "hero-heading",
+        propPath: "text",
       }),
     ],
   });
@@ -118,36 +119,47 @@ test("normalizeDetailPageDocument clamps related source limits", () => {
   expect(normalized.related?.[0]?.limit).toBe(24);
 });
 
-test("normalizeDetailPageDocument rejects duplicate block ids", () => {
-  expect(() =>
-    normalizeDetailPageDocument({
-      ...baseDocument,
-      blocks: [
-        ...baseDocument.blocks,
-        {
-          id: "hero",
-          type: "rich-text-section",
-          variant: "single-column",
-          data: {
-            titleBlock: {
-              title: "Duplicate",
-            },
-          },
-        },
-      ],
-    })
-  ).toThrow("detail_page_document_invalid");
+// Stored-read converts v1 to v2; the strict WRITE path owns fail-closed
+// validation and rejects v1 payloads up front. These rejection tests run the
+// write normalizer against a v2 document derived from the v1 base.
+const baseDocumentV2 = normalizeDetailPageDocument(baseDocument) as {
+  schemaVersion: number;
+  id: string;
+  name: string;
+  contentTypeId: string;
+  contentTypeSlug: string;
+  status: string;
+  titlePattern: string;
+  settings: Record<string, unknown>;
+  sections: Array<{ id: string; blocks: Array<{ id: string }> }>;
+  bindings: Array<Record<string, unknown>>;
+};
+
+test("normalizeDetailPageDocumentForWrite rejects legacy v1 payloads", () => {
+  expect(() => normalizeDetailPageDocumentForWrite(baseDocument)).toThrow(
+    "detail_page_legacy_v1_invalid"
+  );
 });
 
-test("normalizeDetailPageDocument rejects bindings targeting missing blocks", () => {
+test("normalizeDetailPageDocumentForWrite rejects duplicate block ids", () => {
   expect(() =>
-    normalizeDetailPageDocument({
-      ...baseDocument,
+    normalizeDetailPageDocumentForWrite({
+      ...baseDocumentV2,
+      sections: [...baseDocumentV2.sections, { ...baseDocumentV2.sections[0]! }],
+    })
+  ).toThrow("Duplicate page block id");
+});
+
+test("normalizeDetailPageDocumentForWrite rejects bindings targeting missing blocks", () => {
+  expect(() =>
+    normalizeDetailPageDocumentForWrite({
+      ...baseDocumentV2,
       bindings: [
+        ...baseDocumentV2.bindings,
         {
           id: "binding-missing",
           blockId: "missing",
-          propPath: "headline",
+          propPath: "text",
           source: {
             kind: "entry-meta",
             field: "title",
@@ -158,14 +170,14 @@ test("normalizeDetailPageDocument rejects bindings targeting missing blocks", ()
   ).toThrow("detail_page_document_invalid");
 });
 
-test("normalizeDetailPageDocument rejects unsafe prop paths", () => {
+test("normalizeDetailPageDocumentForWrite rejects unsafe prop paths", () => {
   expect(() =>
-    normalizeDetailPageDocument({
-      ...baseDocument,
+    normalizeDetailPageDocumentForWrite({
+      ...baseDocumentV2,
       bindings: [
         {
           id: "binding-unsafe",
-          blockId: "hero",
+          blockId: "hero-heading",
           propPath: "dangerouslySetInnerHTML",
           source: {
             kind: "entry-meta",
@@ -256,10 +268,10 @@ test("normalizeDetailPageId rejects non-uuid-compatible values", () => {
   );
 });
 
-test("normalizeDetailPageDocument rejects unknown keys", () => {
+test("normalizeDetailPageDocumentForWrite rejects unknown keys", () => {
   expect(() =>
-    normalizeDetailPageDocument({
-      ...baseDocument,
+    normalizeDetailPageDocumentForWrite({
+      ...baseDocumentV2,
       extra: true,
     })
   ).toThrow("detail_page_document_invalid");

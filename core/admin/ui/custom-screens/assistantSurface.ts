@@ -14,7 +14,7 @@ import {
   collectWritableBindingFields,
   resolveCustomScreenBindingContracts,
 } from "../../../services/customScreens/bindingResolver";
-import type { Block } from "@/ui/pages/builder/types";
+import type { LegacyWidgetBlock as Block } from "../../../services/renderContracts/legacyWidgetBlock";
 
 type AssistantSurfaceBlock = Block | ScreenBlockV1;
 type AssistantSurfaceBinding = CustomScreenBinding | ScreenFieldBinding;

@@ -1,7 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { analyzeAdminBoundary, type AdminBoundaryViolation } from "./adminBoundaryReport";
 
 export const ADMIN_BASELINE_INITIAL_JS_GZIP_BYTES = 1_061_325;
 export const ADMIN_ENTRY_JS_GZIP_BUDGET_BYTES = 160_000;
@@ -350,122 +349,11 @@ export const formatBytes = (bytes: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// TASK-467: widget editor registry split evidence
+// TASK-580-04: the v1 widget editor registry split evidence was removed with
+// `core/admin/ui/widgets/**`. No widget registry or editor chunk exists in the
+// admin bundle anymore; `check:admin-bundle` asserts zero `core/widgets` or
+// `admin/ui/widgets` source paths in the manifest instead.
 // ---------------------------------------------------------------------------
-
-export type BundleEvidence = {
-  registryChunkFile: string | null;
-  registryChunkRawBytes: number | null;
-  registryChunkGzipBytes: number | null;
-  largestDynamicChunkRawBytes: number;
-  largestDynamicChunkGzipBytes: number;
-  initialStaticJsGzipBytes: number;
-  task467OwnedChunks: AdminBundleAsset[];
-  widgetEditorChunks: AdminBundleAsset[];
-  dynamicOverBudgetChunks: Array<{ file: string; rawBytes: number }>;
-  task467OwnedOverBudgetChunks: Array<{ file: string; rawBytes: number }>;
-  invalidDynamicBudgetAllowlistChunks: Array<{ file: string; followUp: string }>;
-  unresolvedDynamicOverBudgetChunks: Array<{ file: string; rawBytes: number }>;
-  registryEditorBarrelViolations: AdminBoundaryViolation[];
-  registryImportsEditorBarrel: boolean;
-};
-
-export type DocumentedNonTask467DynamicBudgetFollowUp = {
-  file: string;
-  followUp: string;
-};
-
-const documentedNonTask467DynamicBudgetFollowUps = new Map<string, string>();
-
-/**
- * Records a documented over-budget dynamic chunk owned OUTSIDE TASK-467.
- * TASK-467-owned chunks and shared widget-editor chunks must never be
- * allowlisted; registering one here is a validation failure.
- */
-export function registerDocumentedNonTask467DynamicBudgetFollowUp(file: string, followUp: string) {
-  documentedNonTask467DynamicBudgetFollowUps.set(file, followUp);
-}
-
-export function clearDocumentedNonTask467DynamicBudgetFollowUps() {
-  documentedNonTask467DynamicBudgetFollowUps.clear();
-}
-
-export function listDocumentedNonTask467DynamicBudgetFollowUps(): DocumentedNonTask467DynamicBudgetFollowUp[] {
-  return [...documentedNonTask467DynamicBudgetFollowUps].map(([file, followUp]) => ({
-    file,
-    followUp,
-  }));
-}
-
-export function findChunk(report: AdminBundleReport, pattern: RegExp): AdminBundleAsset | null {
-  return report.assets.find((asset) => pattern.test(asset.file)) ?? null;
-}
-
-export function matchesChunkStem(assetFile: string, stem: string): boolean {
-  const basename = assetFile.split("/").at(-1) ?? assetFile;
-  return basename.startsWith(`${stem}-`);
-}
-
-const WIDGET_EDITOR_STEM_PREFIXES = [
-  "registry",
-  "customScreensClient",
-  "customScreensEditorClient",
-] as const;
-
-export function findTask467OwnedChunks(
-  report: AdminBundleReport,
-  widgetEditorModuleNames: string[]
-): AdminBundleAsset[] {
-  return report.assets.filter((asset) => {
-    if (asset.isInitialStatic) return false;
-    return (
-      WIDGET_EDITOR_STEM_PREFIXES.some((stem) => matchesChunkStem(asset.file, stem)) ||
-      widgetEditorModuleNames.some((moduleName) => matchesChunkStem(asset.file, moduleName))
-    );
-  });
-}
-
-export function isTask467OwnedOrEditorSharedChunk(
-  assetFile: string,
-  widgetEditorModuleNames: string[]
-): boolean {
-  const basename = assetFile.split("/").at(-1) ?? assetFile;
-  return (
-    WIDGET_EDITOR_STEM_PREFIXES.some((stem) => matchesChunkStem(assetFile, stem)) ||
-    widgetEditorModuleNames.some((moduleName) => matchesChunkStem(assetFile, moduleName)) ||
-    /(?:WidgetEditor|EditorShared|EditorControls|EditorsShared)/.test(basename)
-  );
-}
-
-export function findDynamicOverBudgetChunks(
-  report: AdminBundleReport
-): Array<{ file: string; rawBytes: number }> {
-  return report.assets
-    .filter((asset) => !asset.isInitialStatic)
-    .filter((asset) => asset.rawBytes >= ADMIN_DYNAMIC_RAW_WARNING_BYTES)
-    .map((asset) => ({ file: asset.file, rawBytes: asset.rawBytes }));
-}
-
-const registrySourcePath = () =>
-  path.join(resolveRepoRoot(), "core", "admin", "ui", "widgets", "registry.ts");
-
-export function registrySourceImportsEditorBarrel(
-  source = readFileSync(registrySourcePath(), "utf8")
-): boolean {
-  return (
-    /from\s+["']\.\/editors(?:\/index)?["']/.test(source) ||
-    /import\s*\(\s*["']\.\/editors(?:\/index)?["']\s*\)/.test(source)
-  );
-}
-
-export function readWidgetEditorChunkModuleNames(
-  source = readFileSync(registrySourcePath(), "utf8")
-): string[] {
-  const modules = [...source.matchAll(/import\s*\(\s*["']\.\/editors\/([^"']+)["']\s*\)/g)]
-    .map((match) => match[1])
-    .filter((moduleName) => moduleName !== "index");
-  return [...new Set(modules)].sort();
-}
 
 /**
  * Resolves the repository root. Under Bun, `import.meta.dir` points at
@@ -477,87 +365,6 @@ export function resolveRepoRoot(): string {
   return scriptDir ? path.resolve(scriptDir, "..") : process.cwd();
 }
 
-export function collectRegistryEditorBarrelViolations(): AdminBoundaryViolation[] {
-  return analyzeAdminBoundary({
-    repoRoot: resolveRepoRoot(),
-    entrypoints: ["core/admin/ui/widgets/registry.ts"],
-    forbiddenPathRules: [
-      {
-        label: "widget editor barrel",
-        path: "core/admin/ui/widgets/editors/index.ts",
-        exact: true,
-      },
-    ],
-  }).violations;
-}
-
-export function collectWidgetRegistryEvidence(report: AdminBundleReport): BundleEvidence {
-  const registryChunk = findChunk(report, /(^|\/)registry-/);
-  const registryEditorBarrelViolations = collectRegistryEditorBarrelViolations();
-  const widgetEditorModuleNames = readWidgetEditorChunkModuleNames();
-  const task467OwnedChunks = findTask467OwnedChunks(report, widgetEditorModuleNames);
-  const widgetEditorChunks = task467OwnedChunks.filter((asset) =>
-    widgetEditorModuleNames.some((moduleName) => matchesChunkStem(asset.file, moduleName))
-  );
-  const dynamicOverBudgetChunks = findDynamicOverBudgetChunks(report);
-  const task467OwnedOverBudgetChunks = task467OwnedChunks
-    .filter((asset) => asset.rawBytes >= ADMIN_DYNAMIC_RAW_WARNING_BYTES)
-    .map((asset) => ({ file: asset.file, rawBytes: asset.rawBytes }));
-  const invalidDynamicBudgetAllowlistChunks = [...documentedNonTask467DynamicBudgetFollowUps]
-    .filter(([file]) => isTask467OwnedOrEditorSharedChunk(file, widgetEditorModuleNames))
-    .map(([file, followUp]) => ({ file, followUp }));
-  const unresolvedDynamicOverBudgetChunks = dynamicOverBudgetChunks.filter(
-    (asset) => !documentedNonTask467DynamicBudgetFollowUps.has(asset.file)
-  );
-
-  return {
-    registryChunkFile: registryChunk?.file ?? null,
-    registryChunkRawBytes: registryChunk?.rawBytes ?? null,
-    registryChunkGzipBytes: registryChunk?.gzipBytes ?? null,
-    largestDynamicChunkRawBytes: report.largestDynamicChunkRawBytes,
-    largestDynamicChunkGzipBytes: report.largestDynamicChunkGzipBytes,
-    initialStaticJsGzipBytes: report.initialStaticJsGzipBytes,
-    task467OwnedChunks,
-    widgetEditorChunks,
-    dynamicOverBudgetChunks,
-    task467OwnedOverBudgetChunks,
-    invalidDynamicBudgetAllowlistChunks,
-    unresolvedDynamicOverBudgetChunks,
-    registryEditorBarrelViolations,
-    registryImportsEditorBarrel:
-      registrySourceImportsEditorBarrel() || registryEditorBarrelViolations.length > 0,
-  };
-}
-
-export function assertAdminBundleSplitEvidence(evidence: BundleEvidence) {
-  if (evidence.registryImportsEditorBarrel) {
-    throw new Error("admin_bundle_registry_editor_barrel:registry_still_imports_editor_barrel");
-  }
-  if (evidence.task467OwnedOverBudgetChunks.length > 0) {
-    const files = evidence.task467OwnedOverBudgetChunks
-      .map((chunk) => `${chunk.file}:${chunk.rawBytes}`)
-      .join(",");
-    throw new Error(`admin_bundle_task467_chunk_over_budget:${files}`);
-  }
-  if (evidence.invalidDynamicBudgetAllowlistChunks.length > 0) {
-    const files = evidence.invalidDynamicBudgetAllowlistChunks
-      .map((chunk) => `${chunk.file}->${chunk.followUp}`)
-      .join(",");
-    throw new Error(`admin_bundle_invalid_dynamic_allowlist:${files}`);
-  }
-  if (evidence.unresolvedDynamicOverBudgetChunks.length > 0) {
-    const files = evidence.unresolvedDynamicOverBudgetChunks
-      .map((chunk) => `${chunk.file}:${chunk.rawBytes}`)
-      .join(",");
-    throw new Error(`admin_bundle_dynamic_chunk_over_budget:${files}`);
-  }
-}
-
-/**
- * Recomputes the admin bundle report from the current `core/dist/client`
- * output. Never reads the stale `.tmp` report as the assertion source;
- * missing dist output fails closed.
- */
 export function loadAdminBundleReport(): AdminBundleReport {
   return readAdminBundleReport({
     repoRoot: resolveRepoRoot(),

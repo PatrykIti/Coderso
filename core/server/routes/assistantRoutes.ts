@@ -462,9 +462,6 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         await requirePermission("solution-kits:read")(ctx);
       }
       const surfaceKind = activeSurfaceKind(body.context);
-      if (surfaceKind === "widget-template") {
-        await requirePermission("widgets:read")(ctx);
-      }
       if (surfaceKind === "custom-screen") {
         await requirePermission("content:read")(ctx);
       }
@@ -473,7 +470,6 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
       }
       if (surfaceKind === "detail-page") {
         await requirePermission("content:read")(ctx);
-        await requirePermission("widgets:read")(ctx);
       }
       return withAssistantErrors(ctx.requestId, async () => {
         if (hasSiteBuilderPlanningContext(body.context)) {

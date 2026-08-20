@@ -1,0 +1,1363 @@
+{
+  "case": "project-detail",
+  "v1": {
+    "schemaVersion": 1,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Szczegóły projektu domu",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "house-project",
+    "status": "published",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "project-detail",
+      "layout": {}
+    },
+    "blocks": [
+      {
+        "id": "project-back-link",
+        "type": "rich-text-section",
+        "variant": "single-column",
+        "layout": {
+          "container": "full",
+          "padding": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "margin": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "background": {
+            "color": "transparent",
+            "image": null
+          }
+        },
+        "data": {
+          "titleBlock": {},
+          "body": {
+            "html": "<p><a href=\"/projekty\">← Wróć do projektów</a></p>"
+          },
+          "options": {
+            "dropcap": false,
+            "toc": false,
+            "maxWidth": "full",
+            "outputMode": "html"
+          }
+        }
+      },
+      {
+        "id": "project-hero",
+        "type": "hero",
+        "variant": "centered",
+        "layout": {
+          "container": "full",
+          "padding": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "margin": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "background": {
+            "color": "transparent",
+            "image": null
+          }
+        },
+        "data": {
+          "headline": "—",
+          "subhead": "",
+          "body": "—",
+          "badge": {
+            "enabled": true,
+            "label": "—",
+            "tone": "primary",
+            "placement": "above-headline"
+          },
+          "primaryCta": {
+            "label": "",
+            "href": ""
+          },
+          "media": {
+            "type": "none",
+            "source": "external"
+          }
+        }
+      },
+      {
+        "id": "project-hero-art",
+        "type": "grid-columns",
+        "variant": "asymmetric",
+        "layout": {
+          "container": "full",
+          "padding": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "margin": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "background": {
+            "color": "transparent",
+            "image": null
+          }
+        },
+        "data": {
+          "columns": [
+            {
+              "id": "hero-art-main",
+              "label": "hero-art-main",
+              "desktopSpan": "8",
+              "tabletSpan": "12",
+              "mobileSpan": "12",
+              "minHeight": "xl",
+              "style": {
+                "surface": "on",
+                "background": "var(--color-primary)",
+                "padding": "none",
+                "radius": "2xl",
+                "overflow": "hidden"
+              }
+            },
+            {
+              "id": "hero-art-accent",
+              "label": "hero-art-accent",
+              "desktopSpan": "4",
+              "tabletSpan": "12",
+              "mobileSpan": "12",
+              "minHeight": "xl",
+              "style": {
+                "surface": "on",
+                "background": "var(--color-secondary)",
+                "padding": "none",
+                "radius": "2xl",
+                "overflow": "hidden"
+              }
+            }
+          ]
+        },
+        "slots": {
+          "column:hero-art-main": [],
+          "column:hero-art-accent": []
+        }
+      },
+      {
+        "id": "project-statistics",
+        "type": "feature-grid",
+        "variant": "cards-4",
+        "layout": {
+          "container": "full",
+          "padding": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "margin": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "background": {
+            "color": "transparent",
+            "image": null
+          }
+        },
+        "data": {
+          "header": {
+            "eyebrow": "",
+            "title": "",
+            "description": ""
+          },
+          "items": [
+            {
+              "id": "area",
+              "title": "—",
+              "description": ""
+            },
+            {
+              "id": "bedrooms",
+              "title": "—",
+              "description": ""
+            },
+            {
+              "id": "bathrooms",
+              "title": "—",
+              "description": ""
+            },
+            {
+              "id": "energy",
+              "title": "—",
+              "description": ""
+            }
+          ],
+          "style": {
+            "columns": "4",
+            "cardPadding": "compact",
+            "hoverEffect": "none"
+          }
+        }
+      },
+      {
+        "id": "project-contact-cta",
+        "type": "cta-banner",
+        "variant": "centered",
+        "layout": {
+          "container": "full",
+          "padding": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "margin": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "background": {
+            "color": "transparent",
+            "image": null
+          }
+        },
+        "data": {
+          "content": {
+            "badge": "",
+            "title": "",
+            "description": "",
+            "showDescription": false
+          },
+          "actions": {
+            "primaryCta": {
+              "label": "Chcę podobny dom",
+              "href": "/kontakt",
+              "enabled": true,
+              "openInNewTab": false,
+              "icon": "none"
+            },
+            "secondaryCta": {
+              "label": "",
+              "href": "",
+              "enabled": false,
+              "openInNewTab": false,
+              "icon": "none"
+            },
+            "tertiaryCta": {
+              "label": "",
+              "href": "",
+              "enabled": false,
+              "openInNewTab": false,
+              "icon": "none"
+            }
+          }
+        }
+      },
+      {
+        "id": "project-assumptions",
+        "type": "feature-grid",
+        "variant": "cards-3",
+        "layout": {
+          "container": "full",
+          "padding": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "margin": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "background": {
+            "color": "transparent",
+            "image": null
+          }
+        },
+        "data": {
+          "header": {
+            "eyebrow": "—",
+            "title": "—",
+            "description": "—"
+          },
+          "items": [
+            {
+              "id": "living-zone",
+              "title": "—",
+              "description": ""
+            },
+            {
+              "id": "private-zone",
+              "title": "—",
+              "description": ""
+            },
+            {
+              "id": "facade",
+              "title": "—",
+              "description": ""
+            }
+          ],
+          "style": {
+            "columns": "3",
+            "cardPadding": "spacious",
+            "hoverEffect": "none"
+          }
+        }
+      },
+      {
+        "id": "project-gallery",
+        "type": "grid-columns",
+        "variant": "asymmetric",
+        "layout": {
+          "container": "full",
+          "padding": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "margin": {
+            "top": "none",
+            "bottom": "none"
+          },
+          "background": {
+            "color": "transparent",
+            "image": null
+          }
+        },
+        "data": {
+          "columns": [
+            {
+              "id": "gallery-tall",
+              "label": "gallery-tall",
+              "desktopSpan": "5",
+              "tabletSpan": "12",
+              "mobileSpan": "12",
+              "minHeight": "xl",
+              "style": {
+                "surface": "on",
+                "background": "var(--color-primary)",
+                "padding": "none",
+                "radius": "2xl",
+                "overflow": "hidden"
+              }
+            },
+            {
+              "id": "gallery-default",
+              "label": "gallery-default",
+              "desktopSpan": "4",
+              "tabletSpan": "12",
+              "mobileSpan": "12",
+              "minHeight": "md",
+              "style": {
+                "surface": "on",
+                "background": "var(--color-secondary)",
+                "padding": "none",
+                "radius": "2xl",
+                "overflow": "hidden"
+              }
+            },
+            {
+              "id": "gallery-warm",
+              "label": "gallery-warm",
+              "desktopSpan": "3",
+              "tabletSpan": "12",
+              "mobileSpan": "12",
+              "minHeight": "md",
+              "style": {
+                "surface": "on",
+                "background": "var(--color-accent)",
+                "padding": "none",
+                "radius": "2xl",
+                "overflow": "hidden"
+              }
+            }
+          ]
+        },
+        "slots": {
+          "column:gallery-tall": [],
+          "column:gallery-default": [],
+          "column:gallery-warm": []
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "id": "project-detail-eyebrow",
+        "blockId": "project-hero",
+        "propPath": "badge.label",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailEyebrow"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-title",
+        "blockId": "project-hero",
+        "propPath": "headline",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      },
+      {
+        "id": "project-detail-lead",
+        "blockId": "project-hero",
+        "propPath": "body",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailLead"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-1-value",
+        "blockId": "project-statistics",
+        "propPath": "items.0.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.0.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-1-label",
+        "blockId": "project-statistics",
+        "propPath": "items.0.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.0.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-2-value",
+        "blockId": "project-statistics",
+        "propPath": "items.1.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.1.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-2-label",
+        "blockId": "project-statistics",
+        "propPath": "items.1.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.1.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-3-value",
+        "blockId": "project-statistics",
+        "propPath": "items.2.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.2.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-3-label",
+        "blockId": "project-statistics",
+        "propPath": "items.2.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.2.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-4-value",
+        "blockId": "project-statistics",
+        "propPath": "items.3.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.3.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-4-label",
+        "blockId": "project-statistics",
+        "propPath": "items.3.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.3.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumptions-eyebrow",
+        "blockId": "project-assumptions",
+        "propPath": "header.eyebrow",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptionsEyebrow"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumptions-title",
+        "blockId": "project-assumptions",
+        "propPath": "header.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptionsTitle"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumptions-lead",
+        "blockId": "project-assumptions",
+        "propPath": "header.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptionsLead"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-1-title",
+        "blockId": "project-assumptions",
+        "propPath": "items.0.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.0.title"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-1-description",
+        "blockId": "project-assumptions",
+        "propPath": "items.0.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.0.description"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-2-title",
+        "blockId": "project-assumptions",
+        "propPath": "items.1.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.1.title"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-2-description",
+        "blockId": "project-assumptions",
+        "propPath": "items.1.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.1.description"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-3-title",
+        "blockId": "project-assumptions",
+        "propPath": "items.2.title",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.2.title"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-3-description",
+        "blockId": "project-assumptions",
+        "propPath": "items.2.description",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.2.description"
+        },
+        "transform": "text",
+        "required": true
+      }
+    ]
+  },
+  "expected": {
+    "schemaVersion": 2,
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Szczegóły projektu domu",
+    "contentTypeId": "00000000-0000-4000-8000-000000000002",
+    "contentTypeSlug": "house-project",
+    "status": "published",
+    "titlePattern": "{{ title }}",
+    "settings": {
+      "template": "project-detail",
+      "layout": {}
+    },
+    "sections": [
+      {
+        "id": "project-back-link",
+        "type": "content",
+        "name": "Content",
+        "variant": "default",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "project-back-link-heading",
+            "type": "heading",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-back-link-text",
+            "type": "text",
+            "props": {
+              "text": "<p><a href=\"/projekty\">← Wróć do projektów</a></p>"
+            },
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "project-hero",
+        "type": "hero",
+        "name": "Hero",
+        "variant": "centered",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "project-hero-heading",
+            "type": "heading",
+            "props": {
+              "text": "—"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-hero-text",
+            "type": "text",
+            "props": {
+              "text": "—"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-hero-badge",
+            "type": "badge",
+            "props": {
+              "text": "—"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-hero-button",
+            "type": "button",
+            "props": {
+              "label": "",
+              "href": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-hero-image",
+            "type": "image",
+            "props": {},
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "project-hero-art",
+        "type": "content",
+        "name": "Content",
+        "variant": "default",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "project-hero-art-columns",
+            "type": "columns",
+            "props": {
+              "count": 2
+            },
+            "visibility": {
+              "visible": true
+            },
+            "slots": {
+              "column:1": [],
+              "column:2": []
+            }
+          }
+        ]
+      },
+      {
+        "id": "project-statistics",
+        "type": "feature-grid",
+        "name": "Feature Grid",
+        "variant": "cards",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "project-statistics-heading",
+            "type": "heading",
+            "props": {
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-statistics-heading-1",
+            "type": "heading",
+            "props": {
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-statistics-text",
+            "type": "text",
+            "props": {
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-statistics-card-0",
+            "type": "card",
+            "props": {
+              "title": "—",
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-statistics-card-1",
+            "type": "card",
+            "props": {
+              "title": "—",
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-statistics-card-2",
+            "type": "card",
+            "props": {
+              "title": "—",
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-statistics-card-3",
+            "type": "card",
+            "props": {
+              "title": "—",
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "project-contact-cta",
+        "type": "cta",
+        "name": "Cta",
+        "variant": "centered",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "project-contact-cta-heading",
+            "type": "heading",
+            "props": {
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-contact-cta-text",
+            "type": "text",
+            "props": {
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-contact-cta-button",
+            "type": "button",
+            "props": {
+              "label": "Chcę podobny dom",
+              "href": "/kontakt"
+            },
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "project-assumptions",
+        "type": "feature-grid",
+        "name": "Feature Grid",
+        "variant": "cards",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "project-assumptions-heading",
+            "type": "heading",
+            "props": {
+              "text": "—"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-assumptions-heading-1",
+            "type": "heading",
+            "props": {
+              "text": "—"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-assumptions-text",
+            "type": "text",
+            "props": {
+              "text": "—"
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-assumptions-card-0",
+            "type": "card",
+            "props": {
+              "title": "—",
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-assumptions-card-1",
+            "type": "card",
+            "props": {
+              "title": "—",
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          },
+          {
+            "id": "project-assumptions-card-2",
+            "type": "card",
+            "props": {
+              "title": "—",
+              "text": ""
+            },
+            "visibility": {
+              "visible": true
+            }
+          }
+        ]
+      },
+      {
+        "id": "project-gallery",
+        "type": "content",
+        "name": "Content",
+        "variant": "default",
+        "layout": {
+          "columns": 1,
+          "align": "start",
+          "justify": "start",
+          "maxWidth": 1080,
+          "stackVertical": false
+        },
+        "style": {
+          "background": "#ffffff",
+          "backgroundType": "color",
+          "backgroundImage": null,
+          "accent": "#0d9488",
+          "radius": 0,
+          "shadow": "none"
+        },
+        "spacing": {
+          "paddingTop": 64,
+          "paddingBottom": 64,
+          "paddingLeft": 40,
+          "paddingRight": 40,
+          "gap": 24
+        },
+        "visibility": {
+          "visible": true,
+          "authOnly": false,
+          "anchor": null,
+          "startsAt": null,
+          "endsAt": null
+        },
+        "responsive": {},
+        "blocks": [
+          {
+            "id": "project-gallery-columns",
+            "type": "columns",
+            "props": {
+              "count": 3
+            },
+            "visibility": {
+              "visible": true
+            },
+            "slots": {
+              "column:1": [],
+              "column:2": [],
+              "column:3": []
+            }
+          }
+        ]
+      }
+    ],
+    "bindings": [
+      {
+        "id": "project-detail-eyebrow",
+        "blockId": "project-hero-badge",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailEyebrow"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-title",
+        "blockId": "project-hero-heading",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-meta",
+          "field": "title"
+        },
+        "required": true
+      },
+      {
+        "id": "project-detail-lead",
+        "blockId": "project-hero-text",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailLead"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-1-value",
+        "blockId": "project-statistics-card-0",
+        "propPath": "title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.0.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-1-label",
+        "blockId": "project-statistics-card-0",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.0.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-2-value",
+        "blockId": "project-statistics-card-1",
+        "propPath": "title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.1.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-2-label",
+        "blockId": "project-statistics-card-1",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.1.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-3-value",
+        "blockId": "project-statistics-card-2",
+        "propPath": "title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.2.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-3-label",
+        "blockId": "project-statistics-card-2",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.2.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-4-value",
+        "blockId": "project-statistics-card-3",
+        "propPath": "title",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.3.value"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-stat-4-label",
+        "blockId": "project-statistics-card-3",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "detailStats.3.label"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumptions-eyebrow",
+        "blockId": "project-assumptions-heading",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptionsEyebrow"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumptions-title",
+        "blockId": "project-assumptions-heading-1",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptionsTitle"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumptions-lead",
+        "blockId": "project-assumptions-text",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptionsLead"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-1-title",
+        "blockId": "project-assumptions-card-0",
+        "propPath": "title",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.0.title"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-1-description",
+        "blockId": "project-assumptions-card-0",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.0.description"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-2-title",
+        "blockId": "project-assumptions-card-1",
+        "propPath": "title",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.1.title"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-2-description",
+        "blockId": "project-assumptions-card-1",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.1.description"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-3-title",
+        "blockId": "project-assumptions-card-2",
+        "propPath": "title",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.2.title"
+        },
+        "transform": "text",
+        "required": true
+      },
+      {
+        "id": "project-assumption-3-description",
+        "blockId": "project-assumptions-card-2",
+        "propPath": "text",
+        "source": {
+          "kind": "entry-field",
+          "field": "assumptions.2.description"
+        },
+        "transform": "text",
+        "required": true
+      }
+    ]
+  },
+  "dropped": []
+}

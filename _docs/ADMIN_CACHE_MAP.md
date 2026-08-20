@@ -302,18 +302,6 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/pages/PageEditor.tsx` (command palette group)
   - Cached APIs: `listPageTemplatesCached`, `getPageTemplateCached`
 
-## Retired widget compatibility surfaces
-- Legacy widget insert dialog (support-only; no new consumers)
-  - UI: `core/admin/ui/widgets/WidgetInsertDialog.tsx`
-  - Cached APIs: `getPageCached`
-- Hidden compatibility catalog
-  - UI: `core/admin/ui/widgets/WidgetLibraryPage.tsx`
-  - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listPagesCached`, `getCachedPages`, `getPageCached`
-  - UI state: section dropdown, table/grid mode, pagination, and selected row ids
-    are shell-owned; only catalog/page data comes from cache.
-  - Cache bus: `widgetCatalog:list` and `pages:list` refresh the section-aware
-    model in the background.
-
 
 ## Media
 - Media library
@@ -469,23 +457,12 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `settings:redacted`; credential-bearing Settings endpoints remain uncached
     in browser storage.
 
-## Retained compatibility renderer controls (data selectors)
+## Removed v1 widget surface (TASK-580)
 
-These paths document existing support/read compatibility controls under the
-historical `core/admin/ui/widgets` namespace. They are not a generic editor
-extension point; current domain editors own their section/block controls.
-- Hero
-  - UI: `core/admin/ui/widgets/editors/HeroEditors.tsx`
-  - Cached APIs: `listMediaCached`
-- Navigation
-  - UI: `core/admin/ui/widgets/editors/NavigationEditors.tsx`
-  - Cached APIs: `listMediaCached`
-- Content list
-  - UI: `core/admin/ui/widgets/editors/ContentListEditors.tsx`
-  - Cached APIs: `listContentTypesCached`, `listEntriesCached`
-- Entry teaser
-  - UI: `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx`
-  - Cached APIs: `listContentTypesCached`, `listEntriesCached`
+The historical `core/admin/ui/widgets` namespace and its editor controls were
+removed with the v1 widget kernel (TASK-580). Surviving render contracts live
+under `core/services/renderContracts/*` and are consumed by the Page V2
+pipeline; they are not a generic editor extension point.
 
 ## Content Editor Fields
 - Relation field suggestions
@@ -495,8 +472,6 @@ extension point; current domain editors own their section/block controls.
 
 ## Prefetch Routes
 - `/pages` -> `listPagesCached`
-- `/advanced/widgets` (hidden support-only route) -> `listWidgetCatalogCached`;
-  deleted widget-template/category clients are never prefetched
 - `/advanced/page-templates` -> `listPageTemplatesCached`
 - `/advanced/engine/:contentTypeId/collection/detail-template/:detailPageId` -> `getContentTypeCollectionWorkspaceCached`, `getDetailPageCached`, `listContentTypesCached`, optional `listEntriesCached`
 - `/advanced/engine/:contentTypeId/collection` -> `listContentTypesCached`, `getContentTypeCollectionWorkspaceCached`

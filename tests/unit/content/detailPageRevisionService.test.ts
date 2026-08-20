@@ -61,13 +61,39 @@ const schema = {
 };
 
 const documentInput = (contentTypeId: string, contentTypeSlug: string, name: string) => ({
+  schemaVersion: 2,
   name,
   contentTypeId,
   contentTypeSlug,
   status: "draft" as const,
   titlePattern: "{{ title }}",
   settings: { template: "detail", layout: {} },
-  blocks: [{ id: "hero", type: "hero", data: { headline: name } }],
+  sections: [
+    {
+      id: "hero-section",
+      type: "content",
+      variant: "default",
+      layout: {
+        columns: 1,
+        align: "start",
+        justify: "start",
+        maxWidth: 1080,
+        stackVertical: false,
+      },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+      spacing: { paddingTop: 64, paddingBottom: 64, paddingLeft: 40, paddingRight: 40, gap: 24 },
+      visibility: { visible: true, authOnly: false, anchor: null, startsAt: null, endsAt: null },
+      responsive: {},
+      blocks: [{ id: "hero-heading", type: "heading", props: { text: name } }],
+    },
+  ],
   bindings: [],
 });
 

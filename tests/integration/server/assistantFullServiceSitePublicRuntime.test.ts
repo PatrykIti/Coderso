@@ -2,15 +2,12 @@ import { expect, test } from "bun:test";
 
 import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import type { AssistantPlannedAction } from "../../../core/services/assistant/actionPlanTypes";
+import { buildDetailPageRenderDocument } from "../../../core/services/content/detailPageV2Conversion";
 import {
   resolveDetailPageBlocks,
   type DetailPageBindingResolverEntry,
 } from "../../../core/services/content/detailPageBindingResolver";
-import {
-  renderPublicPageRuntimeHtml,
-  renderPublicPageV2RuntimeHtml,
-} from "../../../core/site/renderPublicPage";
-import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
+import { renderPublicPageV2RuntimeHtml } from "../../../core/site/renderPublicPage";
 import { PAGE_DOCUMENT_SCHEMA_VERSION } from "../../../core/services/pages/pageDocumentV2";
 
 type PageUpsertAction = Extract<AssistantPlannedAction, { type: "page.upsert" }>;
@@ -70,8 +67,6 @@ const createDetailEntry = (action: EntrySampleCreateAction): DetailPageBindingRe
 });
 
 test("full-service assistant plan renders public runtime pages with valid navigation and footer links", async () => {
-  ensureRuntimeWidgetsRegistered();
-
   const plan = buildFullServiceSitePlan({
     prompt: fullServicePrompt,
   });
@@ -135,12 +130,15 @@ test("full-service assistant plan renders public runtime pages with valid naviga
     },
     preview: false,
   });
-  const detailHtml = await renderPublicPageRuntimeHtml({
+  const detailRenderDocument = buildDetailPageRenderDocument(
+    detailAction.input.document,
+    detailBlocks
+  );
+  const detailHtml = await renderPublicPageV2RuntimeHtml({
     title: sampleAction.input.title,
-    blocks: detailBlocks,
+    document: detailRenderDocument,
     inlineCss:
       ":root{--color-bg:#fff;--color-text:#111827;--color-border:#d1d5db;--color-primary:#1d4ed8;--color-surface:#f8fafc;}",
-    themeName: "default",
     templateKey: "detail",
   });
   expect(detailHtml).toContain("<img");

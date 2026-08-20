@@ -30,7 +30,6 @@ export const cmsResourceKindValues = [
   "entry",
   "content-type",
   "custom-screen",
-  "widget-template",
   "listing-query",
   "listing-template",
   "form",

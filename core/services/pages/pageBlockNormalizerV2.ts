@@ -8,7 +8,7 @@ import {
   FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
   FORM_EMBED_SUCCESS_BEHAVIORS,
   FORM_EMBED_TEXTAREA_ROWS_LIMITS,
-} from "../../widgets/core/formEmbedContract";
+} from "../../services/renderContracts/formEmbedContract";
 import { sanitizeAuthoringMediaUrl } from "./pageAuthoringSanitizers";
 import { sanitizeSvg } from "./svgSanitizer";
 import {
@@ -89,6 +89,61 @@ import {
 } from "./pageDocumentV2Types";
 import { normalizeBlockTextMarksForMode } from "./pageTextMarksV2";
 
+// ── TASK-580-03-L01 ── legacy-widget helpers ─────────────────────────────────
+// Prototype-pollution keys are rejected from the preserved v1 widget `data`
+// copy (same vocabulary as the other owner-backed unsafe-segment sets).
+const LEGACY_WIDGET_UNSAFE_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+/**
+ * Deep-frozen JSON-safe copy of the preserved v1 widget `data`. The value is
+ * first JSON-normalized (same semantics as `cloneRecord` for every other props
+ * payload — cycles throw, functions/undefined drop), then every object level
+ * is frozen and prototype-pollution keys are rejected. Never rendered anywhere:
+ * the placeholder shows the type label only.
+ */
+const deepFreezeCopy = (value: unknown): unknown => {
+  const jsonSafe = cloneRecord(value);
+  if (Array.isArray(jsonSafe)) {
+    return Object.freeze(jsonSafe.map((item) => deepFreezeCopy(item)));
+  }
+  if (isRecord(jsonSafe)) {
+    const copy: RecordValue = {};
+    for (const [key, item] of Object.entries(jsonSafe)) {
+      if (LEGACY_WIDGET_UNSAFE_KEYS.has(key)) continue;
+      copy[key] = deepFreezeCopy(item);
+    }
+    return Object.freeze(copy);
+  }
+  return jsonSafe;
+};
+
+/**
+ * Whole-props normalization of the migration-only `legacy-widget` block.
+ * Both keys are ALWAYS present in the stored shape; `legacyWidgetType` is
+ * REQUIRED on write (bounded 1..64, non-empty), and a malformed stored doc
+ * fails CLOSED on read (`"unknown"` type + `{}` data, never throws).
+ */
+const normalizeLegacyWidgetProps = (
+  input: RecordValue,
+  mode: NormalizeMode,
+  path: string
+): RecordValue => {
+  assertKnownKeys(input, ["legacyWidgetType", "data"], path, mode);
+  const legacyWidgetType = readText(input.legacyWidgetType, "");
+  const data = isRecord(input.data) ? deepFreezeCopy(input.data) : {};
+  if (legacyWidgetType.length === 0 || legacyWidgetType.length > 64) {
+    if (mode === "write") {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        `Invalid ${path}.legacyWidgetType.`,
+        `${path}.legacyWidgetType`
+      );
+    }
+    return { legacyWidgetType: "unknown", data };
+  }
+  return { legacyWidgetType, data };
+};
+
 const normalizeBlockProps = (
   type: PageBlockType,
   value: unknown,
@@ -97,6 +152,13 @@ const normalizeBlockProps = (
   partial = false
 ): Record<string, unknown> => {
   const input = requireRecord(value ?? {}, path, mode);
+  // ── TASK-580-03-L01 ── legacy-widget is normalized as ONE unit (the whole
+  // props shape): both keys are always present in the stored shape and the
+  // required `legacyWidgetType` bound is enforced even when the key is absent.
+  // Responsive overrides (partial) keep the generic per-key loop below.
+  if (type === "legacy-widget" && !partial) {
+    return normalizeLegacyWidgetProps(input, mode, path);
+  }
   assertKnownKeys(input, pageBlockPropKeys[type], path, mode);
   const defaults = pageBlockDefaultProps[type];
   const result: Record<string, unknown> = partial ? {} : { ...defaults };
@@ -536,6 +598,23 @@ const normalizeBlockProp = (
   }
   if (type === "scrollHint" && key === "label") {
     return readText(value, "Scroll"); // a11y text, escaped at render.
+  }
+  // ── TASK-580-03-L01 ── legacy-widget per-key branches. Only reachable on the
+  // PARTIAL path (responsive overrides — the whole-props branch above owns the
+  // stored shape). Same bounds as the write path; a malformed override fails
+  // closed on stored-read ("unknown" / {}), never throws.
+  if (type === "legacy-widget" && key === "legacyWidgetType") {
+    const label = readText(value, "");
+    if (label.length === 0 || label.length > 64) {
+      if (mode === "write") {
+        throw new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+      }
+      return "unknown";
+    }
+    return label;
+  }
+  if (type === "legacy-widget" && key === "data") {
+    return isRecord(value) ? deepFreezeCopy(value) : {};
   }
   if (type === "gallery" && key === "filterable") {
     // Present-only: omit `false` so a non-filterable gallery is byte-identical.

@@ -19,7 +19,7 @@ import {
   type NavigationItem,
   type NavigationData,
   type NavigationLinkTarget,
-} from "../../widgets/core/navigation";
+} from "../../services/renderContracts/navigationRenderer";
 
 export type NavigationLinksSource = NonNullable<NavigationData["linksSource"]>;
 

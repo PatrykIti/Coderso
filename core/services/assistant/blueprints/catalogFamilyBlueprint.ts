@@ -1,4 +1,5 @@
-import type { DetailPageDocument } from "../../content/detailPageTypes";
+import type { PageBlockV2, PageSectionV2 } from "../../pages/pageDocumentV2";
+import type { DetailPageBinding, DetailPageDocument } from "../../content/detailPageTypes";
 import {
   normalizeCustomScreenDefinitionForWrite,
   normalizeScreenFieldBindings,
@@ -243,12 +244,144 @@ const buildDetailPageLayout = (): DetailPageDocument["settings"]["layout"] => ({
   applyDefaultsToNewBlocks: false,
 });
 
+// Deterministic V2 hero section shell shared by every catalog-family detail
+// template. Values mirror the L02 conversion output so the blueprint-authored
+// document and a converted v1 document normalize to the same stored shape.
+const detailPageHeroSectionDefaults = {
+  layout: {
+    columns: 1,
+    align: "start",
+    justify: "start",
+    maxWidth: 1080,
+    stackVertical: false,
+  },
+  style: {
+    background: "#ffffff",
+    backgroundType: "color",
+    backgroundImage: null,
+    accent: "#0d9488",
+    radius: 0,
+    shadow: "none",
+  },
+  spacing: {
+    paddingTop: 64,
+    paddingBottom: 64,
+    paddingLeft: 40,
+    paddingRight: 40,
+    gap: 24,
+  },
+  visibility: {
+    visible: true,
+    authOnly: false,
+    anchor: null,
+    startsAt: null,
+    endsAt: null,
+  },
+} as const;
+
 const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocument => {
-  const heroId = `${preset.key}-detail-hero`;
+  const heroSectionId = `${preset.key}-detail-hero`;
+  const heroHeadingId = `${heroSectionId}-heading`;
+  const heroTextId = `${heroSectionId}-text`;
+  const heroImageId = `${heroSectionId}-image`;
   const hasCoverImage = Boolean(preset.coverImageUrlField);
   const summaryField = preset.summaryField ?? "summary";
+
+  const blocks: PageBlockV2[] = [
+    {
+      id: heroHeadingId,
+      type: "heading",
+      props: { text: preset.contentTypeName },
+      visibility: { visible: true },
+    },
+    {
+      id: heroTextId,
+      type: "text",
+      props: { text: preset.introBody },
+      visibility: { visible: true },
+    },
+    ...(hasCoverImage
+      ? [
+          {
+            id: heroImageId,
+            type: "image" as const,
+            props: { src: "", alt: "" },
+            visibility: { visible: true } as const,
+          },
+        ]
+      : []),
+  ];
+
+  const bindings: DetailPageBinding[] = [
+    {
+      id: `${preset.key}-detail-title`,
+      blockId: heroHeadingId,
+      propPath: "text",
+      source: {
+        kind: "entry-field",
+        field: "title",
+      },
+      transform: "text",
+      required: true,
+    },
+    {
+      id: `${preset.key}-detail-summary`,
+      blockId: heroTextId,
+      propPath: "text",
+      source: {
+        kind: "entry-field",
+        field: summaryField,
+      },
+      transform: "text",
+      required: true,
+    },
+    ...(preset.coverImageUrlField
+      ? [
+          {
+            id: `${preset.key}-detail-cover-image`,
+            blockId: heroImageId,
+            propPath: "src",
+            source: {
+              kind: "entry-field" as const,
+              field: preset.coverImageUrlField,
+            },
+            transform: "text" as const,
+            required: false,
+          },
+        ]
+      : []),
+    ...(preset.coverImageAltField
+      ? [
+          {
+            id: `${preset.key}-detail-cover-image-alt`,
+            blockId: heroImageId,
+            propPath: "alt",
+            source: {
+              kind: "entry-field" as const,
+              field: preset.coverImageAltField,
+            },
+            transform: "text" as const,
+            required: false,
+          },
+        ]
+      : []),
+  ];
+
+  const heroSection: PageSectionV2 = {
+    id: heroSectionId,
+    type: "hero",
+    name: "Hero",
+    variant: hasCoverImage ? "split" : "centered",
+    layout: { ...detailPageHeroSectionDefaults.layout },
+    style: { ...detailPageHeroSectionDefaults.style },
+    spacing: { ...detailPageHeroSectionDefaults.spacing },
+    visibility: { ...detailPageHeroSectionDefaults.visibility },
+    responsive: {},
+    blocks,
+  };
+
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: getCatalogFamilyDetailPageId(preset),
     name: `${preset.contentTypeName} Detail Template`,
     contentTypeId: detailPageContentTypePlaceholderId,
@@ -264,82 +397,8 @@ const buildDetailPageDocument = (preset: CatalogFamilyPreset): DetailPageDocumen
       template: "detail",
       layout: buildDetailPageLayout(),
     },
-    blocks: [
-      {
-        id: heroId,
-        type: "hero",
-        variant: hasCoverImage ? "split" : "centered",
-        data: {
-          headline: preset.contentTypeName,
-          body: preset.introBody,
-          ...(hasCoverImage
-            ? {
-                media: {
-                  type: "image",
-                  source: "external",
-                  src: "",
-                  alt: "",
-                  ratio: "16:9",
-                },
-              }
-            : {}),
-        },
-      },
-    ],
-    bindings: [
-      {
-        id: `${preset.key}-detail-title`,
-        blockId: heroId,
-        propPath: "headline",
-        source: {
-          kind: "entry-field",
-          field: "title",
-        },
-        transform: "text",
-        required: true,
-      },
-      {
-        id: `${preset.key}-detail-summary`,
-        blockId: heroId,
-        propPath: "body",
-        source: {
-          kind: "entry-field",
-          field: summaryField,
-        },
-        transform: "text",
-        required: true,
-      },
-      ...(preset.coverImageUrlField
-        ? [
-            {
-              id: `${preset.key}-detail-cover-image`,
-              blockId: heroId,
-              propPath: "media.src",
-              source: {
-                kind: "entry-field" as const,
-                field: preset.coverImageUrlField,
-              },
-              transform: "text" as const,
-              required: false,
-            },
-          ]
-        : []),
-      ...(preset.coverImageAltField
-        ? [
-            {
-              id: `${preset.key}-detail-cover-image-alt`,
-              blockId: heroId,
-              propPath: "media.alt",
-              source: {
-                kind: "entry-field" as const,
-                field: preset.coverImageAltField,
-              },
-              transform: "text" as const,
-              required: false,
-            },
-          ]
-        : []),
-    ],
+    sections: [heroSection],
+    bindings,
   };
 };
 

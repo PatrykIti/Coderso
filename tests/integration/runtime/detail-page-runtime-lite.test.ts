@@ -109,7 +109,7 @@ const detailPageDocument = normalizeDetailPageDocument({
 let currentContentRoutes: ContentRouteSetting[] = [];
 let currentResolvedDetailPage: {
   document: typeof detailPageDocument;
-  blocks: typeof detailPageDocument.blocks;
+  sections: typeof detailPageDocument.sections;
 } | null = null;
 const bunMock = (
   (await import("bun:test")) as { mock?: { module: (id: string, factory: () => unknown) => void } }
@@ -359,7 +359,7 @@ const requestPublicPath = (path: string) =>
 beforeEach(() => {
   currentResolvedDetailPage = {
     document: detailPageDocument,
-    blocks: detailPageDocument.blocks,
+    sections: detailPageDocument.sections,
   };
   currentContentRoutes = [
     {
@@ -393,7 +393,7 @@ test("public detail routes do not render unsafe title pattern tokens", async () 
       ...detailPageDocument,
       titlePattern: "{{ data.apiKey }} - {{ title }}",
     },
-    blocks: detailPageDocument.blocks,
+    sections: detailPageDocument.sections,
   };
 
   const response = await requestPublicPath(`/${contentType.slug}/${entry.id}`);

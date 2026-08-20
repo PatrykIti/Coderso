@@ -54,11 +54,17 @@ const detailPageDocumentEnvelopeSchema = {
         "status",
         "titlePattern",
         "settings",
-        "blocks",
         "bindings",
       ],
       properties: {
-        schemaVersion: { const: 1 },
+        // TASK-580-03: the write envelope accepts both the retained v1 shape
+        // (schemaVersion 1, `blocks`) and the v2 shape (schemaVersion 2,
+        // `sections`). The write service stays authoritative: v1 payloads fail
+        // closed there with `detail_page_legacy_v1_invalid`, while v2
+        // documents normalize through the shared section/block normalizers.
+        // `schemaVersion` stays optional so legacy docs without it remain
+        // shape-valid at the envelope and are rejected by the service.
+        schemaVersion: { enum: [1, 2] },
         id: { type: "string", pattern: uuidPattern },
         name: { type: "string", minLength: 1 },
         contentTypeId: { type: "string", pattern: uuidPattern },
@@ -67,6 +73,7 @@ const detailPageDocumentEnvelopeSchema = {
         titlePattern: { type: "string", minLength: 1 },
         settings: { type: "object" },
         blocks: { type: "array" },
+        sections: { type: "array" },
         bindings: { type: "array" },
         related: { type: "array" },
         seo: { type: "object" },

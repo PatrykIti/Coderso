@@ -134,7 +134,6 @@ const context = buildAssistantAdminContext({
     ],
     menus: [],
     seoDocuments: [],
-    widgets: [],
     warnings: [],
   },
 });
@@ -411,7 +410,6 @@ test("resolveCmsOperationTargets filters page title searches instead of returnin
       forms: [],
       menus: [],
       seoDocuments: [],
-      widgets: [],
       warnings: [],
     },
   });

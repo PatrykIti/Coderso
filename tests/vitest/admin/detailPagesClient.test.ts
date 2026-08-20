@@ -92,7 +92,7 @@ const readCacheValue = (storage: ReturnType<typeof createLocalStorage>, key: str
 };
 
 const detailPageDocument = (overrides: Partial<DetailPageDocument> = {}): DetailPageDocument => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   id: "detail-page-products",
   name: "Products detail",
   contentTypeId: "ct-products",
@@ -122,7 +122,7 @@ const detailPageDocument = (overrides: Partial<DetailPageDocument> = {}): Detail
       applyDefaultsToNewBlocks: false,
     },
   },
-  blocks: [],
+  sections: [],
   bindings: [],
   ...overrides,
 });

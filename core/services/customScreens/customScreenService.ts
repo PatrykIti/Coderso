@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { contentTypes, customScreens } from "../../db/schema";
-import type { WidgetBlock } from "../../widgets/types";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
 import {
   normalizeCustomScreenDefinitionForWrite,
   normalizeCustomScreenDefinitionForRead,
@@ -33,7 +33,7 @@ export type CustomScreenRecord = {
   sidebarLabel: string | null;
   schemaVersion: CustomScreenDefinitionVersion;
   definition: CustomScreenDefinition;
-  blocks: WidgetBlock[];
+  blocks: LegacyWidgetBlock[];
   bindings: CustomScreenBinding[];
   capabilities: CustomScreenCapabilities;
   revision: number;

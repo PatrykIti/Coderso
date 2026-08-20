@@ -201,30 +201,6 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
           status: "warning",
         },
       ],
-      widgets: [
-        {
-          type: "content-list",
-          title: "Content List",
-          description: "List entries",
-          category: "content",
-          module: "entries",
-          complexity: "composite",
-          audience: "beginner",
-          variants: [{ id: "cards", label: "Cards" }],
-          slots: [
-            {
-              id: "header",
-              label: "Header",
-              kind: "fixed",
-              allowedTypes: ["rich-text-section"],
-            },
-          ],
-          surfaces: ["page-builder", "widget-library"],
-          requires: ["entries"],
-          editor: { hidden: true },
-          render: () => null,
-        },
-      ],
       media: [
         {
           id: "media-1",
@@ -392,15 +368,6 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
         status: "warning",
       },
     ],
-    widgets: [
-      {
-        id: "content-list",
-        source: "core",
-        name: "Content List",
-        variants: ["cards"],
-        surfaces: ["page-builder", "widget-library"],
-      },
-    ],
     media: [
       {
         id: "media-1",
@@ -446,16 +413,6 @@ test("normalizeAssistantResourceCatalog summarizes resource schemas deterministi
   expect(snapshot.contentTypes[0]?.fields.map((field) => field.name)).toEqual(["price", "title"]);
   expect(snapshot.forms[0]?.fields.map((field) => field.name)).toEqual(["email"]);
   expect(snapshot.menus[0]?.items.map((item) => item.label)).toEqual(["Products", "Featured"]);
-  expect(snapshot.widgets[0]?.slots).toEqual([
-    {
-      id: "header",
-      label: "Header",
-      kind: "fixed",
-      allowedTypes: ["rich-text-section"],
-      minItems: null,
-      maxItems: null,
-    },
-  ]);
   expect(JSON.stringify(snapshot)).not.toContain("never expose");
   expect(JSON.stringify(snapshot)).not.toContain("apiToken");
   expect(snapshot.warnings).toEqual([
@@ -487,10 +444,6 @@ test("normalizeAssistantResourceCatalog clamps groups and fields with stable ord
           schema: { properties: { title: { type: "string" } } },
         },
       ],
-      widgets: [
-        { id: "widget-b", source: "core", name: "Widget B" },
-        { id: "widget-a", source: "core", name: "Widget A" },
-      ],
     },
     {
       generatedAt: "2026-04-11T10:00:00.000Z",
@@ -502,7 +455,5 @@ test("normalizeAssistantResourceCatalog clamps groups and fields with stable ord
   expect(snapshot.budget.truncated).toBe(true);
   expect(snapshot.contentTypes.map((item) => item.slug)).toEqual(["a"]);
   expect(snapshot.contentTypes[0]?.fields.map((field) => field.name)).toEqual(["title"]);
-  expect(snapshot.widgets.map((item) => item.id)).toEqual(["widget-a"]);
   expect(snapshot.warnings).toContain("content_types_truncated");
-  expect(snapshot.warnings).toContain("widgets_truncated");
 });

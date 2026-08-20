@@ -92,7 +92,6 @@ export const cacheKeys = {
   commerceProductsList: "commerce:products:list",
   commerceProductDetail: (id: string) => `commerce:products:detail:${id}`,
   commerceCollectionsList: "commerce:collections:list",
-  widgetCatalogList: "widgetCatalog:list",
   pageTemplatesList: "pageTemplates:list",
   pageTemplateDetail: (id: string) => `pageTemplates:detail:${id}`,
   mediaList: "media:list",

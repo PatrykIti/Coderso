@@ -140,7 +140,6 @@ const buildContentContext = async (input?: {
       forms: [],
       menus: [],
       seoDocuments: [],
-      widgets: [],
       warnings: [],
     },
     runtimeSnapshot: {

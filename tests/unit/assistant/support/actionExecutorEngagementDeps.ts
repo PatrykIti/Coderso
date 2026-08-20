@@ -456,7 +456,6 @@ export const createActionExecutorEngagementDeps = (state: ActionExecutorTestStat
             },
             requiredModules: [],
           },
-          templateInstall: null,
         },
         validation: {
           runId: "run-site-kit-1",

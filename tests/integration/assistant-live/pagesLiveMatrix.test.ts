@@ -112,7 +112,6 @@ const buildPageContext = async (): Promise<AssistantActionContext> => {
       forms: [],
       menus: [],
       seoDocuments: [],
-      widgets: [],
       warnings: [],
     },
     runtimeSnapshot: {

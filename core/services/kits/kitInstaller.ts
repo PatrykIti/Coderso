@@ -11,21 +11,8 @@ import {
 } from "./solutionKitsInstallService";
 import type { JsonObject } from "./fullSitePackage/types";
 import { buildSolutionKitManifest, type SolutionKitManifest } from "./kitManifest";
-import { buildTemplateSeedsForKit } from "./kitTemplateSeeds";
 import { getSolutionKitFromCatalog } from "./solutionKitsCatalog";
 import type { SolutionKitDefinition, SolutionKitId } from "./solutionKitTypes";
-import {
-  applyTemplateInstall,
-  rollbackTemplateInstall,
-  type TemplateInstallResult,
-  type TemplateInstallRollbackAction,
-  type TemplateInstallSnapshot,
-} from "../templates/templateInstaller";
-import type { WidgetBlock } from "../../widgets/types";
-import {
-  normalizeWidgetTemplateSettings,
-  type WidgetTemplateSettings,
-} from "../widgets/widgetTemplateSettings";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -34,86 +21,9 @@ const isRecord = (value: unknown): value is JsonRecord =>
 
 const asRecord = (value: unknown): JsonRecord => (isRecord(value) ? value : {});
 
-const mergeSummary = (
-  base: SolutionKitInstallSummary,
-  templates: TemplateInstallResult | null
-): SolutionKitInstallSummary => {
-  if (!templates) return base;
-  return {
-    total: base.total + templates.summary.total,
-    success: base.success + templates.summary.success,
-    failed: base.failed + templates.summary.failed,
-    planned: base.planned + templates.summary.planned,
-    skipped: base.skipped,
-    operations: {
-      ...base.operations,
-      create: base.operations.create + templates.summary.operations.create,
-      update: base.operations.update + templates.summary.operations.update,
-      noop: base.operations.noop + templates.summary.operations.noop,
-      delete: base.operations.delete,
-      restore: base.operations.restore,
-    },
-  };
-};
-
-const toTemplateRollbackPlan = (value: unknown): TemplateInstallRollbackAction[] => {
-  if (!Array.isArray(value)) return [];
-  const items: TemplateInstallRollbackAction[] = [];
-  for (const entry of value) {
-    if (!isRecord(entry)) continue;
-    const key = typeof entry.key === "string" ? entry.key : null;
-    const templateId = typeof entry.templateId === "string" ? entry.templateId : null;
-    const operation = entry.operation;
-    if (!key || !templateId) continue;
-    if (operation !== "create" && operation !== "update") continue;
-
-    let beforeSnapshot: TemplateInstallSnapshot | null = null;
-    if (isRecord(entry.beforeSnapshot)) {
-      const snapshot = entry.beforeSnapshot;
-      if (
-        typeof snapshot.id === "string" &&
-        typeof snapshot.name === "string" &&
-        typeof snapshot.category === "string" &&
-        (snapshot.status === "draft" || snapshot.status === "published")
-      ) {
-        beforeSnapshot = {
-          id: snapshot.id,
-          name: snapshot.name,
-          description:
-            snapshot.description === null || typeof snapshot.description === "string"
-              ? snapshot.description
-              : null,
-          category: snapshot.category,
-          status: snapshot.status,
-          blocks: Array.isArray(snapshot.blocks) ? (snapshot.blocks as WidgetBlock[]) : [],
-          settings: isRecord(snapshot.settings)
-            ? (snapshot.settings as WidgetTemplateSettings)
-            : normalizeWidgetTemplateSettings(undefined),
-        };
-      }
-    }
-
-    items.push({
-      key,
-      operation,
-      templateId,
-      beforeSnapshot,
-    });
-  }
-  return items;
-};
-
-const buildRunOptions = (
-  runOptions: JsonRecord,
-  manifest: SolutionKitManifest,
-  templateInstall: TemplateInstallResult | null
-) => ({
+const buildRunOptions = (runOptions: JsonRecord, manifest: SolutionKitManifest) => ({
   ...runOptions,
   manifest,
-  kitInstaller: {
-    templateInstallSummary: templateInstall?.summary ?? null,
-    templateRollbackPlan: templateInstall?.rollbackPlan ?? [],
-  },
 });
 
 const resolveKitDefinition = (
@@ -129,7 +39,6 @@ const persistRunMetadata = async (
   run: SolutionKitInstallRunRecord,
   summary: SolutionKitInstallSummary,
   options: JsonRecord,
-  templateInstall: TemplateInstallResult | null,
   isDryRun: boolean
 ) => {
   if (isDryRun) {
@@ -140,24 +49,19 @@ const persistRunMetadata = async (
     };
   }
 
-  const failed = templateInstall?.summary.failed ?? 0;
-  const nextStatus = failed > 0 && run.status === "success" ? "failed" : run.status;
-  const nextError =
-    failed > 0 && run.status === "success" ? `template_failed_operations:${failed}` : run.error;
-
   const patchRunMetadata = defaultLegacyInstallLedger.patchRunMetadata;
   if (!patchRunMetadata) throw new Error("solution_kit_install_failed");
   const patched = await patchRunMetadata({
     runId: run.id,
-    status: nextStatus,
+    status: run.status,
     summary: summary as unknown as JsonObject,
-    error: nextError,
+    error: run.error,
     options: options as JsonObject,
   });
 
-  if (!patched) return { ...run, options, summary, status: nextStatus, error: nextError };
+  if (!patched) return { ...run, options, summary };
   const updated = await getSolutionKitInstallRun(run.id);
-  if (!updated) return { ...run, options, summary, status: nextStatus, error: nextError };
+  if (!updated) return { ...run, options, summary };
 
   return {
     ...run,
@@ -171,7 +75,6 @@ const persistRunMetadata = async (
 
 export type ApplyKitInstallResult = SolutionKitInstallResult & {
   manifest: SolutionKitManifest;
-  templateInstall: TemplateInstallResult | null;
 };
 
 export async function applyKitInstall(
@@ -189,34 +92,19 @@ export async function applyKitInstall(
     },
   });
 
-  const templateSeeds = buildTemplateSeedsForKit(definition);
-  const templateInstall =
-    templateSeeds.length > 0
-      ? await applyTemplateInstall({
-          kitId: definition.id,
-          actorId: input.actorId ?? null,
-          seeds: templateSeeds,
-          dryRun: input.dryRun,
-          continueOnError: input.continueOnError,
-        })
-      : null;
-
-  const summary = mergeSummary(coreResult.summary, templateInstall);
-  const options = buildRunOptions(coreResult.run.options, manifest, templateInstall);
+  const options = buildRunOptions(coreResult.run.options, manifest);
   const run = await persistRunMetadata(
     coreResult.run,
-    summary,
+    coreResult.summary,
     options,
-    templateInstall,
     Boolean(input.dryRun)
   );
 
   return {
     ...coreResult,
     run,
-    summary,
+    summary: coreResult.summary,
     manifest,
-    templateInstall,
   };
 }
 
@@ -238,36 +126,15 @@ const resolveSourceRun = async (input: RollbackSolutionKitInstallInput) => {
   return run;
 };
 
-export type RollbackKitInstallResult = SolutionKitInstallResult & {
-  templateRollback: TemplateInstallResult | null;
-};
+export type RollbackKitInstallResult = SolutionKitInstallResult;
 
 export async function rollbackKitInstall(
   input: RollbackSolutionKitInstallInput
 ): Promise<RollbackKitInstallResult> {
   const sourceRun = await resolveSourceRun(input);
 
-  const sourceOptions = asRecord(sourceRun.options);
-  const installerOptions = isRecord(sourceOptions.kitInstaller) ? sourceOptions.kitInstaller : null;
-  const templateRollbackPlan = toTemplateRollbackPlan(
-    installerOptions ? installerOptions.templateRollbackPlan : null
-  );
-
-  const templateRollback =
-    templateRollbackPlan.length > 0
-      ? await rollbackTemplateInstall({
-          rollbackPlan: templateRollbackPlan,
-          continueOnError: input.continueOnError,
-        })
-      : null;
-
-  const coreResult = await rollbackSolutionKitInstall({
+  return rollbackSolutionKitInstall({
     ...input,
     sourceRunId: sourceRun.id,
   });
-
-  return {
-    ...coreResult,
-    templateRollback,
-  };
 }

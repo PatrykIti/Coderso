@@ -1,9 +1,9 @@
-import type { WidgetBlock } from "../../widgets/types";
-import { normalizeTemplateSectionTemplateId } from "../../widgets/core/templateSectionContract";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
+import { normalizeTemplateSectionTemplateId } from "../renderContracts/templateSectionContract";
 import { getWidgetTemplate } from "./widgetTemplateService";
 
 export type TemplateSectionRuntimeResolution = {
-  blocks: WidgetBlock[];
+  blocks: LegacyWidgetBlock[];
   templateId?: string;
   templateName?: string;
   error?: "template_missing" | "template_unpublished" | "template_loop";

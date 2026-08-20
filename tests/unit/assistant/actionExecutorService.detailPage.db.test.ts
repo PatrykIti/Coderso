@@ -5,12 +5,17 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { assistantActionExecutions, detailPageDocuments, users } from "../../../core/db/schema";
 import { matchExistingCompositionResources } from "../../../core/services/assistant/blueprints/blueprintExistingResourceMatcher";
-import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
+import {
+  dryRunAssistantActionPlan,
+  executeAssistantActionPlan,
+} from "../../../core/services/assistant/actionExecutorService";
 import type {
   AssistantActionPlan,
   AssistantDetailPageUpsertAction,
 } from "../../../core/services/assistant/actionPlanTypes";
 import { createContentType, deleteContentType } from "../../../core/services/content/typeService";
+import type { DetailPageDocumentV1 } from "../../../core/services/content/detailPageTypes";
+import type { PageLayoutSettings } from "../../../core/services/pages/layoutSettings";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = (hasDb ? test : test.skip) as typeof test;
@@ -35,6 +40,101 @@ const createdUserIds = new Set<string>();
 const createdContentTypeIds = new Set<string>();
 const createdDetailPageIds = new Set<string>();
 const idempotencyKeysToCleanup = new Set<string>();
+
+const layoutSettings = {
+  wrapper: {
+    container: "default",
+    padding: { top: "md", bottom: "lg" },
+    background: {
+      color: "#ffffff",
+      image: null,
+      media: {
+        type: "none",
+        source: "external",
+        src: null,
+      },
+    },
+  },
+  sections: {
+    gap: "lg",
+    defaults: {
+      container: "default",
+      padding: { top: "xl", bottom: "xl" },
+      margin: { top: "none", bottom: "none" },
+    },
+  },
+  applyDefaultsToNewBlocks: false,
+} satisfies PageLayoutSettings;
+
+// Assistant detail-page authoring is schemaVersion 2 sections only
+// (TASK-580-03-L06); v1 `blocks` payloads fail closed on write.
+const buildV2DetailPageDocument = (input: {
+  id: string;
+  contentTypeId: string;
+  contentTypeSlug: string;
+  name: string;
+  status?: "draft" | "published";
+  heroText?: string;
+}): AssistantDetailPageUpsertAction["input"]["document"] => ({
+  schemaVersion: 2,
+  id: input.id,
+  name: input.name,
+  contentTypeId: input.contentTypeId,
+  contentTypeSlug: input.contentTypeSlug,
+  status: input.status ?? "published",
+  titlePattern: "{{ title }}",
+  settings: {
+    template: "detail",
+    layout: layoutSettings,
+  },
+  sections: [
+    {
+      id: "hero-1",
+      type: "hero",
+      name: "Hero",
+      variant: "centered",
+      layout: {
+        columns: 1,
+        align: "start",
+        justify: "start",
+        maxWidth: 1080,
+        stackVertical: false,
+      },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+      spacing: {
+        paddingTop: 64,
+        paddingBottom: 64,
+        paddingLeft: 40,
+        paddingRight: 40,
+        gap: 24,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: null,
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive: {},
+      blocks: [
+        {
+          id: "hero-1-heading",
+          type: "heading",
+          props: { text: input.heroText ?? "Products detail" },
+          visibility: { visible: true },
+        },
+      ],
+    },
+  ],
+  bindings: [],
+});
 
 const createActor = async () => {
   const [created] = await db
@@ -78,7 +178,7 @@ afterAll(async () => {
       .where(eq(users.id, userId))
       .catch(() => undefined);
   }
-});
+}, 30_000);
 
 testIfDbWithOptions(
   "detail-page upsert actions persist one canonical detail-page document per id",
@@ -100,53 +200,13 @@ testIfDbWithOptions(
     const detailPageId = "74d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
     createdDetailPageIds.add(detailPageId);
 
-    const document = {
-      schemaVersion: 1 as const,
+    const document = buildV2DetailPageDocument({
       id: detailPageId,
-      name: `Products detail template ${token}`,
       contentTypeId: contentType.id,
       contentTypeSlug: "stale-products",
-      status: "published" as const,
-      titlePattern: "{{ title }}",
-      settings: {
-        template: "detail",
-        layout: {
-          wrapper: {
-            container: "default" as const,
-            padding: { top: "md" as const, bottom: "lg" as const },
-            background: {
-              color: "#ffffff",
-              image: null,
-              media: {
-                type: "none" as const,
-                source: "external" as const,
-                src: null,
-              },
-            },
-          },
-          sections: {
-            gap: "lg" as const,
-            defaults: {
-              container: "default" as const,
-              padding: { top: "xl" as const, bottom: "xl" as const },
-              margin: { top: "none" as const, bottom: "none" as const },
-            },
-          },
-          applyDefaultsToNewBlocks: false,
-        },
-      },
-      blocks: [
-        {
-          id: "hero-1",
-          type: "hero",
-          variant: "centered",
-          data: {
-            headline: "Products detail",
-          },
-        },
-      ],
-      bindings: [],
-    } satisfies AssistantDetailPageUpsertAction["input"]["document"];
+      name: `Products detail template ${token}`,
+      heroText: "Products detail",
+    }) satisfies AssistantDetailPageUpsertAction["input"]["document"];
 
     const plan: AssistantActionPlan = {
       id: `plan-detail-page-upsert-${token}`,
@@ -241,44 +301,13 @@ testIfDbWithOptions(
     createdDetailPageIds.add(existingDetailPageId);
     createdDetailPageIds.add(plannedDetailPageId);
 
-    const baseDocument = {
-      schemaVersion: 1 as const,
+    const baseDocument = buildV2DetailPageDocument({
       id: existingDetailPageId,
-      name: `Matched products detail template ${token}`,
       contentTypeId: contentType.id,
       contentTypeSlug: contentType.slug,
-      status: "published" as const,
-      titlePattern: "{{ title }}",
-      settings: {
-        template: "detail",
-        layout: {
-          wrapper: {
-            container: "default" as const,
-            padding: { top: "md" as const, bottom: "lg" as const },
-            background: {
-              color: "#ffffff",
-              image: null,
-              media: {
-                type: "none" as const,
-                source: "external" as const,
-                src: null,
-              },
-            },
-          },
-          sections: {
-            gap: "lg" as const,
-            defaults: {
-              container: "default" as const,
-              padding: { top: "xl" as const, bottom: "xl" as const },
-              margin: { top: "none" as const, bottom: "none" as const },
-            },
-          },
-          applyDefaultsToNewBlocks: false,
-        },
-      },
-      blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-      bindings: [],
-    } satisfies AssistantDetailPageUpsertAction["input"]["document"];
+      name: `Matched products detail template ${token}`,
+      heroText: "Matched products detail",
+    }) satisfies AssistantDetailPageUpsertAction["input"]["document"];
 
     await executeAssistantActionPlan({
       plan: {
@@ -361,7 +390,6 @@ testIfDbWithOptions(
         forms: [],
         menus: [],
         seoDocuments: [],
-        widgets: [],
         media: [],
         commerce: { products: [], collections: [] },
         solutionKits: [],
@@ -404,6 +432,95 @@ testIfDbWithOptions(
     expect(plannedRows).toHaveLength(0);
     expect(existingRows[0]?.name).toBe(`Matched products detail template ${token} updated`);
     expect(existingRows[0]?.status).toBe("draft");
+  },
+  { timeout: 20_000 }
+);
+
+testIfDbWithOptions(
+  "v1-shaped detail-page documents fail closed with detail_page_legacy_v1_invalid",
+  async () => {
+    const actor = await createActor();
+    const token = randomUUID().slice(0, 8);
+    const contentType = await createContentType({
+      name: `V1 Rejected Products ${token}`,
+      slug: `v1-rejected-products-${token}`,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          headline: { type: "string", xFieldType: "text" },
+        },
+      },
+    });
+    createdContentTypeIds.add(contentType.id);
+    const v1DetailPageId = "54d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c";
+
+    const v1Document: DetailPageDocumentV1 = {
+      schemaVersion: 1,
+      id: v1DetailPageId,
+      name: `V1 rejected products detail template ${token}`,
+      contentTypeId: contentType.id,
+      contentTypeSlug: contentType.slug,
+      status: "draft",
+      titlePattern: "{{ title }}",
+      settings: {
+        template: "detail",
+        layout: layoutSettings,
+      },
+      blocks: [
+        {
+          id: "hero-1",
+          type: "hero",
+          variant: "centered",
+          data: { headline: "V1 products detail" },
+        },
+      ],
+      bindings: [],
+    };
+
+    const plan: AssistantActionPlan = {
+      id: `plan-detail-page-v1-rejected-${token}`,
+      status: "ready",
+      intentId: `detail-page-v1-rejected-${token}`,
+      promptKind: "setup_request",
+      intentFamily: "product_catalog",
+      title: "Create detail template",
+      answer: "I can create the detail template.",
+      summary: "Create a products detail template from a legacy v1 document.",
+      confidence: 0.91,
+      assumptions: [],
+      questions: [],
+      actions: [
+        {
+          id: `detail-page-v1-rejected-${token}`,
+          type: "detail-page.upsert",
+          title: "Create products detail template",
+          description: "Create a products detail template from a legacy v1 document.",
+          input: {
+            document: v1Document as unknown as AssistantDetailPageUpsertAction["input"]["document"],
+          },
+        },
+      ],
+    };
+
+    const preview = await dryRunAssistantActionPlan({ plan });
+    expect(preview.readyToExecute).toBe(false);
+    expect(preview.changes[0]?.conflicts[0]?.code).toBe("detail_page_legacy_v1_invalid");
+
+    await expect(
+      executeAssistantActionPlan({
+        plan,
+        actorId: actor.id,
+        idempotencyKey: `assistant-detail-page-v1-rejected-${token}`,
+      })
+    ).rejects.toThrow("assistant_action_plan_not_ready");
+    idempotencyKeysToCleanup.add(`assistant-detail-page-v1-rejected-${token}`);
+
+    const rows = await db
+      .select()
+      .from(detailPageDocuments)
+      .where(eq(detailPageDocuments.id, v1DetailPageId));
+    expect(rows).toHaveLength(0);
   },
   { timeout: 20_000 }
 );

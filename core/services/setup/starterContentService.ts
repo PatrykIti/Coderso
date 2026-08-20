@@ -17,43 +17,13 @@ import {
 } from "../kits/kitInstaller";
 import type { RollbackSolutionKitInstallInput } from "../kits/solutionKitsInstallService";
 import { getSolutionKitInstallRun } from "../kits/solutionKitsInstallService";
-import type {
-  SolutionKitDefinition,
-  SolutionKitId,
-  SolutionKitTemplateBlueprint,
-} from "../kits/solutionKitTypes";
+import type { SolutionKitDefinition, SolutionKitId } from "../kits/solutionKitTypes";
 import { getSetting, setSettings } from "../settings/settingsService";
 
 type JsonRecord = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-// The curated default starter blueprint declares its footer template under this
-// fixed key so `extractShellRefs` can locate the seeded template — core install
-// items carry no template resource type (see below).
-export const STARTER_FOOTER_TEMPLATE_KEY = "starter-footer";
-
-// A registered `footer` widget block using only its canonical defaults (so it
-// validates against the widget schema on write). This is the seeded starter
-// footer that `site.footerTemplateId` is pointed at.
-const starterFooterBlocks: Array<Record<string, unknown>> = [
-  {
-    id: "starter-footer-block",
-    type: "footer",
-    variant: "columns-2",
-    data: {},
-  },
-];
-
-const starterFooterTemplate: SolutionKitTemplateBlueprint = {
-  key: STARTER_FOOTER_TEMPLATE_KEY,
-  name: "Starter Footer",
-  description: "Default site footer seeded by the starter content kit.",
-  category: "Navigation",
-  status: "published",
-  blocks: starterFooterBlocks,
-};
 
 // CLOSED-UNION CONSTRAINT (SolutionKitId): `SolutionKitDefinition.id` and
 // `ApplySolutionKitInstallInput.kitId` are typed to the closed `solutionKitIds`
@@ -66,13 +36,7 @@ const STARTER_BASE_KIT_ID: SolutionKitId = "local-service-business";
 const buildDefaultStarterDefinition = (): SolutionKitDefinition => {
   const base = getSolutionKitFromCatalog(STARTER_BASE_KIT_ID);
   if (!base) throw new Error("starter_kit_unknown");
-  return {
-    ...base,
-    resourceBlueprint: {
-      ...base.resourceBlueprint,
-      templates: [...(base.resourceBlueprint.templates ?? []), starterFooterTemplate],
-    },
-  };
+  return base;
 };
 
 export const DEFAULT_STARTER_KIT_DEFINITION: SolutionKitDefinition =
@@ -90,7 +54,6 @@ export type StarterChoice = { kitId: string } | { blueprintKey: StarterBlueprint
 type StarterShellRefs = {
   homepageId: string | null;
   navigationMenuId: string | null;
-  footerTemplateId: string | null;
 };
 
 function resolveDefinition(choice: StarterChoice): SolutionKitDefinition {
@@ -109,9 +72,6 @@ const readSettingId = async (key: string): Promise<string | null> => {
   return typeof value === "string" && value.length > 0 ? value : null;
 };
 
-// SolutionKitInstallResourceType is only "content_type" | "form" | "page" |
-// "menu" — there is NO template variant, so `footerTemplateId` MUST come from
-// `result.templateInstall.items`, never the core install items.
 function extractShellRefs(result: ApplyKitInstallResult): StarterShellRefs {
   // Homepage: normalizePageSlug maps "" and "/" to "/", so the homepage is the
   // core install item with resourceType "page" and resourceKey "/".
@@ -124,13 +84,7 @@ function extractShellRefs(result: ApplyKitInstallResult): StarterShellRefs {
     (result.items.find(
       (item) => item.resourceType === "menu" && item.resourceKey === "location:primary"
     )?.afterSnapshot?.id as string | undefined) ?? null;
-  // Footer template: the templateInstall item whose key matches the curated
-  // definition's declared footer template key.
-  const footerItem = result.templateInstall?.items.find(
-    (item) => item.key === STARTER_FOOTER_TEMPLATE_KEY
-  );
-  const footerTemplateId = footerItem?.afterSnapshot?.id ?? footerItem?.templateId ?? null;
-  return { homepageId, navigationMenuId, footerTemplateId };
+  return { homepageId, navigationMenuId };
 }
 
 export async function previewStarterContent(choice: StarterChoice) {
@@ -157,7 +111,6 @@ export async function applyStarterContent(choice: StarterChoice, actorId: string
   const priorShellRefs: StarterShellRefs = {
     homepageId: await readSettingId("site.homepageId"),
     navigationMenuId: await readSettingId("site.navigationMenuId"),
-    footerTemplateId: await readSettingId("site.footerTemplateId"),
   };
   const result = await applyKitInstall({
     kitId: def.id,
@@ -171,7 +124,6 @@ export async function applyStarterContent(choice: StarterChoice, actorId: string
   const patch: Record<string, string> = {};
   if (refs.homepageId) patch["site.homepageId"] = refs.homepageId;
   if (refs.navigationMenuId) patch["site.navigationMenuId"] = refs.navigationMenuId;
-  if (refs.footerTemplateId) patch["site.footerTemplateId"] = refs.footerTemplateId;
   if (Object.keys(patch).length > 0) {
     await setSettings(patch);
   }
@@ -192,7 +144,6 @@ const readPriorShellRefs = async (input: {
   return {
     homepageId: readRef(prior.homepageId),
     navigationMenuId: readRef(prior.navigationMenuId),
-    footerTemplateId: readRef(prior.footerTemplateId),
   };
 };
 
@@ -210,7 +161,6 @@ export async function rollbackStarterContent(input: { sourceRunId?: string; kitI
   await setSettings({
     "site.homepageId": prior?.homepageId ?? null,
     "site.navigationMenuId": prior?.navigationMenuId ?? null,
-    "site.footerTemplateId": prior?.footerTemplateId ?? null,
   });
   return result;
 }

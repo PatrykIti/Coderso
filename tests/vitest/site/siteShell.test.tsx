@@ -13,7 +13,7 @@ import {
   resolveMenuActiveHref,
   type SiteShellNavigation,
 } from "../../../core/site/siteShell";
-import type { NavigationItem } from "../../../core/widgets/core/navigation";
+import type { NavigationItem } from "../../../core/services/renderContracts/navigationContract";
 
 // --- normalizeNavPath (TASK-504-03) ------------------------------------------
 

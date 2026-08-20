@@ -92,6 +92,8 @@ const pageEditorBlockLabels: Record<PageBlockType, string> = {
   // ── TASK-534 ── switcher + scrollHint palette labels (mirror blockOptionCopy).
   switcher: "Switcher",
   scrollHint: "Scroll hint",
+  // ── TASK-580-03-L01 ── legacy-widget (migration-only read-only placeholder).
+  "legacy-widget": "Legacy widget",
 };
 
 const pageEditorSectionLabels: Record<PageSectionType, string> = {

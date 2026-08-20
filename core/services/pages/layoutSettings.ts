@@ -3,7 +3,7 @@ import {
   spacingTokens,
   type ContainerToken,
   type SpacingToken,
-} from "../../widgets/types";
+} from "../../services/renderContracts/tokens";
 
 const pageMaxWidthTokens = ["4xl", "5xl", "6xl", "7xl"] as const;
 const pageBackgroundMediaTypes = ["none", "image", "video"] as const;
@@ -74,25 +74,17 @@ const defaultPageLayoutSettings: PageLayoutSettings = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-const normalizeContainerToken = (
-  value: unknown,
-  fallback: ContainerToken
-): ContainerToken =>
+const normalizeContainerToken = (value: unknown, fallback: ContainerToken): ContainerToken =>
   typeof value === "string" && containerTokens.includes(value as ContainerToken)
     ? (value as ContainerToken)
     : fallback;
 
-const normalizeSpacingToken = (
-  value: unknown,
-  fallback: SpacingToken
-): SpacingToken =>
+const normalizeSpacingToken = (value: unknown, fallback: SpacingToken): SpacingToken =>
   typeof value === "string" && spacingTokens.includes(value as SpacingToken)
     ? (value as SpacingToken)
     : fallback;
 
-const normalizePageMaxWidthToken = (
-  value: unknown
-): PageMaxWidthToken | undefined =>
+const normalizePageMaxWidthToken = (value: unknown): PageMaxWidthToken | undefined =>
   typeof value === "string" && pageMaxWidthTokens.includes(value as PageMaxWidthToken)
     ? (value as PageMaxWidthToken)
     : undefined;
@@ -101,8 +93,7 @@ const normalizePageBackgroundMediaType = (
   value: unknown,
   fallback: PageBackgroundMediaType
 ): PageBackgroundMediaType =>
-  typeof value === "string" &&
-  pageBackgroundMediaTypes.includes(value as PageBackgroundMediaType)
+  typeof value === "string" && pageBackgroundMediaTypes.includes(value as PageBackgroundMediaType)
     ? (value as PageBackgroundMediaType)
     : fallback;
 
@@ -115,33 +106,19 @@ const normalizePageBackgroundMediaSource = (
     ? (value as PageBackgroundMediaSource)
     : fallback;
 
-const normalizeSectionLayoutDefaults = (
-  value: unknown
-): PageSectionLayoutDefaults => {
+const normalizeSectionLayoutDefaults = (value: unknown): PageSectionLayoutDefaults => {
   const input = isRecord(value) ? value : {};
   const padding = isRecord(input.padding) ? input.padding : {};
   const margin = isRecord(input.margin) ? input.margin : {};
   return {
-    container: normalizeContainerToken(
-      input.container,
-      defaultSectionLayoutDefaults.container
-    ),
+    container: normalizeContainerToken(input.container, defaultSectionLayoutDefaults.container),
     padding: {
-      top: normalizeSpacingToken(
-        padding.top,
-        defaultSectionLayoutDefaults.padding.top
-      ),
-      bottom: normalizeSpacingToken(
-        padding.bottom,
-        defaultSectionLayoutDefaults.padding.bottom
-      ),
+      top: normalizeSpacingToken(padding.top, defaultSectionLayoutDefaults.padding.top),
+      bottom: normalizeSpacingToken(padding.bottom, defaultSectionLayoutDefaults.padding.bottom),
     },
     margin: {
       top: normalizeSpacingToken(margin.top, defaultSectionLayoutDefaults.margin.top),
-      bottom: normalizeSpacingToken(
-        margin.bottom,
-        defaultSectionLayoutDefaults.margin.bottom
-      ),
+      bottom: normalizeSpacingToken(margin.bottom, defaultSectionLayoutDefaults.margin.bottom),
     },
   };
 };
@@ -151,9 +128,7 @@ export function normalizePageLayoutSettings(input: unknown): PageLayoutSettings 
   const wrapper = isRecord(value.wrapper) ? value.wrapper : {};
   const wrapperPadding = isRecord(wrapper.padding) ? wrapper.padding : {};
   const wrapperBackground = isRecord(wrapper.background) ? wrapper.background : {};
-  const wrapperBackgroundMedia = isRecord(wrapperBackground.media)
-    ? wrapperBackground.media
-    : {};
+  const wrapperBackgroundMedia = isRecord(wrapperBackground.media) ? wrapperBackground.media : {};
   const sections = isRecord(value.sections) ? value.sections : {};
 
   const typographyPreset =
@@ -189,12 +164,8 @@ export function normalizePageLayoutSettings(input: unknown): PageLayoutSettings 
         : mediaType === "image"
           ? legacyImage
           : null;
-  const mediaSrc =
-    mediaType === "none"
-      ? null
-      : mediaSrcCandidate;
-  const resolvedImage =
-    mediaType === "image" ? mediaSrc : null;
+  const mediaSrc = mediaType === "none" ? null : mediaSrcCandidate;
+  const resolvedImage = mediaType === "image" ? mediaSrc : null;
 
   return {
     wrapper: {
@@ -215,26 +186,20 @@ export function normalizePageLayoutSettings(input: unknown): PageLayoutSettings 
       },
       background: {
         color:
-          typeof wrapperBackground.color === "string" &&
-          wrapperBackground.color.trim().length > 0
+          typeof wrapperBackground.color === "string" && wrapperBackground.color.trim().length > 0
             ? wrapperBackground.color
             : defaultPageLayoutSettings.wrapper.background.color,
         image: resolvedImage,
         media: {
           type: mediaType,
           source: mediaSource,
-          ...(mediaSource === "library" && mediaAssetId
-            ? { assetId: mediaAssetId }
-            : {}),
+          ...(mediaSource === "library" && mediaAssetId ? { assetId: mediaAssetId } : {}),
           src: mediaSrc,
         },
       },
     },
     sections: {
-      gap: normalizeSpacingToken(
-        sections.gap,
-        defaultPageLayoutSettings.sections.gap
-      ),
+      gap: normalizeSpacingToken(sections.gap, defaultPageLayoutSettings.sections.gap),
       defaults: normalizeSectionLayoutDefaults(sections.defaults),
     },
     ...(typographyPreset ? { typographyPreset } : {}),

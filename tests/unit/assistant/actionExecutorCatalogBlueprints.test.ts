@@ -204,8 +204,7 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     });
     expect(sections.at(-1)).toMatchObject({ type: "cta" });
     const footerList = sections.at(-1)?.blocks?.find((block) => block.type === "list") as
-      | { props?: { items?: Array<{ href?: string }> } }
-      | undefined;
+      { props?: { items?: Array<{ href?: string }> } } | undefined;
     const footerHrefs =
       footerList?.props?.items
         ?.map((link) => link.href)
@@ -245,11 +244,11 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
     deps.__state.detailPages.every(
       (detailPage) =>
         detailPage.currentDocument.seo?.imageField === "coverImageUrl" &&
-        detailPage.currentDocument.blocks.some(
-          (block) =>
-            block.type === "hero" &&
-            block.variant === "split" &&
-            (block.data?.media as { type?: string } | undefined)?.type === "image"
+        detailPage.currentDocument.sections.some(
+          (section) =>
+            section.type === "hero" &&
+            section.variant === "split" &&
+            section.blocks.some((block) => block.type === "image")
         )
     )
   ).toBe(true);

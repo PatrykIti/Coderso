@@ -28,7 +28,7 @@ import {
   type ContentListSourceMode,
   type ContentListData,
   type ContentListRuntimeItem,
-} from "../../widgets/core/contentList";
+} from "../../services/renderContracts/contentListContract";
 import {
   isPostContentTypeSlug,
   resolvePostRuntimeExcerpt,

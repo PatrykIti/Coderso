@@ -2,7 +2,7 @@ import {
   FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
   FORM_EMBED_SUCCESS_BEHAVIORS,
   FORM_EMBED_TEXTAREA_ROWS_LIMITS,
-} from "../../widgets/core/formEmbedContract";
+} from "../../services/renderContracts/formEmbedContract";
 import { PAGE_CSS_VALUE_MAX_LENGTH } from "./pageAuthoringSanitizers";
 import {
   mobileBreakpoints,
@@ -394,6 +394,16 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   }
   if (type === "scrollHint" && key === "label") {
     return { type: "string", maxLength: 160 };
+  }
+  // ── TASK-580-03-L01 ── legacy-widget (migration-only read-only placeholder).
+  // Ajv in lockstep with the write normalizer: bounded non-empty type label,
+  // and a free-form `data` object preserved verbatim (never deeply validated,
+  // never rendered). MUST precede the generic string tail.
+  if (type === "legacy-widget" && key === "legacyWidgetType") {
+    return { type: "string", minLength: 1, maxLength: 64, pattern: ".*\\S.*" };
+  }
+  if (type === "legacy-widget" && key === "data") {
+    return { type: "object", additionalProperties: true };
   }
   if (type === "gallery" && key === "filterable") return booleanSchema;
   if (type === "gallery" && key === "filterCategories") {

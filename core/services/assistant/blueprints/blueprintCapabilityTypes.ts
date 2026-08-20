@@ -31,22 +31,13 @@ export type BlueprintResourceKind =
   | "form"
   | "menu"
   | "seo"
-  | "widget-template"
   | "site-kit";
 
 export type BlueprintPageSectionKind =
-  | "catalog-landing"
-  | "form-embed"
-  | "lead-capture-landing"
-  | "editorial-hub"
-  | "content-list";
+  "catalog-landing" | "form-embed" | "lead-capture-landing" | "editorial-hub" | "content-list";
 
 export type BlueprintAdminSurfaceKind =
-  | "custom-screen"
-  | "entries"
-  | "pages"
-  | "forms"
-  | "listings";
+  "custom-screen" | "entries" | "pages" | "forms" | "listings";
 
 export type BlueprintGatedKind = "booking" | "checkout-payment" | "detail-page" | "media-import";
 

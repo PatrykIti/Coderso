@@ -187,23 +187,6 @@ export async function hydrateAssistantActiveSurfaceContext(
     };
   }
 
-  if (activeSurface.kind === "widget-template") {
-    const template = await deps.getWidgetTemplate(activeSurface.template.id);
-    if (!template) return { ...contextWithWorkspace, activeSurface: null };
-    return {
-      ...contextWithWorkspace,
-      activeSurface: {
-        ...activeSurface,
-        template: {
-          id: template.id,
-          name: template.name,
-          status: template.status,
-          category: template.category,
-        },
-      },
-    };
-  }
-
   if (activeSurface.kind === "custom-screen") {
     const screen = await deps.getCustomScreen(activeSurface.screen.id);
     if (!screen) return { ...contextWithWorkspace, activeSurface: null };

@@ -40,7 +40,6 @@ import { listSeoCached } from "@/services/seoClient";
 import { getSettingsCached } from "@/services/settingsClient";
 import { getSiteSettingsCached } from "@/services/siteSettingsClient";
 import { listPageTemplatesCached } from "@/services/pageTemplatesClient";
-import { listWidgetCatalogCached } from "@/services/widgetsClient";
 import {
   isExternalHref,
   resolveAdminRoutePath,
@@ -299,10 +298,6 @@ const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/advanced/page-templates",
     run: () => listPageTemplatesCached(prefetchWarmupOptions),
-  },
-  {
-    match: "/advanced/widgets",
-    run: () => listWidgetCatalogCached(prefetchWarmupOptions),
   },
   {
     match: (path) => resolveDetailTemplatePrefetchTarget(path) !== null,

@@ -98,13 +98,24 @@ const summarizeDetailPageDocument = (document: DetailPageDocument) => ({
   contentTypeId: document.contentTypeId,
   contentTypeSlug: document.contentTypeSlug,
   titlePattern: document.titlePattern,
-  blocksCount: document.blocks.length,
+  // Preview metadata may still describe a rejected v1-shaped plan document
+  // (TASK-580-03-L06): v1 payloads fail closed at the strict write
+  // normalizer, so summarize whichever body the invalid payload carried.
+  blocksCount: Array.isArray(document.sections)
+    ? document.sections.reduce((count, section) => count + section.blocks.length, 0)
+    : (document.blocks?.length ?? 0),
   bindingsCount: document.bindings.length,
   relatedCount: document.related?.length ?? 0,
   publicImpact:
     document.status === "published" ? "published-detail-template" : "draft-detail-template",
 });
 
+/**
+ * Detail-page documents are authored as schemaVersion 2 sections only
+ * (TASK-580-03-L06). v1 `blocks` payloads must fail closed at the strict
+ * write normalizer with `detail_page_legacy_v1_invalid`; no v1→v2 bridge
+ * runs in any assistant path.
+ */
 const resolveDetailPageActionDocument = async (
   action: AssistantDetailPageUpsertAction,
   deps: ActionExecutorDeps,
@@ -201,7 +212,8 @@ export const buildDetailPagePreview = async (
     const code =
       error instanceof Error &&
       (error.message === "detail_page_conflict" ||
-        error.message === "detail_page_content_type_mismatch")
+        error.message === "detail_page_content_type_mismatch" ||
+        error.message === "detail_page_legacy_v1_invalid")
         ? error.message
         : "detail_page_invalid";
     const message =
@@ -209,7 +221,9 @@ export const buildDetailPagePreview = async (
         ? "expectedExistingId does not match the detail template id being upserted."
         : code === "detail_page_content_type_mismatch"
           ? "The existing detail template id belongs to a different content type."
-          : "The detail template document or its linked content type is invalid.";
+          : code === "detail_page_legacy_v1_invalid"
+            ? "Legacy schemaVersion 1 detail-page documents are no longer accepted; re-author with schemaVersion 2 sections."
+            : "The detail template document or its linked content type is invalid.";
 
     return createPreviewChange({
       action,
@@ -280,9 +294,8 @@ export const executeDetailPageAction = async (
   preview: AssistantActionPreviewChange,
   ctx: ActionHandlerContext
 ): Promise<AssistantActionExecutionItem> => {
-  const document = await resolveDetailPageActionDocument(action, ctx.deps, ctx);
   const prepared = await ctx.deps.prepareDetailPageDocumentUpsert({
-    document,
+    document: await resolveDetailPageActionDocument(action, ctx.deps, ctx),
     expectedExistingId: action.input.expectedExistingId,
   });
   const targetKey = `${prepared.contentType.slug}/${prepared.document.id}`;

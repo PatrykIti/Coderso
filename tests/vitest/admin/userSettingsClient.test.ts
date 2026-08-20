@@ -22,7 +22,6 @@ const makeSettings = (): UserSettings => ({
   "customScreens.openAfterCreate": true,
   "forms.openAfterCreate": true,
   "media.openAfterUpload": false,
-  "widgets.favorites": ["hero"],
   "widgets.hero.presets": [],
   "posts.editor.preferences": {
     version: 2,

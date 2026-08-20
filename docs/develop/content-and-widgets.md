@@ -3,9 +3,9 @@
 This is where Coderso earns its "WordPress user experience, Next.js developer
 experience" tagline. The **content engine** lets you model data without writing a
 migration, while editor-owned **sections and blocks** turn bounded JSON into
-rendered UI. Product widgets are limited to the configurable Admin Dashboard;
-the historical `core/widgets` directory is retained runtime compatibility code,
-not a general authoring model.
+rendered UI. Product widgets are limited to the configurable Admin Dashboard.
+The v1 `core/widgets` kernel was removed with TASK-580; surviving render
+contracts live under `core/services/renderContracts/`.
 
 ## The content engine
 
@@ -166,34 +166,27 @@ adapter as server enforcement. Form theme colors are the TASK-516 exception that
 use `inherited-render` consistently from write normalization through builder
 preview and public Form rendering.
 
-Historical `core/widgets` read/render adapters opt into inherited keywords only
-for their enumerated direct CSS-property fields. A nested gradient or overlay
-stop may accept `currentColor` while rejecting `inherit`; its owning composite
-parser remains authoritative. These compatibility rules support existing domain
-callers and do not create a generic widget surface.
-
 ## Dashboard widgets
 
 Configurable widgets are an Admin Dashboard feature. Dashboard layout and widget
 data are owned by `core/services/dashboard`, dashboard routes, and the per-user
 `dashboard_layouts` contract. They are not Page Builder blocks and are not part
-of `core/widgets/*`. Dashboard contributions remain internal/admin-only and must
-follow their dashboard schema, RBAC, caching, and user-preference contracts.
+of any `core/widgets/*` namespace. Dashboard contributions remain
+internal/admin-only and must follow their dashboard schema, RBAC, caching, and
+user-preference contracts.
 
-## Historical `core/widgets` compatibility
+## Removed v1 widget surface (TASK-580)
 
-`core/widgets` and `tests/vitest/widgets` remain real filesystem paths because
-legacy render adapters and migrated surfaces still depend on them. Examples
-include compatibility renderers used behind existing Form, listing, contact, or
-newsletter block/section flows. Names such as `form-embed` describe an internal
-runtime seam; they do not define a selectable product widget.
-
-Maintenance in this namespace is limited to security, correctness, compatibility,
-and migration work for an existing caller. Keep its schemas strict, preserve safe
-legacy reads, test the current caller, and avoid registering new authoring
-capabilities. `_docs/WIDGETS.md` and `_docs/_WIDGETS/*` are historical
-implementation references for that maintenance, not a roadmap for new
-non-dashboard widgets.
+`core/widgets/**`, `core/admin/ui/widgets/**`, and `core/admin/ui/pages/builder/**`
+were removed with TASK-580. The v1 page runtime (`core/site/pageRuntime.tsx`,
+`renderPublicPageHtml`, `renderPublicPageRuntimeHtml`) and per-type block
+hydration are gone; public pages and entry detail pages render through the Page
+V2 pipeline (`renderPublicPageV2RuntimeHtml` + `core/services/pages/*`).
+Stored v1 detail-page documents were backfilled (migration 0079) and unmapped v1
+widget types survive only as read-only `legacy-widget` placeholder blocks inside
+converted Page V2 documents. `_docs/WIDGETS.md` and `_docs/_WIDGETS/*` are
+historical tombstones only; new work belongs to the Dashboard widget contract
+(`_docs/DASHBOARD_WIDGETS_SPEC.md`) and the domain section/block contracts.
 
 Changes to core runtime compatibility code still ship through CI and a redeploy.
 They are not runtime-installable like plugins; see

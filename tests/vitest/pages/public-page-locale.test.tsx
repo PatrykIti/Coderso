@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import { createDefaultPageDocumentV2 } from "../../../core/services/pages/pageDocumentV2";
-import {
-  renderPublicPageHtml,
-  renderPublicPageV2RuntimeHtml,
-} from "../../../core/site/renderPublicPage";
+import { renderPublicPageV2RuntimeHtml } from "../../../core/site/renderPublicPage";
 import { buildPublicDocumentShell } from "../../../core/site/publicDocumentShell";
 
 describe("public Page document locale", () => {
   it("renders normalized Polish locale", () => {
-    const html = renderPublicPageHtml({ title: "Dom", blocks: [], siteLocale: "pl-pl" });
+    const html = renderPublicPageV2RuntimeHtml({
+      title: "Dom",
+      document: createDefaultPageDocumentV2(),
+      siteLocale: "pl-pl",
+    });
     expect(html).toContain('<html lang="pl-PL">');
   });
 
@@ -24,9 +25,15 @@ describe("public Page document locale", () => {
   });
 
   it("falls back for missing and invalid locale", () => {
-    expect(renderPublicPageHtml({ title: "Home", blocks: [] })).toContain('<html lang="en">');
     expect(
-      renderPublicPageHtml({ title: "Home", blocks: [], siteLocale: 'pl" onload="x' })
+      renderPublicPageV2RuntimeHtml({ title: "Home", document: createDefaultPageDocumentV2() })
+    ).toContain('<html lang="en">');
+    expect(
+      renderPublicPageV2RuntimeHtml({
+        title: "Home",
+        document: createDefaultPageDocumentV2(),
+        siteLocale: 'pl" onload="x',
+      })
     ).toContain('<html lang="en">');
   });
 

@@ -104,15 +104,9 @@ import {
   executePageDeleteAction,
 } from "./actionExecutorPages";
 import {
-  buildWidgetTemplateDeletePreview,
-  buildWidgetTemplateUpdatePreview,
-  buildWidgetTemplateBlockPatchPreview,
   buildSiteKitRecommendPreview,
   buildSiteKitInstallPreview,
   buildSiteKitValidatePreview,
-  executeWidgetTemplateDeleteAction,
-  executeWidgetTemplateUpdateAction,
-  executeWidgetTemplateBlockPatchAction,
   executeSiteKitRecommendAction,
   executeSiteKitInstallAction,
   executeSiteKitValidateAction,
@@ -537,36 +531,6 @@ export const actionHandlers = createAssistantActionRegistry<AssistantActionHandl
     execute: (action, preview, ctx) =>
       action.type === "page.delete"
         ? executePageDeleteAction(action, preview, ctx.deps)
-        : unexpectedAction(),
-  },
-  "widget-template.delete": {
-    preview: (action, ctx) =>
-      action.type === "widget-template.delete"
-        ? buildWidgetTemplateDeletePreview(action, ctx.deps)
-        : unexpectedAction(),
-    execute: (action, preview, ctx) =>
-      action.type === "widget-template.delete"
-        ? executeWidgetTemplateDeleteAction(action, preview, ctx.deps)
-        : unexpectedAction(),
-  },
-  "widget-template.update": {
-    preview: (action, ctx) =>
-      action.type === "widget-template.update"
-        ? buildWidgetTemplateUpdatePreview(action, ctx.deps)
-        : unexpectedAction(),
-    execute: (action, preview, ctx) =>
-      action.type === "widget-template.update"
-        ? executeWidgetTemplateUpdateAction(action, preview, ctx.actorId, ctx.deps)
-        : unexpectedAction(),
-  },
-  "widget-template.block.patch": {
-    preview: (action, ctx) =>
-      action.type === "widget-template.block.patch"
-        ? buildWidgetTemplateBlockPatchPreview(action, ctx.deps)
-        : unexpectedAction(),
-    execute: (action, preview, ctx) =>
-      action.type === "widget-template.block.patch"
-        ? executeWidgetTemplateBlockPatchAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
   "site-kit.recommend": {

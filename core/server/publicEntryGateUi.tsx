@@ -17,7 +17,7 @@ import {
 } from "../services/content/entryVisibilityGate";
 import type { ContentRouteMatch } from "../site/contentRouteMatcher";
 import type { ContentRouteSetting } from "../services/settings/settingsContracts";
-import type { DeviceTarget } from "../widgets/types";
+import type { DeviceTarget } from "../services/renderContracts/tokens";
 import { attachUserFromSession, type AuthContext } from "./middleware/auth";
 import { getUserPermissions, hasPermission } from "../services/auth/roleService";
 import { resolvePublicStyles } from "./publicSiteAssets";

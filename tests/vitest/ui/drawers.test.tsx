@@ -9,8 +9,6 @@ import { EntryCreateDrawer } from "../../../core/admin/ui/entries/EntryCreateDra
 import { ContentTypeCreateDrawer } from "../../../core/admin/ui/content-types/ContentTypeCreateDrawer";
 import { AccessLogDetailsDrawer } from "../../../core/admin/ui/security/AccessLogDetailsDrawer";
 import type { AccessLogItem } from "../../../core/admin/ui/security/types";
-import { WidgetDetailsDrawer } from "../../../core/admin/ui/widgets/WidgetDetailsDrawer";
-import type { WidgetItem } from "../../../core/admin/ui/widgets/types";
 import { ThemeProfileDrawer } from "../../../core/admin/ui/themes/ThemeProfileDrawer";
 import type { AdminThemeProfileCard } from "../../../core/admin/ui/themes/ThemeProfileCard";
 import { IntegrationDrawer } from "../../../core/admin/ui/settings/IntegrationDrawer";
@@ -36,17 +34,6 @@ const accessLog: AccessLogItem = {
     view: { enabled: true },
     revoke: { enabled: true },
   },
-};
-
-const widget: WidgetItem = {
-  id: "hero",
-  name: "Hero",
-  category: "layout",
-  categoryLabel: "Layout",
-  complexity: "composite",
-  audience: "beginner",
-  module: "core",
-  source: "core",
 };
 
 const themeProfile: AdminThemeProfileCard = {
@@ -163,15 +150,6 @@ test("AccessLogDetailsDrawer renders log info", () => {
 
   expect(html).toContain("Access Log Details");
   expect(html).toContain("admin@coderso.io");
-});
-
-test("WidgetDetailsDrawer renders widget name", () => {
-  const html = renderAdminUi(
-    <WidgetDetailsDrawer widget={widget} open onOpenChange={() => undefined} />
-  );
-
-  expect(html).toContain("Hero");
-  expect(html).toContain("Wizard");
 });
 
 test("ThemeProfileDrawer renders profile name", () => {

@@ -72,7 +72,6 @@ import {
   ThemesRoute,
   UsersRolesRoute,
   WebhooksRoute,
-  WidgetLibraryRoute,
   PageTemplatesRoute,
   PageTemplateEditorRoute,
 } from "@/app/adminRouteComponents";
@@ -377,11 +376,6 @@ export const adminRoutes: RouteDefinition[] = [
     permission: "roles:read",
   },
   { pattern: "/themes", render: () => <ThemesRoute.Component />, permission: "themes:read" },
-  {
-    pattern: "/advanced/widgets",
-    render: () => <WidgetLibraryRoute.Component />,
-    permission: "widgets:read",
-  },
   {
     pattern: "/advanced/page-templates",
     render: () => <PageTemplatesRoute.Component />,

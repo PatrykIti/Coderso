@@ -1,7 +1,7 @@
 import {
   normalizeContentListData,
   type ContentListRuntimeItem,
-} from "../../widgets/core/contentList";
+} from "../../services/renderContracts/contentListContract";
 import {
   getPageBlockActiveSlotKeys,
   resolvePageDocumentForBreakpoint,

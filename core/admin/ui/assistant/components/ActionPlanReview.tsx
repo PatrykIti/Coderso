@@ -58,7 +58,6 @@ const destructiveActionTypes = new Set([
   "menu.item.delete",
   "seo.document.delete",
   "page.delete",
-  "widget-template.delete",
 ]);
 
 const actionTypeLabels: Record<string, string> = {
@@ -103,9 +102,6 @@ const actionTypeLabels: Record<string, string> = {
   "detail-page.upsert": "Detail Template",
   "page.update": "Page",
   "page.delete": "Page",
-  "widget-template.delete": "Widget template",
-  "widget-template.update": "Widget template",
-  "widget-template.block.patch": "Widget template block",
   "site-kit.recommend": "Site kit recommendation",
   "site-kit.install": "Site kit install",
   "site-kit.validate": "Site kit validation",

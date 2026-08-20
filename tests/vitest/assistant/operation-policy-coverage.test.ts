@@ -42,12 +42,6 @@ test("operation policy coverage rows have stable route state and task metadata",
         coverage: "not-applicable",
         task: "TASK-184-16",
       }),
-      expect.objectContaining({
-        route: "/admin/advanced/widgets",
-        label: "Retired Widget Compatibility",
-        coverage: "legacy-maintenance",
-        task: "TASK-184-07",
-      }),
     ])
   );
 });

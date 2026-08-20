@@ -6,7 +6,7 @@
  *
  * Pure (DB-free) coverage:
  *
- * - `readJournal` returns 77 entries with strictly increasing, non-contiguous
+ * - `readJournal` returns 78 entries with strictly increasing, non-contiguous
  *   `idx` (allocated, not identity; sibling streams leave gaps).
  * - `splitStatements` respects the `--> statement-breakpoint` marker and drops
  *   empty chunks.
@@ -19,7 +19,7 @@
  * runner loads `.env`, this file only reads `process.env` and never sources it
  * itself, same gating pattern as the sibling suites in this directory):
  *
- * - `migrateSchema(url, schema)` applies all 77 journal migrations on the
+ * - `migrateSchema(url, schema)` applies all 78 journal migrations on the
  *   first call and 0 on the second (idempotent, tag-tracked in
  *   `_bun_migrations`), and `to_regclass` resolves `pages`/`settings`.
  * - `pg_trgm` exists exactly once database-wide in `pg_extension`.
@@ -55,9 +55,10 @@ const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const SCHEMA = "bun_provision_test";
 const CONTROL = "bun_control_schema";
 const SCRATCH = "bun_provision_fail";
-// Live journal has 78 entries; 0079_hot_shadowcat (TASK-493-01-L02) is the
-// newest appended migration (see core/db/migrations/meta/_journal.json).
-const MIGRATION_COUNT = 78;
+// Live journal has 79 entries; 0080_detail_page_v2_backfill (TASK-580-03-L03)
+// is the newest appended migration; 0079_hot_shadowcat (TASK-493-01-L02)
+// precedes it (see core/db/migrations/meta/_journal.json).
+const MIGRATION_COUNT = 79;
 
 let sql: postgres.Sql | undefined;
 
@@ -79,7 +80,7 @@ afterAll(async () => {
   await sql.end();
 });
 
-test("journal has 77 entries with strictly increasing idx and unique tags", async () => {
+test("journal has 78 entries with strictly increasing idx and unique tags", async () => {
   const journal = await readJournal();
   // Live journal: 0073_smiling_ser_duncan, 0075_form_submissions_export_cursor,
   // 0076_content_revisions_version_uniq and 0078_backup_users_staging were appended

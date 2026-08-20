@@ -17,6 +17,10 @@ This repository uses a hybrid testing model aligned with the product architectur
   - `tests/integration/server/*`
   - `tests/integration/store/*`
   - `tests/integration/plugins/*`
+  - `tests/integration/detailPages/*` - DB-backed detail-page contracts
+    (`detailPageV2BackfillMigration.test.ts` proves the 0079 SQL backfill
+    against the shared v1->v2 fixture corpus and skips cleanly without
+    `DATABASE_URL`/`DATABASE_DIRECT_URL`)
   - `tests/perf/*`
   - `tests/security/*`
   - plugin lifecycle and bundle/runtime contracts

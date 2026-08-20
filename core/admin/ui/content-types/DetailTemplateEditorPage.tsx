@@ -36,26 +36,7 @@ import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
-import { BlockList } from "@/ui/pages/builder/BlockList";
-import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
-import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
-import { LibraryPanel } from "@/ui/pages/builder/LibraryPanel";
-import {
-  applyWidgetBlockPatch,
-  appendSlotBlock,
-  createBlock,
-  deleteBlockById,
-  duplicateBlock,
-  findBlockById,
-  flattenBlocks,
-  getFirstBlockId,
-  moveBlockIntoSlot,
-  reorderBlocksAtPath,
-  updateBlockById,
-  type BlockPath,
-} from "@/ui/pages/builder/blockUtils";
-import type { Block } from "@/ui/pages/builder/types";
-import { getWidgetRegistry } from "@/ui/pages/builder/widgetRegistry";
+import { type AuthoringSelectionTarget } from "@/ui/authoring";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -63,23 +44,23 @@ import type {
   DetailPageBinding,
   DetailPageDocument,
 } from "../../../services/content/detailPageTypes";
-import type { PageMaxWidthToken } from "../../../services/pages/layoutSettings";
-import type { ContainerToken, SpacingToken, WidgetEditorContext } from "../../../widgets/types";
+import type { PageBlockV2, PageSectionV2 } from "../../../services/pages/pageDocumentV2";
+import { updatePageBlockAtPath } from "../../../services/pages/pageBlockPaths";
 
 import { DetailTemplateBindingPanel } from "./DetailTemplateBindingPanel";
+import { DetailTemplateCanvas, findDetailTemplateBlockPath } from "./DetailTemplateCanvas";
+import { DetailTemplateInspector } from "./DetailTemplateInspector";
 import {
   buildDetailTemplateDocumentUpdate,
+  collectSectionBlockIds,
+  findBlockInSection,
   normalizeDetailTemplateDocument,
+  reconcileDetailTemplateSelection,
   resolveDetailTemplateEditorRoute,
+  summarizeDetailTemplateBindingsForAssistant,
+  summarizeDetailTemplateBlocksForAssistant,
 } from "./detailTemplateEditorModel";
 import { fieldsFromSchema } from "./schemaMapping";
-
-type SlotInsertTarget = {
-  parentId: string;
-  slotId: string;
-  slotLabel: string;
-  allowedTypes?: string[];
-};
 
 const editorToasts = createAdminActionToastAdapter({
   actions: {
@@ -110,52 +91,6 @@ const editorToasts = createAdminActionToastAdapter({
   },
 });
 
-const spacingTokenToListSpaceClassMap: Record<SpacingToken, string> = {
-  none: "space-y-0",
-  xs: "space-y-2",
-  sm: "space-y-4",
-  md: "space-y-6",
-  lg: "space-y-8",
-  xl: "space-y-12",
-  "2xl": "space-y-16",
-};
-
-const spacingTokenToPaddingTopClassMap: Record<SpacingToken, string> = {
-  none: "pt-0",
-  xs: "pt-2",
-  sm: "pt-4",
-  md: "pt-6",
-  lg: "pt-8",
-  xl: "pt-12",
-  "2xl": "pt-16",
-};
-
-const spacingTokenToPaddingBottomClassMap: Record<SpacingToken, string> = {
-  none: "pb-0",
-  xs: "pb-2",
-  sm: "pb-4",
-  md: "pb-6",
-  lg: "pb-8",
-  xl: "pb-12",
-  "2xl": "pb-16",
-};
-
-const pageContainerClassMap: Record<ContainerToken, string> = {
-  default: "mx-auto w-full max-w-6xl",
-  narrow: "mx-auto w-full max-w-4xl",
-  full: "w-full",
-};
-
-const pageMaxWidthClassMap: Record<PageMaxWidthToken, string> = {
-  "4xl": "max-w-4xl",
-  "5xl": "max-w-5xl",
-  "6xl": "max-w-6xl",
-  "7xl": "max-w-7xl",
-};
-
-const joinClasses = (...classes: Array<string | undefined | false>) =>
-  classes.filter(Boolean).join(" ");
-
 const formatTimestamp = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -171,105 +106,12 @@ const formatTimestamp = (value: string) => {
 const getErrorMessage = (error: unknown, fallback: string) =>
   isApiClientError(error) ? error.message : fallback;
 
-const readBlockDataText = (block: Block, key: string) => {
-  const data = block.data;
-  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const value = (data as Record<string, unknown>)[key];
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-};
-
-const summarizeDetailTemplateBlocksForAssistant = (
-  blocks: Block[],
-  options: { maxBlocks?: number } = {}
-) => {
-  const maxBlocks = options.maxBlocks ?? 80;
-  const result: Array<{
-    id: string;
-    type: string;
-    label: string | null;
-    path: string;
-    childCount: number;
-    slotKeys: string[];
-    templateId: string | null;
-    templateName: string | null;
-  }> = [];
-
-  const visit = (items: Block[], pathPrefix: string) => {
-    items.forEach((block, index) => {
-      if (result.length >= maxBlocks) return;
-      const path = pathPrefix ? `${pathPrefix}.${index}` : String(index);
-      const slotEntries =
-        block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
-          ? Object.entries(block.slots)
-          : [];
-      const childBlocks = Array.isArray(block.children) ? block.children : [];
-      const slotChildCount = slotEntries.reduce(
-        (count, [, value]) => count + (Array.isArray(value) ? value.length : 0),
-        0
-      );
-      result.push({
-        id: block.id,
-        type: block.type,
-        label: readBlockDataText(block, "title") ?? readBlockDataText(block, "headline"),
-        path,
-        childCount: childBlocks.length + slotChildCount,
-        slotKeys: slotEntries.map(([key]) => key).sort((left, right) => left.localeCompare(right)),
-        templateId:
-          block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
-        templateName:
-          block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
-      });
-
-      if (result.length >= maxBlocks) return;
-      if (childBlocks.length > 0) {
-        visit(childBlocks, `${path}.children`);
-      }
-      for (const [slotId, value] of slotEntries) {
-        if (result.length >= maxBlocks) break;
-        if (Array.isArray(value)) {
-          visit(value as Block[], `${path}.slots.${slotId}`);
-        }
-      }
-    });
-  };
-
-  visit(blocks, "");
-  return result;
-};
-
-const summarizeDetailTemplateBindingsForAssistant = (
-  bindings: DetailPageBinding[],
-  options: { maxBindings?: number } = {}
-) => {
-  const maxBindings = options.maxBindings ?? 80;
-  return bindings.slice(0, maxBindings).map((binding) => ({
-    id: binding.id,
-    blockId: binding.blockId,
-    propPath: binding.propPath,
-    source: binding.source,
-    transform: binding.transform ?? null,
-    required: binding.required === true,
-  }));
-};
-
-const resolveDetailTemplateBindingState = (
-  bindings: DetailPageBinding[],
-  blockId: string | null,
-  propPath: string
-): "literal" | "bound" | "mixed" => {
-  if (!blockId) return "literal";
-  const hasBinding = bindings.some(
-    (binding) => binding.blockId === blockId && binding.propPath === propPath
-  );
-  return hasBinding ? "bound" : "literal";
-};
-
 const toEditorState = (record: DetailPageRecord) => {
   const document = normalizeDetailTemplateDocument(record);
   return {
     record,
     document,
-    blocks: document.blocks as Block[],
+    sections: document.sections,
     bindings: document.bindings,
     name: document.name,
     titlePattern: document.titlePattern,
@@ -290,15 +132,22 @@ export function DetailTemplateEditorPage() {
   const [document, setDocument] = useState<DetailPageDocument | null>(
     initialState?.document ?? null
   );
-  const [blocks, setBlocks] = useState<Block[]>(initialState?.blocks ?? []);
+  const [sections, setSections] = useState<PageSectionV2[]>(initialState?.sections ?? []);
   const [bindings, setBindings] = useState<DetailPageBinding[]>(initialState?.bindings ?? []);
   const [name, setName] = useState(initialState?.name ?? "");
   const [titlePattern, setTitlePattern] = useState(initialState?.titlePattern ?? "{title}");
-  const [selectedId, setSelectedId] = useState<string | null>(initialState?.blocks[0]?.id ?? null);
+  const [selection, setSelection] = useState<AuthoringSelectionTarget | null>(() => {
+    const firstSection = initialState?.sections[0];
+    if (!firstSection) return null;
+    const firstBlock = firstSection.blocks[0];
+    return firstBlock
+      ? { kind: "block", sectionId: firstSection.id, id: firstBlock.id }
+      : { kind: "section", id: firstSection.id };
+  });
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>(
     () => getCachedContentTypes() ?? []
   );
-  const [activeDetailsTab, setActiveDetailsTab] = useState<"template" | "data" | "widget">(
+  const [activeDetailsTab, setActiveDetailsTab] = useState<"template" | "data" | "block">(
     "template"
   );
   const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
@@ -312,7 +161,6 @@ export function DetailTemplateEditorPage() {
   );
   const [sampleEntriesLoading, setSampleEntriesLoading] = useState(false);
   const [sampleEntriesError, setSampleEntriesError] = useState<string | null>(null);
-  const blocksRef = useRef(blocks);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
@@ -332,16 +180,23 @@ export function DetailTemplateEditorPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [libraryTab, setLibraryTab] = useState<"widgets" | "forms">("widgets");
-  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
-  const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
 
-  const selectedBlock = findBlockById(blocks, selectedId);
-  const selectedWidget = useMemo(() => {
-    if (!selectedBlock) return undefined;
-    return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
-  }, [selectedBlock]);
+  const selectedSectionId =
+    selection?.kind === "section"
+      ? selection.id
+      : selection?.kind === "block"
+        ? selection.sectionId
+        : null;
+  const selectedSection = selectedSectionId
+    ? (sections.find((section) => section.id === selectedSectionId) ?? null)
+    : null;
+  const selectedBlock =
+    selection?.kind === "block"
+      ? selectedSection
+        ? findBlockInSection(selectedSection, selection.id)
+        : null
+      : null;
   const selectedContentType = useMemo(() => {
     const contentTypeId = record?.contentTypeId ?? document?.contentTypeId ?? route?.contentTypeId;
     if (!contentTypeId) return null;
@@ -351,49 +206,6 @@ export function DetailTemplateEditorPage() {
     () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
     [selectedContentType]
   );
-  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
-  const detailTemplateWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
-    if (!selectedBlock) return undefined;
-    return {
-      surface: "page-builder",
-      bookingFlows,
-      jumpToBindingPropPath: (propPath: string) => {
-        setActiveDetailsTab("data");
-        setFocusedBindingPropPath(propPath);
-      },
-      getBindingState: (propPath: string) =>
-        resolveDetailTemplateBindingState(bindings, selectedId, propPath),
-    };
-  }, [bindings, bookingFlows, selectedBlock, selectedId]);
-
-  const layout = document?.settings.layout;
-  const wrapperPaddingClass = layout
-    ? joinClasses(
-        spacingTokenToPaddingTopClassMap[layout.wrapper.padding.top],
-        spacingTokenToPaddingBottomClassMap[layout.wrapper.padding.bottom]
-      )
-    : "";
-  const wrapperContainerClass = layout
-    ? joinClasses(
-        pageContainerClassMap[layout.wrapper.container],
-        layout.wrapper.container !== "full" && layout.wrapper.maxWidth
-          ? pageMaxWidthClassMap[layout.wrapper.maxWidth]
-          : undefined
-      )
-    : "mx-auto w-full max-w-6xl";
-  const wrapperBackgroundMedia = layout?.wrapper.background.media;
-  const wrapperBackgroundImage =
-    wrapperBackgroundMedia?.type === "image"
-      ? (wrapperBackgroundMedia.src ?? layout?.wrapper.background.image ?? null)
-      : null;
-  const wrapperBackgroundVideo =
-    wrapperBackgroundMedia?.type === "video" ? wrapperBackgroundMedia.src : null;
-  const wrapperBackgroundStyle = {
-    backgroundColor: layout?.wrapper.background.color ?? "transparent",
-    backgroundImage: wrapperBackgroundImage ? `url(${wrapperBackgroundImage})` : undefined,
-    backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
-    backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
-  };
 
   useEffect(() => {
     if (!record || !document || !detailPageId) {
@@ -412,8 +224,8 @@ export function DetailTemplateEditorPage() {
         titlePattern: titlePattern.trim() || document.titlePattern,
       },
       sampleEntryId: selectedSampleEntryId || null,
-      selectedBlockId: selectedId,
-      blocks: summarizeDetailTemplateBlocksForAssistant(blocks),
+      selectedBlockId: selection?.kind === "block" ? selection.id : null,
+      blocks: summarizeDetailTemplateBlocksForAssistant(sections),
       bindings: summarizeDetailTemplateBindingsForAssistant(bindings),
       warnings: hasUnsavedChanges ? ["detail_page_has_unsaved_changes"] : [],
     });
@@ -423,14 +235,14 @@ export function DetailTemplateEditorPage() {
     };
   }, [
     bindings,
-    blocks,
+    sections,
     detailPageId,
     document,
     hasUnsavedChanges,
     name,
     record,
-    selectedId,
     selectedSampleEntryId,
+    selection,
     titlePattern,
   ]);
 
@@ -458,14 +270,12 @@ export function DetailTemplateEditorPage() {
       const next = toEditorState(nextRecord);
       setRecord(next.record);
       setDocument(next.document);
-      setBlocks(next.blocks);
+      setSections(next.sections);
       setBindings(next.bindings);
       setName(next.name);
       setTitlePattern(next.titlePattern);
       setFocusedBindingPropPath(null);
-      setSelectedId((current) =>
-        current && findBlockById(next.blocks, current) ? current : (next.blocks[0]?.id ?? null)
-      );
+      setSelection((current) => reconcileDetailTemplateSelection(current, next.sections));
       setUnsavedChanges(false);
       setRemoteUpdatePending(false);
     },
@@ -586,10 +396,9 @@ export function DetailTemplateEditorPage() {
     setRemoteUpdatePending(false);
   };
 
-  const updateBlocks = (next: Block[]) => {
-    blocksRef.current = next;
-    setBlocks(next);
-    setDocument((current) => (current ? { ...current, blocks: next } : current));
+  const updateSections = (next: PageSectionV2[]) => {
+    setSections(next);
+    setDocument((current) => (current ? { ...current, sections: next } : current));
     markDraftChanged();
   };
 
@@ -599,86 +408,33 @@ export function DetailTemplateEditorPage() {
     markDraftChanged();
   };
 
-  const pruneBindingsForBlocks = (nextBlocks: Block[]) => {
-    const remainingBlockIds = new Set(flattenBlocks(nextBlocks).map((block) => block.id));
-    updateBindings(bindings.filter((binding) => remainingBlockIds.has(binding.blockId)));
-  };
-
-  const handleAddBlock = (type: string) => {
-    if (slotInsertTarget) {
-      handleInsertIntoSlot(slotInsertTarget.parentId, slotInsertTarget.slotId, type);
-      setSlotInsertTarget(null);
-      if (mobileLibraryOpen) setMobileLibraryOpen(false);
-      return;
+  const handleCanvasChange = (next: PageSectionV2[]) => {
+    const remainingBlockIds = new Set(collectSectionBlockIds(next));
+    const nextBindings = bindings.filter((binding) => remainingBlockIds.has(binding.blockId));
+    updateSections(next);
+    if (nextBindings.length !== bindings.length) {
+      updateBindings(nextBindings);
     }
-    const nextBlock = createBlock(type);
-    updateBlocks([...blocks, nextBlock]);
-    setSelectedId(nextBlock.id);
-    if (mobileLibraryOpen) setMobileLibraryOpen(false);
+    setSelection((current) => reconcileDetailTemplateSelection(current, next));
   };
 
-  const handleAddForm = (form: { id: string; name: string }) => {
-    const nextBlock = createBlock("form-embed");
-    const finalized = {
-      ...nextBlock,
-      data: {
-        ...(nextBlock.data as Record<string, unknown>),
-        formId: form.id,
-        title: form.name,
-      },
-    };
-    updateBlocks([...blocks, finalized]);
-    setSelectedId(finalized.id);
-    if (mobileLibraryOpen) setMobileLibraryOpen(false);
-  };
-
-  const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
-    const nextBlock = createBlock(type);
-    updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
-    setSelectedId(nextBlock.id);
-  };
-
-  const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
-    updateBlocks(moveBlockIntoSlot(blocks, blockId, parentId, slotId));
-  };
-
-  const handleMove = (pathValue: BlockPath, from: number, to: number) => {
-    if (to < 0) return;
-    updateBlocks(reorderBlocksAtPath(blocks, pathValue, from, to));
-  };
-
-  const handleSelectBlock = (id: string) => {
-    setSelectedId(id);
+  const handleSelect = (target: AuthoringSelectionTarget) => {
+    setSelection(target);
     setFocusedBindingPropPath(null);
   };
 
-  const handleDuplicate = (id: string) => {
-    updateBlocks(duplicateBlock(blocks, id));
+  const handleSectionChange = (next: PageSectionV2) => {
+    updateSections(sections.map((section) => (section.id === next.id ? next : section)));
   };
 
-  const handleDelete = (id: string) => {
-    const result = deleteBlockById(blocks, id);
-    if (!result.deleted) return;
-    updateBlocks(result.blocks);
-    pruneBindingsForBlocks(result.blocks);
-    if (selectedId && !findBlockById(result.blocks, selectedId)) {
-      setSelectedId(getFirstBlockId(result.blocks));
-      setFocusedBindingPropPath(null);
-    }
-  };
-
-  const handleChangeBlock = (next: Block) => {
-    updateBlocks(updateBlockById(blocks, next.id, () => next));
-  };
-
-  const handlePatchBlock = (
-    blockId: string,
-    patch: Parameters<typeof applyWidgetBlockPatch>[1]
-  ) => {
-    updateBlocks(
-      updateBlockById(blocksRef.current, blockId, (current) =>
-        applyWidgetBlockPatch(current, patch)
-      )
+  const handleBlockChange = (next: PageBlockV2) => {
+    if (!selectedSection) return;
+    const path = findDetailTemplateBlockPath(selectedSection, next.id);
+    if (!path) return;
+    const result = updatePageBlockAtPath(selectedSection, path, () => next);
+    if (result.status !== "ok") return;
+    updateSections(
+      sections.map((section) => (section.id === selectedSection.id ? result.section : section))
     );
   };
 
@@ -699,7 +455,7 @@ export function DetailTemplateEditorPage() {
     return buildDetailTemplateDocumentUpdate(record, {
       name,
       titlePattern,
-      blocks,
+      sections,
       bindings,
     });
   };
@@ -871,23 +627,6 @@ export function DetailTemplateEditorPage() {
     }
   };
 
-  const renderLibraryPanel = () => (
-    <LibraryPanel
-      onAddWidget={handleAddBlock}
-      onAddForm={handleAddForm}
-      activeTab={libraryTab}
-      onActiveTabChange={(nextTab) => {
-        setLibraryTab(nextTab);
-        if (nextTab !== "widgets" && slotInsertTarget) {
-          setSlotInsertTarget(null);
-        }
-      }}
-      widgetAllowedTypes={slotInsertTarget?.allowedTypes ?? null}
-      widgetContextLabel={slotInsertTarget?.slotLabel ?? null}
-      onClearWidgetContext={() => setSlotInsertTarget(null)}
-    />
-  );
-
   const renderDetailsPanel = () => (
     <div className="flex flex-col gap-6 p-6">
       <Tabs
@@ -898,7 +637,7 @@ export function DetailTemplateEditorPage() {
         <TabsList variant="line" className="w-full">
           <TabsTrigger value="template">Template</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
-          <TabsTrigger value="widget">Widget</TabsTrigger>
+          <TabsTrigger value="block">Block</TabsTrigger>
         </TabsList>
 
         <TabsContent value="template" className="space-y-4">
@@ -950,7 +689,6 @@ export function DetailTemplateEditorPage() {
         <TabsContent value="data" className="space-y-4">
           <DetailTemplateBindingPanel
             selectedBlock={selectedBlock}
-            selectedWidget={selectedWidget ?? null}
             value={bindings}
             fields={contentFields}
             onChange={updateBindings}
@@ -959,19 +697,13 @@ export function DetailTemplateEditorPage() {
           />
         </TabsContent>
 
-        <TabsContent value="widget" className="space-y-4">
-          <section className="space-y-3">
-            <h2 className="text-sm font-semibold">Block</h2>
-            <BlockSettings
-              block={selectedBlock}
-              widget={selectedWidget}
-              onChange={handleChangeBlock}
-              onBlockPatch={
-                selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
-              }
-              editorContext={detailTemplateWidgetContext}
-            />
-          </section>
+        <TabsContent value="block" className="space-y-4">
+          <DetailTemplateInspector
+            section={selectedSection}
+            block={selectedBlock}
+            onSectionChange={handleSectionChange}
+            onBlockChange={handleBlockChange}
+          />
         </TabsContent>
       </Tabs>
 
@@ -987,7 +719,6 @@ export function DetailTemplateEditorPage() {
   return (
     <EditorShell
       activeHref="/admin/advanced/engine"
-      leftPanel={renderLibraryPanel()}
       rightPanel={renderDetailsPanel()}
       rightPanelClassName="p-0"
       breadcrumbs={["Advanced", "Engine", "Collection", title]}
@@ -1001,7 +732,7 @@ export function DetailTemplateEditorPage() {
       }
     >
       <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -1071,9 +802,6 @@ export function DetailTemplateEditorPage() {
               History
             </Button>
             <div className="ml-auto flex flex-wrap items-center gap-2 lg:hidden">
-              <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
-                Components
-              </Button>
               <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
                 Details
               </Button>
@@ -1082,7 +810,7 @@ export function DetailTemplateEditorPage() {
         </div>
       </div>
 
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-8">
         {visibleError ? (
           <Alert variant="destructive">
             <AlertTitle>Detail template error</AlertTitle>
@@ -1113,63 +841,13 @@ export function DetailTemplateEditorPage() {
         ) : null}
 
         {!isLoading && record ? (
-          <div
-            className={joinClasses(
-              "relative w-full overflow-hidden rounded-xl border border-border/50 bg-background",
-              wrapperPaddingClass
-            )}
-            style={wrapperBackgroundStyle}
-          >
-            {wrapperBackgroundVideo ? (
-              <video
-                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-                src={wrapperBackgroundVideo}
-                autoPlay
-                loop
-                muted
-                playsInline
-                aria-hidden="true"
-              />
-            ) : null}
-            <div
-              className={joinClasses(
-                wrapperContainerClass,
-                wrapperBackgroundVideo ? "relative z-[1]" : undefined
-              )}
-            >
-              {blocks.length === 0 ? (
-                <div className="rounded-lg border border-dashed bg-muted/20 p-8 text-sm text-muted-foreground">
-                  Empty detail template.
-                </div>
-              ) : (
-                <BlockList
-                  blocks={blocks}
-                  className={
-                    layout ? spacingTokenToListSpaceClassMap[layout.sections.gap] : undefined
-                  }
-                  pageDefaults={layout?.sections.defaults}
-                  selectedId={selectedId}
-                  onSelect={handleSelectBlock}
-                  onMove={handleMove}
-                  onDuplicate={handleDuplicate}
-                  onDelete={handleDelete}
-                  onInsert={handleInsertIntoSlot}
-                  onMoveToSlot={handleMoveIntoSlot}
-                  onOpenSlotInsert={(target) => {
-                    setLibraryTab("widgets");
-                    setSlotInsertTarget(target);
-                    if (
-                      typeof window !== "undefined" &&
-                      typeof window.matchMedia === "function" &&
-                      window.matchMedia("(max-width: 1023px)").matches
-                    ) {
-                      setMobileLibraryOpen(true);
-                    }
-                  }}
-                />
-              )}
-            </div>
-          </div>
+          <DetailTemplateCanvas
+            sections={sections}
+            layout={document?.settings.layout}
+            selection={selection}
+            onSelect={handleSelect}
+            onChange={handleCanvasChange}
+          />
         ) : null}
       </div>
 
@@ -1260,15 +938,6 @@ export function DetailTemplateEditorPage() {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
-        <SheetContent side="left" className="w-80 p-0">
-          <SheetTitle className="sr-only">Components</SheetTitle>
-          <SheetDescription className="sr-only">
-            Browse available components and widgets.
-          </SheetDescription>
-          <div className="flex h-full min-h-0 flex-col overflow-hidden">{renderLibraryPanel()}</div>
-        </SheetContent>
-      </Sheet>
       <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
         <SheetContent side="right" className="w-80 p-0">
           <SheetTitle className="sr-only">Details</SheetTitle>

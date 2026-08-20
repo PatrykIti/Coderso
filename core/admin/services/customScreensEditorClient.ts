@@ -6,7 +6,7 @@
 // keep the lightweight summary DTO, while editor routes upgrade records with
 // the full definition, editor-view blocks/bindings, and capabilities here.
 
-import type { WidgetBlock } from "../../widgets/types";
+import type { LegacyWidgetBlock } from "../../services/renderContracts/legacyWidgetBlock";
 import type {
   CustomScreenBinding,
   CustomScreenDefinition,
@@ -30,7 +30,7 @@ import {
 
 export type CustomScreenRecord = CustomScreenSummaryRecord & {
   definition: CustomScreenDefinition;
-  blocks: WidgetBlock[];
+  blocks: LegacyWidgetBlock[];
   bindings: CustomScreenBinding[];
   capabilities: CustomScreenCapabilities;
   warnings?: CustomScreenBindingWarning[];

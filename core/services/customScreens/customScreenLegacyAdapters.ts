@@ -1,6 +1,4 @@
-import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
-import type { WidgetBlock } from "../../widgets/types";
-import { normalizeWidgetBlock } from "../../widgets/validator";
+import type { LegacyWidgetBlock } from "../renderContracts/legacyWidgetBlock";
 import {
   migrateCustomScreenBindingToScreenFieldBinding,
   projectScreenFieldBindingToCustomScreenBinding,
@@ -23,10 +21,24 @@ export const retiredScreenWidgetTypes = new Set([
   "screen-two-column",
 ]);
 
-export const normalizeLegacyScreenWidgetBlock = (value: unknown): WidgetBlock | null => {
+export const normalizeLegacyScreenWidgetBlock = (value: unknown): LegacyWidgetBlock | null => {
   if (!isRecord(value)) return null;
   const type = normalizeText(value.type);
   if (!type || !retiredScreenWidgetTypes.has(type)) return null;
+  return normalizeLegacyWidgetBlock(value);
+};
+
+/**
+ * V4-owned read-only placeholder normalize for legacy v1 widget blocks
+ * (TASK-580). The v1 validator is gone; any non-retired widget type is kept as
+ * a typed placeholder so stored documents still render through the read-only
+ * legacy placeholder semantics of the V4 screen runtime leaf blocks. Never
+ * throws `widget_unknown_type`; unknown shapes stay readable, not 404s.
+ */
+const normalizeLegacyWidgetBlock = (value: unknown): LegacyWidgetBlock | null => {
+  if (!isRecord(value)) return null;
+  const type = normalizeText(value.type);
+  if (!type) return null;
   const id = normalizeText(value.id);
   if (!id) throw new Error("custom_screen_definition_invalid");
   const data = normalizeJsonValue(value.data ?? {});
@@ -36,12 +48,12 @@ export const normalizeLegacyScreenWidgetBlock = (value: unknown): WidgetBlock | 
     ? Object.fromEntries(
         Object.entries(value.slots).map(([slotId, items]) => {
           if (!Array.isArray(items)) return [slotId, []];
-          return [slotId, items.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? item)];
+          return [slotId, items.map((item) => normalizeLegacyWidgetBlock(item) ?? item)];
         })
       )
     : undefined;
   const children = Array.isArray(value.children)
-    ? value.children.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? item)
+    ? value.children.map((item) => normalizeLegacyWidgetBlock(item) ?? item)
     : undefined;
 
   return {
@@ -49,23 +61,26 @@ export const normalizeLegacyScreenWidgetBlock = (value: unknown): WidgetBlock | 
     type,
     ...(variant ? { variant } : {}),
     data,
-    ...(isRecord(value.layout) ? { layout: value.layout as WidgetBlock["layout"] } : {}),
+    ...(isRecord(value.layout) ? { layout: value.layout as LegacyWidgetBlock["layout"] } : {}),
     ...(isRecord(value.visibility)
-      ? { visibility: value.visibility as WidgetBlock["visibility"] }
+      ? { visibility: value.visibility as LegacyWidgetBlock["visibility"] }
       : {}),
-    ...(isRecord(value.editor) ? { editor: value.editor as WidgetBlock["editor"] } : {}),
-    ...(children ? { children: children as WidgetBlock[] } : {}),
-    ...(slots ? { slots: slots as Record<string, WidgetBlock[]> } : {}),
+    ...(isRecord(value.editor) ? { editor: value.editor as LegacyWidgetBlock["editor"] } : {}),
+    ...(children ? { children: children as LegacyWidgetBlock[] } : {}),
+    ...(slots ? { slots: slots as Record<string, LegacyWidgetBlock[]> } : {}),
   };
 };
 
-export function normalizeCustomScreenBlocks(value: unknown): WidgetBlock[] {
+export function normalizeCustomScreenBlocks(value: unknown): LegacyWidgetBlock[] {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) {
     throw new Error("custom_screen_definition_invalid");
   }
-  ensureRuntimeWidgetsRegistered();
-  return value.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? normalizeWidgetBlock(item));
+  return value.map((item) => {
+    const block = normalizeLegacyScreenWidgetBlock(item) ?? normalizeLegacyWidgetBlock(item);
+    if (!block) throw new Error("custom_screen_definition_invalid");
+    return block;
+  });
 }
 
 export const screenBlockTypeFromWidgetType = (type: string) => {
@@ -99,7 +114,7 @@ export const widgetTypeFromScreenBlock = (block: ScreenBlockV1) => {
   }
 };
 
-export const migrateWidgetBlockToScreenBlock = (block: WidgetBlock): ScreenBlockV1 => {
+export const migrateWidgetBlockToScreenBlock = (block: LegacyWidgetBlock): ScreenBlockV1 => {
   const slots =
     block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
       ? Object.fromEntries(
@@ -129,7 +144,7 @@ export const migrateWidgetBlockToScreenBlock = (block: WidgetBlock): ScreenBlock
   };
 };
 
-export const projectScreenBlockToWidgetBlock = (block: ScreenBlockV1): WidgetBlock => {
+export const projectScreenBlockToWidgetBlock = (block: ScreenBlockV1): LegacyWidgetBlock => {
   const slots = block.slots
     ? Object.fromEntries(
         Object.entries(block.slots).map(([slotId, items]) => [
@@ -152,7 +167,9 @@ export const projectScreenBlockToWidgetBlock = (block: ScreenBlockV1): WidgetBlo
   };
 };
 
-export const migrateWidgetBlocksToScreenDocument = (blocks: WidgetBlock[]): ScreenDocumentV1 => ({
+export const migrateWidgetBlocksToScreenDocument = (
+  blocks: LegacyWidgetBlock[]
+): ScreenDocumentV1 => ({
   schemaVersion: 1,
   sections:
     blocks.length > 0
@@ -160,7 +177,9 @@ export const migrateWidgetBlocksToScreenDocument = (blocks: WidgetBlock[]): Scre
       : [],
 });
 
-export function getCustomScreenEditorViewBlocks(definition: CustomScreenDefinition): WidgetBlock[] {
+export function getCustomScreenEditorViewBlocks(
+  definition: CustomScreenDefinition
+): LegacyWidgetBlock[] {
   return definition.editorView.document.sections.flatMap((section) =>
     section.blocks.map(projectScreenBlockToWidgetBlock)
   );

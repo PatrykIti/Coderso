@@ -143,9 +143,6 @@ const sameActiveSurface = (
   if (candidate.kind === "detail-page" && activeSurface.kind === "detail-page") {
     return candidate.id === activeSurface.detailPage.id;
   }
-  if (candidate.kind === "widget-template" && activeSurface.kind === "widget-template") {
-    return candidate.id === activeSurface.template.id;
-  }
   return false;
 };
 

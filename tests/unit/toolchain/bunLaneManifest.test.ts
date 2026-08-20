@@ -9,7 +9,7 @@
  * - the collected lane file set equals the git-derived golden set (tracked
  *   plus untracked non-ignored `*.test.{ts,tsx}` files inside LANE_DIRS),
  * - the contract classification examples (settingsService -> C,
- *   widgets/validator -> A, content/entryService -> B, perf path override
+ *   adminThemes/tokenValidation -> A, content/entryService -> B, perf path override
  *   beating DB signals both ways),
  * - importing the module never writes the manifest (import.meta.main guard),
  * - the committed manifest equals a fresh in-process re-run of the classifier
@@ -72,6 +72,7 @@ function gitGoldenLaneFiles(): string[] {
     .split("\n")
     .filter(Boolean)
     .filter((file) => LANE_DIRS.some((dir) => file.startsWith(`${dir}/`)))
+    .filter((file) => existsSync(path.join(ROOT, file))) // working tree is authoritative (uncommitted deletions still sit in the index)
     .sort();
 }
 
@@ -105,7 +106,7 @@ test("classify examples match the contract signals", async () => {
   expect(settings.conflictKeys).toContain("site.adminBaseUrl");
   expect(settings.cWriteGlobal).toBe(true); // setSetting in a before-hook
 
-  const validator = await classify("tests/unit/widgets/validator.test.ts");
+  const validator = await classify("tests/unit/adminThemes/tokenValidation.test.ts");
   expect(validator.bucket).toBe("A");
   expect(validator.conflictKeys).toEqual([]);
   expect(validator.cWriteGlobal).toBe(false);
@@ -128,7 +129,7 @@ test("classify rows carry NO weightMs field (all four branches)", async () => {
   // an empty timings map every B file would fall back to 0 and LPT would dump
   // the whole lane onto one worker. Every emission branch must stay absent.
   const perf = await classify("tests/perf/codersoPerformanceGate.test.ts");
-  const a = await classify("tests/unit/widgets/validator.test.ts");
+  const a = await classify("tests/unit/adminThemes/tokenValidation.test.ts");
   const c = await classify("tests/unit/settings/settingsService.test.ts");
   const b = await classify("tests/unit/content/entryService.test.ts");
   expect([perf.bucket, a.bucket, c.bucket, b.bucket]).toEqual(["perf", "A", "C", "B"]);
@@ -147,8 +148,8 @@ test("transitive DB-coupling is detected through the value-import closure", asyn
   expect((await classify("tests/unit/site/cache.test.ts")).bucket).not.toBe("A");
 
   // A genuinely DB-free file stays A.
-  expect(reachesDbTransitively("tests/unit/widgets/validator.test.ts")).toBe(false);
-  expect((await classify("tests/unit/widgets/validator.test.ts")).bucket).toBe("A");
+  expect(reachesDbTransitively("tests/unit/adminThemes/tokenValidation.test.ts")).toBe(false);
+  expect((await classify("tests/unit/adminThemes/tokenValidation.test.ts")).bucket).toBe("A");
 });
 
 test("transitive detection follows re-exports and skips type-only imports", async () => {
@@ -200,18 +201,6 @@ test("module-scope await imports are followed, lazy and type forms are not", asy
 });
 
 test("module-scope mock registrations stub the awaited graph (mock-aware walk)", async () => {
-  // appointment-form-runtime-hydration.test.ts awaits renderPublicPage and
-  // bookingRuntimeResolver at module scope, but registers 26 module-scope
-  // `bunMock?.module(...)` stubs (pageService, previewService, entryService,
-  // postsService, settingsService, ...) BEFORE those awaits. Every DB path is
-  // intercepted, so the file is genuinely DB-free and stays A.
-  expect(
-    reachesDbTransitively("tests/integration/runtime/appointment-form-runtime-hydration.test.ts")
-  ).toBe(false);
-  expect(
-    (await classify("tests/integration/runtime/appointment-form-runtime-hydration.test.ts")).bucket
-  ).toBe("A");
-
   // detailPageRuntimeResolver.test.ts mocks core/db/client (and the binding
   // resolver) at module scope before awaiting detailPageRuntimeResolver. The
   // client mock stubs the whole DB access surface, including the pure

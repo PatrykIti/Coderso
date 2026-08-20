@@ -59,12 +59,6 @@ import type {
   upsertSeoDocument,
 } from "../seo/seoService";
 import type {
-  deleteWidgetTemplate,
-  getWidgetTemplate,
-  listWidgetTemplates,
-  updateWidgetTemplate,
-} from "../widgets/widgetTemplateService";
-import type {
   countFormSubmissions,
   createForm,
   deleteForm,
@@ -114,7 +108,7 @@ export type ListingResourceReferenceTarget = {
 };
 
 export type ListingResourceReference = {
-  containerType: "page" | "widget-template";
+  containerType: "page";
   containerId: string;
   containerName: string;
   adminHref: string;
@@ -155,10 +149,6 @@ export type ActionExecutorDeps = {
   updatePage: typeof updatePage;
   publishPage: typeof publishPage;
   unpublishPage: typeof unpublishPage;
-  getWidgetTemplate: typeof getWidgetTemplate;
-  listWidgetTemplates: typeof listWidgetTemplates;
-  deleteWidgetTemplate: typeof deleteWidgetTemplate;
-  updateWidgetTemplate: typeof updateWidgetTemplate;
   getForm: typeof getForm;
   listForms: typeof listForms;
   countFormSubmissions: typeof countFormSubmissions;

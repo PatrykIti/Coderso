@@ -1,4 +1,4 @@
-import { contentListLimitMax } from "../../widgets/core/contentList";
+import { contentListLimitMax } from "../../services/renderContracts/contentListContract";
 import type { MenuAppearance } from "../menus/normalizeMenuAppearance";
 import { DEFAULT_TOKENS } from "../theme/tokenTypes";
 
@@ -52,6 +52,10 @@ export const pageBlockTypes = [
   // ── TASK-534 ── declarative interactivity primitives (customSvg pattern).
   "switcher", // segmented tabs; N panels in slots panel:1..panel:6 (absorbs 527).
   "scrollHint", // hero scroll-hint indicator (CSS-keyframe dot/chevron, no runtime).
+  // ── TASK-580-03-L01 ── migration-only read-only placeholder for v1 widget
+  // types with no V2 equivalent (converted detail-page documents only; never
+  // editor-insertable, never assistant-emittable).
+  "legacy-widget",
 ] as const;
 
 /**
@@ -864,6 +868,27 @@ export type PageBlockResponsiveOverrideV2 = {
   props?: Record<string, unknown>;
   style?: PageBlockStyleV2;
   visibility?: Partial<PageBlockVisibilityV2>;
+};
+
+// ── TASK-580-03-L01 ── legacy-widget (migration-only read-only placeholder) ──
+// Prop keys of the `legacy-widget` block, mirrored by
+// `pageBlockPropKeys["legacy-widget"]` in the contract module. This export
+// keeps the keys reachable through the `pageDocumentV2` facade without
+// importing the contract module.
+export const legacyWidgetBlockPropKeys = ["legacyWidgetType", "data"] as const;
+
+/**
+ * Props of the migration-only `legacy-widget` block (TASK-580-03-L01).
+ * Preserves the original v1 widget type id and its verbatim `data` so a
+ * converted detail-page document keeps everything a re-authoring migration
+ * needs. The runtime placeholder renders ONLY the type label — `data` is
+ * never rendered (no XSS surface, no secret leak).
+ */
+export type LegacyWidgetBlockProps = {
+  /** Original v1 widget type id, e.g. "booking-calendar". */
+  legacyWidgetType: string;
+  /** Original widget `data`, preserved verbatim (never rendered). */
+  data: Record<string, unknown>;
 };
 
 export type PageBlockV2 = {

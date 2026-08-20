@@ -138,22 +138,6 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
       },
     },
     manifest: selectedManifest,
-    templateInstall: {
-      summary: {
-        total: 0,
-        success: 0,
-        failed: 0,
-        planned: 0,
-        operations: {
-          create: 0,
-          update: 0,
-          noop: 0,
-        },
-      },
-      items: [],
-      results: [],
-      rollbackPlan: [],
-    },
   };
 
   const result = await executeGuidedSiteBuilder(
@@ -246,13 +230,17 @@ test("executeGuidedSiteBuilder filters kit resources by enabled steps and return
   expect(captured.kitDefinitionOverride?.resourceBlueprint.menus).toHaveLength(0);
 
   const runOptions = captured.runOptions as
-    | { assistantSiteBuilder?: { enabledStepIds?: string[] } }
-    | undefined;
+    { assistantSiteBuilder?: { enabledStepIds?: string[] } } | undefined;
   expect(runOptions?.assistantSiteBuilder?.enabledStepIds).toEqual(["settings", "pages", "qa"]);
 
   expect(result.validation.status).toBe("ok");
   expect(result.validation.unresolvedItems).toHaveLength(0);
-  expect(result.actions.some((action) => action.target === "template")).toBe(true);
+  // The guided builder no longer emits template-targeted actions
+  // (TASK-580-03); assert the disabled resource steps stay filtered out.
+  expect(result.actions.some((action) => action.target === "content_type")).toBe(false);
+  expect(result.actions.some((action) => action.target === "form")).toBe(false);
+  expect(result.actions.some((action) => action.target === "menu")).toBe(false);
+  expect(result.actions.length).toBeGreaterThan(0);
 });
 
 test("executeGuidedSiteBuilder applies Advanced runtime overrides to executable kit copy", async () => {
@@ -283,22 +271,6 @@ test("executeGuidedSiteBuilder applies Advanced runtime overrides to executable 
       },
     },
     manifest: selectedManifest,
-    templateInstall: {
-      summary: {
-        total: 0,
-        success: 0,
-        failed: 0,
-        planned: 0,
-        operations: {
-          create: 0,
-          update: 0,
-          noop: 0,
-        },
-      },
-      items: [],
-      results: [],
-      rollbackPlan: [],
-    },
   };
 
   await executeGuidedSiteBuilder(

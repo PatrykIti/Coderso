@@ -262,11 +262,6 @@ export const PermissionsMatrixRoute = lazyNamedRoute<PermissionSnapshotRouteProp
 
 export const ThemesRoute = lazyNamedRoute(() => import("@/ui/themes/ThemesPage"), "ThemesPage");
 
-export const WidgetLibraryRoute = lazyNamedRoute(
-  () => import("@/ui/widgets/WidgetLibraryPage"),
-  "WidgetLibraryPage"
-);
-
 export const PageTemplatesRoute = lazyNamedRoute(
   () => import("@/ui/pages/templates/PageTemplatesPage"),
   "PageTemplatesPage"

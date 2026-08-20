@@ -17,7 +17,7 @@ import {
 import {
   buildContentRouteSettingDesired,
   buildProjectDetailDesired,
-  PROJECT_DETAIL_BINDINGS,
+  buildProjectDetailV2Bindings,
   PROJECT_DETAIL_KEY,
   PROJECT_DETAIL_PATH,
   PROJECT_LIST_PATH,
@@ -164,117 +164,98 @@ describe("Projekty Domów listing resources", () => {
 });
 
 describe("Projekty Domów Aurora detail", () => {
-  it("registers the exact seven-block native composition", () => {
+  it("registers the exact seven-section native composition", () => {
     const detail = buildProjectDetailDesired(contentRef);
-    const blocks = detail.blocks as Array<Record<string, unknown>>;
-    expect(blocks.map(({ id, type, variant }) => ({ id, type, variant }))).toEqual([
-      { id: "project-back-link", type: "rich-text-section", variant: "single-column" },
+    const sections = detail.sections as Array<Record<string, unknown>>;
+    expect(sections.map(({ id, type, variant }) => ({ id, type, variant }))).toEqual([
+      { id: "project-back-link", type: "content", variant: "default" },
       { id: "project-hero", type: "hero", variant: "centered" },
-      { id: "project-hero-art", type: "grid-columns", variant: "asymmetric" },
-      { id: "project-statistics", type: "feature-grid", variant: "cards-4" },
-      { id: "project-contact-cta", type: "cta-banner", variant: "centered" },
-      { id: "project-assumptions", type: "feature-grid", variant: "cards-3" },
-      { id: "project-gallery", type: "grid-columns", variant: "asymmetric" },
+      { id: "project-hero-art", type: "content", variant: "default" },
+      { id: "project-statistics", type: "feature-grid", variant: "cards" },
+      { id: "project-contact-cta", type: "cta", variant: "centered" },
+      { id: "project-assumptions", type: "feature-grid", variant: "cards" },
+      { id: "project-gallery", type: "content", variant: "default" },
     ]);
-    expect(blocks[0]?.data).toMatchObject({
-      titleBlock: {},
-      body: { html: '<p><a href="/projekty">← Wróć do projektów</a></p>' },
-      options: { dropcap: false, toc: false, maxWidth: "full", outputMode: "html" },
-    });
-    expect(blocks[1]?.data).toMatchObject({
-      headline: "—",
-      subhead: "",
-      body: "—",
-      badge: { enabled: true, label: "—", tone: "primary", placement: "above-headline" },
-      primaryCta: { label: "", href: "" },
-      media: { type: "none", source: "external" },
+
+    const blocksOf = (index: number) =>
+      (sections[index] as { blocks: Array<Record<string, unknown>> }).blocks;
+
+    expect(blocksOf(0).map(({ id, type }) => ({ id, type }))).toEqual([
+      { id: "project-back-link-heading", type: "heading" },
+      { id: "project-back-link-text", type: "text" },
+    ]);
+    expect(blocksOf(0)[1]?.props).toMatchObject({
+      text: '<p><a href="/projekty">← Wróć do projektów</a></p>',
     });
 
-    const heroArt = blocks[2] as { data: JsonObject; slots: JsonObject };
-    expect(heroArt.data.columns).toEqual([
-      expect.objectContaining({
-        id: "hero-art-main",
-        desktopSpan: "8",
-        tabletSpan: "12",
-        mobileSpan: "12",
-        minHeight: "xl",
-        style: expect.objectContaining({ background: "var(--color-primary)" }),
-      }),
-      expect.objectContaining({
-        id: "hero-art-accent",
-        desktopSpan: "4",
-        tabletSpan: "12",
-        mobileSpan: "12",
-        minHeight: "xl",
-        style: expect.objectContaining({ background: "var(--color-secondary)" }),
-      }),
+    const heroBlocks = blocksOf(1);
+    expect(heroBlocks.map(({ id, type }) => ({ id, type }))).toEqual([
+      { id: "project-hero-heading", type: "heading" },
+      { id: "project-hero-text", type: "text" },
+      { id: "project-hero-badge", type: "badge" },
+      { id: "project-hero-button", type: "button" },
+      { id: "project-hero-image", type: "image" },
     ]);
+    expect(heroBlocks[0]?.props).toMatchObject({ text: "—" });
+    expect(heroBlocks[1]?.props).toMatchObject({ text: "—" });
+    expect(heroBlocks[2]?.props).toMatchObject({ text: "—" });
+    expect(heroBlocks[3]?.props).toMatchObject({ label: "", href: null });
+
+    const heroArt = blocksOf(2)[0] as { props: JsonObject; slots: JsonObject };
+    expect(heroArt).toMatchObject({ id: "project-hero-art-columns", type: "columns" });
+    expect(heroArt.props).toMatchObject({ count: 2 });
     expect(heroArt.slots).toEqual({
-      "column:hero-art-main": [],
-      "column:hero-art-accent": [],
+      "column:1": [],
+      "column:2": [],
     });
 
-    const statistics = blocks[3]!.data as JsonObject;
-    expect(statistics).toMatchObject({
-      header: { eyebrow: "", title: "", description: "" },
-      items: [
-        { id: "area", title: "—", description: "" },
-        { id: "bedrooms", title: "—", description: "" },
-        { id: "bathrooms", title: "—", description: "" },
-        { id: "energy", title: "—", description: "" },
-      ],
-      style: { columns: "4", cardPadding: "compact", hoverEffect: "none" },
+    const statisticsBlocks = blocksOf(3);
+    expect(statisticsBlocks[3]).toMatchObject({
+      id: "project-statistics-card-0",
+      type: "card",
+      props: { title: "—" },
     });
-    expect(JSON.stringify(statistics)).not.toMatch(/"(?:image|icon|ctaLabel|ctaHref)"/);
-
-    expect(blocks[4]!.data).toMatchObject({
-      content: { badge: "", title: "", description: "", showDescription: false },
-      actions: {
-        primaryCta: {
-          label: "Chcę podobny dom",
-          href: "/kontakt",
-          enabled: true,
-          openInNewTab: false,
-          icon: "none",
-        },
-        secondaryCta: { label: "", href: "", enabled: false },
-        tertiaryCta: { label: "", href: "", enabled: false },
-      },
+    expect(statisticsBlocks[4]).toMatchObject({
+      id: "project-statistics-card-1",
+      type: "card",
+      props: { title: "—" },
+    });
+    expect(statisticsBlocks[5]).toMatchObject({
+      id: "project-statistics-card-2",
+      type: "card",
+      props: { title: "—" },
+    });
+    expect(statisticsBlocks[6]).toMatchObject({
+      id: "project-statistics-card-3",
+      type: "card",
+      props: { title: "—" },
     });
 
-    const assumptions = blocks[5]!.data as JsonObject;
-    expect(assumptions).toMatchObject({
-      header: { eyebrow: "—", title: "—", description: "—" },
-      items: [
-        { id: "living-zone", title: "—", description: "" },
-        { id: "private-zone", title: "—", description: "" },
-        { id: "facade", title: "—", description: "" },
-      ],
-      style: { columns: "3", cardPadding: "spacious", hoverEffect: "none" },
+    expect(blocksOf(4).find(({ id }) => id === "project-contact-cta-button")?.props).toMatchObject({
+      label: "Chcę podobny dom",
+      href: "/kontakt",
     });
 
-    const gallery = blocks[6] as { data: JsonObject; slots: JsonObject };
-    expect(
-      (gallery.data.columns as JsonObject[]).map(({ id, desktopSpan, minHeight }) => ({
-        id,
-        desktopSpan,
-        minHeight,
-      }))
-    ).toEqual([
-      { id: "gallery-tall", desktopSpan: "5", minHeight: "xl" },
-      { id: "gallery-default", desktopSpan: "4", minHeight: "md" },
-      { id: "gallery-warm", desktopSpan: "3", minHeight: "md" },
+    const assumptionCards = blocksOf(5).filter(({ type }) => type === "card");
+    expect(assumptionCards.map(({ id }) => id)).toEqual([
+      "project-assumptions-card-0",
+      "project-assumptions-card-1",
+      "project-assumptions-card-2",
     ]);
+
+    const gallery = blocksOf(6)[0] as { props: JsonObject; slots: JsonObject };
+    expect(gallery).toMatchObject({ id: "project-gallery-columns", type: "columns" });
+    expect(gallery.props).toMatchObject({ count: 3 });
     expect(gallery.slots).toEqual({
-      "column:gallery-tall": [],
-      "column:gallery-default": [],
-      "column:gallery-warm": [],
+      "column:1": [],
+      "column:2": [],
+      "column:3": [],
     });
   });
 
   it("pins every required no-fallback Aurora binding and removes related dependencies", () => {
     const detail = buildProjectDetailDesired(contentRef);
-    expect(detail.bindings).toEqual(PROJECT_DETAIL_BINDINGS);
+    expect(detail.bindings).toEqual(buildProjectDetailV2Bindings());
     for (const binding of detail.bindings as JsonObject[]) {
       expect(binding.required).toBe(true);
       expect(binding).not.toHaveProperty("fallback");
@@ -291,10 +272,18 @@ describe("Projekty Domów Aurora detail", () => {
   it("resolves Aurora completely and rejects every non-Aurora fixture", async () => {
     const resolved = await resolveBlocksFor(0);
     const hero = resolved.find(({ id }) => id === "project-hero")!;
-    expect(hero.data).toMatchObject({
-      headline: "Dom Aurora",
-      body: PROJECT_FIXTURES[0]!.detailLead,
-      badge: { label: "Projekt pokazowy" },
+    expect(hero.type).toBe("hero");
+    const heroByRole = new Map(
+      (hero.blocks as Array<{ id: string; props: JsonObject }>).map(({ id, props }) => [id, props])
+    );
+    expect(heroByRole.get("project-hero-heading")).toMatchObject({
+      text: "Dom Aurora",
+    });
+    expect(heroByRole.get("project-hero-text")).toMatchObject({
+      text: PROJECT_FIXTURES[0]!.detailLead,
+    });
+    expect(heroByRole.get("project-hero-badge")).toMatchObject({
+      text: "Projekt pokazowy",
     });
     const serialized = JSON.stringify(resolved);
     expect(serialized).not.toContain('"—"');
@@ -386,6 +375,6 @@ describe("Projekty Domów discovery resource graph", () => {
     const first = buildProjectDiscoveryResources();
     expect(buildProjectDiscoveryResources()).toEqual(first);
     expect(JSON.parse(JSON.stringify(first))).toEqual(first);
-    expect(JSON.stringify(first)).not.toMatch(/00000000-0000-4000|mediaId|assetId/);
+    expect(JSON.stringify(first)).not.toMatch(/00000000-0000-4000|mediaId|"assetId":(?!\s*null)/);
   });
 });

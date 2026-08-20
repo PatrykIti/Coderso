@@ -6,6 +6,7 @@ import {
   executeAssistantActionPlan,
 } from "../../../core/services/assistant/actionExecutorService";
 import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
+import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
 import {
   createPageBlockV2,
   createPageSectionV2,
@@ -16,6 +17,92 @@ import { createActionExecutorTestDeps } from "./support/actionExecutorTestDeps";
 import { createTestPageIntroSection } from "./support/actionExecutorFixtures";
 
 const createDeps = () => createActionExecutorTestDeps().deps;
+// Assistant detail-page authoring is schemaVersion 2 sections only
+// (TASK-580-03-L06); v1 `blocks` payloads fail closed on write.
+const buildV2DetailPageDocument = (input: {
+  id: string;
+  contentTypeId: string;
+  contentTypeSlug: string;
+  status?: "draft" | "published";
+}): DetailPageDocument => ({
+  schemaVersion: 2,
+  id: input.id,
+  name: "Products detail template",
+  contentTypeId: input.contentTypeId,
+  contentTypeSlug: input.contentTypeSlug,
+  status: input.status ?? "draft",
+  titlePattern: "{{ title }}",
+  settings: {
+    template: "detail",
+    layout: {
+      wrapper: {
+        container: "default",
+        padding: { top: "md", bottom: "lg" },
+        background: {
+          color: "#ffffff",
+          image: null,
+          media: { type: "none", source: "external", src: null },
+        },
+      },
+      sections: {
+        gap: "lg",
+        defaults: {
+          container: "default",
+          padding: { top: "xl", bottom: "xl" },
+          margin: { top: "none", bottom: "none" },
+        },
+      },
+      applyDefaultsToNewBlocks: false,
+    },
+  },
+  sections: [
+    {
+      id: "hero-1",
+      type: "hero",
+      name: "Hero",
+      variant: "centered",
+      layout: {
+        columns: 1,
+        align: "start",
+        justify: "start",
+        maxWidth: 1080,
+        stackVertical: false,
+      },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+      spacing: {
+        paddingTop: 64,
+        paddingBottom: 64,
+        paddingLeft: 40,
+        paddingRight: 40,
+        gap: 24,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: null,
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive: {},
+      blocks: [
+        {
+          id: "hero-1-heading",
+          type: "heading",
+          props: { text: "Products detail" },
+          visibility: { visible: true },
+        },
+      ],
+    },
+  ],
+  bindings: [],
+});
 
 test("executeAssistantActionPlan preserves trusted media asset ids in page.upsert section blocks", async () => {
   const deps = createDeps();
@@ -504,53 +591,11 @@ test("dryRunAssistantActionPlan flags detail-page upserts whose content type doe
         title: "Create products detail template",
         description: "Create a products detail template.",
         input: {
-          document: {
-            schemaVersion: 1,
+          document: buildV2DetailPageDocument({
             id: "24d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-            name: "Products detail template",
             contentTypeId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
             contentTypeSlug: "products",
-            status: "draft",
-            titlePattern: "{{ title }}",
-            settings: {
-              template: "detail",
-              layout: {
-                wrapper: {
-                  container: "default",
-                  padding: { top: "md", bottom: "lg" },
-                  background: {
-                    color: "#ffffff",
-                    image: null,
-                    media: {
-                      type: "none",
-                      source: "external",
-                      src: null,
-                    },
-                  },
-                },
-                sections: {
-                  gap: "lg",
-                  defaults: {
-                    container: "default",
-                    padding: { top: "xl", bottom: "xl" },
-                    margin: { top: "none", bottom: "none" },
-                  },
-                },
-                applyDefaultsToNewBlocks: false,
-              },
-            },
-            blocks: [
-              {
-                id: "hero-1",
-                type: "hero",
-                variant: "centered",
-                data: {
-                  headline: "Products detail",
-                },
-              },
-            ],
-            bindings: [],
-          },
+          }),
         },
       },
     ],
@@ -611,40 +656,11 @@ test("dryRunAssistantActionPlan flags detail-page expectedExistingId mismatches"
             description: "Create a products detail template.",
             input: {
               expectedExistingId: "94d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-              document: {
-                schemaVersion: 1,
+              document: buildV2DetailPageDocument({
                 id: "24d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-                name: "Products detail template",
                 contentTypeId: "64d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
                 contentTypeSlug: "products",
-                status: "draft",
-                titlePattern: "{{ title }}",
-                settings: {
-                  template: "detail",
-                  layout: {
-                    wrapper: {
-                      container: "default",
-                      padding: { top: "md", bottom: "lg" },
-                      background: {
-                        color: "#ffffff",
-                        image: null,
-                        media: { type: "none", source: "external", src: null },
-                      },
-                    },
-                    sections: {
-                      gap: "lg",
-                      defaults: {
-                        container: "default",
-                        padding: { top: "xl", bottom: "xl" },
-                        margin: { top: "none", bottom: "none" },
-                      },
-                    },
-                    applyDefaultsToNewBlocks: false,
-                  },
-                },
-                blocks: [{ id: "hero-1", type: "hero", variant: "centered", data: {} }],
-                bindings: [],
-              },
+              }),
             },
           },
         ],

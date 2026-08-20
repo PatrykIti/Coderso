@@ -12,11 +12,10 @@ import {
   collectPrehydratedDetailBlockIds,
   resolveDetailPageRuntimeSeo,
 } from "../../../core/server/publicSiteEntryRuntime";
-import {
-  renderPublicPageRuntimeHtml,
-  renderPublicPageV2RuntimeHtml,
-} from "../../../core/site/renderPublicPage";
-import { ListingFiltersBlock } from "../../../core/widgets/core/listingFilters";
+import { buildDetailPageRenderDocument } from "../../../core/services/content/detailPageV2Conversion";
+import { preparePageRuntimeDocument } from "../../../core/services/pages/pageRuntimeDataPreparation";
+import { renderPublicPageV2RuntimeHtml } from "../../../core/site/renderPublicPage";
+import { ListingFiltersBlock } from "../../../core/services/renderContracts/listingFiltersRenderer";
 import { buildProjectDetailDesired } from "../../../scripts/projekty-domow/content/projectDetail";
 import { PROJECT_FIXTURES } from "../../../scripts/projekty-domow/content/projectFixtures";
 import { HOUSE_PROJECT_SCHEMA } from "../../../scripts/projekty-domow/content/projectSchema";
@@ -132,7 +131,7 @@ describe("Projekty Domów public runtime rendering", () => {
     expect(contactHtml).toContain('aria-label="Abstrakcyjna mapa lokalizacji"');
   });
 
-  it("renders the bound detail composition inside the shared responsive site shell", async () => {
+  it("renders the bound detail composition through the Page v2 runtime inside the shared responsive site shell", async () => {
     const aurora = PROJECT_FIXTURES[0]!;
     const detail = buildProjectDetailDesired(
       refs.contentType,
@@ -169,7 +168,7 @@ describe("Projekty Domów public runtime rendering", () => {
       updatedAt: new Date("2026-07-23T10:00:00.000Z"),
       author: null,
     } as DetailPageBindingResolverEntry;
-    const blocks = await resolveDetailPageBlocks(
+    const sections = await resolveDetailPageBlocks(
       {
         document: detail,
         entry,
@@ -182,7 +181,7 @@ describe("Projekty Domów public runtime rendering", () => {
       },
       {}
     );
-    expect(blocks.map((block) => block.id)).toEqual([
+    expect(sections.map((section) => section.id)).toEqual([
       "project-back-link",
       "project-hero",
       "project-hero-art",
@@ -191,74 +190,61 @@ describe("Projekty Domów public runtime rendering", () => {
       "project-assumptions",
       "project-gallery",
     ]);
-    expect(blocks.find((block) => block.id === "project-hero")).toMatchObject({
-      type: "hero",
-      data: {
-        headline: "Dom Aurora",
-        body: aurora.detailLead,
-        badge: { enabled: true, label: "Projekt pokazowy" },
-      },
+    const hero = sections.find((section) => section.id === "project-hero");
+    expect(hero?.type).toBe("hero");
+    expect(hero?.blocks.find((block) => block.id === "project-hero-heading")).toMatchObject({
+      type: "heading",
+      props: { text: "Dom Aurora" },
     });
-    expect(blocks.find((block) => block.id === "project-hero-art")).toMatchObject({
-      type: "grid-columns",
-      data: {
-        columns: [
-          {
-            id: "hero-art-main",
-            desktopSpan: "8",
-            tabletSpan: "12",
-            mobileSpan: "12",
-            minHeight: "xl",
-            style: { background: "var(--color-primary)" },
-          },
-          {
-            id: "hero-art-accent",
-            desktopSpan: "4",
-            tabletSpan: "12",
-            mobileSpan: "12",
-            minHeight: "xl",
-            style: { background: "var(--color-secondary)" },
-          },
-        ],
-      },
+    expect(hero?.blocks.find((block) => block.id === "project-hero-text")).toMatchObject({
+      type: "text",
+      props: { text: aurora.detailLead },
     });
-    expect(blocks.find((block) => block.id === "project-statistics")).toMatchObject({
-      type: "feature-grid",
-      data: {
-        items: aurora.detailStats?.map((stat) => ({
-          id: stat.id,
-          title: stat.value,
-          description: stat.label,
-        })),
-      },
+    expect(hero?.blocks.find((block) => block.id === "project-hero-badge")).toMatchObject({
+      type: "badge",
+      props: { text: aurora.detailEyebrow },
     });
-    expect(blocks.find((block) => block.id === "project-contact-cta")).toMatchObject({
-      type: "cta-banner",
-      data: {
-        actions: {
-          primaryCta: { label: "Chcę podobny dom", href: "/kontakt", enabled: true },
-        },
-      },
+    expect(
+      sections
+        .find((section) => section.id === "project-hero-art")
+        ?.blocks.find((block) => block.id === "project-hero-art-columns")
+    ).toMatchObject({
+      type: "columns",
+      props: { count: 2 },
     });
-    expect(blocks.find((block) => block.id === "project-assumptions")).toMatchObject({
-      data: {
-        header: {
-          eyebrow: aurora.assumptionsEyebrow,
-          title: aurora.assumptionsTitle,
-          description: aurora.assumptionsLead,
-        },
-        items: aurora.assumptions,
-      },
+    const statistics = sections.find((section) => section.id === "project-statistics");
+    for (const [index, stat] of (aurora.detailStats ?? []).entries()) {
+      expect(
+        statistics?.blocks.find((block) => block.id === `project-statistics-card-${index}`)
+      ).toMatchObject({
+        type: "card",
+        props: { title: stat.value, text: stat.label },
+      });
+    }
+    expect(
+      sections
+        .find((section) => section.id === "project-contact-cta")
+        ?.blocks.find((block) => block.id === "project-contact-cta-button")
+    ).toMatchObject({
+      type: "button",
+      props: { label: "Chcę podobny dom", href: "/kontakt" },
     });
-    expect(blocks.find((block) => block.id === "project-gallery")).toMatchObject({
-      type: "grid-columns",
-      data: {
-        columns: [
-          { id: "gallery-tall", desktopSpan: "5" },
-          { id: "gallery-default", desktopSpan: "4" },
-          { id: "gallery-warm", desktopSpan: "3" },
-        ],
-      },
+    const assumptions = sections.find((section) => section.id === "project-assumptions");
+    for (const [index, assumption] of (aurora.assumptions ?? []).entries()) {
+      expect(
+        assumptions?.blocks.find((block) => block.id === `project-assumptions-card-${index}`)
+      ).toMatchObject({
+        type: "card",
+        props: { title: assumption.title, text: assumption.description },
+      });
+    }
+    expect(
+      sections
+        .find((section) => section.id === "project-gallery")
+        ?.blocks.find((block) => block.id === "project-gallery-columns")
+    ).toMatchObject({
+      type: "columns",
+      props: { count: 3 },
     });
     const detailSeo = resolveDetailPageRuntimeSeo({
       document: detail,
@@ -270,12 +256,35 @@ describe("Projekty Domów public runtime rendering", () => {
       metaDescription: aurora.seoDescription,
     });
     const footerDocument = buildFooterTemplate().desired.document as unknown as NonNullable<
-      Parameters<typeof renderPublicPageRuntimeHtml>[0]["siteShell"]
+      Parameters<typeof renderPublicPageV2RuntimeHtml>[0]["siteShell"]
     >["footerDocument"];
 
-    const html = await renderPublicPageRuntimeHtml({
+    // The kit detail document carries no collection/form/filters blocks, so the
+    // preparation stubs below are never invoked; they keep this Bun-free lane
+    // free of db/runtime imports.
+    const prepared = await preparePageRuntimeDocument(
+      buildDetailPageRenderDocument(detail, sections),
+      {
+        preview: false,
+        breakpoint: "desktop",
+        contentRoutes: [],
+      },
+      {
+        resolveContentListRuntimeData: async () => {
+          throw new Error("kit detail document has no collection block");
+        },
+        resolveFormRuntimeData: async () => {
+          throw new Error("kit detail document has no form block");
+        },
+      }
+    );
+    expect(prepared.cacheable).toBe(true);
+    expect(prepared.cacheMode).toBe("full");
+
+    const html = renderPublicPageV2RuntimeHtml({
       title: detailSeo.title,
-      blocks,
+      document: prepared.document,
+      runtimeDataByBlockId: prepared.runtimeDataByBlockId,
       templateKey: "project-detail",
       inlineCss: ":root{--color-bg:#07111f;--color-text:#f7fbff}",
       responsiveCss: '@media(max-width:767px){[data-site-footer="true"]{--detail-footer-mobile:1}}',
@@ -309,27 +318,37 @@ describe("Projekty Domów public runtime rendering", () => {
     expect(html).toContain("<title>Dom Aurora — projekt pokazowy — FormaDom Studio</title>");
     expect(html).toContain(`name="description" content="${aurora.seoDescription}"`);
     expect(html).toContain('rel="canonical" href="http://127.0.0.1:3000/projekty/aurora"');
-    expect(html).toContain('data-grid-columns-count="2"');
-    expect(html).toContain('data-grid-column="column:hero-art-main"');
-    expect(html).toContain('data-grid-column="column:hero-art-accent"');
-    expect(html).toContain("var(--color-primary)");
-    expect(html).toContain("var(--color-secondary)");
+    // Hero headline bound from the entry renders as visible heading text.
+    expect(html).toContain('data-block-id="project-hero-heading"');
+    expect(html).toContain("Dom Aurora");
+    expect(html).toContain(aurora.detailLead);
+    // hero-art grid columns
+    expect(html).toContain('data-page-layout-columns-count="2"');
+    expect(html).toContain('data-block-id="project-hero-art-columns"');
+    // feature cards bound from the entry stats
     for (const stat of aurora.detailStats ?? []) {
       expect(html).toContain(stat.value);
       expect(html).toContain(stat.label);
     }
+    // CTA
     expect(html).toContain("Chcę podobny dom");
+    expect(html).toContain('href="/kontakt"');
     for (const assumption of aurora.assumptions ?? []) {
       expect(html).toContain(assumption.title);
       expect(html).toContain(assumption.description);
     }
-    expect(html).toContain('data-grid-columns-count="3"');
-    expect(html).toContain('data-grid-column="column:gallery-tall"');
-    expect(html).toContain('data-grid-column="column:gallery-default"');
-    expect(html).toContain('data-grid-column="column:gallery-warm"');
-    expect(html).toContain('href="/kontakt"');
+    // gallery grid columns
+    expect(html).toContain('data-page-layout-columns-count="3"');
+    expect(html).toContain('data-block-id="project-gallery-columns"');
+    // TASK-580-03-L04: the converted kit doc renders through the v2 pipeline;
+    // no v1 legacy-widget placeholder data, no unknown-widget fallback, and no
+    // kit authoring placeholders. (Unbound v2 block defaults such as the hero
+    // "Learn more" button and "Heading" section heads are intentional section
+    // defaults from the kit's authored sections, not v1 leakage.)
+    expect(html).not.toContain("data-legacy-widget");
+    expect(html).not.toContain("widget_unknown_type");
     expect(html).not.toMatch(
-      /Build your system with Coderso|Launch modern sites|Get started|Learn more|Untitled|Read more|Media [1-4]|Content list|Choose a listing query/
+      /Build your system with Coderso|Launch modern sites|Get started|Untitled|Read more|Media [1-4]|Content list|Choose a listing query/
     );
   });
 });

@@ -153,23 +153,6 @@ const baseCatalog = {
       status: "warning",
     },
   ],
-  widgets: [
-    {
-      id: "widget-template-hero",
-      source: "template",
-      name: "Hero Template",
-      description: null,
-      category: "Marketing",
-      module: "widgets",
-      complexity: "composite",
-      audience: "beginner",
-      variants: [],
-      slots: [],
-      surfaces: ["page-builder"],
-      requires: [],
-      status: "published",
-    },
-  ],
   warnings: [],
 } as unknown as AssistantActionContext["resourceCatalog"];
 
@@ -314,22 +297,6 @@ export const cmsOperationFixtures: CmsOperationFixture[] = [
       status: "ready",
       responseKind: "action_plan",
       actionTypes: ["listing-template.delete"],
-    },
-  },
-  {
-    name: "widget template update",
-    prompt: "rename widget template Hero Template",
-    context: baseContext,
-    providerDraft: {
-      operation: "update",
-      resourceKind: "widget-template",
-      targetQuery: { exactName: "Hero Template" },
-      mutation: { fieldIntent: "name", value: "Hero Template Updated" },
-    },
-    expected: {
-      status: "ready",
-      responseKind: "action_plan",
-      actionTypes: ["widget-template.update"],
     },
   },
   {

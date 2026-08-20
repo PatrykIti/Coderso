@@ -35,16 +35,16 @@ test("splitStatements trims whitespace and keeps single-chunk files intact", () 
   expect(splitStatements("")).toEqual([]);
 });
 
-test("readJournal returns 78 entries with strictly increasing idx and unique tags", async () => {
+test("readJournal returns 79 entries with strictly increasing idx and unique tags", async () => {
   const journal = await readJournal();
   // Live journal: 0073_smiling_ser_duncan (2026-08-16), 0075_form_submissions_export_cursor,
-  // 0076_content_revisions_version_uniq, 0078_backup_users_staging and
-  // 0079_hot_shadowcat (TASK-493) appended by concurrent streams. Concurrent
-  // agents allocate `idx` from the live journal, so `idx` is strictly
-  // increasing (sorted order) but not equal to the array index — a removed
-  // racing migration can leave a gap. The applier iterates entries in array
-  // order and only consumes `tag`.
-  expect(journal.entries.length).toBe(78);
+  // 0076_content_revisions_version_uniq, 0078_backup_users_staging,
+  // 0079_hot_shadowcat (TASK-493) and 0080_detail_page_v2_backfill (TASK-580-03-L03)
+  // appended by concurrent streams. Concurrent agents allocate `idx` from the
+  // live journal, so `idx` is strictly increasing (sorted order) but not equal
+  // to the array index — a removed racing migration can leave a gap. The applier
+  // iterates entries in array order and only consumes `tag`.
+  expect(journal.entries.length).toBe(79);
   const tags = new Set<string>();
   journal.entries.forEach((entry, index) => {
     if (index > 0) {
