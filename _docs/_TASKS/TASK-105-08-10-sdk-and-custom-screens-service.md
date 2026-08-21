@@ -1,0 +1,129 @@
+# TASK-105-08-10: SDK and Custom Screens Service
+# FileName: TASK-105-08-10-sdk-and-custom-screens-service.md
+
+**Priority:** High  
+**Category:** QA + Coverage  
+**Estimated Effort:** Medium  
+**Dependencies:** None beyond parent (source files are all read-only; this leaf
+only writes tests)
+**Parent Task:** TASK-105-08  
+**Status:** ⏳ To Do
+
+---
+
+## Overview
+
+Close every line gap in `core/services/customScreens/**` (19 files) and verify the SDK
+lane. **Seed correction (verified against the artifact):** `packages/sdk/src/**` is
+already at `100%` LINES on all four files (`client.ts` 1/1, `pluginManifest.ts` 69/69,
+`server.ts` 1/1, `shared.ts` 1/1). The SDK has NO line residual in this wave; only
+`pluginManifest.ts` carries a branch/statement residual (`90.80` stmts / `88.31` branch /
+`100.00` func), which is a non-blocking follow-up for `TASK-105-09`, not a line-closure
+target. Test-only: no API surface, no production change.
+
+## Scope
+
+Uncovered-line budget: **161** across 19 files (current covered/total + line%):
+
+| File | Covered/Total | Line% |
+|---|---|---:|
+| `bindingResolver.ts` | 85/107 | 79.4% |
+| `capabilities.ts` | 36/38 | 94.7% |
+| `customScreenBindingNormalizer.ts` | 93/97 | 95.9% |
+| `customScreenDefinitionNormalizer.ts` | 94/106 | 88.7% |
+| `customScreenEditorViewNormalizer.ts` | 52/57 | 91.2% |
+| `customScreenLegacyAdapters.ts` | 53/61 | 86.9% |
+| `customScreenListViewNormalizer.ts` | 131/136 | 96.3% |
+| `customScreenNormalizationPrimitives.ts` | 127/131 | 96.9% |
+| `customScreenService.ts` | 96/97 | 99.0% |
+| `relatedEntryResolver.ts` | 31/33 | 93.9% |
+| `screenDocumentBindingOps.ts` | 17/18 | 94.4% |
+| `screenDocumentDataNormalizer.ts` | 180/186 | 96.8% |
+| `screenDocumentFactories.ts` | 34/38 | 89.5% |
+| `screenDocumentMutations.ts` | 129/136 | 94.9% |
+| `screenDocumentNormalizer.ts` | 74/77 | 96.1% |
+| `screenDocumentReadNormalizer.ts` | 145/153 | 94.8% |
+| `screenDocumentTree.ts` | 57/62 | 91.9% |
+| `screenEntryPresentationOverrideContract.ts` | 102/105 | 97.1% |
+| `screenEntryPresentationOverrides.ts` | 103/162 | 63.6% |
+
+## Single-Writer File Ownership
+
+- This leaf is the SOLE writer of the 19 source files above and of its test files under
+  `tests/vitest/customScreens/*` and `tests/vitest/sdk/*`.
+- CARVE-IN: `tests/vitest/admin/custom-screen-schemas.test.ts` (930 lines) tests
+  `core/services/customScreens/**` normalizers, so THIS leaf owns it (extending it is
+  permitted), NOT TASK-105-08-01. It stays in `tests/vitest/admin/` for now; the
+  single writer is this leaf either way.
+- Existing suites it may extend (owned by this leaf): `bindingResolver.test.ts`,
+  `capabilities.test.ts`, `customScreenService.test.ts`, `relatedEntryResolver.test.ts`,
+  `customScreenSummaryContract.test.ts`, `customScreenBackfill.test.ts`,
+  `screen-document-*.test.ts`, `screenDocumentOps.test.ts`, and SDK suites
+  `tests/vitest/sdk/pluginManifest.test.ts`, `client.test.ts`, `server.test.ts`,
+  `exports.test.ts`, `hookContext.test.ts`. (`shared.test.ts` does NOT exist; create
+  it as a new suite only if a shared SDK contract needs one.)
+- New focused suites for the residual lines. No other leaf may edit these test files.
+
+## Pseudocode
+
+These modules are Bun-free pure logic. Mock seams are limited to injected deps (none for
+most normalizers); no React render is needed.
+
+```ts
+import { describe, it, expect } from "vitest";
+import { bindingResolver } from "@/services/customScreens/bindingResolver";
+
+// fixture: a valid screen document + a table of binding shapes (field, block, prop,
+// mode variants) that each resolve to an expected value or a documented fallback.
+```
+
+Assertion shape per module:
+
+1. `screenEntryPresentationOverrides` (59 uncovered): table-driven over every override
+   source (contract-driven, per-entry, per-collection) and every merge/priority/fallback
+   branch.
+2. `bindingResolver` (22 uncovered): every binding shape and every miss/fallback branch.
+3. Normalizers (`customScreenDefinitionNormalizer`, `customScreenLegacyAdapters`,
+   `customScreenEditorViewNormalizer`, `customScreenListViewNormalizer`,
+   `customScreenBindingNormalizer`, `screenDocumentReadNormalizer`,
+   `screenDocumentDataNormalizer`, `screenDocumentNormalizer`,
+   `customScreenNormalizationPrimitives`): table-driven over every default, clamp,
+   legacy-adapter, and reject-unknown branch; assert round-trip byte-identity on
+   no-override documents where the contract requires it.
+4. Document ops (`screenDocumentMutations`, `screenDocumentBindingOps`,
+   `screenDocumentFactories`, `screenDocumentTree`, `screenDocumentReadNormalizer`):
+   each mutation/factory/tree branch and its error mapping.
+5. SDK: confirm each SDK file stays at 100% lines; optionally add `pluginManifest.ts`
+   branch hardening only if time permits (record the branch residual honestly otherwise).
+
+Work order (worst first): `screenEntryPresentationOverrides` (59), `bindingResolver` (22),
+`customScreenDefinitionNormalizer` (12), `customScreenLegacyAdapters` (8),
+`customScreenEditorViewNormalizer` (5), then each remaining 1–7 line gap.
+
+## Validation Gates
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/tsc -p packages/sdk/tsconfig.json --noEmit`
+- targeted Vitest, one file per invocation:
+  `export TMPDIR=/tmp && set -a && . ./.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/customScreens/bindingResolver.test.ts`
+- `git diff --check`
+- line-count gate ≤ 1000 per added/modified file.
+
+## 1000-Line Rule
+
+`tests/vitest/admin/custom-screen-schemas.test.ts` (930, owned by this leaf) is near
+the gate; split before extending. `tests/vitest/admin/customScreensClient.test.ts`
+(925) is owned by TASK-105-08-01 and is NOT this leaf's concern. Any new suite
+crossing 1000 lines splits by responsibility.
+
+## Security Contract
+
+Test-only, no API surface.
+
+## Acceptance Criteria
+
+1. All 19 customScreens service files reach `100%` lines.
+2. SDK files remain at `100%` lines; the `pluginManifest.ts` branch residual is reported
+   honestly (and hardened opportunistically).
+3. Round-trip byte-identity is pinned where a no-override document contract requires it.
