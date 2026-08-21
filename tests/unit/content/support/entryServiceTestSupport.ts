@@ -73,6 +73,7 @@ export const entryServiceTestState = {
 
 export const cleanup = async () => {
   if (entryServiceTestState.entryId) {
+    await db.delete(seoDocuments).where(eq(seoDocuments.targetId, entryServiceTestState.entryId));
     await db
       .delete(contentRevisions)
       .where(eq(contentRevisions.entryId, entryServiceTestState.entryId));

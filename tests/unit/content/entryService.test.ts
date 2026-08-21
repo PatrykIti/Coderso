@@ -8,6 +8,7 @@ import {
   contentTypes,
   media,
   previewTokens,
+  seoDocuments,
   users,
 } from "../../../core/db/schema";
 import {
@@ -84,8 +85,10 @@ testIfDbWithOptions(
       expect(draft?.status).toBe("draft");
     } finally {
       if (localEntryId) {
+        await db.delete(seoDocuments).where(eq(seoDocuments.targetId, localEntryId));
         await db.delete(contentRevisions).where(eq(contentRevisions.entryId, localEntryId));
         await db.delete(previewTokens).where(eq(previewTokens.targetId, localEntryId));
+        await db.delete(seoDocuments).where(eq(seoDocuments.targetId, localEntryId));
         await db.delete(contentEntries).where(eq(contentEntries.id, localEntryId));
       }
       if (localContentTypeId) {
@@ -175,9 +178,11 @@ testIfDb("listEntriesWithContentTypes returns cross-type rows with owner metadat
     );
   } finally {
     if (articleEntryId) {
+      await db.delete(seoDocuments).where(eq(seoDocuments.targetId, articleEntryId));
       await db.delete(contentEntries).where(eq(contentEntries.id, articleEntryId));
     }
     if (productEntryId) {
+      await db.delete(seoDocuments).where(eq(seoDocuments.targetId, productEntryId));
       await db.delete(contentEntries).where(eq(contentEntries.id, productEntryId));
     }
     await db.delete(contentTypes).where(eq(contentTypes.id, articlesType.id));
@@ -265,6 +270,7 @@ testIfDbWithOptions(
       expect(updated?.seo?.description).toBe("SEO summary");
     } finally {
       if (localEntryId) {
+        await db.delete(seoDocuments).where(eq(seoDocuments.targetId, localEntryId));
         await db.delete(contentEntries).where(eq(contentEntries.id, localEntryId));
       }
       if (localContentTypeId) {
@@ -280,6 +286,7 @@ testIfDbWithOptions(
   async () => {
     let localContentTypeId: string | undefined;
     let localUserId: string | undefined;
+    const localEntryIds: string[] = [];
 
     try {
       const [user] = await db
@@ -312,12 +319,14 @@ testIfDbWithOptions(
         slug: sourceSlug,
         data: { title: "Source Story" },
       });
+      localEntryIds.push(entry.id);
 
-      await createEntry(type.id, {
+      const copyEntry = await createEntry(type.id, {
         title: "Existing copy",
         slug: `${sourceSlug}-copy`,
         data: { title: "Existing copy" },
       });
+      localEntryIds.push(copyEntry.id);
 
       await updateEntryMetadata(entry.id, {
         taxonomy: { tagIds: [tag!.id] },
@@ -325,6 +334,7 @@ testIfDbWithOptions(
       });
 
       const duplicated = await duplicateEntry(entry.id, localUserId);
+      if (duplicated) localEntryIds.push(duplicated.id);
 
       expect(duplicated?.title).toBe("Source Story (Copy 2)");
       expect(duplicated?.slug).toBe(`${sourceSlug}-copy-2`);
@@ -336,6 +346,10 @@ testIfDbWithOptions(
       expect(duplicated?.seo?.description).toBe("Source SEO summary");
       expect(duplicated?.seo?.robots).toBe("index,follow");
     } finally {
+      for (const entryId of localEntryIds) {
+        await db.delete(seoDocuments).where(eq(seoDocuments.targetId, entryId));
+        await db.delete(contentEntries).where(eq(contentEntries.id, entryId));
+      }
       if (localContentTypeId) {
         await db.delete(contentTypes).where(eq(contentTypes.id, localContentTypeId));
       }
@@ -424,9 +438,11 @@ testIfDb("validates relation entry IDs", async () => {
     ).rejects.toThrow("relation_entry_missing");
   } finally {
     if (teamEntryId) {
+      await db.delete(seoDocuments).where(eq(seoDocuments.targetId, teamEntryId));
       await db.delete(contentEntries).where(eq(contentEntries.id, teamEntryId));
     }
     if (projectEntryId) {
+      await db.delete(seoDocuments).where(eq(seoDocuments.targetId, projectEntryId));
       await db.delete(contentEntries).where(eq(contentEntries.id, projectEntryId));
     }
     await db.delete(contentTypes).where(eq(contentTypes.id, teamType.id));
@@ -533,6 +549,7 @@ testIfDb("validates media asset IDs and types", async () => {
     ).rejects.toThrow("media_type_not_allowed");
   } finally {
     if (entryId) {
+      await db.delete(seoDocuments).where(eq(seoDocuments.targetId, entryId));
       await db.delete(contentEntries).where(eq(contentEntries.id, entryId));
     }
     if (imageId) {

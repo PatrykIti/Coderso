@@ -53,7 +53,7 @@ test("readJournal returns 79 entries with strictly increasing idx and unique tag
     expect(entry.tag.length).toBeGreaterThan(0);
     tags.add(entry.tag);
   });
-  expect(tags.size).toBe(78);
+  expect(tags.size).toBe(79);
 });
 
 test("rewritePublicReferences retargets public-qualified REFERENCES to the worker schema", () => {

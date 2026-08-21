@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { contentEntries, users } from "../../../core/db/schema";
+import { contentEntries, seoDocuments, users } from "../../../core/db/schema";
 import { deleteContentType } from "../../../core/services/content/typeService";
 import { getEntry, updateEntry } from "../../../core/services/content/entryService";
 import {
@@ -262,6 +262,9 @@ test("published entry, page and menu updates stage as draft and publish only at 
       if (resource.kind === "menu") await deleteMenu(resource.id);
       if (resource.kind === "page") await deletePage(resource.id);
       if (resource.kind === "content_entry") {
+        await db
+          .delete(seoDocuments)
+          .where(and(eq(seoDocuments.targetType, "entry"), eq(seoDocuments.targetId, resource.id)));
         await db.delete(contentEntries).where(eq(contentEntries.id, resource.id));
       }
     }

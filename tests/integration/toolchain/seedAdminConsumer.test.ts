@@ -45,7 +45,7 @@ const FRESH_CREATE_SCHEMA = "seed_admin_consumer_fresh_create";
 const FRESH_SEED_SCHEMA = "seed_admin_consumer_fresh_seed";
 const LEGACY_SCHEMA = "seed_admin_consumer_legacy";
 const MIGRATION_TAG = "0071_seed_admin_role";
-const TOTAL_MIGRATIONS = 73;
+const TOTAL_MIGRATIONS = 79;
 const LEGACY_ROLE_ID = randomUUID();
 
 let sql: postgres.Sql | undefined;
