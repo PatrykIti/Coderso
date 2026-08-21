@@ -7,8 +7,9 @@
 **Category:** Testing / Documentation / Runtime Smoke / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-542-01..03
-**Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Status:** ✅ Done
+**Completed:** 2026-08-21
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
@@ -23,7 +24,7 @@ owner suite from this subtask.
 
 | ID | Title | Ownership | Status |
 |---|---|---|---|
-| TASK-542-04-L01 | Six cross-device publish-front flows and closure | tests, docs, smoke evidence, TASK-542 closure metadata | ⏳ To Do |
+| TASK-542-04-L01 | Six cross-device publish-front flows and closure | tests, docs, smoke evidence, TASK-542 closure metadata | ✅ Done |
 
 ## Security Contract
 

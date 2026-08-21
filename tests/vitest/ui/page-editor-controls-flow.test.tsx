@@ -366,9 +366,13 @@ test("PageEditor block style controls update visible canvas style and saved data
     expect(block.className).toContain("mx-auto");
     expect(block.style.getPropertyValue("--coderso-block-text")).toBe("#123456");
     expect(block.style.getPropertyValue("--coderso-block-surface")).toBe("#fef3c7");
-    expect(block.style.opacity).toBe("0.5");
-    expect(block.style.borderRadius).toBe("18px");
-    expect(block.style.boxShadow).toBe("0 14px 40px rgba(15, 23, 42, 0.12)");
+    // TASK-481-01-L01 content scope: brand visual style keys live on the
+    // inner [data-page-editor-content] wrapper, not the block frame.
+    const blockContent = block.querySelector('[data-page-editor-content="true"]') as HTMLElement;
+    expect(blockContent).toBeTruthy();
+    expect(blockContent.style.opacity).toBe("0.5");
+    expect(blockContent.style.borderRadius).toBe("18px");
+    expect(blockContent.style.boxShadow).toBe("0 14px 40px rgba(15, 23, 42, 0.12)");
     expect(block.style.padding).toBe("12px 14px 0px 0px");
     expect(block.style.marginBottom).toBe("10px");
     expect(block.style.marginLeft).toBe("auto");

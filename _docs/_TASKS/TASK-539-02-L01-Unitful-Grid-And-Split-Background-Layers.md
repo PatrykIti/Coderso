@@ -7,8 +7,9 @@
 **Category:** Pages / CSS Security / Pure Domain
 **Estimated Effort:** Medium
 **Dependencies:** TASK-539-02, TASK-541
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -40,7 +41,7 @@ function parsePageAuthoringColor(value: unknown): string | null {
 export const sanitizeAuthoringCssColor = (value: unknown): string | null =>
   parsePageAuthoringColor(value);
 
-export const isSafeAuthoringCssColor = (value: unknown): boolean =>
+export const isSafeAuthoringCssColor = (value: string): boolean =>
   parsePageAuthoringColor(value) !== null;
 ```
 
@@ -253,7 +254,9 @@ then run every exact validation gate below and enforce the family line limit
 
 Update the existing sanitizer suite for:
 
-- all preserved export names and delegation to the single analysis;
+- all preserved export names and delegation to the single analysis, including the
+  exact exported signatures `sanitizeAuthoringCssColor(value: unknown)` and
+  `isSafeAuthoringCssColor(value: string): boolean`;
 - exact one/two/six-gradient image substrings with irregular casing/spacing;
 - gradient+final-color split, color-only, canonical reconstruction, and raw-image
   identity under different equivalent final color spellings;

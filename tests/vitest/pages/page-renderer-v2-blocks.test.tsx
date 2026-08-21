@@ -1,14 +1,16 @@
+// TASK-539-05-L01 — block renderers: text/marks, button, image, badge, card, video, divider, spacer, typography fidelity
+// Cohesive suite split out of the former `page-renderer-v2.test.tsx` monolith.
+// Each suite is independently runnable in the Vitest lane (Bun-free pages renderer).
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import {
   createPageBlockV2,
   createPageSectionV2,
-  PAGE_DOCUMENT_SCHEMA_VERSION,
-  type PageDocumentV2,
-  type PageSectionV2,
+  pageTypographyFontFamilyCssValues,
+  pageTypographyFontSizeCssValues,
+  pageTypographyFontWeightCssValues,
 } from "../../../core/services/pages/pageDocumentV2";
-
 import {
   PageBlockFrame,
   PageDocumentRender,
@@ -17,19 +19,23 @@ import {
   toPageBlockRenderProps,
   toPageBlockTypographyStyle,
 } from "../../../core/services/pages/pageRendererV2";
-
+import { buildPageEditorCollectionPreviewBinding } from "../../../core/services/pages/pageEditorCollectionPreview";
+import { buildPageEditorFormPreviewBinding } from "../../../core/services/pages/pageEditorFormPreview";
 import {
-  pageTypographyFontFamilyCssValues,
-  pageTypographyFontSizeCssValues,
-  pageTypographyFontWeightCssValues,
-} from "../../../core/services/pages/pageDocumentV2";
+  mapPageFiltersBlockToListingFiltersData,
+  type PageRuntimeDataByBlockId,
+} from "../../../core/services/pages/pageRuntimeBindingContract";
+import { normalizeListingFiltersData } from "../../../core/services/renderContracts/listingFiltersContract";
+import { createDocument, createSection } from "./pageRendererV2TestFixtures";
+test("list link items render anchors while plain items stay inline-editable text", () => {
+  const html = renderToStaticMarkup(<PageSectionContent section={createSection()} />);
 
-const createDocument = (sections: PageSectionV2[]): PageDocumentV2 => ({
-  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
-  breakpoints: ["desktop", "tablet", "mobile"],
-  seo: {},
-  settings: { template: "page-v2", showInNav: true },
-  sections,
+  // Link item ({ label, href }) renders a real anchor with the stored target.
+  expect(html).toContain('href="/linked"');
+  expect(html).toMatch(/<a[^>]*href="\/linked"[^>]*>Linked item<\/a>/);
+  // Plain string items render as text (no anchor) and keep the inline-edit hook.
+  expect(html).toContain("Plain item");
+  expect(html).not.toMatch(/<a[^>]*>Plain item<\/a>/);
 });
 
 test("block render props expose shared classes, styles, and data attributes", () => {
@@ -771,147 +777,182 @@ test("document renderer resolves responsive typography overrides for the public 
   expect(mobileHtml).toContain("font-size:var(--text-sm");
 });
 
-test("shared renderer omits hidden block frames unless admin opts in", () => {
-  const section = createPageSectionV2("content", {
-    id: "sec-hidden-block-renderer",
-    blocks: [
-      createPageBlockV2("heading", {
-        id: "blk-public-heading",
-        props: { text: "Public headline", level: "h2", align: "left" },
-      }),
-      createPageBlockV2("text", {
-        id: "blk-hidden-text",
-        props: { text: "Hidden body", format: "plain", align: "left" },
-        visibility: { visible: false },
-      }),
-    ],
+// ── TASK-532 typography fidelity (Bundle B) — behavioral render ──
+test("TASK-532 toPageBlockTypographyStyle: fluid font-size wins over the discrete token", () => {
+  const custom = createPageBlockV2("heading", {
+    props: { text: "Fluid", level: "h1", align: "left" },
+    style: { fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)", fontSize: "lg" },
   });
+  expect(toPageBlockTypographyStyle(custom).fontSize).toBe("clamp(2.6rem,5vw,4.4rem)");
 
-  const runtimeContent = renderToStaticMarkup(<PageSectionContent section={section} />);
-  const adminContent = renderToStaticMarkup(
-    <PageSectionContent
-      section={section}
-      includeHiddenBlocks
-      renderBlockFrame={({ block, content, renderProps }) => (
-        <div {...renderProps.dataAttributes} data-admin-preview="true">
-          {content ?? <span>Hidden ghost</span>}
-        </div>
-      )}
-    />
-  );
+  // token-only path intact (regression).
+  const tokenOnly = createPageBlockV2("heading", {
+    props: { text: "Token", level: "h1", align: "left" },
+    style: { fontSize: "lg" },
+  });
+  expect(toPageBlockTypographyStyle(tokenOnly).fontSize).toBe(pageTypographyFontSizeCssValues.lg);
 
-  expect(runtimeContent).toContain("Public headline");
-  expect(runtimeContent).not.toContain("Hidden body");
-  expect(runtimeContent).not.toContain('data-block-id="blk-hidden-text"');
-  expect(adminContent).toContain('data-block-id="blk-hidden-text"');
-  expect(adminContent).toContain("Hidden ghost");
+  // text-transform emitted; heavier weight maps to the css value; unset absent.
+  const transformed = createPageBlockV2("heading", {
+    props: { text: "Up", level: "h1", align: "left" },
+    style: { textTransform: "uppercase", fontWeight: "black" },
+  });
+  const emitted = toPageBlockTypographyStyle(transformed);
+  expect(emitted.textTransform).toBe("uppercase");
+  expect(emitted.fontWeight).toBe(pageTypographyFontWeightCssValues.black);
+  expect(emitted.fontWeight).toBe("900");
 
-  const documentHtml = renderToStaticMarkup(
-    <PageDocumentRender document={createDocument([section])} />
-  );
-  expect(documentHtml).not.toContain('data-block-id="blk-hidden-text"');
+  const bare = createPageBlockV2("heading", {
+    props: { text: "Bare", level: "h1", align: "left" },
+  });
+  const bareEmitted = toPageBlockTypographyStyle(bare);
+  expect(bareEmitted).not.toHaveProperty("fontSize");
+  expect(bareEmitted).not.toHaveProperty("textTransform");
 });
 
-test("shared renderer provides safe inert states while rendering active layout slots recursively", () => {
-  const section = createPageSectionV2("content", {
-    id: "sec-empty-block-placeholders",
-    blocks: [
-      createPageBlockV2("image", {
-        id: "blk-empty-image",
-        props: { src: "", alt: "", caption: "", fit: "cover" },
-      }),
-      createPageBlockV2("video", {
-        id: "blk-empty-video",
-        props: { src: "", title: "", autoplay: false, muted: true },
-      }),
-      createPageBlockV2("gallery", {
-        id: "blk-static-gallery",
-        props: {
-          layout: "masonry",
-          items: [
-            {
-              src: "https://cdn.example.test/studio.jpg",
-              alt: "Studio",
-              caption: "Studio view",
+test("TASK-532 heading renders inline fluid font-size + text-transform", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-heading",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "blk-532-heading",
+            props: { text: "Fluid heading", level: "h1", align: "left" },
+            style: {
+              fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)",
+              textTransform: "uppercase",
             },
-            { title: "Planning board" },
-          ],
-        },
-      }),
-      createPageBlockV2("collection", {
-        id: "blk-inert-collection",
-        props: { contentTypeId: "ct-private", queryId: "query-private", limit: 6 },
-      }),
-      createPageBlockV2("form", {
-        id: "blk-inert-form",
-        props: { formId: "form-private", title: "Contact form" },
-      }),
-      createPageBlockV2("embed", {
-        id: "blk-safe-embed",
-        props: {
-          html: "<script>alert(1)</script>",
-          url: "https://example.test/embed",
-          provider: "custom",
-        },
-      }),
-      createPageBlockV2("columns", {
-        id: "blk-layout-columns",
-        props: { count: 2, gap: 24, distribution: "equal" },
-        slots: {
-          "column:1": [
-            createPageBlockV2("heading", {
-              id: "blk-nested-active",
-              props: { text: "Nested active", level: "h2", align: "left" },
-            }),
-          ],
-          "column:2": [
-            createPageBlockV2("text", {
-              id: "blk-hidden-nested",
-              props: { text: "Hidden nested", format: "plain", align: "left" },
-              visibility: { visible: false },
-            }),
-          ],
-          "column:3": [
-            createPageBlockV2("heading", {
-              id: "blk-dormant-nested",
-              props: { text: "Dormant nested", level: "h2", align: "left" },
-            }),
-          ],
-        },
-      }),
-    ],
-  });
-  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+          }),
+        ],
+      })}
+    />
+  );
+  expect(html).toContain("font-size:clamp(2.6rem,5vw,4.4rem)");
+  expect(html).toContain("text-transform:uppercase");
+});
 
-  expect(html).toContain('data-block-id="blk-empty-image"');
-  expect(html).toContain('data-block-id="blk-empty-video"');
-  expect(html).toContain('data-block-id="blk-static-gallery"');
-  expect(html).toContain('data-block-id="blk-inert-collection"');
-  expect(html).toContain('data-block-id="blk-inert-form"');
-  expect(html).toContain('data-block-id="blk-safe-embed"');
-  expect(html).toContain('data-block-id="blk-layout-columns"');
-  expect(html).toContain("Image");
-  expect(html).toContain("Video");
-  expect(html).toContain('data-page-gallery="true"');
-  expect(html).toContain('data-page-gallery-layout="masonry"');
-  expect(html).toContain("https://cdn.example.test/studio.jpg");
-  expect(html).toContain("Studio view");
-  expect(html).toContain("Planning board");
-  expect(html).toContain('data-page-block-inert="collection"');
-  expect(html).toContain('data-page-block-inert="form"');
-  expect(html).toContain('data-page-block-inert="embed"');
-  expect(html).toContain("Contact form is not available yet.");
-  expect(html).toContain('data-page-layout-block="columns"');
-  expect(html).toContain('data-page-block-slot="column:1"');
-  expect(html).toContain('data-page-block-slot="column:2"');
-  expect(html).not.toContain('data-page-block-slot="column:3"');
-  expect(html).toContain("Nested active");
-  expect(html).not.toContain("Columns");
-  expect(html).not.toContain("Hidden nested");
-  expect(html).not.toContain("Dormant nested");
-  expect(html).not.toContain("ct-private");
-  expect(html).not.toContain("query-private");
-  expect(html).not.toContain("form-private");
-  expect(html).not.toContain("<script>");
-  expect(html).not.toContain("alert(1)");
+test("TASK-532 divider gradient variant renders a gradient <span>; legacy divider is an <hr>", () => {
+  const gradientHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-divider-gradient",
+        blocks: [
+          createPageBlockV2("divider", {
+            id: "blk-532-divider-gradient",
+            props: { tone: "accent", thickness: 2, width: 34, align: "left", gradient: true },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(gradientHtml).toContain("linear-gradient(90deg");
+  expect(gradientHtml).toContain(", transparent)");
+  expect(gradientHtml).toContain("width:34px");
+  expect(gradientHtml).not.toContain("<hr");
+
+  const legacyHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-divider-legacy",
+        blocks: [
+          createPageBlockV2("divider", {
+            id: "blk-532-divider-legacy",
+            props: { tone: "neutral", thickness: 1 },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(legacyHtml).toContain("<hr");
+  expect(legacyHtml).not.toContain("linear-gradient");
+});
+
+test("TASK-532 rich text block honors textColor; plain path + unset stay unchanged", () => {
+  const richColored = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-color",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-color",
+            props: { text: "<p>Aqua body</p>", format: "rich", align: "left" },
+            style: { textColor: "#22d3ee" },
+          }),
+        ],
+      })}
+    />
+  );
+  // Wrapper carries the authored color + the inherit-forcing class so every
+  // descendant inherits it. NOTE: renderToStaticMarkup asserts EMITTED MARKUP
+  // only — the actual PAINTED color on the child <p>/<span> (getComputedStyle)
+  // is proven by the LIVE Playwright computed-color smoke (acceptance #5), not
+  // here. This codebase ships no @tailwindcss/typography plugin, so the inline
+  // wrapper color already paints today; the inherit class is defensive.
+  expect(richColored).toContain("color:#22d3ee");
+  expect(richColored).toContain("text-[color:inherit]");
+  // STRUCTURAL proof (as far as SSR markup can go): the sanitized child <p> is
+  // emitted INSIDE the same wrapper <div> that carries BOTH `color:#22d3ee` and
+  // the `[&_*]:text-[color:inherit]` descendant utility — so the inherit chain
+  // that wins the cascade is really present in the tree. The wrapper's opening
+  // tag must precede the child text, and that opening tag must carry both the
+  // authored inline color and the inherit-forcing class. (The COMPUTED color on
+  // that child stays a live-smoke concern — SSR does not resolve the cascade.)
+  const richWrapperOpen = richColored.match(/<div[^>]*data-page-block-text="true"[^>]*>/)?.[0];
+  expect(richWrapperOpen).toBeDefined();
+  expect(richWrapperOpen).toContain("color:#22d3ee");
+  expect(richWrapperOpen).toContain("text-[color:inherit]");
+  expect(richColored.indexOf(richWrapperOpen as string)).toBeLessThan(
+    richColored.indexOf("Aqua body")
+  );
+
+  // A bad color fails soft — no inline color, no inherit class.
+  const richBadColor = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-badcolor",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-badcolor",
+            props: { text: "<p>No color</p>", format: "rich", align: "left" },
+            style: { textColor: "javascript:alert(1)" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(richBadColor).not.toContain("text-[color:inherit]");
+
+  // Unset textColor on rich → no inline color, no inherit class (byte-identical).
+  const richUnset = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-unset",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-unset",
+            props: { text: "<p>Plain body</p>", format: "rich", align: "left" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(richUnset).not.toContain("text-[color:inherit]");
+
+  // The PLAIN path keeps its --coderso-block-text var mechanism (regression).
+  const plainColored = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-plain-color",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-plain-color",
+            props: { text: "Plain aqua", format: "plain", align: "left" },
+            style: { textColor: "#22d3ee" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(plainColored).toContain("--coderso-block-text");
 });

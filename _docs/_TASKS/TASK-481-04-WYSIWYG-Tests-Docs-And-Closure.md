@@ -7,9 +7,10 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Small
 **Dependencies:** TASK-481-01, TASK-481-02, TASK-481-03
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-19
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -27,8 +28,8 @@ notes.
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-04-L01 | Brand-WYSIWYG vitest + real-input Playwright smoke | Small | ⏳ To Do |
-| TASK-481-04-L02 | Docs + TASK-479-05-L03 / TASK-479-08-L02 reciprocity | Small | ⏳ To Do |
+| TASK-481-04-L01 | Brand-WYSIWYG vitest + real-input Playwright smoke | Small | ✅ Done |
+| TASK-481-04-L02 | Docs + TASK-479-05-L03 / TASK-479-08-L02 reciprocity | Small | ✅ Done |
 
 ## Dependencies
 

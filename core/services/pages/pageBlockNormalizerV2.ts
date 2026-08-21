@@ -9,7 +9,6 @@ import {
   FORM_EMBED_SUCCESS_BEHAVIORS,
   FORM_EMBED_TEXTAREA_ROWS_LIMITS,
 } from "../../services/renderContracts/formEmbedContract";
-import { sanitizeAuthoringMediaUrl } from "./pageAuthoringSanitizers";
 import { sanitizeSvg } from "./svgSanitizer";
 import {
   createPageListItem,
@@ -23,6 +22,7 @@ import {
   assertKnownKeys,
   cloneRecord,
   isRecord,
+  normalizeBlockResponsiveStyle,
   normalizeBlockStyle,
   normalizeBlockVisibility,
   normalizeEnum,
@@ -83,11 +83,18 @@ import {
   scrollHintGlyphs,
   switcherVariants,
   type PageBadgeIcon,
+  type PageBlockStyleV2,
   type PageBlockType,
   type PageBlockV2,
   type PageBlockVisibilityV2,
 } from "./pageDocumentV2Types";
 import { normalizeBlockTextMarksForMode } from "./pageTextMarksV2";
+import { normalizeGalleryItems } from "./pageBlockGalleryNormalizer";
+import { expandLegacyFiltersCollectionBlock } from "./pageLegacyFiltersExpand";
+// Public contract stability (TASK-459): the section normalizer consumes the
+// legacy filters expander through this module's facade; the implementation
+// moved to pageLegacyFiltersExpand to keep this file within the line limit.
+export { expandLegacyFiltersCollectionBlock } from "./pageLegacyFiltersExpand";
 
 // ── TASK-580-03-L01 ── legacy-widget helpers ─────────────────────────────────
 // Prototype-pollution keys are rejected from the preserved v1 widget `data`
@@ -173,6 +180,13 @@ const normalizeBlockProps = (
       // stays byte-identical to a legacy one (the defaults seed no such key).
       if (normalized !== undefined) result[key] = normalized;
     }
+  }
+  // ── TASK-539 ── divider `width`/`align` are decorative companions of
+  // `gradient:true`; a non-gradient divider drops stale values in BOTH modes
+  // (the result is a fresh object, so caller input is never mutated).
+  if (type === "divider" && result.gradient !== true) {
+    delete result.width;
+    delete result.align;
   }
   if (isPageTextMarkCapableBlockType(type) && input.marks !== undefined) {
     const text = typeof result.text === "string" ? result.text : "";
@@ -342,43 +356,14 @@ const normalizeFiltersAliases = (
   return normalized;
 };
 
-const normalizeGalleryItems = (value: unknown): Record<string, unknown>[] => {
-  if (!Array.isArray(value)) return [];
-  return value.flatMap((item) => {
-    if (typeof item === "string") {
-      const src = sanitizeAuthoringMediaUrl(item);
-      return src ? [{ src, alt: "", caption: "" }] : [];
-    }
-    if (!isRecord(item)) return [];
-    const src =
-      readOptionalMediaUrl(item.src) ??
-      readOptionalMediaUrl(item.url) ??
-      readOptionalMediaUrl(item.image) ??
-      readOptionalMediaUrl(item.assetUrl) ??
-      "";
-    const alt = readOptionalText(item.alt) ?? readOptionalText(item.title) ?? "";
-    const caption =
-      readOptionalText(item.caption) ??
-      readOptionalText(item.title) ??
-      readOptionalText(item.label) ??
-      readOptionalText(item.name) ??
-      readOptionalText(item.description) ??
-      "";
-    if (!src && !caption) return [];
-    // ── TASK-534 ── present-only per-item `category`: a SPACE-SEPARATED set of
-    // single kebab/word tokens (each `GALLERY_CATEGORY_PATTERN`). Out-of-pattern
-    // tokens are DROPPED (fail-soft) so the stored value is always a bounded token
-    // set that can never `"`-break out of the `data-category` attribute. Absent /
-    // no valid token ⇒ NO `category` key, so legacy gallery items stay byte-identical.
-    const rebuilt: Record<string, unknown> = { src, alt, caption };
-    const catTokens = (readOptionalText(item.category) ?? "")
-      .split(/\s+/)
-      .filter((token) => GALLERY_CATEGORY_PATTERN.test(token))
-      .slice(0, GALLERY_FILTER_CATEGORY_MAX);
-    if (catTokens.length) rebuilt.category = catTokens.join(" ");
-    return [rebuilt];
-  });
-};
+/**
+ * Mode-aware canonical gallery items normalizer (TASK-539). Write mode is
+ * strict: exact keys, required own strings bounded BEFORE any repair, byte
+ * identity for `sanitizeAuthoringMediaUrl`/trim, and a category that is
+ * exactly 1..12 unique owner tokens joined by one ASCII space. Stored read is
+ * adaptive: legacy aliases with pinned precedence, trim-before-cap,
+ * sanitize-after-cap, token dedupe, and canonical-only rebuild.
+ */
 
 const normalizeBlockProp = (
   type: PageBlockType,
@@ -639,7 +624,7 @@ const normalizeBlockProp = (
     return Boolean(value);
   }
   if (type === "list" && key === "items") return normalizeListItems(value, mode, path);
-  if (type === "gallery" && key === "items") return normalizeGalleryItems(value);
+  if (type === "gallery" && key === "items") return normalizeGalleryItems(value, mode, path);
   if (key === "items") return Array.isArray(value) ? cloneRecord(value) : [];
   if (key === "href") return readOptionalLinkHref(value) ?? null;
   if (key === "src" || key === "image" || key === "url") return readOptionalMediaUrl(value) ?? null;
@@ -655,7 +640,8 @@ const normalizeBlockResponsive = (
   value: unknown,
   type: PageBlockType,
   mode: NormalizeMode,
-  path: string
+  path: string,
+  baseStyle: PageBlockStyleV2 | undefined
 ): PageBlockV2["responsive"] => {
   if (value === undefined) return undefined;
   const input = requireRecord(value, path, mode);
@@ -697,12 +683,26 @@ const normalizeBlockResponsive = (
         : normalizeBlockProps(type, overridePropsInput, mode, `${path}.${breakpoint}.props`, true);
     const props =
       normalizedProps && Object.keys(normalizedProps).length > 0 ? normalizedProps : undefined;
-    const style = normalizeBlockStyle(
+    const style = normalizeBlockResponsiveStyle(
       overrideInput.style,
       mode,
-      `${path}.${breakpoint}.style`,
-      true
+      `${path}.${breakpoint}.style`
     );
+    // TASK-539 layer reachability: a nonempty responsive layer without a
+    // nonempty normalized BASE layer is an unreachable delta. Write rejects at
+    // the exact layer path; stored read drops only that layer and lets the
+    // empty-record pruning below remove a now-empty style/breakpoint.
+    if (style?.layer && !(baseStyle?.layer && Object.keys(baseStyle.layer).length > 0)) {
+      if (mode === "write") {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Invalid ${path}.${breakpoint}.style.layer.`,
+          `${path}.${breakpoint}.style.layer`
+        );
+      }
+      delete style.layer;
+    }
+    const normalizedStyle = style && Object.keys(style).length > 0 ? style : undefined;
     const visibility =
       overrideInput.visibility === undefined
         ? undefined
@@ -714,7 +714,7 @@ const normalizeBlockResponsive = (
           );
     const normalized = {
       ...(props ? { props } : {}),
-      ...(style ? { style } : {}),
+      ...(normalizedStyle ? { style: normalizedStyle } : {}),
       ...(visibility && Object.keys(visibility).length > 0 ? { visibility } : {}),
     };
     if (Object.keys(normalized).length > 0) result[breakpoint] = normalized;
@@ -832,59 +832,6 @@ const normalizeBlockSlots = (
   return Object.keys(result).length > 0 ? result : undefined;
 };
 
-const legacyFiltersCollectionFilterPropKeys = [
-  "queryId",
-  "facets",
-  "aliases",
-  "layout",
-  "autoApply",
-  "showSearch",
-  "showCount",
-  "searchLabel",
-  "searchPlaceholder",
-  "applyLabel",
-] as const;
-
-const legacyFiltersCollectionStripPropKeys = new Set<string>([
-  "mode",
-  ...legacyFiltersCollectionFilterPropKeys.filter((key) => key !== "queryId"),
-]);
-
-/**
- * Non-destructive legacy adapter (TASK-459-02, frozen TASK-459-01 decision):
- * assistant blueprints historically attached `mode: "filters"` plus the
- * filter-surface props to a COLLECTION block. Those payloads now normalize
- * into a filters + collection pair: the dedicated filters block owns the
- * facet controls, while the original collection block keeps rendering the
- * linked results. Collection blocks WITHOUT `mode: "filters"` are untouched,
- * so existing documents render byte-identically.
- */
-export const expandLegacyFiltersCollectionBlock = (value: unknown): unknown[] => {
-  if (!isRecord(value) || value.type !== "collection" || !isRecord(value.props)) return [value];
-  if (value.props.mode !== "filters") return [value];
-  const legacy = value.props;
-  const props: RecordValue = {};
-  for (const key of legacyFiltersCollectionFilterPropKeys) {
-    if (legacy[key] !== undefined) props[key] = legacy[key];
-  }
-  const collectionProps = Object.fromEntries(
-    Object.entries(legacy).filter(([key]) => !legacyFiltersCollectionStripPropKeys.has(key))
-  );
-  const sourceId = typeof value.id === "string" ? value.id.trim() : "";
-  const filtersId = sourceId ? `${sourceId}_filters` : undefined;
-  const filtersBlock = {
-    ...value,
-    ...(filtersId ? { id: filtersId } : {}),
-    type: "filters",
-    props,
-  };
-  const collectionBlock = {
-    ...value,
-    props: collectionProps,
-  };
-  return [filtersBlock, collectionBlock];
-};
-
 export const normalizeBlock = (
   value: unknown,
   path: string,
@@ -926,7 +873,13 @@ export const normalizeBlock = (
     const type = normalizeEnum(input.type, pageBlockTypes, "text", `${path}.type`, mode);
     const id = ensureUniqueBlockId(normalizeId(input.id, "blk", blockIndex, mode), path, context);
     const style = normalizeBlockStyle(input.style, mode, `${path}.style`);
-    const responsive = normalizeBlockResponsive(input.responsive, type, mode, `${path}.responsive`);
+    const responsive = normalizeBlockResponsive(
+      input.responsive,
+      type,
+      mode,
+      `${path}.responsive`,
+      style
+    );
     const slots = normalizeBlockSlots(input.slots, type, mode, `${path}.slots`, depth, context);
     return {
       id,

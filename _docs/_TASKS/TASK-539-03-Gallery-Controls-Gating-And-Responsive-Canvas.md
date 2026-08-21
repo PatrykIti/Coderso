@@ -7,8 +7,9 @@
 **Category:** Pages / Admin Editor / Responsive UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01, TASK-539-02; TASK-478/TASK-481 collision boundary resolved
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -22,11 +23,11 @@ usable Page canvas width on narrow viewports.
 
 | Order | Leaf | Sole responsibility | Status |
 |---|---|---|---|
-| 1 | TASK-539-03-L05 | Shared grid-placement contract and focused proof | ⏳ To Do |
-| 2 | TASK-539-03-L01 | Registry/UI-model vocabulary, gates, z clamp, and cohesive registry/test split | ⏳ To Do |
-| 3 | TASK-539-03-L02 | Media URL, gallery-item, and gallery-category controls | ⏳ To Do |
-| 4 | TASK-539-03-L03 | PageEditor wiring, cohesive editor/test split, and Page-local responsive clearance | ⏳ To Do |
-| 5 | TASK-539-03-L04 | Additive TASK-539 editor proof suites only | ⏳ To Do |
+| 1 | TASK-539-03-L05 | Shared grid-placement contract and focused proof | ✅ Done |
+| 2 | TASK-539-03-L01 | Registry/UI-model vocabulary, gates, z clamp, and cohesive registry/test split | ✅ Done |
+| 3 | TASK-539-03-L02 | Media URL, gallery-item, and gallery-category controls | ✅ Done |
+| 4 | TASK-539-03-L03 | PageEditor wiring on the 481-split facade, flow-test split, and Page-local responsive clearance | ✅ Done |
+| 5 | TASK-539-03-L04 | Additive TASK-539 editor proof suites only | ✅ Done |
 
 Land exactly `L05 → L01 → L02 → L03 → L04`. L05 is the sole writer of the
 placement module; editor, renderer, and responsive CSS are consumers only.
@@ -38,13 +39,20 @@ must not edit `core/admin/ui/shared/CanvasEditor.tsx`, any Custom Screen file,
 `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx`, renderer/runtime/model/
 sanitizer source, foreign tests, task indexes, or changelogs.
 
-The grounded pre-task oversize seams are
-`pageEditorControlRegistry.ts` (1,813 lines),
-`page-editor-control-registry.test.ts` (1,893),
-`PageEditor.tsx` (5,204), and `page-editor-v2-flow.test.tsx` (6,813).
-Their owning leaves must split them by cohesive responsibility and retain explicit
-stable facades; every resulting human-authored source/test file must be at most
-1,000 physical lines.
+The grounded oversize seams are
+`PageEditor.tsx` (5,204) and `page-editor-v2-flow.test.tsx` (6,813). The
+`PageEditor.tsx` facade split (7 modules) is ALREADY landed by TASK-481-02-L02;
+this subtask rebases onto that split facade and does NOT re-split it. The flow-test
+seam is owned by TASK-539-03-L03. TASK-547 already split the registry:
+`pageEditorControlRegistry.ts` is now 32 lines (down from the pre-split 1,813) and
+`page-editor-control-registry.test.ts` is now 942 lines (down from 1,893). Re-ground
+the registry work against the landed modules
+`pageEditorControlDefinition.ts`, `pageEditorBlockControlRegistry.ts`,
+`pageEditorBlockStyleControls.ts`, and `pageEditorSectionControls.ts` rather than
+re-splitting them.
+Their owning leaves must split the remaining oversized seams by cohesive
+responsibility and retain explicit stable facades; every resulting human-authored
+source/test file must be at most 1,000 physical lines.
 
 ## Security Contract
 
@@ -109,9 +117,8 @@ bun --cwd core lint
 bun run test:vitest -- \
   tests/vitest/pages/page-block-grid-placement.test.ts \
   tests/vitest/pages/page-editor-control-registry.test.ts \
-  tests/vitest/pages/page-editor-control-registry-capabilities.test.ts \
-  tests/vitest/pages/page-editor-control-registry-effects.test.ts \
-  tests/vitest/pages/page-editor-control-registry-responsive.test.ts \
+  tests/vitest/pages/page-editor-content-controls.test.ts \
+  tests/vitest/pages/page-editor-visual-controls.test.ts \
   tests/vitest/pages/page-editor-control-ui-model.test.ts \
   tests/vitest/ui/page-editor-media-url-control.test.tsx \
   tests/vitest/ui/page-editor-gallery-items-control.test.tsx \

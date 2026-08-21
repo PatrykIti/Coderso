@@ -7,8 +7,9 @@
 **Category:** Pages / Validation / Documentation / Closure
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01 through TASK-539-07
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create in this leaf only)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create in this leaf only)
 
 ---
 
@@ -23,16 +24,18 @@ May edit only:
 - `docs/develop/content-and-widgets.md`;
 - `docs/guide/screens/page-editor-preview-settings-and-history.md`;
 - TASK-539 descendant/parent statuses, only the TASK-539 board row/statistics delta,
-  changelog 1251, and only its changelog-index row;
+  changelog 1318, and only its changelog-index row;
 - screenshots `_docs/_workflows/_smoke/task-539-*`.
 
 Read but never edit:
 
-- `tests/integration/runtime/pages-runtime.test.ts` (legacy 2,000+ line suite);
+- `tests/integration/runtime/pages-runtime.test.ts` (427-line suite, already split
+  into `pages-runtime-blocks.test.ts` / `pages-runtime-responsive.test.ts` /
+  `pages-runtime-test-support.ts`; read-only);
 - `tests/integration/runtime/site-shell-runtime.test.ts`.
 
 Do not edit production source, another task family, workflow code, or shared-index
-bytes outside the exact TASK-539/changelog-1251 deltas. Read both indexes fresh
+bytes outside the exact TASK-539/changelog-1318 deltas. Read both indexes fresh
 immediately before closure. There is no TASK-545 prerequisite, exception, manifest,
 or evidence-path substitution.
 
@@ -77,7 +80,7 @@ getSetting, getSettingRecord, setSetting, deleteSetting
 getSecuritySettings, setSecuritySettings, resetSecuritySettingsCache
 resetRateLimitBuckets
 createPageTemplate, SITE_FOOTER_TEMPLATE_SETTING_KEY, clearSiteCache
-createForm, setFormFields, createListingQuery
+createForm, setFormFields
 db; accessLogs, auditLogs, formFields, forms, ipAllowlist, listingQueries,
   pageRevisions, pages, pageTemplates, previewTokens, roles, sessions, settings,
   userRoles, users
@@ -125,6 +128,14 @@ pageRequest(method, routeSuffix, actor?, csrf?, body?, expectedStatus)
 snapshotOwnedMutationState(slugs, pageIds)
   query only exact owned Page slugs/ids plus their pageRevisions and auditLogs
   return deterministic rows/counts so every denial can compare before/after bytes
+
+createOwnedListingQuery(ownedUserId)
+  insert one suite-owned listingQueries row directly through db with the typed
+    desired query shape {source:"users",sourceConfig:{},filters:[...],sort:[...],
+    pagination:{limit:1,offset:0},fields:["id","name","status"]}
+  return the created UUID id
+  this is a local typed DB insert fixture (no admin HTTP client, service writer
+    fence/lock, cache, or audit side effects)
 ```
 
 Create at least these actors with collision-safe UUID identities and exact RBAC:
@@ -177,7 +188,7 @@ Create one collision-safe published, public suite-owned Form through `createForm
 and one exact text field through `setFormFields`:
 `{type:"text",label:"Name",name:"name",required:true,settings:{},orderIndex:0}`;
 the Page form block references that exact Form ID. Create one suite-owned saved query
-through `createListingQuery`. Its deterministic query is
+through `createOwnedListingQuery`. Its deterministic query is
 `{source:"users",sourceConfig:{},filters:[{field:"id",op:"eq",value:ownedUserId}],`
 `sort:[{field:"id",dir:"asc"}],pagination:{limit:1,offset:0},`
 `fields:["id","name","status"]}`. Under the same unsafe marquee subtree, the Page
@@ -298,13 +309,13 @@ Run every command from leaves 01–07 and this exact aggregate inventory. A name
 is rerun once alone before classification.
 
 ```bash
-bun run test:vitest -- tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts tests/vitest/pages/page-document-v2-listing-and-settings.test.ts tests/vitest/pages/page-document-v2-style-contracts.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
+bun run test:vitest -- tests/vitest/pages/page-document-v2-facade.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-idempotence.test.ts tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts tests/vitest/pages/page-document-v2-listing-and-settings.test.ts tests/vitest/pages/page-document-v2-style-contracts.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
 bun run test:vitest -- tests/vitest/pages/page-authoring-sanitizers.test.ts tests/vitest/pages/page-authoring-sanitizers-security-corpus.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
-bun run test:vitest -- tests/vitest/pages/page-block-grid-placement.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-editor-control-registry-capabilities.test.ts tests/vitest/pages/page-editor-control-registry-effects.test.ts tests/vitest/pages/page-editor-control-registry-responsive.test.ts tests/vitest/pages/page-editor-control-ui-model.test.ts tests/vitest/ui/page-editor-media-url-control.test.tsx tests/vitest/ui/page-editor-gallery-items-control.test.tsx tests/vitest/ui/page-editor-gallery-category-tokens-control.test.tsx tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor-v2-authoring-flow.test.tsx tests/vitest/ui/page-editor-v2-controls-flow.test.tsx tests/vitest/ui/page-editor-v2-inline-edit-flow.test.tsx tests/vitest/ui/page-editor-v2-responsive-flow.test.tsx tests/vitest/ui/page-editor-v2-layout-flow.test.tsx tests/vitest/ui/page-editor-v2-persistence-flow.test.tsx tests/vitest/ui/page-editor-v2-settings-flow.test.tsx tests/vitest/pages/task-539-page-editor-controls.test.ts tests/vitest/ui/task-539-page-editor-flow.test.tsx
+bun run test:vitest -- tests/vitest/pages/page-block-grid-placement.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-editor-content-controls.test.ts tests/vitest/pages/page-editor-visual-controls.test.ts tests/vitest/pages/page-editor-control-ui-model.test.ts tests/vitest/ui/page-editor-media-url-control.test.tsx tests/vitest/ui/page-editor-gallery-items-control.test.tsx tests/vitest/ui/page-editor-gallery-category-tokens-control.test.tsx tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor-v2-authoring-flow.test.tsx tests/vitest/ui/page-editor-v2-controls-flow.test.tsx tests/vitest/ui/page-editor-v2-inline-edit-flow.test.tsx tests/vitest/ui/page-editor-v2-responsive-flow.test.tsx tests/vitest/ui/page-editor-v2-layout-flow.test.tsx tests/vitest/ui/page-editor-v2-persistence-flow.test.tsx tests/vitest/ui/page-editor-v2-settings-flow.test.tsx tests/vitest/pages/task-539-page-editor-controls.test.ts tests/vitest/ui/task-539-page-editor-flow.test.tsx
 bun run test:vitest -- tests/vitest/pages/page-composition-effects.test.ts tests/vitest/pages/task-534-interactivity-css.test.ts tests/vitest/pages/task-539-transform-composition.test.ts
-bun run test:vitest -- tests/vitest/pages/page-renderer-v2-facade.test.tsx tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-renderer-v2-section-layout.test.tsx tests/vitest/pages/page-renderer-v2-blocks.test.tsx tests/vitest/pages/page-renderer-v2-data-binding.test.tsx tests/vitest/pages/page-renderer-v2-effects.test.tsx tests/vitest/pages/page-renderer-v2-svg.test.tsx tests/vitest/pages/page-renderer-v2-composition.test.tsx tests/vitest/pages/page-renderer-timeline-geometry.test.ts tests/vitest/pages/task-534-interactivity-render.test.tsx tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
-bun run test:vitest -- tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-security.test.ts tests/vitest/pages/task-539-responsive-css-parity.test.ts
-bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/sectionScrollEffect.test.tsx tests/vitest/content/cursorSpotlight.test.tsx tests/vitest/content/task-534-interactivity-runtime.test.tsx tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx
+bun run test:vitest -- tests/vitest/pages/page-renderer-v2-facade.test.tsx tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-renderer-v2-section-layout.test.tsx tests/vitest/pages/page-renderer-v2-blocks.test.tsx tests/vitest/pages/page-renderer-v2-data-binding.test.tsx tests/vitest/pages/page-renderer-v2-effects.test.tsx tests/vitest/pages/page-renderer-v2-svg.test.tsx tests/vitest/pages/page-renderer-v2-composition.test.tsx tests/vitest/pages/page-renderer-timeline-geometry.test.ts tests/vitest/pages/task-534-interactivity-render.test.tsx tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx tests/vitest/pages/task-539-renderer-replica-identity.test.tsx
+bun run test:vitest -- tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-block-behavior.test.ts tests/vitest/pages/page-responsive-css-security.test.ts tests/vitest/pages/task-539-responsive-css-parity.test.tsx
+bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/sectionScrollEffect.test.tsx tests/vitest/content/cursorSpotlight.test.tsx tests/vitest/content/task-534-interactivity-runtime.test.tsx tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx tests/vitest/pages/task-539-page-effects-runtime-replica-and-soft-fail.test.tsx
 ```
 
 ## Exact aggregate gates
@@ -429,10 +440,15 @@ distinct real flows:
 7. **Reduced-motion functionality.** Enable reduced motion and prove switcher and
    gallery pointer/keyboard/roving/ARIA/hidden behavior remains functional while
    reveal/parallax/spotlight/tilt/magnetic stay neutral and content remains visible.
-8. **Timeline and divider geometry.** Exercise default, compact, multi-item, and
+8. **Timeline, glow, and divider geometry.** Exercise default, compact, multi-item, and
    single-item timelines plus gradient/non-gradient divider gating. Assert connector
    endpoints at the exact `22px` default/`18px` compact marker centers, non-final
    row-gap bleed, no single-item connector, and visible divider length/alignment/tone.
+   Author the lift/glow-reveal decoration on real blocks and prove the glow
+   `::before/::after` overlay carries `pointer-events:none` (computed style) so real
+   pointer clicks, drags, and text selection pass through the glow overlay to the
+   underlying interactive content; assert a clickable descendant receives the event
+   and the overlay never captures the pointer.
 9. **Narrow canvas and themes.** At 320, 390, and 480 px open/close the inspector,
    select and edit controls in both light and dark Admin themes, and assert positive
    usable canvas width, reachable controls, no rail-induced zero width, clipping, or
@@ -458,14 +474,14 @@ identity, and user-visible editing/publish workflow. Do not describe task intern
 the user guide.
 
 Create
-`_docs/_CHANGELOG/1251-{YYYY-MM-DD}-task-539-page-v2-post-audit-remediation-ii.md`
+`_docs/_CHANGELOG/1318-{YYYY-MM-DD}-task-539-page-v2-post-audit-remediation-ii.md`
 using the actual closure date and live changelog convention. Record exact validation
 results, line receipt, audits, nine-flow evidence, screenshots, and owner commit scope
 without secrets. Its Tasks field/index coverage must enumerate TASK-539, all 8 direct
-children, and all 18 physical leaves, including TASK-539-03-L05, before any family
+children, and all 19 physical leaves, including TASK-539-02-L03 and TASK-539-03-L05, before any family
 status is closed.
 
 Only after every required receipt is green: mark leaves terminal, then child tasks,
 then TASK-539; update only its board row and recompute statistics from physical files;
-add only changelog 1251/index rows. No direct child may remain open. Do not commit as an
+add only changelog 1318/index rows. No direct child may remain open. Do not commit as an
 agent.

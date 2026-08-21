@@ -5,6 +5,14 @@ import {
 } from "../../services/renderContracts/formEmbedContract";
 import { PAGE_CSS_VALUE_MAX_LENGTH } from "./pageAuthoringSanitizers";
 import {
+  PAGE_GALLERY_ALT_MAX,
+  PAGE_GALLERY_CAPTION_MAX,
+  PAGE_GALLERY_CATEGORY_MAX,
+  PAGE_GALLERY_ITEMS_MAX,
+  PAGE_GALLERY_SRC_MAX,
+  galleryCategoryTokenStackPattern,
+} from "./pageGalleryV2";
+import {
   mobileBreakpoints,
   pageBlockCapabilities,
   pageBlockPropKeys,
@@ -413,6 +421,7 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
       items: { type: "string" },
     };
   }
+  if (type === "gallery" && key === "items") return galleryItemsJsonSchema;
   if (key === "size") return numericSchema(0, 240);
   if (
     key === "ordered" ||
@@ -443,6 +452,34 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   }
   return stringSchema;
 };
+
+// ── TASK-539 REGION: strict canonical gallery item schema ────────────────────
+// `additionalProperties:false` with REQUIRED `src`/`alt`/`caption`, only the
+// optional `category` key, and owner-bound maxLengths/maxItems. JSON Schema
+// proves shape and bounds only: the token-stack pattern MAY accept repeated
+// tokens; the write normalizer independently enforces uniqueness.
+const galleryItemJsonSchema: RecordValue = {
+  type: "object",
+  required: ["src", "alt", "caption"],
+  additionalProperties: false,
+  properties: {
+    src: { type: "string", maxLength: PAGE_GALLERY_SRC_MAX },
+    alt: { type: "string", maxLength: PAGE_GALLERY_ALT_MAX },
+    caption: { type: "string", maxLength: PAGE_GALLERY_CAPTION_MAX },
+    category: {
+      type: "string",
+      minLength: 1,
+      maxLength: PAGE_GALLERY_CATEGORY_MAX,
+      pattern: galleryCategoryTokenStackPattern,
+    },
+  },
+};
+const galleryItemsJsonSchema: RecordValue = {
+  type: "array",
+  maxItems: PAGE_GALLERY_ITEMS_MAX,
+  items: galleryItemJsonSchema,
+};
+// ── END TASK-539 REGION ──────────────────────────────────────────────────────
 
 const pageBoxSpacingJsonSchema: RecordValue = {
   type: "object",
@@ -609,6 +646,70 @@ export const pageBlockStyleJsonSchema: RecordValue = {
 const PAGE_BLOCK_STYLE_JSON_SCHEMA_REF = "#/$defs/pageBlockStyle";
 const pageBlockStyleJsonSchemaRef: RecordValue = { $ref: PAGE_BLOCK_STYLE_JSON_SCHEMA_REF };
 
+// ── TASK-539 REGION: dedicated strict responsive block style ─────────────────
+// Responsive overrides validate against THIS schema, never the base
+// `pageBlockStyle` ref. Only the allowed responsive subset is present; the
+// base-only/structural keys (decoration, tilt, tiltGlare, surfacePreset,
+// hoverEffect, marquee, composition, revealDelay, magnetic) and `layer.anchor`
+// are absent, so a hand-authored override carrying one rejects. Allowed
+// property definitions are picked from the base owner (no duplicated grammars
+// or numeric values); `layer` is narrowed to an `x`/`y`/`z`-only object.
+const pageBlockResponsiveLayerJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    x: numericSchema(PAGE_LAYER_X_CLAMP.min, PAGE_LAYER_X_CLAMP.max),
+    y: numericSchema(PAGE_LAYER_Y_CLAMP.min, PAGE_LAYER_Y_CLAMP.max),
+    z: numericSchema(PAGE_LAYER_Z_CLAMP.min, PAGE_LAYER_Z_CLAMP.max),
+  },
+};
+const pageBlockResponsiveStyleKeys = [
+  "align",
+  "width",
+  "column",
+  "textColor",
+  "background",
+  "backgroundType",
+  "backgroundImage",
+  "opacity",
+  "radius",
+  "shadow",
+  "borderColor",
+  "borderWidth",
+  "borderStyle",
+  "padding",
+  "margin",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "lineHeight",
+  "letterSpacing",
+  "fontSizeCustom",
+  "textTransform",
+  "surfaceTint",
+  "glow",
+  "colSpan",
+  "rowSpan",
+] as const;
+export const pageBlockResponsiveStyleJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    ...Object.fromEntries(
+      pageBlockResponsiveStyleKeys.map((key) => [
+        key,
+        (pageBlockStyleJsonSchema.properties as RecordValue)[key],
+      ])
+    ),
+    layer: pageBlockResponsiveLayerJsonSchema,
+  },
+};
+const PAGE_BLOCK_RESPONSIVE_STYLE_JSON_SCHEMA_REF = "#/$defs/pageBlockResponsiveStyle";
+const pageBlockResponsiveStyleJsonSchemaRef: RecordValue = {
+  $ref: PAGE_BLOCK_RESPONSIVE_STYLE_JSON_SCHEMA_REF,
+};
+// ── END TASK-539 REGION ──────────────────────────────────────────────────────
+
 const pageBlockVisibilityJsonSchema: RecordValue = {
   type: "object",
   required: ["visible"],
@@ -640,7 +741,9 @@ const blockResponsiveJsonSchemaForType = (type: PageBlockType): RecordValue => {
     additionalProperties: false,
     properties: {
       props: blockResponsivePropsJsonSchemaForType(type),
-      style: pageBlockStyleJsonSchemaRef,
+      // TASK-539: dedicated strict responsive block style ref, never the base
+      // `pageBlockStyle` ref (base-only/structural keys reject).
+      style: pageBlockResponsiveStyleJsonSchemaRef,
       visibility: {
         type: "object",
         additionalProperties: false,

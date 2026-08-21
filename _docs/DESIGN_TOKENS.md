@@ -86,6 +86,36 @@ resolved site token in the admin canvas. Arbitrary `var()` expressions are not
 accepted by the Page authoring color sanitizer; only the names above are valid
 for Page block/section colors and inline text marks.
 
+### Page editor canvas: brand vs neutral token resolution (TASK-481)
+
+- The page editor canvas is split into a CHROME layer (selection outline/ring,
+  badges, ghost insert tiles) and a CONTENT scope (`data-page-editor-content`)
+  holding the rendered page content + its brand-consuming inline style.
+- NEUTRAL site vars (`--color-bg/-surface/-text`) are emitted on the canvas
+  FRAME (`toPageCanvasColorCssVariableMap`, TASK-477-02) — chrome does not
+  consume them.
+- BRAND site vars (`--color-primary/-secondary/-accent/-border`) are emitted
+  ONLY on the content scope (`toPageCanvasBrandColorCssVariableMap`,
+  TASK-481-02), so block/inline brand colors render the SAME value as the front
+  (WYSIWYG).
+- Chrome RE-ASSERTS the admin brand (`adminBrandColorCssVariableMap`:
+  `--color-primary: var(--primary)`, ...) on the section/block frame, so chrome —
+  even nested inside an ancestor content scope — keeps the admin theme.
+- Stored values are unchanged and still validated by the page-color sanitizer
+  allowlist (`authoringColorTokenNames`); this is display-only token threading.
+- Live repaint: on a settings write that changes `design.tokens`, the canvas
+  revalidates the FULL settings payload (`getSettingsCached({ force: true })`
+  on the `settingsRedacted` cache-bus event) so the content scope repaints to
+  the new site accent instead of falling back to the redacted cache (which never
+  carries `design.tokens`).
+
+Cross-task boundary: TASK-481 did NOT edit `core/admin/styles/globals.css`
+`@theme {`. The `@theme` brand `--color-*` mapping + dark layer remain owned by
+TASK-479-05-L03; the `data-page-editor-canvas-frame` chrome restyle remains
+owned by TASK-479-08-L02. TASK-481 only added the content-scope brand emission
++ admin re-assertion in `core/ui/theme/tokenCss.ts` and
+`core/admin/ui/pages/**`.
+
 ## Canonical CSS color values (TASK-519, TASK-541)
 
 `core/services/theme/cssColorContract.ts` is the one Bun-free semantic owner for

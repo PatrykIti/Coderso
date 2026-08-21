@@ -8,8 +8,9 @@
 **Category:** Testing / Documentation / Smoke / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-542-01-L01, TASK-542-02-L01, TASK-542-03-L01..L03
-**Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Status:** ✅ Done
+**Completed:** 2026-08-21
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
@@ -23,7 +24,7 @@
 - `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md`
 - TASK-542 task-scoped screenshots under the currently supported
   `_docs/_workflows/_smoke/` path
-- TASK-542 statuses, board/statistics, pinned changelog 1254 at closure
+- TASK-542 statuses, board/statistics, pinned changelog 1319 at closure
 
 ## Implementation Pseudocode
 
@@ -38,7 +39,7 @@ restart Bun server, publish synthetic menus, exercise all device/depth/reset flo
 record computed-style/geometry/ARIA assertions, console errors, screenshot paths and
 hashes in TASK-542 closeout evidence using the current workflow contract
 update declared docs/cache maps
-create changelog 1254 and close all physical descendants only after graph/gates pass
+create changelog 1319 and close all physical descendants only after graph/gates pass
 ```
 
 ## Required test matrix
@@ -46,7 +47,7 @@ create changelog 1254 and close all physical descendants only after graph/gates 
 ```text
 tests/vitest/services/menu-document-v2.test.ts
 tests/vitest/services/public-navigation-projection.test.ts
-tests/vitest/site/menu-document-css.test.ts
+tests/vitest/site/menu-document-css-542.test.ts
 tests/vitest/site/siteShell.test.tsx
 tests/vitest/ui/menu-design-editor.test.tsx
 tests/vitest/admin/menusClient.test.ts
@@ -97,7 +98,7 @@ bun --cwd core lint
 bunx tsc -p tsconfig.json --noEmit
 bunx vitest run tests/vitest/services/menu-document-v2.test.ts \
   tests/vitest/services/public-navigation-projection.test.ts \
-  tests/vitest/site/menu-document-css.test.ts \
+  tests/vitest/site/menu-document-css-542.test.ts \
   tests/vitest/site/siteShell.test.tsx \
   tests/vitest/ui/menu-design-editor.test.tsx \
   tests/vitest/admin/menusClient.test.ts \
@@ -115,6 +116,6 @@ git diff --check
 ```
 
 Create exactly
-`_docs/_CHANGELOG/1254-{YYYY-MM-DD}-task-542-menu-determinism-responsive-runtime-parity.md`
+`_docs/_CHANGELOG/1319-{YYYY-MM-DD}-task-542-menu-determinism-responsive-runtime-parity.md`
 using the actual UTC closure date, update fresh indexes/statistics,
 then close every TASK-542 descendant. No closure with deferred smoke.

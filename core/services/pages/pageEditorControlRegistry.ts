@@ -1,10 +1,12 @@
 export type {
+  PageEditorControlCondition,
   PageEditorControlDefinition,
   PageEditorControlInput,
   PageEditorControlOptionsSource,
   PageEditorControlPanel,
   PageEditorControlTarget,
 } from "./pageEditorControlDefinition";
+export { isPageEditorControlVisible } from "./pageEditorControlDefinition";
 export {
   getPageBlockCapability,
   getPageEditorControlsForTarget,

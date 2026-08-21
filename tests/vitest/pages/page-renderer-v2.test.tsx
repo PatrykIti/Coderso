@@ -1,775 +1,971 @@
+// TASK-539-05-L01 — shared renderer core: admin canvas chrome, preview callbacks, hidden/inert states, per-column composition, byte-identity, per-edge border, native timeline
+// Cohesive suite split out of the former `page-renderer-v2.test.tsx` monolith.
+// Each suite is independently runnable in the Vitest lane (Bun-free pages renderer).
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
+import { readFileSync } from "node:fs";
 import {
   createPageBlockV2,
   createPageSectionV2,
   type PageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
-
 import {
+  PageDocumentRender,
   PageSectionContent,
   PageSectionRender,
+  resolvePageRenderTree,
+  toPageBlockRenderProps,
   toPageSectionBleedStyle,
-  toPageSectionRenderProps,
+  toPageSectionStyle,
 } from "../../../core/services/pages/pageRendererV2";
+import { serializePageBlockPath } from "../../../core/services/pages/pageBlockPaths";
+import { createDocument, createSection } from "./pageRendererV2TestFixtures";
+test("admin preview wrappers preserve the same shared section and block content", () => {
+  const section = createSection();
+  const runtimeContent = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const adminContent = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      renderBlockFrame={({ content, renderProps }) => (
+        <div
+          className={renderProps.className}
+          style={renderProps.style}
+          {...renderProps.dataAttributes}
+          data-editor-chrome="true"
+        >
+          {content}
+        </div>
+      )}
+    />
+  );
 
-const createSection = () =>
-  createPageSectionV2("hero", {
-    id: "sec-shared-renderer",
-    name: "Shared Renderer",
-    variant: "centered",
-    layout: { columns: 3, align: "center", justify: "between", maxWidth: 960 },
-    style: {
-      background: "#f8fafc",
-      backgroundType: "color",
-      backgroundImage: null,
-      accent: "#ff00aa",
-      radius: 18,
-      shadow: "md",
-    },
-    spacing: {
-      paddingTop: 16,
-      paddingRight: 18,
-      paddingBottom: 20,
-      paddingLeft: 22,
-      gap: 12,
-    },
+  expect(adminContent.replaceAll(' data-editor-chrome="true"', "")).toBe(runtimeContent);
+  expect(renderToStaticMarkup(<PageSectionRender section={section} />)).toContain(
+    'data-page-variant="centered"'
+  );
+  expect(
+    renderToStaticMarkup(<PageSectionContent section={section} layoutMode="canvas-device" />)
+  ).toContain('data-page-section-layout-mode="canvas-device"');
+});
+
+test("shared renderer omits hidden block frames unless admin opts in", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-hidden-block-renderer",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-public-heading",
+        props: { text: "Public headline", level: "h2", align: "left" },
+      }),
+      createPageBlockV2("text", {
+        id: "blk-hidden-text",
+        props: { text: "Hidden body", format: "plain", align: "left" },
+        visibility: { visible: false },
+      }),
+    ],
+  });
+
+  const runtimeContent = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const adminContent = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      includeHiddenBlocks
+      renderBlockFrame={({ block, content, renderProps }) => (
+        <div {...renderProps.dataAttributes} data-admin-preview="true">
+          {content ?? <span>Hidden ghost</span>}
+        </div>
+      )}
+    />
+  );
+
+  expect(runtimeContent).toContain("Public headline");
+  expect(runtimeContent).not.toContain("Hidden body");
+  expect(runtimeContent).not.toContain('data-block-id="blk-hidden-text"');
+  expect(adminContent).toContain('data-block-id="blk-hidden-text"');
+  expect(adminContent).toContain("Hidden ghost");
+
+  const documentHtml = renderToStaticMarkup(
+    <PageDocumentRender document={createDocument([section])} />
+  );
+  expect(documentHtml).not.toContain('data-block-id="blk-hidden-text"');
+});
+
+test("shared renderer provides safe inert states while rendering active layout slots recursively", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-empty-block-placeholders",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-empty-image",
+        props: { src: "", alt: "", caption: "", fit: "cover" },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-empty-video",
+        props: { src: "", title: "", autoplay: false, muted: true },
+      }),
+      createPageBlockV2("gallery", {
+        id: "blk-static-gallery",
+        props: {
+          layout: "masonry",
+          items: [
+            {
+              src: "https://cdn.example.test/studio.jpg",
+              alt: "Studio",
+              caption: "Studio view",
+            },
+            { title: "Planning board" },
+          ],
+        },
+      }),
+      createPageBlockV2("collection", {
+        id: "blk-inert-collection",
+        props: { contentTypeId: "ct-private", queryId: "query-private", limit: 6 },
+      }),
+      createPageBlockV2("form", {
+        id: "blk-inert-form",
+        props: { formId: "form-private", title: "Contact form" },
+      }),
+      createPageBlockV2("embed", {
+        id: "blk-safe-embed",
+        props: {
+          html: "<script>alert(1)</script>",
+          url: "https://example.test/embed",
+          provider: "custom",
+        },
+      }),
+      createPageBlockV2("columns", {
+        id: "blk-layout-columns",
+        props: { count: 2, gap: 24, distribution: "equal" },
+        slots: {
+          "column:1": [
+            createPageBlockV2("heading", {
+              id: "blk-nested-active",
+              props: { text: "Nested active", level: "h2", align: "left" },
+            }),
+          ],
+          "column:2": [
+            createPageBlockV2("text", {
+              id: "blk-hidden-nested",
+              props: { text: "Hidden nested", format: "plain", align: "left" },
+              visibility: { visible: false },
+            }),
+          ],
+          "column:3": [
+            createPageBlockV2("heading", {
+              id: "blk-dormant-nested",
+              props: { text: "Dormant nested", level: "h2", align: "left" },
+            }),
+          ],
+        },
+      }),
+    ],
+  });
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-block-id="blk-empty-image"');
+  expect(html).toContain('data-block-id="blk-empty-video"');
+  expect(html).toContain('data-block-id="blk-static-gallery"');
+  expect(html).toContain('data-block-id="blk-inert-collection"');
+  expect(html).toContain('data-block-id="blk-inert-form"');
+  expect(html).toContain('data-block-id="blk-safe-embed"');
+  expect(html).toContain('data-block-id="blk-layout-columns"');
+  expect(html).toContain("Image");
+  expect(html).toContain("Video");
+  expect(html).toContain('data-page-gallery="true"');
+  expect(html).toContain('data-page-gallery-layout="masonry"');
+  expect(html).toContain("https://cdn.example.test/studio.jpg");
+  expect(html).toContain("Studio view");
+  expect(html).toContain("Planning board");
+  expect(html).toContain('data-page-block-inert="collection"');
+  expect(html).toContain('data-page-block-inert="form"');
+  expect(html).toContain('data-page-block-inert="embed"');
+  expect(html).toContain("Contact form is not available yet.");
+  expect(html).toContain('data-page-layout-block="columns"');
+  expect(html).toContain('data-page-block-slot="column:1"');
+  expect(html).toContain('data-page-block-slot="column:2"');
+  expect(html).not.toContain('data-page-block-slot="column:3"');
+  expect(html).toContain("Nested active");
+  expect(html).not.toContain("Columns");
+  expect(html).not.toContain("Hidden nested");
+  expect(html).not.toContain("Dormant nested");
+  expect(html).not.toContain("ct-private");
+  expect(html).not.toContain("query-private");
+  expect(html).not.toContain("form-private");
+  expect(html).not.toContain("<script>");
+  expect(html).not.toContain("alert(1)");
+});
+
+test("video autoplay prop reaches the rendered video with policy companions", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-video-autoplay",
+    blocks: [
+      createPageBlockV2("video", {
+        id: "blk-video-autoplay",
+        props: {
+          src: "https://cdn.example.test/intro.mp4",
+          title: "Intro",
+          autoplay: true,
+          muted: false,
+        },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video-manual",
+        props: {
+          src: "https://cdn.example.test/manual.mp4",
+          title: "Manual",
+          autoplay: false,
+          muted: false,
+        },
+      }),
+    ],
+  });
+
+  const videoTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<video[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(videoTags[0]).toContain("autoPlay");
+  expect(videoTags[0]).toContain("muted");
+  expect(videoTags[0]).toContain("playsInline");
+  expect(videoTags[0]).toContain('title="Intro"');
+  expect(videoTags[0]).toContain('aria-label="Intro"');
+  expect(videoTags[1]).not.toContain("autoPlay");
+  expect(videoTags[1]).not.toContain("playsInline");
+  expect(videoTags[1]).not.toContain("muted");
+  expect(videoTags[1]).toContain('title="Manual"');
+  expect(videoTags[1]).toContain('aria-label="Manual"');
+});
+
+test("video title stays off the inert placeholder when no safe source renders", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-video-placeholder-title",
+    blocks: [
+      createPageBlockV2("video", {
+        id: "blk-video-empty-src",
+        props: {
+          src: "",
+          title: "No source",
+          autoplay: false,
+          muted: true,
+        },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video-unsafe-src",
+        props: {
+          src: "javascript:alert(1)",
+          title: "Unsafe source",
+          autoplay: true,
+          muted: false,
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-block-id="blk-video-empty-src"');
+  expect(html).toContain('data-block-id="blk-video-unsafe-src"');
+  expect(html).toContain("Video");
+  expect(html).not.toContain("<video");
+  expect(html).not.toContain("No source");
+  expect(html).not.toContain("Unsafe source");
+  expect(html).not.toContain("title=");
+  expect(html).not.toContain("aria-label=");
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("alert(1)");
+});
+
+test("divider tone prop changes the rendered divider border style", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-divider-tone",
+    blocks: [
+      createPageBlockV2("divider", {
+        id: "blk-divider-accent",
+        props: { tone: "accent", thickness: 3 },
+      }),
+      createPageBlockV2("divider", {
+        id: "blk-divider-muted",
+        props: { tone: "muted", thickness: 2 },
+      }),
+      createPageBlockV2("divider", {
+        id: "blk-divider-neutral",
+        props: { tone: "neutral", thickness: 1 },
+      }),
+    ],
+  });
+
+  const hrTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<hr[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(hrTags[0]).toContain("border-color:var(--coderso-section-accent,#0d9488)");
+  expect(hrTags[0]).toContain("border-width:3px");
+  expect(hrTags[0]).not.toContain("border-[var(--coderso-section-accent");
+  expect(hrTags[1]).toContain("border-color:#cbd5e1");
+  expect(hrTags[2]).toContain("border-color:#e2e8f0");
+});
+
+test("spacer size prop reaches the rendered inert spacer height", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-spacer-size",
+    blocks: [
+      createPageBlockV2("spacer", {
+        id: "blk-spacer-default",
+        props: {},
+      }),
+      createPageBlockV2("spacer", {
+        id: "blk-spacer-large",
+        props: { size: 72 },
+      }),
+    ],
+  });
+
+  const spacerTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(
+      /<div[^>]*aria-hidden="true"[^>]*>/g
+    ),
+    (match) => match[0]
+  );
+
+  expect(spacerTags[0]).toContain("height:32px");
+  expect(spacerTags[1]).toContain("height:72px");
+});
+
+test("gallery renderer exposes a bounded empty state for empty item arrays", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-empty-gallery",
+    blocks: [
+      createPageBlockV2("gallery", {
+        id: "blk-empty-gallery",
+        props: { items: [], layout: "grid" },
+      }),
+    ],
+  });
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-block-id="blk-empty-gallery"');
+  expect(html).toContain('data-page-gallery-empty="true"');
+  expect(html).toContain("Empty gallery");
+});
+
+test("admin preview frame callback receives recursive block path metadata", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-frame-paths",
+    blocks: [
+      createPageBlockV2("container", {
+        id: "blk-container",
+        slots: {
+          children: [
+            createPageBlockV2("group", {
+              id: "blk-group",
+              slots: {
+                children: [
+                  createPageBlockV2("heading", {
+                    id: "blk-nested-heading",
+                    props: { text: "Nested frame", level: "h2", align: "left" },
+                  }),
+                ],
+              },
+            }),
+          ],
+        },
+      }),
+    ],
+  });
+  const frames: Array<{
+    id: string;
+    path: string;
+    depth: number;
+    slotKey?: string;
+    parentId?: string;
+  }> = [];
+
+  renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      renderBlockFrame={({ block, content, blockPath, depth, slotKey, parentBlock }) => {
+        frames.push({
+          id: block.id,
+          path: serializePageBlockPath(blockPath),
+          depth,
+          slotKey,
+          parentId: parentBlock?.id,
+        });
+        return <div data-frame-id={block.id}>{content}</div>;
+      }}
+    />
+  );
+
+  expect(frames).toContainEqual({
+    id: "blk-container",
+    path: "root:0",
+    depth: 1,
+    slotKey: undefined,
+    parentId: undefined,
+  });
+  expect(frames).toContainEqual({
+    id: "blk-group",
+    path: "root:0/children:0",
+    depth: 2,
+    slotKey: "children",
+    parentId: "blk-container",
+  });
+  expect(frames).toContainEqual({
+    id: "blk-nested-heading",
+    path: "root:0/children:0/children:0",
+    depth: 3,
+    slotKey: "children",
+    parentId: "blk-group",
+  });
+});
+
+test("document renderer resolves responsive block overrides before rendering", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-responsive-renderer",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-responsive-heading",
+        props: { text: "Desktop headline", level: "h1", align: "center" },
+        responsive: {
+          mobile: { props: { text: "Mobile headline" } },
+        },
+      }),
+      createPageBlockV2("container", {
+        id: "blk-responsive-container",
+        slots: {
+          children: [
+            createPageBlockV2("heading", {
+              id: "blk-responsive-nested-heading",
+              props: { text: "Desktop nested headline", level: "h2", align: "left" },
+              responsive: {
+                mobile: { props: { text: "Mobile nested headline" } },
+              },
+            }),
+          ],
+        },
+      }),
+    ],
+  });
+  const document = createDocument([section]);
+
+  expect(resolvePageRenderTree(document, "mobile").sections[0]?.blocks[0]?.props.text).toBe(
+    "Mobile headline"
+  );
+  expect(
+    resolvePageRenderTree(document, "mobile").sections[0]?.blocks[1]?.slots?.children?.[0]?.props
+      .text
+  ).toBe("Mobile nested headline");
+  const html = renderToStaticMarkup(<PageDocumentRender document={document} breakpoint="mobile" />);
+  expect(html).toContain('data-page-v2="true"');
+  expect(html).toContain("Mobile headline");
+  expect(html).toContain("Mobile nested headline");
+  expect(html).not.toContain("Desktop headline");
+  expect(html).not.toContain("Desktop nested headline");
+});
+
+test("document renderer omits hidden sections outside admin chrome", () => {
+  const visibleSection = createPageSectionV2("content", {
+    id: "sec-visible-renderer",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-visible-heading",
+        props: { text: "Visible headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+  const hiddenSection = createPageSectionV2("content", {
+    id: "sec-hidden-renderer",
     visibility: {
-      visible: true,
+      visible: false,
       authOnly: false,
-      anchor: "shared-renderer",
+      anchor: "hidden",
       startsAt: null,
       endsAt: null,
     },
     blocks: [
       createPageBlockV2("heading", {
-        id: "blk-heading",
-        props: { text: "Shared headline", level: "h1", align: "center" },
+        id: "blk-hidden-heading",
+        props: { text: "Hidden headline", level: "h2", align: "left" },
       }),
-      createPageBlockV2("button", {
-        id: "blk-button",
-        props: { label: "Open", href: "/open", target: "blank" },
+    ],
+  });
+  const html = renderToStaticMarkup(
+    <PageDocumentRender document={createDocument([visibleSection, hiddenSection])} />
+  );
+
+  expect(html).toContain("Visible headline");
+  expect(html).not.toContain("Hidden headline");
+  expect(html).not.toContain('data-section-id="sec-hidden-renderer"');
+});
+
+test("shared renderer remains inside the Bun-free Pages service boundary", () => {
+  const source = readFileSync("core/services/pages/pageRendererV2.tsx", "utf8");
+
+  expect(source).toContain('from "./pageDocumentV2"');
+  expect(source).not.toMatch(/@\/|db\/client|settingsService|pagesClient|server\/|core\/site/);
+});
+
+test("admin and site Tailwind entrypoints scan Pages service renderer classes", () => {
+  const adminCss = readFileSync("core/admin/styles/globals.css", "utf8");
+  const siteCss = readFileSync("core/site/styles/site.css", "utf8");
+
+  expect(adminCss).toContain('@source "../../services/pages/**/*.{ts,tsx}"');
+  expect(siteCss).toContain('@source "../../services/pages/**/*.{ts,tsx}"');
+});
+
+test("front render of multi-column grids keeps editor ghost affordances out of the markup", () => {
+  const emptyGridSection = createPageSectionV2("content", {
+    id: "sec-empty-grid",
+    layout: { columns: 3, align: "start", justify: "start", maxWidth: 1100 },
+    blocks: [],
+  });
+  const gridSection = createPageSectionV2("content", {
+    id: "sec-grid",
+    layout: { columns: 2, align: "start", justify: "start", maxWidth: 1100 },
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-grid-heading",
+        props: { text: "Grid heading", level: "h2", align: "left" },
       }),
-      createPageBlockV2("list", {
-        id: "blk-list",
-        props: {
-          ordered: true,
-          items: ["Plain item", { label: "Linked item", href: "/linked" }],
+      createPageBlockV2("columns", {
+        id: "blk-grid-columns",
+        props: { count: 2, gap: 24, distribution: "equal" },
+        slots: {
+          "column:1": [
+            createPageBlockV2("text", {
+              id: "blk-grid-copy",
+              props: { text: "Column copy", format: "plain", align: "left" },
+            }),
+          ],
+        },
+      }),
+    ],
+  });
+  const html = renderToStaticMarkup(
+    <PageDocumentRender document={createDocument([emptyGridSection, gridSection])} />
+  );
+
+  expect(html).toContain('data-section-id="sec-grid"');
+  expect(html).toContain('data-page-block-slot="column:1"');
+  expect(html).toContain('data-page-block-slot="column:2"');
+  // Front parity guard: ghost add tiles are editor-only chrome and must never
+  // serialize into public markup, even for empty grids and empty column slots.
+  expect(html).not.toContain("data-page-editor");
+  expect(html).not.toContain("Add block");
+  expect(html).not.toContain("Add the first block");
+});
+
+test("row-direction group renders two buttons side by side on front and canvas (owner finding #7)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-row-group",
+    blocks: [
+      createPageBlockV2("group", {
+        id: "blk-row-group",
+        props: { direction: "row", wrap: false, gap: 16 },
+        slots: {
+          children: [
+            createPageBlockV2("button", {
+              id: "blk-cta-first",
+              props: {
+                label: "First action",
+                href: "/a",
+                target: "self",
+                variant: "primary",
+                size: "md",
+              },
+            }),
+            createPageBlockV2("button", {
+              id: "blk-cta-second",
+              props: {
+                label: "Second action",
+                href: "/b",
+                target: "self",
+                variant: "primary",
+                size: "md",
+              },
+            }),
+          ],
         },
       }),
     ],
   });
 
-const stripSectionTemplateMarker = (className: string) => className;
+  const front = renderToStaticMarkup(<PageSectionRender section={section} />);
+  expect(front).toContain('data-page-block-slot="children"');
+  expect(front).toContain("flex flex-row");
+  expect(front.match(/<a\s/g) ?? []).toHaveLength(2);
+  expect(front.indexOf("First action")).toBeLessThan(front.indexOf("Second action"));
 
-const countMarkup = (markup: string, needle: string) => markup.split(needle).length - 1;
-
-test("section render props expose shared classes, styles, and data attributes", () => {
-  const section = createSection();
-  const renderProps = toPageSectionRenderProps(section);
-  const canvasProps = toPageSectionRenderProps(section, { layoutMode: "canvas-device" });
-
-  expect(renderProps.contentClassName).toContain("grid w-full");
-  expect(renderProps.contentClassName).toContain("md:grid-cols-3");
-  expect(renderProps.contentClassName).toContain("items-center");
-  expect(renderProps.contentClassName).toContain("justify-between");
-  expect(renderProps.contentClassName).toContain("page-section-template-hero-centered");
-  expect(renderProps.style).toMatchObject({
-    "--coderso-section-accent": "#ff00aa",
-    backgroundColor: "#f8fafc",
-    borderRadius: "18px",
-    boxShadow: "0 14px 40px rgba(15, 23, 42, 0.12)",
-    padding: "16px 18px 20px 22px",
-    maxWidth: "960px",
-    margin: "0 auto",
-    gap: "12px",
-  });
-  expect(renderProps.dataAttributes).toEqual({
-    "data-page-section": "hero",
-    "data-section-id": "sec-shared-renderer",
-    "data-page-variant": "centered",
-    "data-page-section-template": "hero",
-  });
-  expect(canvasProps.contentClassName).toContain("grid-cols-3");
-  expect(canvasProps.contentClassName).not.toContain("md:grid-cols-3");
+  const canvas = renderToStaticMarkup(
+    <PageSectionContent section={section} layoutMode="canvas-device" />
+  );
+  expect(canvas).toContain("flex flex-row");
+  expect(canvas.match(/<a\s/g) ?? []).toHaveLength(2);
 });
 
-test("section templates branch supported variants and fall back without mutating stored data", () => {
-  const centered = createPageSectionV2("hero", {
-    id: "sec-hero-centered",
-    variant: "centered",
-    layout: { columns: 1, align: "center", justify: "center", maxWidth: 960 },
-  });
-  const split = createPageSectionV2("hero", {
-    id: "sec-hero-split",
-    variant: "split",
-    layout: { columns: 1, align: "center", justify: "center", maxWidth: 960 },
-  });
-  const unsupported = createPageSectionV2("hero", {
-    id: "sec-hero-unsupported",
-    variant: "cards",
-  });
-
-  const centeredProps = toPageSectionRenderProps(centered);
-  const splitProps = toPageSectionRenderProps(split);
-  const unsupportedProps = toPageSectionRenderProps(unsupported);
-
-  expect(centeredProps.contentClassName).toContain("page-section-template-hero-centered");
-  expect(centeredProps.contentClassName).not.toContain("md:grid-cols-2");
-  expect(splitProps.contentClassName).toContain("page-section-template-hero-split");
-  expect(splitProps.contentClassName).toContain("md:grid-cols-2");
-  expect(unsupported.variant).toBe("cards");
-  expect(unsupportedProps.dataAttributes["data-page-variant"]).toBe("default");
-  expect(unsupportedProps.contentClassName).toContain("page-section-template-hero-default");
-  expect(renderToStaticMarkup(<PageSectionRender section={split} />)).toContain(
-    'data-page-variant="split"'
-  );
-});
-
-test("phase 3b section variants change published surfaces beyond marker classes", () => {
-  const contentDefault = createPageSectionV2("content", {
-    id: "sec-content-default",
-    variant: "default",
-    spacing: { paddingTop: 80, paddingRight: 40, paddingBottom: 80, paddingLeft: 40, gap: 30 },
-  });
-  const contentCompact = createPageSectionV2("content", {
-    id: "sec-content-compact",
-    variant: "compact",
-    spacing: contentDefault.spacing,
-  });
-  expect(toPageSectionRenderProps(contentCompact).style.padding).toBe("44px 30px 44px 30px");
-  expect(toPageSectionRenderProps(contentCompact).style.padding).not.toBe(
-    toPageSectionRenderProps(contentDefault).style.padding
-  );
-  expect(toPageSectionRenderProps(contentCompact).style.gap).toBe("18px");
-
-  const timelineDefault = createPageSectionV2("timeline", {
-    id: "sec-timeline-default",
-    variant: "default",
-    layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
-  });
-  const timelineHorizontal = createPageSectionV2("timeline", {
-    id: "sec-timeline-horizontal",
-    variant: "horizontal",
-    layout: timelineDefault.layout,
-  });
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(timelineHorizontal).contentClassName)
-  ).toContain("md:grid-cols-3");
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(timelineHorizontal).contentClassName)
-  ).not.toBe(
-    stripSectionTemplateMarker(toPageSectionRenderProps(timelineDefault).contentClassName)
-  );
-
-  const faqDefault = createPageSectionV2("faq", {
-    id: "sec-faq-default",
-    variant: "default",
-    spacing: { paddingTop: 64, paddingRight: 40, paddingBottom: 64, paddingLeft: 40, gap: 24 },
-  });
-  const faqCompact = createPageSectionV2("faq", {
-    id: "sec-faq-compact",
-    variant: "compact",
-    spacing: faqDefault.spacing,
-  });
-  expect(toPageSectionRenderProps(faqCompact).style.gap).toBe("14px");
-  expect(toPageSectionRenderProps(faqCompact).style.padding).not.toBe(
-    toPageSectionRenderProps(faqDefault).style.padding
-  );
-
-  const ctaDefault = createPageSectionV2("cta", {
-    id: "sec-cta-default",
-    variant: "default",
-  });
-  const ctaCentered = createPageSectionV2("cta", {
-    id: "sec-cta-centered",
-    variant: "centered",
-  });
-  const ctaFullWidth = createPageSectionV2("cta", {
-    id: "sec-cta-full",
-    variant: "full-width",
-  });
-  const ctaDefaultClass = stripSectionTemplateMarker(
-    toPageSectionRenderProps(ctaDefault).contentClassName
-  );
-  const ctaCenteredClass = stripSectionTemplateMarker(
-    toPageSectionRenderProps(ctaCentered).contentClassName
-  );
-  // The CTA variants must stay VISUALLY distinct, not merely string-different:
-  // `default` is left-aligned while `centered` centers its content. A prior
-  // working-tree regression collapsed `default` onto the centered classes (only
-  // an inert `content-center` token differed), which a `.not.toBe` string check
-  // failed to catch — so assert the actual alignment tokens on each.
-  expect(ctaDefaultClass).toContain("text-left");
-  expect(ctaDefaultClass).not.toContain("text-center");
-  expect(ctaCenteredClass).toContain("text-center");
-  expect(ctaCenteredClass).not.toContain("text-left");
-  expect(ctaCenteredClass).not.toBe(ctaDefaultClass);
-  // TASK-525-01-L01 REBASELINE (owned): a full-width section's CONTENT is now
-  // capped/centered at layout.maxWidth (was maxWidth:"none"); the 100vw
-  // background bleed lives on the outer <section> box, not the content div.
-  const ctaFullWidthStyle = toPageSectionRenderProps(ctaFullWidth).style;
-  expect(ctaFullWidthStyle.maxWidth).toBe(`${ctaFullWidth.layout.maxWidth}px`);
-  expect(ctaFullWidthStyle.maxWidth).not.toBe("none");
-  expect(ctaFullWidthStyle.margin).toBe("0 auto");
-  // bleed is expressed on the section box, not by dropping the content cap:
-  expect(toPageSectionBleedStyle(ctaFullWidth)?.width).toBe("100vw");
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(ctaFullWidth).contentClassName)
-  ).toContain("min-h-[320px]");
-
-  const testimonialsCards = createPageSectionV2("testimonials", {
-    id: "sec-testimonials-cards",
-    variant: "cards",
-  });
-  const testimonialsGrid = createPageSectionV2("testimonials", {
-    id: "sec-testimonials-grid",
-    variant: "grid",
-  });
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(testimonialsCards).contentClassName)
-  ).not.toBe(
-    stripSectionTemplateMarker(toPageSectionRenderProps(testimonialsGrid).contentClassName)
-  );
-  const testimonialsDefault = createPageSectionV2("testimonials", {
-    id: "sec-testimonials-default",
-    variant: "default",
-    layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
-  });
-  const testimonialsDefaultClass = stripSectionTemplateMarker(
-    toPageSectionRenderProps(testimonialsDefault).contentClassName
-  );
-  const testimonialsGridClass = stripSectionTemplateMarker(
-    toPageSectionRenderProps({
-      ...testimonialsGrid,
-      layout: testimonialsDefault.layout,
-    }).contentClassName
-  );
-  expect(testimonialsDefaultClass).not.toBe(testimonialsGridClass);
-  expect(testimonialsDefaultClass).not.toContain("md:grid-cols-3");
-  expect(testimonialsGridClass).toContain("md:grid-cols-3");
-});
-
-test("phase 3b guard sections keep real grid geometry beyond marker classes", () => {
-  const featureDefault = createPageSectionV2("feature-grid", {
-    id: "sec-feature-default",
-    variant: "default",
-    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
-  });
-  const featureCards = createPageSectionV2("feature-grid", {
-    id: "sec-feature-cards",
-    variant: "cards",
-    layout: featureDefault.layout,
-  });
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(featureCards).contentClassName)
-  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(featureDefault).contentClassName));
-  expect(toPageSectionRenderProps(featureCards).contentClassName).toContain("md:grid-cols-3");
-
-  const comparisonDefault = createPageSectionV2("comparison", {
-    id: "sec-comparison-default",
-    variant: "default",
-    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
-  });
-  const comparisonGrid = createPageSectionV2("comparison", {
-    id: "sec-comparison-grid",
-    variant: "grid",
-    layout: comparisonDefault.layout,
-  });
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(comparisonGrid).contentClassName)
-  ).not.toBe(
-    stripSectionTemplateMarker(toPageSectionRenderProps(comparisonDefault).contentClassName)
-  );
-  expect(toPageSectionRenderProps(comparisonGrid).contentClassName).toContain("md:grid-cols-2");
-
-  const customDefault = createPageSectionV2("custom", {
-    id: "sec-custom-default",
-    variant: "default",
-    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
-  });
-  const customGrid = createPageSectionV2("custom", {
-    id: "sec-custom-grid",
-    variant: "grid",
-    layout: customDefault.layout,
-  });
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(customGrid).contentClassName)
-  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(customDefault).contentClassName));
-  expect(toPageSectionRenderProps(customGrid).contentClassName).toContain("md:grid-cols-2");
-});
-
-test("phase 3b section templates add truthful structure around existing blocks", () => {
-  const mediaSplit = createPageSectionV2("media-split", {
-    id: "sec-media-split",
-    variant: "split",
+test("admin columns-slot trailing hook renders per active slot and never on runtime paths", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-slot-hook",
     blocks: [
-      createPageBlockV2("image", {
-        id: "blk-media",
-        props: { src: "/studio.jpg", alt: "Studio" },
-      }),
-      createPageBlockV2("heading", {
-        id: "blk-copy",
-        props: { text: "Story", level: "h2", align: "left" },
-      }),
-    ],
-  });
-  const mediaHorizontal = createPageSectionV2("media-split", {
-    id: "sec-media-horizontal",
-    variant: "horizontal",
-    blocks: mediaSplit.blocks,
-  });
-  const splitHtml = renderToStaticMarkup(<PageSectionContent section={mediaSplit} />);
-  const horizontalHtml = renderToStaticMarkup(<PageSectionContent section={mediaHorizontal} />);
-  expect(splitHtml).toContain('data-page-media-split="split"');
-  expect(splitHtml.indexOf('data-page-media-split-zone="media"')).toBeLessThan(
-    splitHtml.indexOf('data-page-media-split-zone="content"')
-  );
-  expect(horizontalHtml).toContain('data-page-media-split="horizontal"');
-  expect(horizontalHtml.indexOf('data-page-media-split-zone="content"')).toBeLessThan(
-    horizontalHtml.indexOf('data-page-media-split-zone="media"')
-  );
-
-  const timelineHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("timeline", {
-        id: "sec-timeline-structure",
-        variant: "horizontal",
-        blocks: [
-          createPageBlockV2("heading", {
-            id: "blk-milestone-1",
-            props: { text: "Launch", level: "h3", align: "left" },
-          }),
-          createPageBlockV2("text", {
-            id: "blk-milestone-2",
-            props: { text: "Second milestone", format: "plain", align: "left" },
-          }),
-        ],
-      })}
-    />
-  );
-  expect(timelineHtml.match(/data-page-timeline-item=/g)).toHaveLength(2);
-  expect(timelineHtml.match(/data-page-timeline-marker="true"/g)).toHaveLength(2);
-
-  const galleryHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("gallery", {
-        id: "sec-gallery-structure",
-        variant: "cards",
-        blocks: [
-          createPageBlockV2("image", {
-            id: "blk-gallery-image",
-            props: { src: "/gallery.jpg", alt: "Gallery" },
-          }),
-        ],
-      })}
-    />
-  );
-  expect(galleryHtml).toContain('data-page-gallery-section-item="1"');
-  expect(galleryHtml).toContain('data-page-gallery-section-variant="cards"');
-
-  const faqHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("faq", {
-        id: "sec-faq-structure",
-        variant: "compact",
-        blocks: [
-          createPageBlockV2("text", {
-            id: "blk-faq-answer",
-            props: { text: "Answer", format: "plain", align: "left" },
-          }),
-        ],
-      })}
-    />
-  );
-  expect(faqHtml).toContain('data-page-faq-item="1"');
-  expect(faqHtml).toContain('data-page-faq-variant="compact"');
-
-  const testimonialsHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("testimonials", {
-        id: "sec-testimonials-structure",
-        variant: "cards",
-        blocks: [
-          createPageBlockV2("quote", {
-            id: "blk-testimonial",
-            props: { text: "Reliable product", cite: "Customer" },
-          }),
-        ],
-      })}
-    />
-  );
-  expect(testimonialsHtml).toContain('data-page-testimonial-card="true"');
-  expect(testimonialsHtml).toContain('data-page-testimonial-variant="cards"');
-});
-
-test("phase 3b media-split variants classify media, preserve default identity, and inherit media sanitizers", () => {
-  const mixedMedia = createPageSectionV2("media-split", {
-    id: "sec-media-split-mixed",
-    variant: "split",
-    blocks: [
-      createPageBlockV2("text", {
-        id: "blk-copy",
-        props: { text: "Copy", format: "plain", align: "left" },
-      }),
-      createPageBlockV2("video", {
-        id: "blk-video",
-        props: { src: "/tour.mp4", title: "Tour", autoplay: false },
-      }),
-      createPageBlockV2("gallery", {
-        id: "blk-gallery",
-        props: {
-          items: [{ src: "/one.jpg", alt: "One" }],
-          layout: "grid",
-          columns: 1,
-          gap: 8,
+      createPageBlockV2("columns", {
+        id: "blk-hook-columns",
+        props: { count: 2, gap: 24, distribution: "equal" },
+        slots: {
+          "column:1": [
+            createPageBlockV2("heading", {
+              id: "blk-hook-heading",
+              props: { text: "Slot child", level: "h2", align: "left" },
+            }),
+          ],
         },
       }),
     ],
   });
-  const mixedHtml = renderToStaticMarkup(<PageSectionContent section={mixedMedia} />);
-  const mediaZoneStart = mixedHtml.indexOf('data-page-media-split-zone="media"');
-  const contentZoneStart = mixedHtml.indexOf('data-page-media-split-zone="content"');
-  expect(mediaZoneStart).toBeGreaterThan(-1);
-  expect(contentZoneStart).toBeGreaterThan(-1);
-  expect(mediaZoneStart).toBeLessThan(contentZoneStart);
-  const mediaZoneHtml = mixedHtml.slice(mediaZoneStart, contentZoneStart);
-  const contentZoneHtml = mixedHtml.slice(contentZoneStart);
-  expect(mediaZoneHtml).toContain('data-block-id="blk-video"');
-  expect(mediaZoneHtml).toContain('data-block-id="blk-gallery"');
-  expect(mediaZoneHtml).not.toContain('data-block-id="blk-copy"');
-  expect(contentZoneHtml).toContain('data-block-id="blk-copy"');
 
-  const noMedia = createPageSectionV2("media-split", {
-    id: "sec-media-split-empty-media",
-    variant: "split",
-    blocks: [
-      createPageBlockV2("heading", {
-        id: "blk-only-copy",
-        props: { text: "Only copy", level: "h2", align: "left" },
-      }),
-    ],
-  });
-  const noMediaHtml = renderToStaticMarkup(<PageSectionContent section={noMedia} />);
-  expect(noMediaHtml).toContain('data-page-media-split-empty="true"');
+  const calls: Array<{ slotKey: string; childCount: number; ownerPath: string }> = [];
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      layoutMode="canvas-device"
+      renderColumnsSlotTrailing={({ slotKey, ownerPath, childCount }) => {
+        calls.push({ slotKey, childCount, ownerPath: serializePageBlockPath(ownerPath) });
+        return (
+          <button type="button" data-page-editor-ghost="columns-slot">
+            Add block
+          </button>
+        );
+      }}
+      trailingContent={
+        <button type="button" data-page-editor-ghost="section-append">
+          Add block
+        </button>
+      }
+    />
+  );
 
-  const defaultMediaSplit = createPageSectionV2("media-split", {
-    id: "sec-media-split-default",
-    variant: "default",
-    blocks: mixedMedia.blocks,
-  });
-  const defaultHtml = renderToStaticMarkup(<PageSectionContent section={defaultMediaSplit} />);
-  expect(defaultHtml).not.toContain("data-page-media-split-zone");
-  expect(defaultHtml).not.toContain("data-page-media-split-empty");
+  expect(calls).toEqual([
+    { slotKey: "column:1", childCount: 1, ownerPath: "root:0" },
+    { slotKey: "column:2", childCount: 0, ownerPath: "root:0" },
+  ]);
+  expect(html.match(/data-page-editor-ghost="columns-slot"/g)).toHaveLength(2);
+  expect(html).toContain('data-page-editor-ghost="section-append"');
 
-  const unsafeMedia = createPageSectionV2("media-split", {
-    id: "sec-media-split-unsafe",
-    variant: "split",
-    blocks: [
-      createPageBlockV2("image", {
-        id: "blk-unsafe-media",
-        props: { src: "javascript:alert(1)", alt: "Unsafe" },
-      }),
-      createPageBlockV2("text", {
-        id: "blk-safe-copy",
-        props: { text: "Safe copy", format: "plain", align: "left" },
-      }),
-    ],
-  });
-  const unsafeHtml = renderToStaticMarkup(<PageSectionContent section={unsafeMedia} />);
-  expect(unsafeHtml).toContain('data-page-media-split-zone="media"');
-  expect(unsafeHtml).not.toContain("javascript:alert");
+  const runtime = renderToStaticMarkup(<PageSectionRender section={section} />);
+  expect(runtime).not.toContain("data-page-editor-ghost");
 });
 
-test("phase 3b wrapper variants expose default, grid, card, and index semantics", () => {
-  const galleryBlocks = [
-    createPageBlockV2("image", {
-      id: "blk-gallery-one",
-      props: { src: "/gallery-one.jpg", alt: "One" },
-    }),
-    createPageBlockV2("image", {
-      id: "blk-gallery-two",
-      props: { src: "/gallery-two.jpg", alt: "Two" },
-    }),
-  ];
-  const galleryCardsHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("gallery", {
-        id: "sec-gallery-cards-coverage",
-        variant: "cards",
-        blocks: galleryBlocks,
-      })}
-    />
-  );
-  expect(galleryCardsHtml).toContain('data-page-gallery-section-item="1"');
-  expect(galleryCardsHtml).toContain('data-page-gallery-section-item="2"');
-  expect(galleryCardsHtml).toContain("shadow-sm");
-  const galleryGridHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("gallery", {
-        id: "sec-gallery-grid-coverage",
-        variant: "grid",
-        blocks: galleryBlocks,
-      })}
-    />
-  );
-  const galleryDefaultHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("gallery", {
-        id: "sec-gallery-default-coverage",
-        variant: "default",
-        blocks: galleryBlocks,
-      })}
-    />
-  );
-  expect(galleryGridHtml).toContain('data-page-gallery-section-variant="grid"');
-  expect(galleryDefaultHtml).toContain('data-page-gallery-section-variant="default"');
-  expect(galleryGridHtml).not.toContain("shadow-sm");
-  expect(galleryDefaultHtml).not.toContain("shadow-sm");
+// --- Section per-column composition (owner finding #5, round 3) ---
 
-  const faqBlocks = [
-    createPageBlockV2("text", {
-      id: "blk-faq-one",
-      props: { text: "Answer one", format: "plain", align: "left" },
-    }),
-    createPageBlockV2("text", {
-      id: "blk-faq-two",
-      props: { text: "Answer two", format: "plain", align: "left" },
-    }),
-  ];
-  const faqDefaultHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("faq", {
-        id: "sec-faq-default-coverage",
-        variant: "default",
-        blocks: faqBlocks,
-      })}
-    />
-  );
-  const faqCompactHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("faq", {
-        id: "sec-faq-compact-coverage",
-        variant: "compact",
-        blocks: faqBlocks,
-      })}
-    />
-  );
-  expect(faqDefaultHtml).toContain('data-page-faq-item="1"');
-  expect(faqDefaultHtml).toContain('data-page-faq-item="2"');
-  expect(faqDefaultHtml).toContain("p-5 shadow-sm");
-  expect(faqCompactHtml).toContain("px-4 py-3 shadow-none");
-
-  const testimonialBlocks = [
-    createPageBlockV2("quote", {
-      id: "blk-testimonial-one",
-      props: { text: "First", cite: "A" },
-    }),
-    createPageBlockV2("quote", {
-      id: "blk-testimonial-two",
-      props: { text: "Second", cite: "B" },
-    }),
-  ];
-  const testimonialCardsHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("testimonials", {
-        id: "sec-testimonials-cards-coverage",
-        variant: "cards",
-        blocks: testimonialBlocks,
-      })}
-    />
-  );
-  const testimonialGridHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("testimonials", {
-        id: "sec-testimonials-grid-coverage",
-        variant: "grid",
-        blocks: testimonialBlocks,
-      })}
-    />
-  );
-  const testimonialDefaultHtml = renderToStaticMarkup(
-    <PageSectionContent
-      section={createPageSectionV2("testimonials", {
-        id: "sec-testimonials-default-coverage",
-        variant: "default",
-        blocks: testimonialBlocks,
-      })}
-    />
-  );
-  expect(countMarkup(testimonialCardsHtml, 'data-page-testimonial-card="true"')).toBe(2);
-  expect(testimonialGridHtml).not.toContain('data-page-testimonial-card="true"');
-  expect(testimonialDefaultHtml).not.toContain('data-page-testimonial-card="true"');
-  expect(testimonialGridHtml).toContain('data-page-testimonial-variant="grid"');
-  expect(testimonialDefaultHtml).toContain('data-page-testimonial-variant="default"');
-});
-
-test("phase 3b wrapped template sections keep exactly one wrapper per block in column composition", () => {
-  const assignedBlocks = [
-    createPageBlockV2("text", {
-      id: "blk-assigned-one",
-      props: { text: "Assigned one", format: "plain", align: "left" },
-      style: { column: 1 },
-    }),
-    createPageBlockV2("text", {
-      id: "blk-assigned-two",
-      props: { text: "Assigned two", format: "plain", align: "left" },
-      style: { column: 2 },
-    }),
-  ];
-  const assertWrappedComposition = (
-    section: PageSectionV2,
-    itemAttribute: string,
-    expectedColumns: number
-  ) => {
-    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
-    expect(countMarkup(html, 'data-page-section-column="')).toBe(expectedColumns);
-    expect(countMarkup(html, `${itemAttribute}=`)).toBe(section.blocks.length);
-    expect(countMarkup(html, 'data-block-id="blk-assigned-one"')).toBe(1);
-    expect(countMarkup(html, 'data-block-id="blk-assigned-two"')).toBe(1);
-    return html;
-  };
-
-  const timelineHtml = assertWrappedComposition(
-    createPageSectionV2("timeline", {
-      id: "sec-timeline-composition-coverage",
-      variant: "horizontal",
-      layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
-      blocks: assignedBlocks,
-    }),
-    "data-page-timeline-item",
-    3
-  );
-  expect(countMarkup(timelineHtml, 'data-page-timeline-marker="true"')).toBe(2);
-
-  assertWrappedComposition(
-    createPageSectionV2("gallery", {
-      id: "sec-gallery-composition-coverage",
-      variant: "cards",
-      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
-      blocks: assignedBlocks,
-    }),
-    "data-page-gallery-section-item",
-    3
-  );
-
-  const faqHtml = assertWrappedComposition(
-    createPageSectionV2("faq", {
-      id: "sec-faq-composition-coverage",
-      variant: "compact",
-      layout: { columns: 2, align: "stretch", justify: "start", maxWidth: 1080 },
-      blocks: assignedBlocks,
-    }),
-    "data-page-faq-item",
-    2
-  );
-  expect(faqHtml).toContain("px-4 py-3 shadow-none");
-
-  const testimonialsHtml = assertWrappedComposition(
-    createPageSectionV2("testimonials", {
-      id: "sec-testimonials-composition-coverage",
-      variant: "cards",
-      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
-      blocks: assignedBlocks,
-    }),
-    "data-page-testimonial-item",
-    3
-  );
-  expect(countMarkup(testimonialsHtml, 'data-page-testimonial-card="true"')).toBe(2);
-});
-
-test("phase 3b leaves non-wrapped section families wrapper-free", () => {
-  const block = createPageBlockV2("text", {
-    id: "blk-identity",
-    props: { text: "Identity", format: "plain", align: "left" },
+const createTwoColumnSection = (blocks: PageSectionV2["blocks"]) =>
+  createPageSectionV2("content", {
+    id: "sec-column-composition",
+    name: "Column composition",
+    layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+    blocks,
   });
-  const sections = [
-    createPageSectionV2("hero", { id: "sec-hero-identity", variant: "centered", blocks: [block] }),
-    createPageSectionV2("content", {
-      id: "sec-content-identity",
-      variant: "compact",
-      blocks: [block],
-    }),
-    createPageSectionV2("feature-grid", {
-      id: "sec-feature-identity",
-      variant: "cards",
-      blocks: [block],
-    }),
-    createPageSectionV2("comparison", {
-      id: "sec-comparison-identity",
-      variant: "grid",
-      blocks: [block],
-    }),
-    createPageSectionV2("cta", { id: "sec-cta-identity", variant: "default", blocks: [block] }),
-    createPageSectionV2("custom", {
-      id: "sec-custom-identity",
-      variant: "grid",
-      blocks: [block],
-    }),
-  ];
-  for (const section of sections) {
-    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
-    expect(html).not.toContain("data-page-media-split-zone");
-    expect(html).not.toContain("data-page-timeline-item");
-    expect(html).not.toContain("data-page-gallery-section-item");
-    expect(html).not.toContain("data-page-faq-item");
-    expect(html).not.toContain("data-page-testimonial-item");
-    expect(countMarkup(html, 'data-block-id="blk-identity"')).toBe(1);
+
+const compositionBlocks = (columns: Array<number | null>) =>
+  columns.map((column, index) =>
+    createPageBlockV2("text", {
+      id: `blk-col-${index + 1}`,
+      props: { text: `Copy ${index + 1}`, format: "plain", align: "left" },
+      ...(column === null ? {} : { style: { column } }),
+    })
+  );
+
+test("section without column assignments keeps the auto-flow markup byte-identical (legacy pin)", () => {
+  // Documents authored before `style.column` existed never carry the field;
+  // an explicit `column: null` is the normalized "legacy auto-flow" value.
+  // Both must produce the exact same wrapper-free auto-flow markup.
+  const unset = createTwoColumnSection(compositionBlocks([null, null, null]));
+  const explicitNull = createTwoColumnSection(
+    compositionBlocks([null, null, null]).map((block) => ({
+      ...block,
+      style: { ...(block.style ?? {}), column: null },
+    }))
+  );
+
+  const unsetMarkup = renderToStaticMarkup(<PageSectionContent section={unset} />);
+  const explicitNullMarkup = renderToStaticMarkup(<PageSectionContent section={explicitNull} />);
+  expect(explicitNullMarkup).toBe(unsetMarkup);
+  // No per-column wrappers: blocks stay direct auto-flow grid children, in
+  // stored order, immediately inside the section content element.
+  expect(unsetMarkup).not.toContain("data-page-section-column");
+  expect(unsetMarkup.indexOf("blk-col-1")).toBeLessThan(unsetMarkup.indexOf("blk-col-2"));
+  expect(unsetMarkup.indexOf("blk-col-2")).toBeLessThan(unsetMarkup.indexOf("blk-col-3"));
+  expect(/data-page-section-layout-mode="runtime"><div class="max-w-full/.test(unsetMarkup)).toBe(
+    true
+  );
+});
+
+test("section column assignments render per-column wrapper stacks with legacy cells for unassigned blocks", () => {
+  // Hero starter shape: three blocks pinned to column 1, plus one unassigned
+  // block at index 3 (legacy auto-flow cell 3 % 2 -> column 2) and one
+  // out-of-range assignment that clamps into the last painted column.
+  const section = createTwoColumnSection(compositionBlocks([1, 1, 1, null, 4]));
+  const markup = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  const wrappers = markup.split('data-page-section-column="').slice(1);
+  expect(wrappers).toHaveLength(2);
+  const [columnOne, columnTwo] = wrappers as [string, string];
+  expect(columnOne.startsWith("1")).toBe(true);
+  expect(columnTwo.startsWith("2")).toBe(true);
+  for (const id of ["blk-col-1", "blk-col-2", "blk-col-3"]) {
+    expect(columnOne).toContain(id);
+    expect(columnTwo.includes(id)).toBe(false);
   }
+  // Unassigned block keeps its legacy visual cell; column 4 clamps to 2.
+  expect(columnTwo).toContain("blk-col-4");
+  expect(columnTwo).toContain("blk-col-5");
+  expect(columnTwo.indexOf("blk-col-4")).toBeLessThan(columnTwo.indexOf("blk-col-5"));
+  // Wrappers inherit the section gap so vertical rhythm matches auto-flow.
+  expect(markup).toContain("gap:inherit");
+  expect(markup).toContain('data-page-section-column-owner="sec-column-composition"');
 });
 
-test("full-width section variants remove the outer section gutter so backgrounds fill the band", () => {
-  const bounded = createPageSectionV2("hero", {
-    id: "sec-bounded-hero",
-    variant: "default",
+test("section column composition keeps canvas/front parity and runtime renders no ghost affordances", () => {
+  const section = createTwoColumnSection(compositionBlocks([1, null, 2]));
+  const runtime = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const admin = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      renderBlockFrame={({ content, renderProps }) => (
+        <div
+          className={renderProps.className}
+          style={renderProps.style}
+          {...renderProps.dataAttributes}
+          data-editor-chrome="true"
+        >
+          {content}
+        </div>
+      )}
+    />
+  );
+  expect(admin.replaceAll(' data-editor-chrome="true"', "")).toBe(runtime);
+  expect(runtime).not.toContain("data-page-editor-ghost");
+
+  // The per-column trailing hook is admin-only chrome: it fires once per
+  // composition column AFTER that column's blocks, and runtime paths that
+  // never pass it stay unchanged.
+  const calls: Array<{ column: number; childCount: number }> = [];
+  const canvas = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      layoutMode="canvas-device"
+      renderSectionColumnTrailing={({ column, childCount }) => {
+        calls.push({ column, childCount });
+        return (
+          <button type="button" data-page-editor-ghost="section-column-append">
+            Add block
+          </button>
+        );
+      }}
+    />
+  );
+  expect(calls).toEqual([
+    { column: 1, childCount: 1 },
+    { column: 2, childCount: 2 },
+  ]);
+  expect(canvas.match(/data-page-editor-ghost="section-column-append"/g)).toHaveLength(2);
+});
+
+test("stackVertical collapses column wrappers into one stacked column without losing composition", () => {
+  const base = createTwoColumnSection(compositionBlocks([1, 1, null]));
+  const stacked: PageSectionV2 = { ...base, layout: { ...base.layout, stackVertical: true } };
+  const markup = renderToStaticMarkup(
+    <PageSectionContent section={stacked} layoutMode="canvas-device" />
+  );
+  // The grid collapses to a single column while the wrapper DOM (derived from
+  // the composition count, not the collapsed count) keeps the column groups —
+  // mirroring the front's grid-cols-1 media collapse over base markup.
+  expect(markup).toContain("grid-cols-1");
+  expect(markup.match(/data-page-section-column="/g)).toHaveLength(2);
+});
+
+test("no-glow / no-gradient section + block render byte-identical to the pre-531 style shape", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-noeffect",
     style: {
       background: "#eef2ff",
       backgroundType: "color",
       backgroundImage: null,
       accent: "#0d9488",
-      radius: 0,
-      shadow: "none",
+      radius: 12,
+      shadow: "sm",
     },
   });
-  const fullWidth = createPageSectionV2("hero", {
-    id: "sec-full-width-hero",
-    variant: "full-width",
-    style: {
-      background: "#dcfce7",
-      backgroundType: "color",
-      backgroundImage: null,
-      accent: "#0d9488",
-      radius: 0,
-      shadow: "none",
-    },
+  const style = toPageSectionStyle(section);
+  // The enum shadow alone (no glow) is UNCHANGED — no trailing comma-joined glow.
+  expect(style.boxShadow).toBe("0 6px 20px rgba(15, 23, 42, 0.08)");
+  expect(style.backgroundColor).toBe("#eef2ff");
+  const block = createPageBlockV2("heading", {
+    id: "blk-noeffect",
+    props: { text: "Plain", level: "h2", align: "left" },
+    style: { shadow: "md" },
+  });
+  expect(toPageBlockRenderProps(block).style.boxShadow).toBe("0 14px 40px rgba(15, 23, 42, 0.12)");
+});
+// TASK-533-02-L04 — render emit: per-edge section border on the box that paints the
+// section background in each mode (content box for normal, bleed box for full-bleed).
+describe("per-edge section border render emit (TASK-533-02)", () => {
+  test("emits per-edge border on the section box (border-block = top+bottom only)", () => {
+    const section = createPageSectionV2("content", {
+      id: "sec-border-block",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        border: { top: { color: "#fff2", width: 1 }, bottom: { color: "#fff2", width: 1 } },
+      } as never,
+    });
+    const st = toPageSectionStyle(section) as Record<string, unknown>;
+    expect(st.borderTopWidth).toBe("1px");
+    expect(st.borderBottomWidth).toBe("1px");
+    expect(st.borderTopStyle).toBe("solid");
+    // border-block: NO left/right emitted.
+    expect("borderLeftWidth" in st).toBe(false);
+    expect("borderRightWidth" in st).toBe(false);
   });
 
-  const boundedProps = toPageSectionRenderProps(bounded);
-  const fullWidthProps = toPageSectionRenderProps(fullWidth);
-  const fullWidthHtml = renderToStaticMarkup(<PageSectionRender section={fullWidth} />);
+  test("emits nothing when border unset (byte-identical to post-530)", () => {
+    const st = toPageSectionStyle(
+      createPageSectionV2("content", { id: "sec-no-border" })
+    ) as Record<string, unknown>;
+    expect(Object.keys(st).some((k) => k.startsWith("border") && k !== "borderRadius")).toBe(false);
+  });
 
-  // PRESERVED w-full siblings (option A: the bleed lives on the OUTER <section>).
-  expect(boundedProps.sectionClassName).toBe("w-full px-4 py-6");
-  expect(fullWidthProps.sectionClassName).toBe("w-full");
-  expect(fullWidthHtml).toContain('<section class="w-full"');
-  expect(fullWidthHtml).not.toContain('class="w-full px-4 py-6"');
-  // TASK-525-01-L01 REBASELINE (owned): the full-width content is now
-  // capped/centered at layout.maxWidth (was maxWidth:"none") and the background
-  // NO LONGER lives on the content div — the 100vw bleed + background paint on
-  // the OUTER <section> box so the bg fills the band edge-to-edge while content
-  // stays contained. STRONGER: pins the content cap AND the bg bleed on separate
-  // elements.
-  expect(fullWidthProps.style.maxWidth).toBe(`${fullWidth.layout.maxWidth}px`);
-  expect(fullWidthProps.style.maxWidth).not.toBe("none");
-  expect(fullWidthProps.style.margin).toBe("0 auto");
-  expect(fullWidthProps.style.backgroundColor).toBeUndefined();
-  // The full-bleed background box (100vw) + its background live on <section>:
-  const fullWidthBleed = toPageSectionBleedStyle(fullWidth);
-  expect(fullWidthBleed?.width).toBe("100vw");
-  expect(fullWidthBleed?.marginLeft).toBe("calc(50% - 50vw)");
-  expect(fullWidthBleed?.backgroundColor).toBe("#dcfce7");
-  // Rendered <section> carries the bleed width + the background color.
-  expect(fullWidthHtml).toContain("width:100vw");
-  expect(fullWidthHtml).toContain("background-color:#dcfce7");
+  test("a full-bleed section frames its border on the BLEED box, not the paint-empty content box", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-bleed-border",
+      variant: "default",
+      style: {
+        background: "#dcfce7",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        fullBleed: true,
+        border: { top: { color: "#fff2", width: 1 }, bottom: { color: "#fff2", width: 1 } },
+      } as never,
+    });
+    const bleed = toPageSectionBleedStyle(section) as Record<string, unknown>;
+    expect(bleed.borderTopWidth).toBe("1px");
+    expect(bleed.borderBottomWidth).toBe("1px");
+    // The paint-empty full-bleed content-box return carries NO border (frame rides the bleed box).
+    const content = toPageSectionStyle(section) as Record<string, unknown>;
+    expect(Object.keys(content).some((k) => k.startsWith("border"))).toBe(false);
+  });
+
+  test("a NON-full-bleed section carries the border on the content box; bleed style is undefined", () => {
+    const section = createPageSectionV2("content", {
+      id: "sec-normal-border",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        border: { top: { color: "#fff2", width: 1 } },
+      } as never,
+    });
+    const st = toPageSectionStyle(section) as Record<string, unknown>;
+    expect(st.borderTopWidth).toBe("1px");
+    expect(toPageSectionBleedStyle(section)).toBeUndefined();
+  });
+});
+
+// TASK-533-03-L02 — native timeline vertical axis + glow dots. Additive DOM: all
+// existing data-page-timeline-* hooks retained; the horizontal variant is not
+// regressed. No author-controlled value (axis tinted off --coderso-section-accent).
+describe("native timeline vertical axis (TASK-533-03)", () => {
+  const makeTimelineSection = (variant: "default" | "compact" | "horizontal") =>
+    createPageSectionV2("timeline", {
+      id: `sec-timeline-${variant}`,
+      variant,
+      layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [
+        createPageBlockV2("heading", {
+          id: `tl-a-${variant}`,
+          props: { text: "Step one", level: "h3", align: "left" },
+        }),
+        createPageBlockV2("heading", {
+          id: `tl-b-${variant}`,
+          props: { text: "Step two", level: "h3", align: "left" },
+        }),
+        createPageBlockV2("heading", {
+          id: `tl-c-${variant}`,
+          props: { text: "Step three", level: "h3", align: "left" },
+        }),
+      ],
+    });
+
+  test("vertical variant draws a CONTINUOUS axis: full-item segments bleed across the row gap", () => {
+    const html = renderToStaticMarkup(
+      <PageSectionRender section={makeTimelineSection("default")} />
+    );
+    // 3 items, each with an axis segment + a retained marker + retained content hook.
+    expect((html.match(/data-page-timeline-item=/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-axis-line="true"/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-marker="true"/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-content="true"/g) ?? []).length).toBe(3);
+    // The axis is tinted off the fixed section-accent gradient literal (not an author
+    // string), reinforcing that no author-controlled value reaches the timeline CSS.
+    expect(html).toContain("linear-gradient(var(--coderso-section-accent");
+    // CONTINUITY (audit remediation 2026-07-09). The section content grid stacks these
+    // items with a real 24px ROW gap AND each item carries its own `py-3` (12px) padding.
+    // The axis-line must span the FULL item box (`inset-y-0`) so the py padding is INSIDE
+    // the segment — otherwise a dot-row-only span leaves a visible ~24px BREAK at every
+    // boundary (the pre-fix dashed rule). Assert the axis-line is the full-item `inset-y-0`
+    // rule, no longer clamped to the dot-row.
+    expect(html).toMatch(
+      /data-page-timeline-axis-line="true"[^>]*inset-y-0|inset-y-0[^>]*data-page-timeline-axis-line="true"/
+    );
+    // The NON-LAST items bleed the bottom by exactly the resolved row gap (24px default) so
+    // segment N reaches segment N+1's top — real inter-segment continuity, not just the
+    // grid gap. There are 3 items ⇒ 2 non-last segments carry the bleed.
+    expect((html.match(/bottom:calc\(-1 \* 24px\)/g) ?? []).length).toBe(2);
+    // The LAST item ENDS the rule at its dot: TASK-539-05-L01 geometry resolves the
+    // final bottom to `calc(100% - markerCenterPx)` so the segment stops exactly at the
+    // final marker center — no overshoot into the item's bottom padding or empty section
+    // space (the old `bottom:0` overshot the py-3 padding; the 539-05 geometry fixes it).
+    expect(html).toContain("bottom:calc(100% - 22px)");
+    // The glow dot carries a box-shadow off the accent (`.timeline article:before`).
+    expect(html).toContain("box-shadow:0 0 16px var(--coderso-section-accent");
+  });
+
+  test("compact vertical variant bleeds the axis across the CLAMPED (smaller) gap", () => {
+    const html = renderToStaticMarkup(
+      <PageSectionRender section={makeTimelineSection("compact")} />
+    );
+    expect((html.match(/data-page-timeline-axis-line="true"/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-marker="true"/g) ?? []).length).toBe(3);
+    // Compact scales the section gap (24 → round(24*0.6)=14 via scalePageSectionSpacing,
+    // floored at min 8); the bleed offset is DERIVED from the actual resolved gap, so it
+    // tracks the scaled value, not the default 24px. Two non-last segments carry it.
+    expect((html.match(/bottom:calc\(-1 \* 14px\)/g) ?? []).length).toBe(2);
+    expect(html).not.toContain("bottom:calc(-1 * 24px)");
+    // Full-item span + last-item marker-center end are preserved under the compact clamp
+    // too (compact marker center = 18px).
+    expect(html).toMatch(
+      /data-page-timeline-axis-line="true"[^>]*inset-y-0|inset-y-0[^>]*data-page-timeline-axis-line="true"/
+    );
+    expect(html).toContain("bottom:calc(100% - 18px)");
+  });
+
+  test("horizontal variant still renders (markers retained, no vertical axis, no regression)", () => {
+    const html = renderToStaticMarkup(
+      <PageSectionRender section={makeTimelineSection("horizontal")} />
+    );
+    expect((html.match(/data-page-timeline-item=/g) ?? []).length).toBe(3);
+    expect((html.match(/data-page-timeline-marker="true"/g) ?? []).length).toBe(3);
+    // Horizontal keeps the top-row marker layout and draws NO vertical axis line.
+    expect(html).not.toContain('data-page-timeline-axis-line="true"');
+    expect(html).toContain("md:grid-rows-[auto_1fr]");
+  });
 });

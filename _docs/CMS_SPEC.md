@@ -83,6 +83,28 @@ Przechowywanie:
   - `kind = publish` dla snapshotow publikacji,
   - `kind = autosave` dla najnowszego niezatwierdzonego Page Settings snapshot.
 
+Model v2 additions (TASK-539) belong to the Page editor contract — strict
+schema, normalizer, editor controls, renderer, and tests — never a generic
+widget surface:
+
+- Gallery rows are canonical `{ src, alt, caption, category? }` objects with
+  bounded lengths (120 rows; 2048/500/2000-char src/alt/caption; category token
+  stack of 1..12 kebab tokens). Stored legacy gallery aliases read
+  non-destructively; the page editor owns the gallery items/media/category
+  controls.
+- One shared grid-placement classification (`block-frame`,
+  `section-template-wrapper`, `none`) drives editor span controls, the public
+  renderer, and responsive span CSS from a single Bun-free owner.
+- Responsive typography (custom font size, `text-transform` reset), responsive
+  grid spans and `x/y/z` layer offsets, parsed background paint with full-bleed
+  surface targeting, and the transform/marquee/timeline/effects surfaces are
+  all Page v2 model behavior owned by the page editor.
+- Public Page rendering stays read-only: TASK-539 adds no public write surface.
+  Saved listing queries are consumed by the Page `filters`/`collection` blocks
+  through the existing listing runtime, and an unsafe marquee subtree degrades
+  to one canonical segment so scripts, nonces, and listing binders never
+  duplicate.
+
 ## Pages runtime parity (v1)
 
 - Public rendering i runtime preview korzystaja z tego samego pipeline.
@@ -94,6 +116,17 @@ Przechowywanie:
   `collection`/`form`/`embed` blocks. Public collection output is published-only,
   form output reuses the existing forms runtime security projection, and embed
   output is limited to hardened provider iframes or sanitized inline markup.
+- Page v2 responsive delivery reflects the normalized model (TASK-539): custom
+  font size and explicit `text-transform: none`, placement-gated grid spans,
+  present-key layer offsets, parsed paint with full-bleed surface targeting,
+  and one canonical segment per unsafe marquee subtree. No-effect documents
+  stay byte-identical.
+- Page effects runtime: one static IIFE per render, main and footer emit their
+  own copy and the shared per-root controller deduplicates through binder
+  `WeakSet`s (parser-order rescan, no `MutationObserver`). Switcher and gallery
+  stay keyboard-functional under reduced motion with a fixed per-event listener
+  passivity contract (`keydown` non-passive so arrow-key roving can
+  `preventDefault`; all other listeners passive).
 - Page Templates (TASK-420-03) is the reusable-template surface: Page v2
   `sections[]` documents stored in `page_templates`, authored with the shared
   Page Editor v2 surface at `/advanced/page-templates`, previewed through

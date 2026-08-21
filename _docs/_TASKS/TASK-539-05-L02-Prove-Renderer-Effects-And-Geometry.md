@@ -7,15 +7,21 @@
 **Category:** Pages / Vitest / Renderer Proof
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-05-L01
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
 ## Additive-only ownership
 
 Create only
-`tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx`.
+`tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx` and
+`tests/vitest/pages/task-539-renderer-replica-identity.test.tsx` (split by
+cohesive responsibility so the prettier-canonical output stays `<=1000` lines
+per file; the effects/geometry/placement/gallery/background/divider/timeline
+proof owns the contract-named file, the marquee-replica identity proof owns the
+replica file, and each stays independently runnable).
 L01 source and all split/existing renderer suites are read-only here.
 
 ## Implementation Pseudocode
@@ -124,12 +130,12 @@ contracts are unchanged.
 ## Validation and line receipt
 
 ```bash
-bun run test:vitest -- tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
+bun run test:vitest -- tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx tests/vitest/pages/task-539-renderer-replica-identity.test.tsx
 bun --cwd core lint:types
 bun --cwd core lint
 node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
-wc -l tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx
+wc -l tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx tests/vitest/pages/task-539-renderer-replica-identity.test.tsx
 git diff --check
 ```
 
-The new suite must be independently runnable and `<=1000`. Rerun it once on failure.
+Each new suite must be independently runnable and `<=1000`. Rerun once on failure.

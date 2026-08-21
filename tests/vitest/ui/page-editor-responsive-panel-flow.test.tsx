@@ -513,6 +513,11 @@ test("PageEditor floating-panel sweep: every rendered control presents the docum
       accent: "#123456",
       radius: 12,
       shadow: "md",
+      // TASK-539-03-L01 gate: parallaxIntensity is reachable only while the
+      // base scroll effect is parallax; keeping the gate open keeps the sweep
+      // over the full style-panel surface (stored 0.5 must display as-is).
+      scrollEffect: "parallax",
+      parallaxIntensity: 0.5,
     },
     spacing: { paddingTop: 32, paddingBottom: 48, paddingLeft: 24, paddingRight: 16, gap: 12 },
     blocks: [

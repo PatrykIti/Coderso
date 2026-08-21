@@ -7,9 +7,15 @@ import {
 } from "./pageAuthoringSanitizers";
 import {
   defaultBlockVisibility,
+  defaultStyle,
   pageBlockStyleKeys,
   pageBoxSpacingKeys,
 } from "./pageDocumentV2Contract";
+import type {
+  PageBlockResponsiveLayerV2,
+  PageBlockResponsiveStyleV2,
+  PageSectionResponsiveStyleV2,
+} from "./pageResponsiveStyleV2";
 import {
   PAGE_BLOCK_BORDER_WIDTH_CLAMP,
   PAGE_BLOCK_BOX_SPACING_CLAMP,
@@ -600,6 +606,335 @@ const normalizeBlockBoxSpacing = (
   }
   return Object.keys(result).length > 0 ? result : undefined;
 };
+
+// ── TASK-539 REGION: dedicated strict responsive style normalizers ───────────
+
+/** Base-only/structural section style keys a responsive override must never carry. */
+export const pageSectionResponsiveStyleForbiddenKeys = [
+  "scrollEffect",
+  "parallaxIntensity",
+  "surfacePreset",
+  "composition",
+  "fullBleed",
+  "noiseOverlay",
+  "columnTemplate",
+  "border",
+] as const;
+
+/** Base-only/structural block style keys a responsive override must never carry. */
+export const pageBlockResponsiveStyleForbiddenKeys = [
+  "decoration",
+  "tilt",
+  "tiltGlare",
+  "surfacePreset",
+  "hoverEffect",
+  "marquee",
+  "composition",
+  "revealDelay",
+  "magnetic",
+] as const;
+
+const pageSectionResponsiveStyleKeys = [
+  "background",
+  "backgroundType",
+  "backgroundImage",
+  "accent",
+  "radius",
+  "shadow",
+  "glow",
+] as const;
+
+const pageBlockResponsiveStyleKeys = [
+  "align",
+  "width",
+  "column",
+  "textColor",
+  "background",
+  "backgroundType",
+  "backgroundImage",
+  "opacity",
+  "radius",
+  "shadow",
+  "borderColor",
+  "borderWidth",
+  "borderStyle",
+  "padding",
+  "margin",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "lineHeight",
+  "letterSpacing",
+  "fontSizeCustom",
+  "textTransform",
+  "layer",
+  "surfaceTint",
+  "glow",
+  "colSpan",
+  "rowSpan",
+] as const;
+
+/**
+ * Presence means an own enumerable key even when its value is `undefined`;
+ * never a value-only truthiness test. Known base-only/structural keys reject
+ * as `page_document_invalid` at their exact authored path.
+ */
+const rejectForbiddenKeys = (input: RecordValue, forbidden: readonly string[], path: string) => {
+  for (const key of forbidden) {
+    if (Object.prototype.hasOwnProperty.call(input, key)) {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        `Invalid ${path}.${key}.`,
+        `${path}.${key}`
+      );
+    }
+  }
+};
+
+/** Fresh candidate without the given own keys; never mutates the caller's object. */
+const withoutOwnKeys = (input: RecordValue, keys: readonly string[]): RecordValue => {
+  const candidate: RecordValue = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (!keys.includes(key)) candidate[key] = value;
+  }
+  return candidate;
+};
+
+export const invalidAt = (path: string): PageDocumentError =>
+  new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+
+/**
+ * Dedicated responsive section style normalizer (TASK-539). Write rejects every
+ * known base-only/structural key as `page_document_invalid` at its exact path
+ * before the reject-unknown allowlist; stored read copies without the forbidden
+ * own keys and normalizes the allowed paint siblings.
+ */
+export const normalizeSectionResponsiveStyle = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageSectionResponsiveStyleV2 | undefined => {
+  if (value === undefined) return undefined;
+  const input = requireRecord(value, path, mode);
+  const candidate =
+    mode === "write" ? input : withoutOwnKeys(input, pageSectionResponsiveStyleForbiddenKeys);
+  if (mode === "write") rejectForbiddenKeys(input, pageSectionResponsiveStyleForbiddenKeys, path);
+  assertKnownKeys(candidate, pageSectionResponsiveStyleKeys, path, mode);
+  const result: PageSectionResponsiveStyleV2 = {};
+  if (candidate.background !== undefined)
+    result.background = readSafeBackground(candidate.background, defaultStyle.background);
+  if (candidate.backgroundType !== undefined) {
+    result.backgroundType = normalizeEnum(
+      candidate.backgroundType,
+      pageBackgroundTypes,
+      defaultStyle.backgroundType,
+      `${path}.backgroundType`,
+      mode
+    );
+  }
+  if (candidate.backgroundImage !== undefined)
+    result.backgroundImage = readOptionalMediaUrl(candidate.backgroundImage) ?? null;
+  if (candidate.accent !== undefined)
+    result.accent = readSafeColor(candidate.accent, defaultStyle.accent);
+  if (candidate.radius !== undefined)
+    result.radius = readNumber(candidate.radius, defaultStyle.radius, 0, 64);
+  if (candidate.shadow !== undefined) {
+    result.shadow = normalizeEnum(
+      candidate.shadow,
+      pageShadowTokens,
+      defaultStyle.shadow,
+      `${path}.shadow`,
+      mode
+    );
+  }
+  if (candidate.glow !== undefined) {
+    const glow = normalizeGlow(candidate.glow, mode, `${path}.glow`);
+    if (glow) result.glow = glow;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+
+/**
+ * Dedicated responsive block style normalizer (TASK-539). Same forbidden-key /
+ * reject-unknown semantics as the section twin. `layer` accepts only `x`/`y`/
+ * `z` (write rejects `anchor` at its exact path; stored read drops it), and
+ * `textTransform:"none"` is an allowed explicit reset that survives.
+ */
+export const normalizeBlockResponsiveStyle = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageBlockResponsiveStyleV2 | undefined => {
+  if (value === undefined) return undefined;
+  const input = requireRecord(value, path, mode);
+  const candidate =
+    mode === "write" ? input : withoutOwnKeys(input, pageBlockResponsiveStyleForbiddenKeys);
+  if (mode === "write") rejectForbiddenKeys(input, pageBlockResponsiveStyleForbiddenKeys, path);
+  assertKnownKeys(candidate, pageBlockResponsiveStyleKeys, path, mode);
+  const result: PageBlockResponsiveStyleV2 = {};
+  if (candidate.align !== undefined)
+    result.align = normalizeEnum(
+      candidate.align,
+      pageTextAlignments,
+      "left",
+      `${path}.align`,
+      mode
+    );
+  if (candidate.width !== undefined)
+    result.width = normalizeEnum(candidate.width, pageBlockWidths, "auto", `${path}.width`, mode);
+  if (candidate.column !== undefined) {
+    const clamped = readNullableClampedNumber(
+      candidate.column,
+      PAGE_SECTION_BLOCK_COLUMN_CLAMP,
+      `${path}.column`,
+      mode
+    );
+    result.column = clamped === null ? null : Math.trunc(clamped);
+  }
+  if (candidate.textColor !== undefined)
+    result.textColor = readOptionalSafeColor(candidate.textColor) ?? null;
+  if (candidate.background !== undefined)
+    result.background = readOptionalSafeBackground(candidate.background) ?? null;
+  if (candidate.backgroundType !== undefined) {
+    result.backgroundType = normalizeEnum(
+      candidate.backgroundType,
+      pageBackgroundTypes,
+      "none",
+      `${path}.backgroundType`,
+      mode
+    );
+  }
+  if (candidate.backgroundImage !== undefined)
+    result.backgroundImage = readOptionalMediaUrl(candidate.backgroundImage) ?? null;
+  if (candidate.opacity !== undefined) result.opacity = readNumber(candidate.opacity, 1, 0, 1);
+  if (candidate.radius !== undefined) result.radius = readNumber(candidate.radius, 0, 0, 64);
+  if (candidate.shadow !== undefined)
+    result.shadow = normalizeEnum(
+      candidate.shadow,
+      pageShadowTokens,
+      "none",
+      `${path}.shadow`,
+      mode
+    );
+  if (candidate.borderColor !== undefined)
+    result.borderColor = readOptionalSafeColor(candidate.borderColor) ?? null;
+  if (candidate.borderWidth !== undefined) {
+    const width = readOptionalClampedNumber(
+      candidate.borderWidth,
+      PAGE_BLOCK_BORDER_WIDTH_CLAMP,
+      `${path}.borderWidth`,
+      mode
+    );
+    if (width !== undefined) result.borderWidth = width;
+  }
+  if (candidate.borderStyle !== undefined)
+    result.borderStyle = normalizeEnum(
+      candidate.borderStyle,
+      pageBlockBorderStyles,
+      "none",
+      `${path}.borderStyle`,
+      mode
+    );
+  if (candidate.padding !== undefined) {
+    const padding = normalizeBlockBoxSpacing(candidate.padding, mode, `${path}.padding`);
+    if (padding) result.padding = padding;
+  }
+  if (candidate.margin !== undefined) {
+    const margin = normalizeBlockBoxSpacing(candidate.margin, mode, `${path}.margin`);
+    if (margin) result.margin = margin;
+  }
+  if (candidate.fontFamily !== undefined)
+    result.fontFamily = normalizeNullableEnum(
+      candidate.fontFamily,
+      pageTypographyFontFamilies,
+      `${path}.fontFamily`,
+      mode
+    );
+  if (candidate.fontSize !== undefined)
+    result.fontSize = normalizeNullableEnum(
+      candidate.fontSize,
+      pageTypographyFontSizes,
+      `${path}.fontSize`,
+      mode
+    );
+  if (candidate.fontWeight !== undefined)
+    result.fontWeight = normalizeNullableEnum(
+      candidate.fontWeight,
+      pageTypographyFontWeights,
+      `${path}.fontWeight`,
+      mode
+    );
+  if (candidate.lineHeight !== undefined)
+    result.lineHeight = readNullableClampedNumber(
+      candidate.lineHeight,
+      PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
+      `${path}.lineHeight`,
+      mode
+    );
+  if (candidate.letterSpacing !== undefined)
+    result.letterSpacing = readNullableClampedNumber(
+      candidate.letterSpacing,
+      PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
+      `${path}.letterSpacing`,
+      mode
+    );
+  if (candidate.fontSizeCustom !== undefined) {
+    const safe = sanitizeAuthoringCssFontSize(candidate.fontSizeCustom);
+    if (safe) result.fontSizeCustom = safe;
+  }
+  // Responsive `"none"` is an allowed explicit reset and SURVIVES (the base
+  // normalizer omits it; the responsive channel is a per-breakpoint reset).
+  if (candidate.textTransform !== undefined)
+    result.textTransform = normalizeEnum(
+      candidate.textTransform,
+      pageTypographyTextTransforms,
+      "none",
+      `${path}.textTransform`,
+      mode
+    );
+  if (candidate.layer !== undefined) {
+    const l = (isRecord(candidate.layer) ? candidate.layer : {}) as RecordValue;
+    if (mode === "write" && Object.prototype.hasOwnProperty.call(l, "anchor"))
+      throw invalidAt(`${path}.layer.anchor`);
+    assertKnownKeys(l, ["x", "y", "z"], `${path}.layer`, mode);
+    const layer: PageBlockResponsiveLayerV2 = {};
+    if (l.x !== undefined)
+      layer.x = readNumber(l.x, 0, PAGE_LAYER_X_CLAMP.min, PAGE_LAYER_X_CLAMP.max);
+    if (l.y !== undefined)
+      layer.y = readNumber(l.y, 0, PAGE_LAYER_Y_CLAMP.min, PAGE_LAYER_Y_CLAMP.max);
+    if (l.z !== undefined)
+      layer.z = readNumber(l.z, 0, PAGE_LAYER_Z_CLAMP.min, PAGE_LAYER_Z_CLAMP.max);
+    if (Object.keys(layer).length > 0) result.layer = layer;
+  }
+  if (candidate.surfaceTint !== undefined) {
+    const tint = readOptionalSafeColor(candidate.surfaceTint);
+    if (typeof tint === "string" && tint.length > 0) result.surfaceTint = tint;
+  }
+  if (candidate.glow !== undefined) {
+    const glow = normalizeGlow(candidate.glow, mode, `${path}.glow`);
+    if (glow) result.glow = glow;
+  }
+  if (candidate.colSpan !== undefined) {
+    const n = readOptionalClampedNumber(
+      candidate.colSpan,
+      PAGE_BLOCK_SPAN_CLAMP,
+      `${path}.colSpan`,
+      mode
+    );
+    if (n !== undefined) result.colSpan = Math.trunc(n);
+  }
+  if (candidate.rowSpan !== undefined) {
+    const n = readOptionalClampedNumber(
+      candidate.rowSpan,
+      PAGE_BLOCK_SPAN_CLAMP,
+      `${path}.rowSpan`,
+      mode
+    );
+    if (n !== undefined) result.rowSpan = Math.trunc(n);
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+// ── END TASK-539 REGION ──────────────────────────────────────────────────────
 
 export const normalizeBlockVisibility = (
   value: unknown,

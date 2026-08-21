@@ -70,35 +70,17 @@ type NulException = {
 };
 
 /**
- * The one tracked source still carrying NUL bytes, recorded with the reason it is
- * not fixed in this commit rather than quietly muted.
- *
- * `core/admin/ui/pages/PageEditor.tsx` joins the form ids a document references
- * into one `useMemo` dependency string and splits it again, using a literal NUL as
- * the separator (2 bytes, around lines 785 and 790). The fix is to write it as the
- * `\u0000` escape, which is the same string at runtime and leaves the source text.
- *
- * It is not applied here because the repository's physical-line gate rejects any
- * touched human-authored module over 1,000 lines, and this legacy page editor is
- * 5,205 lines. Even a one-character fix therefore requires a cohesive page-editor
- * split in the same task. Fixing it belongs to the stream that owns that split,
- * not to a NUL-byte cleanup that would leave the governed module oversized.
- *
- * The entry pins the COUNT, not the offsets: offsets move under every unrelated
- * edit to an actively-developed file, while the count only moves when someone adds
- * or removes a NUL. Fixing the file makes this test fail too -- deliberately: the
- * failure message says to delete the entry, so the exception cannot outlive the
- * defect it describes.
+ * No tracked source currently carries a NUL byte. The TASK-540-era exception for
+ * the legacy monolith `PageEditor.tsx` (a literal-NUL form-id `useMemo` separator
+ * at ~5,205 lines, where the line gate blocked a one-character fix) is gone: the
+ * merge with the s3 page-editor stream replaced that monolith with the thin host
+ * (0 NUL), and the stream's `usePageEditorController.ts` carried the same
+ * separator pattern, now written as the `\u0000` escape (identical at runtime,
+ * no control byte in the source). Any future NUL fails this test deliberately:
+ * write it as the `\u0000` escape, or use a placeholder that is not a control
+ * byte, and never add a new entry to this list.
  */
-const NUL_EXCEPTIONS: readonly NulException[] = [
-  {
-    path: "core/admin/ui/pages/PageEditor.tsx",
-    nulBytes: 2,
-    reason:
-      "form-id useMemo key separator; at 5,205 lines the file requires a cohesive " +
-      "split before any edit can satisfy the repository's 1,000-line gate",
-  },
-];
+const NUL_EXCEPTIONS: readonly NulException[] = [];
 
 /**
  * The record separator `git ls-files -z` writes between paths. Built from a char

@@ -7,8 +7,9 @@
 **Category:** Pages / Browser Runtime / Reliability
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-04-L01, TASK-539-05-L01
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -177,3 +178,17 @@ git diff --check
 ```
 
 Rerun any named failing file once in isolation before classification.
+
+## Closure note (TASK-539-08-L01 smoke, changelog 1318)
+
+- The nine-flow smoke (2026-08-20) discovered a real runtime defect: `bindOne`
+  in `core/services/pages/pageEffectsRuntime.ts` bound EVERY listener with
+  `{passive:true}`, so switcher/gallery arrow-key roving that calls
+  `preventDefault` produced the Chromium console error "Unable to preventDefault
+  inside passive event listener".
+- Corrected under 08-L01 (documented smoke-driven correction to this leaf's
+  deliverable): `keydown` binds with `{passive:false}`; all other listeners
+  stay `{passive:true}`. Regression test added in the rescan suite
+  (`tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx`,
+  addEventListener spy: keydown non-passive, others passive, roving still
+  works). Suites 14 + 30 + 22 green; console 0 errors after the fix.

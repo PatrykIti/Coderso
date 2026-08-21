@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-20T20:43:13.461Z",
+  "generatedAt": "2026-08-21T11:31:14.981Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -609,6 +609,12 @@
       "file": "tests/integration/runtime/site-shell-runtime.test.ts",
       "bucket": "C",
       "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/runtime/task-539-page-parity-runtime.test.ts",
+      "bucket": "C",
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.adminBaseUrl"],
       "cWriteGlobal": false
     },
     {

@@ -1,15 +1,18 @@
+// TASK-539-05-L01 — block/section composition: decoration, tilt, layer, surface presets, ambient orbs, marquee, glow + gradient, grid span
+// Cohesive suite split out of the former `page-renderer-v2.test.tsx` monolith.
+// Each suite is independently runnable in the Vitest lane (Bun-free pages renderer).
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import {
   createPageBlockV2,
   createPageSectionV2,
-  PAGE_DOCUMENT_SCHEMA_VERSION,
+  PAGE_GLOW_BLUR_CLAMP,
+  PAGE_GLOW_OFFSET_CLAMP,
+  PAGE_GLOW_SPREAD_CLAMP,
   type PageBlockV2,
-  type PageDocumentV2,
   type PageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
-
 import {
   PageBlockFrame,
   PageDocumentRender,
@@ -17,31 +20,16 @@ import {
   PageSectionRender,
   toPageBlockRenderProps,
   toPageSectionBleedStyle,
+  toPageSectionRenderProps,
   toPageSectionStyle,
 } from "../../../core/services/pages/pageRendererV2";
-
 import {
   clampGlowNum,
   composeGlowBoxShadow,
   mergeShadows,
 } from "../../../core/services/pages/pageGlow";
-
-import {
-  PAGE_GLOW_BLUR_CLAMP,
-  PAGE_GLOW_OFFSET_CLAMP,
-  PAGE_GLOW_SPREAD_CLAMP,
-} from "../../../core/services/pages/pageDocumentV2";
-
-const createDocument = (sections: PageSectionV2[]): PageDocumentV2 => ({
-  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
-  breakpoints: ["desktop", "tablet", "mobile"],
-  seo: {},
-  settings: { template: "page-v2", showInNav: true },
-  sections,
-});
-
-const countMarkup = (markup: string, needle: string) => markup.split(needle).length - 1;
-
+import { countMarkup, createDocument } from "./pageRendererV2TestFixtures";
+// ── TASK-522-03-L02 — floating-drift decoration + block-frame composition seam ──
 type CompositionStyle = NonNullable<PageBlockV2["style"]>;
 
 const composedBlock = (style: CompositionStyle, id = "blk-comp"): PageBlockV2 =>
@@ -597,8 +585,8 @@ test("marquee group renders a viewport + two tracks with frame data-marquee (522
     />
   );
   expect(html).toContain("cx-marquee-viewport");
-  // seamless → two tracks (one aria-hidden).
-  expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+  // seamless → two equal adjacent segments under one rail (one aria-hidden).
+  expect(countMarkup(html, "cx-marquee-segment")).toBe(2);
   expect(countMarkup(html, 'aria-hidden="true"')).toBeGreaterThanOrEqual(1);
 });
 
@@ -639,8 +627,8 @@ test("seamless marquee copy carries NO data-block-id in canvas mode (finding 3)"
   // framed item — never the aria-hidden decorative copy (no duplicate targets).
   expect(countMarkup(html, 'data-block-id="blk-m1"')).toBe(1);
   expect(countMarkup(html, 'data-block-id="blk-m2"')).toBe(1);
-  // Two tracks still render (the copy is present, just frame-less).
-  expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+  // Two segments still render (the copy is present, just frame-less).
+  expect(countMarkup(html, "cx-marquee-segment")).toBe(2);
 });
 
 // ── TASK-531-01-L02/L04 — glow render + section-gradient (single + multi-layer) ──
@@ -657,7 +645,7 @@ describe("glow + multi-layer/section gradient render (TASK-531-01-L02)", () => {
       "0px 18px 45px 0px #8ee8ff"
     );
     expect(composeGlowBoxShadow({ color: "rgba(142,232,255,.22)", blur: 45, y: 18 })).toBe(
-      "0px 18px 45px 0px rgba(142,232,255,.22)"
+      "0px 18px 45px 0px rgba(142, 232, 255, 0.22)"
     );
     // Defaults: blur ⇒ 24, spread/x/y ⇒ 0 when unset.
     expect(composeGlowBoxShadow({ color: "#0d9488" })).toBe("0px 0px 24px 0px #0d9488");
@@ -704,7 +692,7 @@ describe("glow + multi-layer/section gradient render (TASK-531-01-L02)", () => {
       style: { glow: { color: "rgba(142,232,255,.22)", blur: 45, y: 18 } } as never,
     });
     expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
-      "0px 18px 45px 0px rgba(142,232,255,.22)"
+      "0px 18px 45px 0px rgba(142, 232, 255, 0.22)"
     );
   });
 
@@ -863,32 +851,142 @@ describe("glow + multi-layer/section gradient render (TASK-531-01-L02)", () => {
     const multiHtml = renderToStaticMarkup(<PageSectionContent section={multiSection} />);
     expect(multiHtml).toContain("background-image:radial-gradient(circle at 82% 10%");
   });
+});
+// TASK-533-01-L04 — render emit: block grid span on the frame + section
+// columnTemplate inline grid. Present-only ⇒ byte-identical to post-530 when unset.
+describe("grid span + asymmetric column ratio render emit (TASK-533-01)", () => {
+  test("emits gridRow/gridColumn span on the block frame present-only", () => {
+    const rowSpan = createPageBlockV2("heading", {
+      id: "blk-row-span",
+      props: { text: "Aurora", level: "h2", align: "left" },
+      style: { rowSpan: 2 } as never,
+    });
+    expect(toPageBlockRenderProps(rowSpan).style.gridRow).toBe("span 2");
+    const colSpan = createPageBlockV2("heading", {
+      id: "blk-col-span",
+      props: { text: "Wide", level: "h2", align: "left" },
+      style: { colSpan: 2 } as never,
+    });
+    expect(toPageBlockRenderProps(colSpan).style.gridColumn).toBe("span 2");
+    // Both together.
+    const both = createPageBlockV2("heading", {
+      id: "blk-both-span",
+      props: { text: "Both", level: "h2", align: "left" },
+      style: { colSpan: 2, rowSpan: 3 } as never,
+    });
+    expect(toPageBlockRenderProps(both).style.gridColumn).toBe("span 2");
+    expect(toPageBlockRenderProps(both).style.gridRow).toBe("span 3");
+    // Present-only: an unstyled block emits NEITHER key (byte-identical to post-530).
+    const bare = toPageBlockRenderProps(
+      createPageBlockV2("heading", {
+        id: "blk-no-span",
+        props: { text: "Plain", level: "h2", align: "left" },
+      })
+    ).style as Record<string, unknown>;
+    expect("gridRow" in bare).toBe(false);
+    expect("gridColumn" in bare).toBe(false);
+  });
 
-  test("no-glow / no-gradient section + block render byte-identical to the pre-531 style shape", () => {
-    const section = createPageSectionV2("hero", {
-      id: "sec-noeffect",
+  test("emits inline gridTemplateColumns overriding the symmetric grid class", () => {
+    const section = createPageSectionV2("content", {
+      id: "sec-column-template",
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
       style: {
-        background: "#eef2ff",
+        background: "#ffffff",
         backgroundType: "color",
         backgroundImage: null,
         accent: "#0d9488",
-        radius: 12,
-        shadow: "sm",
-      },
+        radius: 0,
+        shadow: "none",
+        columnTemplate: "1.15fr .85fr",
+      } as never,
     });
-    const style = toPageSectionStyle(section);
-    // The enum shadow alone (no glow) is UNCHANGED — no trailing comma-joined glow.
-    expect(style.boxShadow).toBe("0 6px 20px rgba(15, 23, 42, 0.08)");
-    expect(style.backgroundColor).toBe("#eef2ff");
-    const block = createPageBlockV2("heading", {
-      id: "blk-noeffect",
-      props: { text: "Plain", level: "h2", align: "left" },
-      style: { shadow: "md" },
+    const props = toPageSectionRenderProps(section);
+    expect(props.style.gridTemplateColumns).toBe("1.15fr .85fr");
+    // The symmetric grid class is still present as the fallback tracks (inline wins).
+    expect(props.contentClassName).toContain("md:grid-cols-2");
+    // Audit remediation (TASK-533): the SAME asymmetric ratio must reach the editor
+    // canvas (layoutMode "canvas-device") so the author sees the effect they'll ship
+    // — WYSIWYG / publish->front parity. The canvas grid class is symmetric, but the
+    // inline gridTemplateColumns overrides it regardless of layout mode. Previously a
+    // canvas-device guard suppressed the ratio in the canvas, making the control
+    // invisible where the author works; assert parity here to lock the fix in.
+    const canvasProps = toPageSectionRenderProps(section, { layoutMode: "canvas-device" });
+    expect(canvasProps.style.gridTemplateColumns).toBe("1.15fr .85fr");
+    // The canvas still carries its own (symmetric) grid class as the fallback tracks.
+    expect(canvasProps.contentClassName).toContain("grid-cols-2");
+    // Present-only: a section WITHOUT columnTemplate emits NO gridTemplateColumns,
+    // in BOTH the front and the canvas layout mode (byte-identical to post-530).
+    const bare = toPageSectionRenderProps(
+      createPageSectionV2("content", {
+        id: "sec-no-template",
+        layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      })
+    ).style as Record<string, unknown>;
+    expect("gridTemplateColumns" in bare).toBe(false);
+    const bareCanvas = toPageSectionRenderProps(
+      createPageSectionV2("content", {
+        id: "sec-no-template-canvas",
+        layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      }),
+      { layoutMode: "canvas-device" }
+    ).style as Record<string, unknown>;
+    expect("gridTemplateColumns" in bareCanvas).toBe(false);
+  });
+
+  // Audit remediation: span (colSpan/rowSpan) and per-column `column` assignment are
+  // MUTUALLY EXCLUSIVE. In the pure auto-flow path the block frame is a direct child of
+  // the section content grid, so `grid-column/grid-row: span N` genuinely changes layout.
+  // But once ANY root block carries a `column` assignment and the section paints >=2
+  // columns, PageSectionContent switches to per-column composition: every block is wrapped
+  // in a SINGLE-column `<div data-page-section-column>`. There `grid-column: span 2` is a
+  // no-op (one column) and `grid-row: span 2` spans the wrapper's own auto-rows
+  // (whitespace) — a silent cosmetic failure. So the span must be DROPPED in that path.
+  test("drops the inert block span when the block is inside a per-column composition wrapper", () => {
+    const big = createPageBlockV2("text", {
+      id: "blk-big-card",
+      props: { text: "Large", format: "plain", align: "left" },
+      style: { column: 1, colSpan: 2, rowSpan: 2 } as never,
     });
-    expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
-      "0 14px 40px rgba(15, 23, 42, 0.12)"
-    );
+    const sibling = createPageBlockV2("text", {
+      id: "blk-small-card",
+      props: { text: "Small", format: "plain", align: "left" },
+      style: { column: 2 } as never,
+    });
+    const section = createPageSectionV2("content", {
+      id: "sec-span-composition",
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [big, sibling],
+    });
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    // Composition IS active (per-column wrappers present).
+    expect(html).toContain('data-page-section-column="1"');
+    // The span is NOT emitted anywhere — it would be an inert/misleading rule here.
+    expect(html).not.toContain("grid-column:span 2");
+    expect(html).not.toContain("grid-row:span 2");
+  });
+
+  test("keeps the block span in the pure auto-flow path (no column assignments)", () => {
+    // Same big block WITHOUT a `column` assignment ⇒ auto-flow ⇒ the block frame is a
+    // direct child of the section content grid ⇒ span genuinely changes layout ⇒ emitted.
+    const big = createPageBlockV2("text", {
+      id: "blk-big-autoflow",
+      props: { text: "Large", format: "plain", align: "left" },
+      style: { colSpan: 2, rowSpan: 2 } as never,
+    });
+    const plain = createPageBlockV2("text", {
+      id: "blk-plain-autoflow",
+      props: { text: "Plain", format: "plain", align: "left" },
+    });
+    const section = createPageSectionV2("content", {
+      id: "sec-span-autoflow",
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [big, plain],
+    });
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    // No composition wrappers (no assignments) — the span survives on the block frame.
+    expect(html).not.toContain("data-page-section-column");
+    expect(html).toContain("grid-column:span 2");
+    expect(html).toContain("grid-row:span 2");
   });
 });
-
-// ── TASK-532 typography fidelity (Bundle B) — behavioral render ──

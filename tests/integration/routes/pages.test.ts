@@ -165,6 +165,21 @@ const expectRouteApiError = async (promise: Promise<unknown>, code: string, stat
   }
 };
 
+const expectRouteApiErrorWithPath = async (
+  promise: Promise<unknown>,
+  code: string,
+  status: number,
+  path: string
+) => {
+  try {
+    await promise;
+    throw new Error("expected_route_error");
+  } catch (error) {
+    expect(error).toMatchObject({ code, status });
+    expect((error as { details?: { path?: string } }).details).toEqual({ path });
+  }
+};
+
 const makeValidatingDeps = () => {
   return {
     requirePermission: () => async () => undefined,
@@ -795,3 +810,167 @@ testIfDb("page route handlers surface not-found and revision guard errors", asyn
     409
   );
 });
+
+const canonicalGalleryRows = [
+  {
+    src: "https://media.example.com/photo.jpg",
+    alt: "Photo alt",
+    caption: "Photo caption",
+    category: "nature",
+  },
+  { src: "", alt: "", caption: "Caption only" },
+  { src: "", alt: "Alt only", caption: "" },
+  { src: "", alt: "", caption: "" },
+];
+
+const buildCanonicalRoundTripData = () => {
+  const base = buildPageData();
+  const section = base.sections[0] as { blocks: unknown[] };
+  return {
+    ...base,
+    sections: [
+      {
+        ...section,
+        blocks: [
+          {
+            id: "blk_gallery",
+            type: "gallery",
+            props: { layout: "grid", items: canonicalGalleryRows },
+            visibility: { visible: true },
+          },
+          {
+            id: "blk_heading",
+            type: "heading",
+            props: { text: "Route Page", level: "h1", align: "left" },
+            style: { layer: { x: 10, y: 20, z: 2 } },
+            visibility: { visible: true },
+            responsive: { mobile: { style: { layer: { x: 30, y: 40, z: 3 } } } },
+          },
+        ],
+      },
+    ],
+  };
+};
+
+type PersistedPageDoc = {
+  sections: Array<{
+    blocks: Array<{ props: { items?: Array<Record<string, unknown>> } }>;
+  }>;
+};
+
+const readGalleryItems = (doc: unknown): Array<Record<string, unknown>> =>
+  ((doc as PersistedPageDoc).sections[0]?.blocks[0]?.props.items ?? []) as Array<
+    Record<string, unknown>
+  >;
+
+const readResponsiveLayerDelta = (doc: unknown): unknown =>
+  (
+    doc as {
+      sections: Array<{
+        blocks: Array<{
+          responsive?: { mobile?: { style?: { layer?: unknown } } };
+        }>;
+      }>;
+    }
+  ).sections[0]?.blocks[1]?.responsive?.mobile?.style?.layer;
+
+testIfDb(
+  "page routes round-trip canonical gallery rows and present keys, and reject invalid nested gallery writes without mutating the owned page",
+  async () => {
+    const { router, routes } = makeRouter();
+    const deps = makeValidatingDeps();
+    const page = await createPageDirectly("Canonical Gallery Page");
+    registerPageRoutes(router, deps);
+
+    const patchData = (data: unknown) =>
+      runRoute(routes, "PATCH", "/pages/:id", {
+        params: { id: page.id },
+        body: { data },
+      });
+
+    const patched = (await patchData(buildCanonicalRoundTripData())) as typeof pages.$inferSelect;
+    expect(readGalleryItems(patched.currentData)).toEqual(canonicalGalleryRows);
+
+    const [persisted] = await db.select().from(pages).where(eq(pages.id, page.id));
+    expect(readGalleryItems(persisted?.currentData)).toEqual(canonicalGalleryRows);
+    expect(readResponsiveLayerDelta(patched.currentData)).toEqual({ x: 30, y: 40, z: 3 });
+    expect(readResponsiveLayerDelta(persisted?.currentData)).toEqual({ x: 30, y: 40, z: 3 });
+    expect(persisted?.currentData).toEqual(patched.currentData);
+
+    const persistedData = persisted?.currentData;
+    const persistedStatus = persisted?.status;
+    const persistedPublished = persisted?.publishedData;
+
+    const assertOwnedPageUnchanged = async () => {
+      const [after] = await db.select().from(pages).where(eq(pages.id, page.id));
+      expect(after?.currentData).toEqual(persistedData);
+      expect(after?.status).toEqual(persistedStatus);
+      expect(after?.publishedData).toEqual(persistedPublished);
+    };
+
+    const galleryItemPath = "sections.0.blocks.0.props.items.0";
+    const unknownKeyCases = [
+      "mystery",
+      "url",
+      "image",
+      "assetUrl",
+      "title",
+      "label",
+      "name",
+      "description",
+    ];
+    for (const key of unknownKeyCases) {
+      const doc = structuredClone(persistedData) as PersistedPageDoc;
+      readGalleryItems(doc)[0]![key] = "legacy";
+      await expectRouteApiErrorWithPath(
+        patchData(doc),
+        "page_document_unknown_field",
+        400,
+        `${galleryItemPath}.${key}`
+      );
+      await assertOwnedPageUnchanged();
+    }
+
+    const invalidCases: Array<(items: Array<Record<string, unknown>>) => void> = [
+      (items) => {
+        delete items[0]!.src;
+      },
+      (items) => {
+        items[0]!.src = "javascript:alert(1)";
+      },
+      (items) => {
+        items[0]!.category = "nature nature";
+      },
+      (items) => {
+        items.length = 0;
+        items.push(...Array.from({ length: 121 }, () => ({ src: "", alt: "", caption: "" })));
+      },
+      (items) => {
+        items[0]!.src = "a".repeat(2049);
+      },
+      (items) => {
+        items[0]!.alt = "a".repeat(501);
+      },
+      (items) => {
+        items[0]!.caption = "a".repeat(2001);
+      },
+      (items) => {
+        items[0]!.src = " https://media.example.com/photo.jpg ";
+      },
+      (items) => {
+        items[0]!.alt = " alt ";
+      },
+      (items) => {
+        items[0]!.caption = " caption ";
+      },
+    ];
+
+    for (const mutate of invalidCases) {
+      const doc = structuredClone(persistedData) as PersistedPageDoc;
+      mutate(readGalleryItems(doc));
+      await expectRouteApiError(patchData(doc), "page_document_invalid", 400);
+      await assertOwnedPageUnchanged();
+    }
+  },
+  15_000
+);

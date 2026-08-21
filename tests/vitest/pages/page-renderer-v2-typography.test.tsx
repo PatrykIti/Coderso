@@ -464,8 +464,9 @@ describe("native timeline vertical axis (TASK-533-03)", () => {
     // grid gap. There are 3 items ⇒ 2 non-last segments carry the bleed.
     expect((html.match(/bottom:calc\(-1 \* 24px\)/g) ?? []).length).toBe(2);
     // The LAST item ENDS the rule at its dot (no downward overshoot into empty section
-    // space) — mirrors the reference `.timeline:before{bottom:0}`.
-    expect(html).toContain("bottom:0");
+    // space) — mirrors the reference `.timeline:before{bottom:0}` via the resolved
+    // marker offset (TASK-533-03 geometry): 100% - marker top (22px default).
+    expect(html).toContain("bottom:calc(100% - 22px)");
     // The glow dot carries a box-shadow off the accent (`.timeline article:before`).
     expect(html).toContain("box-shadow:0 0 16px var(--coderso-section-accent");
   });
@@ -481,11 +482,12 @@ describe("native timeline vertical axis (TASK-533-03)", () => {
     // tracks the scaled value, not the default 24px. Two non-last segments carry it.
     expect((html.match(/bottom:calc\(-1 \* 14px\)/g) ?? []).length).toBe(2);
     expect(html).not.toContain("bottom:calc(-1 * 24px)");
-    // Full-item span + last-item flush end are preserved under the compact clamp too.
+    // Full-item span + last-item flush end are preserved under the compact clamp too
+    // (marker offset scales to 18px).
     expect(html).toMatch(
       /data-page-timeline-axis-line="true"[^>]*inset-y-0|inset-y-0[^>]*data-page-timeline-axis-line="true"/
     );
-    expect(html).toContain("bottom:0");
+    expect(html).toContain("bottom:calc(100% - 18px)");
   });
 
   test("horizontal variant still renders (markers retained, no vertical axis, no regression)", () => {

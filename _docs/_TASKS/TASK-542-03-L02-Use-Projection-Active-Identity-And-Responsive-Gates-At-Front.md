@@ -8,8 +8,9 @@
 **Category:** Public Site / Menu Runtime / Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-542-02-L01, TASK-542-03-L01, TASK-539
-**Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Status:** ✅ Done
+**Completed:** 2026-08-21
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
@@ -76,6 +77,16 @@ authored scrolled key. CSS media rules decide which device visibly responds; the
 script remains one static, front-only instance and no-scrolled documents emit no
 script.
 
+Defect being fixed: the current gate (`siteShell.tsx:680-700`) reads only
+`document.sections[0]?.layout` (the desktop base bar), so a tablet/mobile-only
+authored scrolled variant never arms the script. Replace it with
+`menuDocumentHasScrolledVariantForAnyDevice(document)` imported from
+TASK-542-01-L01, which checks every effective device layout. Assert a visible
+effect, not string presence: author a mobile-only sticky scrolled surface, then
+in the runtime/smoke flow assert the `data-scrolled` / computed header state
+toggles on scroll at a mobile viewport (and stays un-armed for a no-scrolled
+document).
+
 ## Error/compatibility flow
 
 - Missing activePath stamps none.
@@ -89,7 +100,8 @@ script.
 
 - `tests/vitest/site/siteShell.test.tsx`: projection import, duplicate href one
   current, longest match, deep path identity, hidden branch, icon no-inline color,
-  responsive-only scroll gate, no-scrolled no-script.
+  responsive-only scroll gate (tablet/mobile-authored scrolled variant arms the
+  script; a desktop-only base bar must not be the trigger), no-scrolled no-script.
 - `tests/unit/site/menu-document-render.test.tsx` and
   `tests/integration/runtime/site-shell-runtime.test.ts`: SSR/runtime parity.
 

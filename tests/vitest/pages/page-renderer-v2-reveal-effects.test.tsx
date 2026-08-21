@@ -112,7 +112,7 @@ test("PAGE_REVEAL_MOTION_CSS is reduced-motion-safe + reveal-armed scoped", () =
     '[data-page-effect^="reveal"]:not([data-revealed]){opacity:0}'
   );
   expect(PAGE_REVEAL_MOTION_CSS).toContain(
-    '[data-page-effect="reveal-up"]:not([data-revealed]){transform:translateY(1rem)}'
+    '[data-reveal-armed] [data-page-effect="reveal-up"]:not([data-revealed]){--cx-reveal-y:1rem}'
   );
 });
 
@@ -175,8 +175,11 @@ test("TASK-525-02: revealing CHILDREN carry their own hide-state + transition (c
 
   // revealed target keyed on the SECTION's data-revealed (runtime toggles section only):
   expect(PAGE_REVEAL_MOTION_CSS).toContain("[data-revealed] [data-page-block]");
+  // TASK-539-05-L01: the revealed child reset writes only `--cx-reveal-y:0` (never
+  // a raw `transform:none` that would clobber the decoration/hover/tilt/magnetic
+  // channels composed by the same host formula).
   expect(PAGE_REVEAL_MOTION_CSS).toContain(
-    "[data-revealed] [data-page-block]{opacity:1;transform:none}"
+    '[data-reveal-armed] [data-page-effect^="reveal"][data-revealed] [data-page-block]{opacity:1;--cx-reveal-y:0}'
   );
 });
 

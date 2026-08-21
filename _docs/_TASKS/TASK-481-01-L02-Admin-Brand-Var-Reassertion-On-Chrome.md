@@ -7,9 +7,10 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Small
 **Dependencies:** TASK-481-01-L01
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-19
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -30,7 +31,7 @@ child block's chrome would inherit a parent content scope's site brand.
 - `core/ui/theme/tokenCss.ts` — add `adminBrandColorCssVariableMap` (co-located with
   the other canvas/token maps; a static constant map, no token argument).
 - `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` — apply the map as inline
-  `style` on the `<section>` frame (~736) and the block frame `<div>` (~884), merged
+  `style` on the `<section>` frame (~908) and the block frame `<div>` (~1058), merged
   with the existing `frameLayoutStyle` from L01.
 
 **Source-of-truth docs:**
@@ -57,8 +58,8 @@ Not a route/auth/data leaf — N/A by surface, stated explicitly:
 ## Implementation Pseudocode
 
 Admin base brand vars already exist in `core/admin/styles/globals.css` `@layer base`
-(`--primary: var(--admin-button-primary-bg)` :99, `--secondary` :101, `--accent` :103,
-`--border` :111) and the `@theme {` block maps `--color-primary: var(--primary)` (:10),
+(`--primary: var(--admin-button-primary-bg)` :166, `--secondary` :171, `--accent` :173,
+`--border` :184) and the `@theme {` block maps `--color-primary: var(--primary)` (:10),
 `--color-secondary: var(--secondary)` (:12), `--color-accent: var(--accent)` (:14),
 `--color-border: var(--border)` (:22). Re-assert that same brand mapping as an inline
 scope:
@@ -80,13 +81,13 @@ export const adminBrandColorCssVariableMap: Record<string, string> = {
 ```
 
 ```tsx
-// PageAuthoringCanvas.tsx — section frame (~736)
+// PageAuthoringCanvas.tsx — section frame (~908)
 <section
   className={/* unchanged chrome classes */}
   style={adminBrandColorCssVariableMap as CSSProperties}
   data-page-editor-section={section.type} ...>
 
-// block frame (~884) — merge with L01 frameLayoutStyle
+// block frame (~1058) — merge with L01 frameLayoutStyle
 <div
   className={/* unchanged chrome classes */}
   style={{ ...adminBrandColorCssVariableMap, ...frameLayoutStyle } as CSSProperties}

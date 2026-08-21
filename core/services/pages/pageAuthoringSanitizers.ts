@@ -4,6 +4,7 @@ import {
   parseHtmlAttributes,
   sanitizeHtmlWithPolicy,
 } from "../posts/editor/postRichTextHtmlUtils";
+import { parseCssColorValue } from "../theme/cssColorContract";
 
 export type AuthoringUrlKind = "link" | "media";
 export type AuthoringSafeHrefOptions = {
@@ -23,14 +24,6 @@ export const authoringColorTokenNames = [
 ] as const;
 export type AuthoringColorTokenName = (typeof authoringColorTokenNames)[number];
 
-const hexColorPattern = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const namedColorPattern = /^[a-z]+$/i;
-// NOTE: the leading `\s*` after `(` is deliberately OMITTED — the trailing char class
-// `[0-9a-z .,%/-]*` already matches leading spaces, and a `\s*` here overlaps that class
-// producing catastrophic backtracking (ReDoS) on pathological input like
-// `rgb(<20000 spaces>z`. Do NOT re-add it. Leading whitespace inside the parens is still
-// accepted by the char class; the whole value is length-guarded before it reaches here.
-const functionalColorPattern = /^(?:rgb|rgba|hsl|hsla)\([0-9a-z .,%/-]*\)$/i;
 const gradientCharsetPattern = /^(?:linear|radial|conic)-gradient\([0-9a-z #%,.()/\s-]*\)$/i;
 const colorTokenPattern = /^var\(--color-([a-z]+(?:-[a-z]+)*)\)$/;
 const rejectedProtocolPattern = /^(?:javascript|data|vbscript):/i;
@@ -90,11 +83,21 @@ export const isAuthoringColorToken = (
   return Boolean(match?.[1] && (authoringColorTokenNames as readonly string[]).includes(match[1]));
 };
 
+// ── TASK-541 color delegation ────────────────────────────────────────────────
+// `parseCssColorValue(raw, "authoring")` is the SINGLE semantic color parser.
+// Page applies ONLY the exact seven-token allowlist afterward and never pretrims,
+// lowercases, regex-classifies, or recreates color syntax. Every accepted
+// non-token authoring color uses TASK-541 canonical bytes; noncanonical spellings
+// deliberately become canonical.
+const parsePageAuthoringColor = (value: unknown): string | null => {
+  const parsed = parseCssColorValue(value, "authoring");
+  if (!parsed) return null;
+  if (parsed.kind !== "token") return parsed.normalized;
+  return isAuthoringColorToken(parsed.normalized) ? parsed.normalized : null;
+};
+
 export const isSafeAuthoringCssColor = (value: string): boolean =>
-  hexColorPattern.test(value) ||
-  isAuthoringColorToken(value) ||
-  namedColorPattern.test(value) ||
-  functionalColorPattern.test(value);
+  parsePageAuthoringColor(value) !== null;
 
 const urlFunctionPattern = /url\s*\(/i;
 
@@ -104,73 +107,137 @@ export const isSafeAuthoringCssGradient = (value: string): boolean =>
   !urlFunctionPattern.test(value) &&
   isSingleGradientLayer(value);
 
-// ── TASK-531 REGION (multi-layer background sanitizer relax) ──────────────────
-// Accept a COMMA-SEPARATED list of safe gradient/color layers (glow-over-gradient,
-// the reference `.cta-card`/`art-*` look) while STILL rejecting every hostile
-// construct. This is the SECURITY-CRITICAL core of TASK-531 and the one new attack
-// surface: the relaxation is an ALLOWLIST applied PER top-level comma-split layer —
-// NOT a loosened regex, NOT a denylist — plus a whole-value tripwire pre-pass and a
-// layer-count cap, failing CLOSED on any bad layer / over-cap / tripwire hit.
+// ── TASK-539-02-L01 REGION (split background layers) ─────────────────────────
+// ONE internal bounded analysis owns the background grammar and returns the
+// structured paint plus the top-level layer count. The structured parser, the
+// legacy boolean predicate, and the legacy string sanitizer each delegate to that
+// single analysis; there is no second grammar, second walk, or per-wrapper regex.
 
 // Top-level layer cap (the reference never exceeds 2-3; bounds pathological /
 // ReDoS-adjacent input).
 export const PAGE_BG_MAX_LAYERS = 6 as const;
 
-// Whole-value tripwire pre-pass (fail-closed defence-in-depth, BEFORE the split): any
+// Whole-value tripwire pre-pass (fail-closed defence-in-depth, BEFORE the walk): any
 // hostile CSS function / protocol / at-rule that could smuggle a network fetch or
 // script execution. `url()` is already blocked per-layer by isSafeAuthoringCssGradient's
 // urlFunctionPattern, but this tripwires the WHOLE value so nothing slips even if a
-// future charset tweak widens a per-layer validator. This validator is EXPORTED and is
-// re-used by BOTH render boundaries (the SSR inline `toGradientBackground` and the RAW
-// `<style>` per-device `pageResponsiveCss.ts` emit), so the tripwire MUST live inside
-// the exported fn — do NOT let a consumer re-implement or bypass it.
+// future charset tweak widens a per-layer validator. The tripwire MUST live inside the
+// exported analysis so every render boundary (SSR inline `toGradientBackground` and the
+// RAW `<style>` per-device `pageResponsiveCss.ts` emit) inherits it; do NOT let a
+// consumer re-implement or bypass it.
 const multiLayerTripwire =
   /(?:url|image-set|image|element|cross-fade)\s*\(|@import|expression\s*\(|behavior\s*:|-moz-binding|(?:javascript|vbscript|data)\s*:/i;
 
-// Split a background value at TOP-LEVEL commas only (paren-depth 0). A comma inside a
-// gradient's own paren group (e.g. `radial-gradient(circle, a, b)`) stays with its
-// layer. Mirrors the existing hasBalancedParens / isSingleGradientLayer paren walk —
-// NEVER a naive value.split(",") (which would shred gradient internals).
-const splitTopLevelBackgroundLayers = (value: string): string[] => {
-  const layers: string[] = [];
+export type AuthoringCssBackgroundPaint = {
+  image: string | null;
+  color: string | null;
+};
+
+type AuthoringCssBackgroundAnalysis = {
+  paint: AuthoringCssBackgroundPaint;
+  layerCount: number;
+};
+
+// Whole-value raw code-point guard (shared with the grid sanitizer). Rejects every
+// C0/C1 control (U+0000..U+001F, U+007F..U+009F) and every Unicode/ECMAScript
+// whitespace code point other than ASCII space U+0020, including BOM U+FEFF (explicit
+// because it is not covered by Unicode `White_Space`), ANYWHERE in the raw value,
+// before trim/split/regex/color delegation. ASCII space is the ONLY legal whitespace.
+const unicodeWhitespaceCodePointPattern = /^\p{White_Space}$/u;
+
+function hasForbiddenAuthoringCssRawCodePoint(raw: string): boolean {
+  for (const char of raw) {
+    const codePoint = char.codePointAt(0)!;
+    const isControl = codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
+    const isNonAsciiWhitespace =
+      char !== " " && (unicodeWhitespaceCodePointPattern.test(char) || codePoint === 0xfeff);
+    if (isControl || isNonAsciiWhitespace) return true;
+  }
+  return false;
+}
+
+function analyzeAuthoringCssBackgroundPaint(value: unknown): AuthoringCssBackgroundAnalysis | null {
+  if (typeof value !== "string") return null;
+  if (value.length === 0 || value.length > PAGE_CSS_VALUE_MAX_LENGTH) return null;
+  if (hasForbiddenAuthoringCssRawCodePoint(value)) return null;
+  if (multiLayerTripwire.test(value)) return null;
+
+  // One paren-depth walk: balance check + top-level comma source offsets. A comma
+  // inside a gradient's own paren group stays inside its layer; NEVER a naive
+  // value.split(",") (which would shred gradient internals).
+  const layerStarts: number[] = [0];
   let depth = 0;
-  let start = 0;
   for (let index = 0; index < value.length; index += 1) {
     const char = value[index];
     if (char === "(") depth += 1;
-    else if (char === ")") depth = Math.max(0, depth - 1);
-    else if (char === "," && depth === 0) {
-      layers.push(value.slice(start, index).trim());
-      start = index + 1;
+    else if (char === ")") {
+      depth -= 1;
+      if (depth < 0) return null; // imbalance: unmatched close paren
+    } else if (char === "," && depth === 0) {
+      layerStarts.push(index + 1);
     }
   }
-  layers.push(value.slice(start).trim());
-  return layers;
-};
+  if (depth !== 0) return null; // imbalance: unclosed parens
+  if (layerStarts.length > PAGE_BG_MAX_LAYERS) return null;
+
+  let imageStart: number | null = null;
+  let imageEnd: number | null = null;
+  let color: string | null = null;
+
+  for (let layerIndex = 0; layerIndex < layerStarts.length; layerIndex += 1) {
+    const layerStart = layerStarts[layerIndex]!;
+    const layerEnd =
+      layerIndex + 1 < layerStarts.length ? layerStarts[layerIndex + 1]! - 1 : value.length;
+    const slice = value.slice(layerStart, layerEnd);
+
+    // Separately located ASCII-space trimmed bounds of this original source slice.
+    let trimStart = 0;
+    let trimEnd = slice.length;
+    while (trimStart < trimEnd && slice.charCodeAt(trimStart) === 0x20) trimStart += 1;
+    while (trimEnd > trimStart && slice.charCodeAt(trimEnd - 1) === 0x20) trimEnd -= 1;
+    if (trimStart >= trimEnd) return null; // empty layer
+    const trimmedSlice = slice.slice(trimStart, trimEnd);
+
+    if (isSafeAuthoringCssGradient(trimmedSlice)) {
+      if (imageStart === null) imageStart = layerStart + trimStart;
+      imageEnd = layerStart + trimEnd;
+      continue;
+    }
+
+    // A color is legal only as the single FINAL layer; any earlier non-gradient
+    // layer (color, url, or other function) rejects the whole value.
+    if (layerIndex !== layerStarts.length - 1) return null;
+    // Pass the UNTOUCHED slice (leading/trailing ASCII spaces included) so TASK-541's
+    // 128-char raw cap, ASCII-space rule, and control/non-ASCII rejection stay
+    // authoritative. `image` is never rebuilt with join(); only whole-value outer
+    // ASCII spaces and the final color delimiter/slice are excluded.
+    const parsedColor = parsePageAuthoringColor(slice);
+    if (!parsedColor) return null;
+    color = parsedColor;
+  }
+
+  const image = imageStart !== null && imageEnd !== null ? value.slice(imageStart, imageEnd) : null;
+  return {
+    paint: { image, color },
+    layerCount: layerStarts.length,
+  };
+}
+
+export const parseAuthoringCssBackgroundPaint = (
+  value: unknown
+): AuthoringCssBackgroundPaint | null => analyzeAuthoringCssBackgroundPaint(value)?.paint ?? null;
 
 /**
- * Accept a value as a SAFE multi-layer background: the whole value is tripwire-clean,
- * splits into 2..PAGE_BG_MAX_LAYERS top-level layers, and EVERY layer is a safe color
- * OR a safe (single) gradient. Fails CLOSED on any bad layer / over-cap / tripwire hit.
- *
- * EXPORTED — both render boundaries import it to relax their post-sanitizer re-check so
- * a multi-layer value actually PAINTS (531-01-L02): the SSR inline `toGradientBackground`
- * (React-escaped `CSSProperties`) and the RAW `<style>` per-device emit in
- * `pageResponsiveCss.ts` (dangerouslySetInnerHTML, un-escaped — the whole-value tripwire
- * is load-bearing there). Because both boundaries reuse THIS fn they inherit the same
- * allowlist + tripwire + cap for free; a value one boundary accepts is exactly what the
- * write boundary accepts.
+ * Legacy multi-layer predicate: `true` only for a valid 2..PAGE_BG_MAX_LAYERS
+ * stack. A valid single color or single gradient still parses and sanitizes but
+ * is `false` here. Delegates to the same analysis; it does not compare or
+ * reclassify paint members and does not own another grammar.
  */
 export const isSafeAuthoringCssBackgroundLayers = (value: string): boolean => {
-  if (multiLayerTripwire.test(value)) return false; // fail-closed pre-pass
-  const layers = splitTopLevelBackgroundLayers(value);
-  if (layers.length < 2 || layers.length > PAGE_BG_MAX_LAYERS) return false;
-  return layers.every(
-    (layer) =>
-      layer.length > 0 && (isSafeAuthoringCssColor(layer) || isSafeAuthoringCssGradient(layer))
-  );
+  const analysis = analyzeAuthoringCssBackgroundPaint(value);
+  return analysis !== null && analysis.layerCount >= 2;
 };
-// ── END TASK-531 REGION ───────────────────────────────────────────────────────
+// ── END TASK-539-02-L01 REGION ───────────────────────────────────────────────
 
 // Cheap length pre-guard (defence-in-depth against algorithmic-complexity / ReDoS): no
 // legitimate authoring color or multi-layer background comes close to this. Rejecting
@@ -179,24 +246,15 @@ export const isSafeAuthoringCssBackgroundLayers = (value: string): boolean => {
 // (< ~64 chars); a 6-layer gradient stack still fits comfortably under this cap.
 export const PAGE_CSS_VALUE_MAX_LENGTH = 512 as const;
 
-export const sanitizeAuthoringCssColor = (value: unknown): string | null => {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.length > PAGE_CSS_VALUE_MAX_LENGTH) return null;
-  return isSafeAuthoringCssColor(trimmed) ? trimmed : null;
-};
+export const sanitizeAuthoringCssColor = (value: unknown): string | null =>
+  parsePageAuthoringColor(value);
 
 export const sanitizeAuthoringCssBackground = (value: unknown): string | null => {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.length > PAGE_CSS_VALUE_MAX_LENGTH) return null;
-  // UNCHANGED single-layer fast path — a value with no top-level comma is byte-identical
-  // to pre-531 behavior (no single-layer document changes).
-  if (isSafeAuthoringCssColor(trimmed) || isSafeAuthoringCssGradient(trimmed)) return trimmed;
-  // TASK-531: NEW multi-layer branch (glow-over-gradient). Entered ONLY when the
-  // single-layer fast path fails; the allowlist + tripwire + cap fail closed.
-  if (isSafeAuthoringCssBackgroundLayers(trimmed)) return trimmed;
-  return null; // fail-closed
+  const analysis = analyzeAuthoringCssBackgroundPaint(value);
+  if (!analysis) return null;
+  const { paint } = analysis;
+  if (paint.image && paint.color) return `${paint.image}, ${paint.color}`;
+  return paint.image ?? paint.color;
 };
 
 // ── TASK-532 typography length grammar (Bundle B — fluid font-size) ──────────
@@ -366,20 +424,23 @@ export const sanitizeAuthoringRichTextHtml = (value: unknown): string => {
 // isSafeAuthoringCssGradient / isSingleGradientLayer / sanitizeAuthoringCssBackground).
 const GRID_MAX_TRACKS = 12;
 const GRID_MAX_REPEAT = 12; // repeat(N,…) count bound
-// Number sub-pattern accepts a leading-dot decimal (`.85fr`, `.9fr`) — the reference
-// `.project-grid{grid-template-columns:1.15fr .85fr}` uses them. GRID_LEN re-validates
-// the INNER tokens of minmax()/repeat(); the unit is OPTIONAL there so a BARE unitless
-// numeric bound (canonically `0`, as in `.hero-grid{…minmax(0,1fr)…}`) is ACCEPTED. A
-// bare finite number is a valid flexible/fixed minmax bound with no injection surface
-// (the up-front metacharacter reject + bounded track/repeat counts stay intact).
-const GRID_LEN = /^(?:(?:\d+(?:\.\d+)?|\.\d+)(?:fr|px|%|rem|em)?|auto)$/; // unit OPTIONAL (bare `0` ok)
-// GRID_TRACK keeps the unit REQUIRED for a STANDALONE track (a bare unitless number is
-// not a valid standalone grid track); the unitless allowance applies ONLY to the
-// minmax/repeat inner re-validation via GRID_LEN. The minmax()/repeat() inner body is
-// NOT validated by this regex alone (`[^()]+` admits arbitrary chars) — the loop below
-// re-validates each inner token against GRID_LEN. The regex only recognises the shape.
-const GRID_TRACK =
-  /^(?:(?:\d+(?:\.\d+)?|\.\d+)(?:fr|px|%|rem|em)|auto|minmax\([^()]+\)|repeat\(\d{1,2},[^()]+\))$/;
+// TASK-539-02-L01 zero-only unitful grammar. Only ALL-ZERO decimal spellings
+// (`0`, `0.0`, `0.00…`, `.0`) may be unitless; every nonzero number requires one
+// of `fr|px|%|rem|em`, INCLUDING inside minmax()/repeat(). Bare nonzero numbers,
+// negatives, bare units, unsupported units, and nested functions reject
+// everywhere. `.85fr` (leading-dot decimal) stays accepted (reference
+// `.project-grid{…1.15fr .85fr}`). Units/function names remain lowercase as today.
+const GRID_NUMBER_SOURCE = "(?:[0-9]+(?:\\.[0-9]+)?|\\.[0-9]+)";
+const GRID_ZERO_SOURCE = "(?:0+(?:\\.0+)?|\\.0+)";
+const GRID_UNIT_SOURCE = "(?:fr|px|%|rem|em)";
+const GRID_LEN_SOURCE = `(?:${GRID_ZERO_SOURCE}|${GRID_NUMBER_SOURCE}${GRID_UNIT_SOURCE}|auto)`;
+const GRID_LEN = new RegExp(`^(?:${GRID_LEN_SOURCE})$`);
+// GRID_TRACK recognises the outer shape only (`minmax(…)`/`repeat(…)` bodies are
+// NOT validated by this regex alone — `[^()]+` admits arbitrary chars). The loop
+// below re-validates every inner token against GRID_LEN (closed grammar).
+const GRID_TRACK = new RegExp(
+  `^(?:${GRID_LEN_SOURCE}|minmax\\([^()]+\\)|repeat\\(\\d{1,2},[^()]+\\))$`
+);
 
 // Split a comma-separated function body into trimmed non-empty tokens.
 const gridInnerTokens = (body: string): string[] =>
@@ -422,6 +483,13 @@ const gridTopLevelTracks = (raw: string): string[] => {
 
 export const sanitizeAuthoringGridTemplate = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
+  // RAW code-point guard BEFORE `.trim()` / metacharacter regex / tokenizer
+  // (TASK-539-02-L01): every C0/C1 control and every Unicode/ECMAScript
+  // whitespace code point other than ASCII space, including U+FEFF, rejects even
+  // at an outer edge or comma-adjacent position. `.trim()` must never erase a
+  // leading/trailing forbidden character and `/\s/` must never reinterpret one as
+  // an ordinary separator.
+  if (hasForbiddenAuthoringCssRawCodePoint(value)) return null;
   const raw = value.trim();
   if (raw.length === 0 || raw.length > 200) return null;
   // Hard-reject any rule/injection metacharacter up front (defence in depth). The
@@ -433,16 +501,17 @@ export const sanitizeAuthoringGridTemplate = (value: unknown): string | null => 
   if (tracks.length === 0 || tracks.length > GRID_MAX_TRACKS) return null;
   // Re-validated tracks are re-emitted in a CANONICAL no-inner-space form so the output is
   // stable regardless of the author's spacing (`minmax(0, 1fr)` and `minmax(0,1fr)` both
-  // → `minmax(0,1fr)`), while bare tracks (`1.15fr`, `.85fr`, `auto`) pass through as-is.
+  // → `minmax(0,1fr)`), while bare tracks (`1.15fr`, `.85fr`, `auto`, `0`) pass through
+  // preserving their trimmed spelling.
   const normalized: string[] = [];
   for (const track of tracks) {
     if (!GRID_TRACK.test(track)) return null;
     // CLOSED grammar: re-validate the INNER tokens of minmax()/repeat() against
-    // GRID_LEN (bounded finite numbers only — `[^()]+` in GRID_TRACK does NOT).
+    // GRID_LEN (zero-only unitless or unitful — `[^()]+` in GRID_TRACK does NOT).
     const mm = /^minmax\((.+)\)$/.exec(track);
     if (mm) {
       const inner = gridInnerTokens(mm[1]!);
-      // minmax(min, max) — exactly two length/fr/auto tokens, each valid.
+      // minmax(GRID_LEN, GRID_LEN) — exactly two tokens, each zero-or-unitful/auto.
       if (inner.length !== 2 || !inner.every((token) => GRID_LEN.test(token))) return null;
       normalized.push(`minmax(${inner.join(",")})`);
       continue;
@@ -453,7 +522,9 @@ export const sanitizeAuthoringGridTemplate = (value: unknown): string | null => 
       // finite int, bounded (reject repeat(99,…) — `\d{1,2}` alone allows up to 99).
       if (!Number.isInteger(count) || count < 1 || count > GRID_MAX_REPEAT) return null;
       const inner = gridInnerTokens(rp[2]!);
-      if (inner.length === 0 || !inner.every((token) => GRID_LEN.test(token))) return null;
+      // repeat(integer 1..12, GRID_LEN) — EXACTLY ONE inner track; multiple repeat
+      // inner tracks (spaced or comma-separated) reject.
+      if (inner.length !== 1 || !GRID_LEN.test(inner[0]!)) return null;
       normalized.push(`repeat(${count},${inner.join(",")})`);
       continue;
     }

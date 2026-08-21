@@ -24,6 +24,9 @@ const baseCanvasProps = {
   onStartInlineEdit: vi.fn(),
   onCommitInlineEdit: vi.fn(),
   onApplyTextMark: vi.fn(),
+  // TASK-481-01-L03: the canvas host passes brand token variables down to the
+  // content scope; the links-dock suite must provide the required prop.
+  contentBrandTokenVariables: {},
 };
 
 const mount = (node: ReactNode) => {

@@ -16,9 +16,14 @@ import {
 import {
   PAGE_COMPOSITION_EFFECTS_CSS,
   PAGE_INTERACTIVITY_CSS,
+  PAGE_LAYER_WIDTH_ATTRIBUTE,
   resolveDrawInAttrs,
   usesInteractivityRuntime,
 } from "./pageCompositionEffects";
+import {
+  PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE,
+  transformPageReplicaIdentityAttribute,
+} from "./pageRendererReplicaIdentity";
 import { PAGE_EFFECTS_RUNTIME_ID, PAGE_EFFECTS_RUNTIME_SOURCE } from "./pageEffectsRuntime";
 import { INTERACTIVITY_KEYFRAMES_CSS, SCROLL_HINT_GLYPHS } from "./pageInteractivityGlyphs";
 import type { PageBlockPath } from "./pageBlockPaths";
@@ -365,7 +370,17 @@ export const renderPageBlockContent = (
           {...dataAttrs}
           style={{ ...SAFE_CUSTOM_SVG_BOUNDARY_STYLE, ...(cssVars as CSSProperties) }}
         >
-          {renderSafeSvgNode(tree, "svg-root", Boolean(props.drawIn), true)}
+          {/* TASK-539-05-L01 — in an approved marquee replica, every Safe-SVG
+              `id` definition and matching `url(#...)`/hash reference is
+              namespaced through the identity transformer; the primary passes
+              no context and stays byte-identical. */}
+          {renderSafeSvgNode(
+            tree,
+            "svg-root",
+            Boolean(props.drawIn),
+            true,
+            context.replicaIdentity
+          )}
         </span>
       );
     }
@@ -391,6 +406,17 @@ export const renderPageBlockContent = (
         "panel:5",
         "panel:6",
       ] as const;
+      // ── TASK-539-05-L01 ── replica identity routing. In an approved marquee
+      // replica, every switcher DOM `id` definition and matching local
+      // `aria-controls`/`aria-labelledby` reference is namespaced through the
+      // identity transformer (only targets backed by a locally emitted `id`
+      // rewrite; the primary stays byte-identical). The replica context rides
+      // into every panel slot list so deeper ids/hooks namespace too.
+      const replica = context.replicaIdentity;
+      const replicaId = (value: string) =>
+        replica ? transformPageReplicaIdentityAttribute(replica, "id", value) : value;
+      const replicaRef = (attribute: "aria-controls" | "aria-labelledby", value: string) =>
+        replica ? transformPageReplicaIdentityAttribute(replica, attribute, value) : value;
       return (
         <div data-switcher="true" data-switcher-variant={variant}>
           <div
@@ -405,8 +431,8 @@ export const renderPageBlockContent = (
                 type="button"
                 role="tab"
                 data-switcher-tab="true"
-                id={`${block.id}-tab-${i}`}
-                aria-controls={`${block.id}-panel-${i}`}
+                id={replicaId(`${block.id}-tab-${i}`)}
+                aria-controls={replicaRef("aria-controls", `${block.id}-panel-${i}`)}
                 aria-selected={i === active ? "true" : "false"}
                 tabIndex={i === active ? 0 : -1}
                 className="cx-switcher-tab"
@@ -423,8 +449,8 @@ export const renderPageBlockContent = (
                 key={i}
                 role="tabpanel"
                 data-switcher-panel="true"
-                id={`${block.id}-panel-${i}`}
-                aria-labelledby={`${block.id}-tab-${i}`}
+                id={replicaId(`${block.id}-panel-${i}`)}
+                aria-labelledby={replicaRef("aria-labelledby", `${block.id}-tab-${i}`)}
                 data-active={i === active ? "true" : "false"}
                 // TASK-534 a11y (APG Tabs): tabIndex=0 makes a panel whose authored
                 // children may be entirely non-focusable (text/image/heading) reachable
@@ -444,6 +470,9 @@ export const renderPageBlockContent = (
                   renderBlockWithFrame: renderPageBlockWithFrame,
                   slotKey: panelSlots[i],
                   parentBlock: block,
+                  section: context.section,
+                  transformHost: context.transformHost,
+                  replicaIdentity: replica,
                 })}
               </div>
             );
@@ -513,8 +542,17 @@ const renderPageBlockWithFrame = (block: PageBlockV2, context: PageBlockRenderCo
   // TASK-533-01 (audit remediation): drop the block grid span when this block is
   // rendered inside a per-column composition wrapper (single-column grid) — see
   // toPageBlockRenderProps + PageBlockRenderContext.suppressBlockSpan.
+  //
+  // ── TASK-539-05-L01 ── the section boundary computed the ONE legal grid
+  // target (`context.spanTarget`) and the reveal-host flag; the marquee replica
+  // identity rides through `context.replicaIdentity`. Nested children always
+  // carry `"none"`/propagated flags. Undefined (section-less direct calls)
+  // keeps the legacy default behavior.
   const renderProps = toPageBlockRenderProps(block, {
     suppressSpan: context.suppressBlockSpan,
+    spanTarget: context.spanTarget,
+    transformHost: context.transformHost,
+    replicaIdentity: context.replicaIdentity,
   });
   // TASK-528 whole-card tilt: the frame carries data-block-tilt (co-located with
   // data-surface), so CSS `perspective` must sit on an ANCESTOR — wrap the frame
@@ -538,11 +576,31 @@ const renderPageBlockWithFrame = (block: PageBlockV2, context: PageBlockRenderCo
   // can retarget the per-device layer override at THIS wrapper. `data-block-id`
   // stays uniquely on the frame (selection chrome depends on that 1:1 mapping).
   const wrapperLayerId = "data-layer" in s.wrapperAttrs ? block.id : undefined;
+  // ── TASK-539-05-L01 ──
+  // - LAYER WIDTH: the owner `PAGE_LAYER_WIDTH_ATTRIBUTE` ("full"|"auto") is
+  //   stamped ONLY on this existing tilt/layer wrapper (never on the frame) so
+  //   the bounded authored width applies to the absolutely-positioned layer
+  //   node; present-only when a width is authored.
+  // - REPLICA TILT-LAYER ALIAS: an approved replica wrapper corresponding to a
+  //   primary `data-tilt-parent-for` wrapper replaces the primary-only hook
+  //   with the style-scope alias (same canonical id value) — the replica never
+  //   registers as a primary per-device override target, and 539-06's scoped
+  //   CSS can target both. No new wrapper is added.
+  const wrapperLayerWidth =
+    wrapperLayerId !== undefined && (block.style?.width === "full" || block.style?.width === "auto")
+      ? block.style.width
+      : undefined;
+  const isReplicaWrapper = context.replicaIdentity !== undefined;
   const withTiltParent = (frame: ReactNode): ReactNode =>
     s.tiltParent ? (
       <div
         data-tilt-parent=""
-        {...(wrapperLayerId ? { [PAGE_TILT_PARENT_LAYER_ATTRIBUTE]: wrapperLayerId } : {})}
+        {...(wrapperLayerId
+          ? isReplicaWrapper
+            ? { [PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE]: wrapperLayerId }
+            : { [PAGE_TILT_PARENT_LAYER_ATTRIBUTE]: wrapperLayerId }
+          : {})}
+        {...(wrapperLayerWidth ? { [PAGE_LAYER_WIDTH_ATTRIBUTE]: wrapperLayerWidth } : {})}
         style={{ perspective: "1200px", ...(s.wrapperVars as CSSProperties) }}
         {...s.wrapperAttrs}
       >
@@ -669,8 +727,11 @@ export function PageDocumentRender({
    *    secondary emits it only when the primary does NOT (footer-only spotlight).
    *
    * The runtime `<script>` is NOT suppressed on secondary (a footer-only-motion page
-   * still needs it); it self-guards on a window flag (`PAGE_EFFECTS_RUNTIME_INIT_FLAG`)
-   * so a second copy is a total no-op — one set of listeners/observers, no re-arm.
+   * still needs it). TASK-539: each emitted copy invokes the reusable per-root
+   * controller, which discovers LATER main/footer nodes while binder-specific
+   * idempotence prevents duplicate work — the second copy is NOT a “total no-op”;
+   * it is what arms the footer/motion nodes the primary controller could not have
+   * seen yet. TASK-539-07 owns the runtime implementation.
    */
   documentRole?: "primary" | "secondary";
   /**

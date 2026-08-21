@@ -7,8 +7,9 @@
 **Category:** Pages / Validation / Documentation / Closure
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01 through TASK-539-07
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only here after implementation validation)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only here after implementation validation)
 
 ---
 
@@ -29,7 +30,7 @@ baseline for the family line gate.
 
 | Leaf | Scope | Status |
 |---|---|---|
-| TASK-539-08-L01 | Runtime parity suite, docs, aggregate gates, audits, smoke, closure | ⏳ To Do |
+| TASK-539-08-L01 | Runtime parity suite, docs, aggregate gates, audits, smoke, closure | ✅ Done |
 
 ## Ownership
 
@@ -39,7 +40,7 @@ legacy oversized `tests/integration/runtime/pages-runtime.test.ts` and runs that
 read-only. Existing `site-shell-runtime.test.ts` is also read-only.
 
 L01 owns only the five named Page docs, TASK-539 status/board/changelog artifacts,
-changelog 1251, and `task-539-*` smoke screenshots. It may not edit production source,
+changelog 1318, and `task-539-*` smoke screenshots. It may not edit production source,
 another task family, or TASK-545 artifacts. In the current concurrent tree it must
 also preserve `_docs/_TASKS/TASK-548*.md`, `_docs/_workflows/task-548-*.mjs`,
 `_docs/_CHANGELOG/1261-*`, the changelog-1261 index row, and the TASK-548 board
@@ -113,7 +114,7 @@ fixture pattern. If changed to handler coverage, they additionally require
   show no grid hook/alias/span CSS. Browser smoke uses the product-reachable
   main→footer order and later-node rescans; the reverse parser order remains an exact
   fixed-DOM TASK-539-07-L02 Vitest proof and is not fabricated in Playwright.
-- All five docs, descendants, board statistics/indexes, and changelog 1251 are
+- All five docs, descendants, board statistics/indexes, and changelog 1318 are
   synchronized without a TASK-545 exception.
 
 ## Validation

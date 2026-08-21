@@ -7,11 +7,14 @@ import {
 } from "../../../core/services/pages/pageDocumentV2";
 import {
   PAGE_BG_MAX_LAYERS,
+  PAGE_CSS_VALUE_MAX_LENGTH,
   composeAuthoringGradientCss,
   escapeAuthoringCssString,
   isSafeAuthoringCssBackgroundLayers,
+  isSafeAuthoringCssColor,
   isSafeAuthoringCssLength,
   normalizeAuthoringSafeHref,
+  parseAuthoringCssBackgroundPaint,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
   sanitizeAuthoringCssFontSize,
@@ -20,6 +23,7 @@ import {
   sanitizeAuthoringMediaUrl,
   sanitizeAuthoringRichTextHtml,
 } from "../../../core/services/pages/pageAuthoringSanitizers";
+import { CSS_COLOR_VALUE_MAX_LENGTH } from "../../../core/services/theme/cssColorContract";
 
 test("authoring URL sanitizers keep current safe hrefs and reject scriptable protocols", () => {
   expect(sanitizeAuthoringLinkHref("/pricing")).toBe("/pricing");
@@ -96,7 +100,8 @@ test("TASK-531: multi-layer background sanitizer accepts safe glow-over-gradient
   );
   expect(sanitizeAuthoringCssBackground("#0d9488")).toBe("#0d9488");
   expect(sanitizeAuthoringCssBackground("var(--color-primary)")).toBe("var(--color-primary)");
-  expect(sanitizeAuthoringCssBackground("rgba(0,0,0,.5)")).toBe("rgba(0,0,0,.5)");
+  // A noncanonical color spelling deliberately becomes TASK-541 canonical bytes.
+  expect(sanitizeAuthoringCssBackground("rgba(0,0,0,.5)")).toBe("rgba(0, 0, 0, 0.5)");
   // A single gradient is NOT a "multi-layer" value (needs >= 2 top-level layers).
   expect(isSafeAuthoringCssBackgroundLayers("linear-gradient(90deg,#000,#fff)")).toBe(false);
 });
@@ -133,8 +138,13 @@ test("TASK-531: multi-layer background sanitizer rejects hostile constructs (XSS
   const overCap = Array.from({ length: PAGE_BG_MAX_LAYERS + 1 }, () => "#000").join(", ");
   expect(sanitizeAuthoringCssBackground(overCap)).toBeNull();
   expect(isSafeAuthoringCssBackgroundLayers(overCap)).toBe(false);
-  // Exactly at the cap is accepted (boundary).
-  const atCap = Array.from({ length: PAGE_BG_MAX_LAYERS }, () => "#000").join(", ");
+  // Exactly at the cap is accepted (boundary) for a VALID stack. A stack of plain
+  // colors is no longer valid because a color may only be the single FINAL layer;
+  // use a gradient stack instead (TASK-539-02-L01 split grammar).
+  const atCap = Array.from(
+    { length: PAGE_BG_MAX_LAYERS },
+    () => "linear-gradient(90deg,#000,#fff)"
+  ).join(", ");
   expect(isSafeAuthoringCssBackgroundLayers(atCap)).toBe(true);
 });
 
@@ -362,4 +372,341 @@ test("sanitizeAuthoringGridTemplate rejects injection / out-of-grammar → null"
   expect(sanitizeAuthoringGridTemplate(null as unknown)).toBeNull();
   expect(sanitizeAuthoringGridTemplate(undefined as unknown)).toBeNull();
   expect(sanitizeAuthoringGridTemplate({} as unknown)).toBeNull();
+});
+
+// ── TASK-539-02-L01 — TASK-541 single color delegation ───────────────────────
+test("TASK-539-02: color adapters delegate raw input to TASK-541 (seven tokens only)", () => {
+  // Canonical colors pass through; noncanonical spellings become canonical bytes.
+  expect(sanitizeAuthoringCssColor("#0D9488")).toBe("#0d9488");
+  expect(sanitizeAuthoringCssColor("#0d9488")).toBe("#0d9488");
+  expect(sanitizeAuthoringCssColor("rgba(13,148,136,0.35)")).toBe("rgba(13, 148, 136, 0.35)");
+  expect(sanitizeAuthoringCssColor("rgb(255, 0, 0)")).toBe("rgb(255, 0, 0)");
+  expect(sanitizeAuthoringCssColor("transparent")).toBe("transparent");
+  // Exact seven-token acceptance.
+  for (const token of [
+    "var(--color-primary)",
+    "var(--color-secondary)",
+    "var(--color-accent)",
+    "var(--color-bg)",
+    "var(--color-surface)",
+    "var(--color-text)",
+    "var(--color-border)",
+  ]) {
+    expect(sanitizeAuthoringCssColor(token), token).toBe(token);
+    expect(isSafeAuthoringCssColor(token), token).toBe(true);
+  }
+  // Every otherwise-valid TASK-541 token outside the seven rejects.
+  for (const token of [
+    "var(--color-danger)",
+    "var(--color-extra)",
+    "var(--color-accent-strong)",
+    "var(--color-primary-soft)",
+  ]) {
+    expect(sanitizeAuthoringCssColor(token), token).toBeNull();
+    expect(isSafeAuthoringCssColor(token), token).toBe(false);
+  }
+  // Named colors are outside the TASK-541 authoring grammar entirely.
+  expect(sanitizeAuthoringCssColor("red")).toBeNull();
+  expect(sanitizeAuthoringCssColor("white")).toBeNull();
+  expect(isSafeAuthoringCssColor("red")).toBe(false);
+  // Non-string input fails closed.
+  expect(sanitizeAuthoringCssColor(12 as unknown)).toBeNull();
+  expect(sanitizeAuthoringCssColor(null)).toBeNull();
+});
+
+test("TASK-539-02: raw color adapters honor TASK-541 cap before any preprocessing", () => {
+  const terminal = "#abc";
+  const exactCap = `${" ".repeat(CSS_COLOR_VALUE_MAX_LENGTH - terminal.length)}${terminal}`;
+  const capPlusOne = ` ${exactCap}`;
+  expect(exactCap).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH);
+  expect(capPlusOne).toHaveLength(CSS_COLOR_VALUE_MAX_LENGTH + 1);
+  expect(sanitizeAuthoringCssColor(exactCap)).toBe(terminal);
+  expect(sanitizeAuthoringCssColor(capPlusOne)).toBeNull();
+});
+
+// ── TASK-539-02-L01 — structured split background parser ─────────────────────
+test("TASK-539-02: structured background parser returns exact image/color bytes", () => {
+  const oneGradient = "linear-gradient(90deg,#000,#fff)";
+  expect(parseAuthoringCssBackgroundPaint(oneGradient)).toEqual({
+    image: oneGradient,
+    color: null,
+  });
+  expect(parseAuthoringCssBackgroundPaint("#0d9488")).toEqual({ image: null, color: "#0d9488" });
+  expect(parseAuthoringCssBackgroundPaint("var(--color-primary)")).toEqual({
+    image: null,
+    color: "var(--color-primary)",
+  });
+  // Split: image keeps the exact gradient bytes incl. internal spacing; the final
+  // color is TASK-541 canonical.
+  const split = "linear-gradient(90deg, #000, #fff), var(--color-primary)";
+  expect(parseAuthoringCssBackgroundPaint(split)).toEqual({
+    image: "linear-gradient(90deg, #000, #fff)",
+    color: "var(--color-primary)",
+  });
+  expect(sanitizeAuthoringCssBackground(split)).toBe(
+    "linear-gradient(90deg, #000, #fff), var(--color-primary)"
+  );
+  // image is byte-identical regardless of the final color spelling.
+  const head = "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%)";
+  expect(parseAuthoringCssBackgroundPaint(`${head}, #FFF`)).toEqual({ image: head, color: "#fff" });
+  expect(parseAuthoringCssBackgroundPaint(`${head}, #FFFFFF`)).toEqual({
+    image: head,
+    color: "#ffffff",
+  });
+  expect(parseAuthoringCssBackgroundPaint(`${head}, rgba(255,255,255,1)`)).toEqual({
+    image: head,
+    color: "rgba(255, 255, 255, 1)",
+  });
+  // Two gradients: image spans the exact separators (whole outer-trimmed input).
+  const two = `${head}, linear-gradient(145deg,#0f1720,#1b2733)`;
+  expect(parseAuthoringCssBackgroundPaint(two)).toEqual({ image: two, color: null });
+  expect(sanitizeAuthoringCssBackground(two)).toBe(two);
+  // Six-gradient stack at the cap parses and sanitizes byte-identically.
+  const six = Array.from({ length: PAGE_BG_MAX_LAYERS }, () => oneGradient).join(", ");
+  expect(parseAuthoringCssBackgroundPaint(six)).toEqual({ image: six, color: null });
+  expect(sanitizeAuthoringCssBackground(six)).toBe(six);
+  expect(isSafeAuthoringCssBackgroundLayers(six)).toBe(true);
+  // Outer ASCII spaces are excluded from image; inner gradient spacing is preserved.
+  expect(parseAuthoringCssBackgroundPaint(` ${oneGradient} `)).toEqual({
+    image: oneGradient,
+    color: null,
+  });
+});
+
+test("TASK-539-02: legacy cardinality — single forms parse but the layer predicate needs 2..max", () => {
+  const oneColor = "#0d9488";
+  const oneGradient = "linear-gradient(90deg,#000,#fff)";
+  expect(parseAuthoringCssBackgroundPaint(oneColor)).not.toBeNull();
+  expect(sanitizeAuthoringCssBackground(oneColor)).toBe("#0d9488");
+  expect(isSafeAuthoringCssBackgroundLayers(oneColor)).toBe(false);
+  expect(parseAuthoringCssBackgroundPaint(oneGradient)).not.toBeNull();
+  expect(sanitizeAuthoringCssBackground(oneGradient)).toBe(oneGradient);
+  expect(isSafeAuthoringCssBackgroundLayers(oneGradient)).toBe(false);
+  // Valid two-layer stack is true; one above the cap is false.
+  const two = `${oneGradient}, radial-gradient(circle,#000,#fff)`;
+  expect(isSafeAuthoringCssBackgroundLayers(two)).toBe(true);
+  const atCap = Array.from({ length: PAGE_BG_MAX_LAYERS }, () => oneGradient).join(", ");
+  expect(isSafeAuthoringCssBackgroundLayers(atCap)).toBe(true);
+  const overCap = `${atCap}, ${oneGradient}`;
+  expect(isSafeAuthoringCssBackgroundLayers(overCap)).toBe(false);
+  expect(sanitizeAuthoringCssBackground(overCap)).toBeNull();
+});
+
+test("TASK-539-02: background rejects early colors, two colors, images, tripwires, imbalance, empty/over-cap layers", () => {
+  const oneGradient = "linear-gradient(90deg,#000,#fff)";
+  const rejected = [
+    // Color before / between gradients and multiple colors.
+    "#000, linear-gradient(90deg,#000,#fff)",
+    "linear-gradient(90deg,#000,#fff), #fff, radial-gradient(circle,#000,#fff)",
+    "#000, #fff",
+    "var(--color-primary), linear-gradient(90deg,#000,#fff)",
+    // Non-gradient image/fetch functions (whole-value tripwire first).
+    "url(//evil/x)",
+    'image-set("//evil/x" 1x), linear-gradient(90deg,#000,#fff)',
+    "element(#foo), linear-gradient(90deg,#000,#fff)",
+    "cross-fade(url(//evil/a), url(//evil/b)), linear-gradient(90deg,#000,#fff)",
+    "image(//evil/x), linear-gradient(90deg,#000,#fff)",
+    // Scriptable protocols / at-rules / functions (tripwire).
+    "javascript:alert(1), linear-gradient(90deg,#000,#fff)",
+    "linear-gradient(90deg,#000,#fff), data:text/html,<script>",
+    "vbscript:msgbox(1), linear-gradient(90deg,#000,#fff)",
+    "@import url(evil); linear-gradient(90deg,#000,#fff)",
+    "linear-gradient(90deg,#000,#fff), expression(alert(1))",
+    "linear-gradient(90deg,#000,#fff), behavior:url(#default#foo)",
+    "-moz-binding:url(//evil/x), linear-gradient(90deg,#000,#fff)",
+    // A layer that is neither a safe gradient nor a safe color.
+    "12 34, linear-gradient(90deg,#000,#fff)",
+    // Imbalance (unclosed / unmatched close paren).
+    "linear-gradient(90deg,#000,#fff",
+    "radial-gradient(circle,#000,#fff)), linear-gradient(90deg,#000,#fff)",
+    // Empty layers.
+    "linear-gradient(90deg,#000,#fff), , radial-gradient(circle,#000,#fff)",
+    "linear-gradient(90deg,#000,#fff),,",
+    // Whole-value overflow (untouched length > PAGE_CSS_VALUE_MAX_LENGTH).
+    `${" ".repeat(PAGE_CSS_VALUE_MAX_LENGTH + 1)}${oneGradient}`,
+  ];
+  for (const value of rejected) {
+    expect(sanitizeAuthoringCssBackground(value), `sanitize: ${JSON.stringify(value)}`).toBeNull();
+    expect(parseAuthoringCssBackgroundPaint(value), `parse: ${JSON.stringify(value)}`).toBeNull();
+  }
+  // A non-Page token as the final color rejects (the token filter applies to the split).
+  expect(sanitizeAuthoringCssBackground(`${oneGradient}, var(--color-danger)`)).toBeNull();
+  // Layer overflow: 7 safe layers reject.
+  const overCap = Array.from({ length: PAGE_BG_MAX_LAYERS + 1 }, () => "#000").join(", ");
+  expect(sanitizeAuthoringCssBackground(overCap)).toBeNull();
+});
+
+test("TASK-539-02: raw background guard rejects every C0/C1 control and non-ASCII whitespace before normalization", () => {
+  const oneGradient = "linear-gradient(90deg,#000,#fff)";
+  // Outer edge, top-level separator, gradient interior, and final color slice.
+  const placements = [
+    (raw: string) => `${raw}${oneGradient}`,
+    (raw: string) => `${oneGradient}${raw}`,
+    (raw: string) => `${oneGradient},${raw}#fff`,
+    (raw: string) => `linear-gradient(90deg,${raw}#000,#fff)`,
+    (raw: string) => `${oneGradient}, ${raw}#fff`,
+  ];
+  const forbidden = [
+    "\u0000",
+    "\u0009",
+    "\u000a",
+    "\u000b",
+    "\u000c",
+    "\u000d",
+    "\u001f", // C0
+    "\u007f", // DEL
+    "\u0080",
+    "\u0085",
+    "\u009f", // C1
+    "\u00a0",
+    "\u1680",
+    "\u2000",
+    "\u200a",
+    "\u2028",
+    "\u2029",
+    "\u202f",
+    "\u205f",
+    "\u3000",
+    "\ufeff", // BOM (explicit; not covered by Unicode White_Space)
+  ];
+  for (const cp of forbidden) {
+    for (const place of placements) {
+      expect(
+        sanitizeAuthoringCssBackground(place(cp)),
+        `sanitize ${JSON.stringify(cp)}`
+      ).toBeNull();
+      expect(parseAuthoringCssBackgroundPaint(place(cp)), `parse ${JSON.stringify(cp)}`).toBeNull();
+    }
+  }
+  // ASCII space alone remains legal everywhere and canonicalizes deterministically.
+  expect(sanitizeAuthoringCssBackground(` ${oneGradient} `)).toBe(oneGradient);
+  expect(sanitizeAuthoringCssBackground(`${oneGradient}, #fff`)).toBe(`${oneGradient}, #fff`);
+});
+
+test("TASK-539-02: final color layer honors TASK-541 raw cap through the untouched slice", () => {
+  const head = "linear-gradient(90deg,#000,#fff)";
+  const atCap = `${head},${" ".repeat(CSS_COLOR_VALUE_MAX_LENGTH - "#abc".length)}#abc`;
+  expect(atCap.length).toBeLessThanOrEqual(PAGE_CSS_VALUE_MAX_LENGTH);
+  expect(parseAuthoringCssBackgroundPaint(atCap)).toEqual({ image: head, color: "#abc" });
+  const capPlusOne = `${head},${" ".repeat(CSS_COLOR_VALUE_MAX_LENGTH - "#abc".length + 1)}#abc`;
+  expect(parseAuthoringCssBackgroundPaint(capPlusOne)).toBeNull();
+  expect(sanitizeAuthoringCssBackground(capPlusOne)).toBeNull();
+});
+
+// ── TASK-539-02-L01 — zero-only unitful grid grammar ─────────────────────────
+test("TASK-539-02: grid accepts zero-only unitless and unitful lengths at every nested position", () => {
+  const accepted: ReadonlyArray<readonly [input: string, canonical: string]> = [
+    ["0", "0"],
+    ["0 1fr", "0 1fr"],
+    ["0.0", "0.0"],
+    ["0.00", "0.00"],
+    [".0", ".0"],
+    ["0px", "0px"],
+    ["0.0px", "0.0px"],
+    [".85fr", ".85fr"],
+    ["50%", "50%"],
+    ["1rem", "1rem"],
+    ["1em", "1em"],
+    ["auto", "auto"],
+    ["auto 1fr", "auto 1fr"],
+    ["minmax(0,1fr)", "minmax(0,1fr)"],
+    ["minmax(0.0,1fr)", "minmax(0.0,1fr)"],
+    ["minmax(.0,1fr)", "minmax(.0,1fr)"],
+    ["minmax(auto,1fr)", "minmax(auto,1fr)"],
+    ["repeat(1,1fr)", "repeat(1,1fr)"],
+    ["repeat(12,1fr)", "repeat(12,1fr)"],
+    ["repeat(3,0)", "repeat(3,0)"],
+    ["repeat(3,0.0)", "repeat(3,0.0)"],
+    ["minmax(0, 1fr) repeat(3, 1fr)", "minmax(0,1fr) repeat(3,1fr)"],
+    ["  0  1fr ", "0 1fr"],
+    ["1fr 1.2fr", "1fr 1.2fr"],
+    ["1.15fr .85fr", "1.15fr .85fr"],
+  ];
+  for (const [input, canonical] of accepted) {
+    expect(sanitizeAuthoringGridTemplate(input), JSON.stringify(input)).toBe(canonical);
+    // Deterministic second pass (idempotence).
+    expect(sanitizeAuthoringGridTemplate(canonical)).toBe(canonical);
+  }
+});
+
+test("TASK-539-02: grid rejects nonzero unitless, negatives, bare/unsupported units, nesting, multiple repeat tracks", () => {
+  const rejected = [
+    "5",
+    "1.5",
+    "0.5",
+    "minmax(5,1fr)",
+    "minmax(1fr,5)",
+    "repeat(3,2)",
+    "repeat(3,0.5)",
+    "-1fr",
+    "-5",
+    "-0",
+    "px",
+    "fr",
+    "%",
+    "rem",
+    "1vw",
+    "1vh",
+    "1ch",
+    "1s",
+    "1deg",
+    "1FR",
+    "MINMAX(0,1fr)",
+    "AUTO",
+    "repeat(3,minmax(0,1fr))",
+    "minmax(minmax(0,1fr),1fr)",
+    "repeat(3,1fr 2fr)",
+    "repeat(3,1fr,2fr)",
+    "repeat(0,1fr)",
+    "repeat(13,1fr)",
+    "repeat(999,1fr)",
+    "5 1fr",
+    "1fr 5",
+    "minmax(0, 1fr) 5",
+    "0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr 0.5fr",
+  ];
+  for (const value of rejected) {
+    expect(sanitizeAuthoringGridTemplate(value), JSON.stringify(value)).toBeNull();
+  }
+});
+
+test("TASK-539-02: grid raw guard rejects controls and non-ASCII whitespace before trim/tokenization", () => {
+  const placements = [
+    (raw: string) => `${raw}1fr 1fr`, // leading edge (trim would erase these)
+    (raw: string) => `1fr 1fr${raw}`, // trailing edge
+    (raw: string) => `1fr${raw}1fr`, // between tracks
+    (raw: string) => `minmax(0,${raw}1fr)`, // function interior
+    (raw: string) => `minmax(0${raw},1fr)`, // comma-adjacent inside function
+  ];
+  const forbidden = [
+    "\u0000",
+    "\u0009",
+    "\u000a",
+    "\u000b",
+    "\u000c",
+    "\u000d",
+    "\u001f", // C0
+    "\u007f", // DEL
+    "\u0080",
+    "\u0085",
+    "\u009f", // C1
+    "\u00a0",
+    "\u1680",
+    "\u2000",
+    "\u200a",
+    "\u2028",
+    "\u2029",
+    "\u202f",
+    "\u205f",
+    "\u3000",
+    "\ufeff", // BOM
+  ];
+  for (const cp of forbidden) {
+    for (const place of placements) {
+      expect(sanitizeAuthoringGridTemplate(place(cp)), JSON.stringify(cp)).toBeNull();
+    }
+  }
+  // ASCII space alone is legal and canonicalizes deterministically (control cases).
+  expect(sanitizeAuthoringGridTemplate(" 1fr 1fr ")).toBe("1fr 1fr");
+  expect(sanitizeAuthoringGridTemplate("minmax(0, 1fr)")).toBe("minmax(0,1fr)");
 });

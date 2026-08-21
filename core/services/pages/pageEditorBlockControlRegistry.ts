@@ -173,21 +173,35 @@ export const pageBlockControlRegistry: Record<
     blockPropControl("video", "muted", { label: "Muted", input: "switch" }),
   ],
   gallery: [
+    // TASK-539: all four gallery props are BASE-only — the public responsive
+    // prop contract supports only heading/text alignment. Editing them while a
+    // tablet/mobile device is active updates the base document.
+    blockPropControl("gallery", "items", {
+      label: "Gallery items",
+      input: "galleryItems",
+      panel: "content",
+      responsive: false,
+    }),
     blockPropControl("gallery", "layout", {
       label: "Layout",
       input: "segmented",
       panel: "style",
       options: pageGalleryLayouts,
+      responsive: false,
     }),
     blockPropControl("gallery", "filterable", {
       label: "Filterable",
       input: "switch",
       panel: "content",
+      responsive: false,
     }),
     blockPropControl("gallery", "filterCategories", {
       label: "Filter categories",
-      input: "items",
+      input: "galleryCategoryTokens",
       panel: "content",
+      responsive: false,
+      // Category tokens exist only when filtering is enabled (base gate).
+      showWhen: { path: ["props", "filterable"], equals: true },
     }),
   ],
   form: [
@@ -323,20 +337,27 @@ export const pageBlockControlRegistry: Record<
   ],
   embed: [],
   divider: [
+    // TASK-539: all five divider props are BASE-only (the responsive prop
+    // contract supports only heading/text alignment); `width`/`align` appear
+    // only when the base `gradient` rule is enabled, and a tablet/mobile
+    // override can never open or close that gate.
     blockPropControl("divider", "tone", {
       label: "Tone",
       input: "select",
       options: pageDividerTones,
+      responsive: false,
     }),
     blockPropControl("divider", "thickness", {
       label: "Thickness",
       input: "number",
       clamp: { min: 1, max: 16 },
+      responsive: false,
     }),
     blockPropControl("divider", "gradient", {
       label: "Gradient rule",
       input: "switch",
       panel: "style",
+      responsive: false,
     }),
     blockPropControl("divider", "width", {
       label: "Rule length",
@@ -344,12 +365,16 @@ export const pageBlockControlRegistry: Record<
       panel: "style",
       clamp: PAGE_DIVIDER_WIDTH_CLAMP,
       unit: "px",
+      responsive: false,
+      showWhen: { path: ["props", "gradient"], equals: true },
     }),
     blockPropControl("divider", "align", {
       label: "Rule align",
       input: "segmented",
       panel: "style",
       options: pageDividerAligns,
+      responsive: false,
+      showWhen: { path: ["props", "gradient"], equals: true },
     }),
   ],
   spacer: [

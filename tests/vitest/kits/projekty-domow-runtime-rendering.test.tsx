@@ -32,7 +32,7 @@ const refs = {
 describe("Projekty Domów public runtime rendering", () => {
   it("renders the source-ordered native category facet and reset contract", () => {
     const projects = buildFormaDomPages(refs).find((seed) => seed.key === "projekty");
-    const document = projects?.desired.data as {
+    const document = projects?.desired.data as unknown as {
       sections: Array<{ blocks: PageBlockV2[] }>;
     };
     const blocks = document.sections.flatMap((section) => section.blocks);
@@ -107,8 +107,8 @@ describe("Projekty Domów public runtime rendering", () => {
     expect(homeHtml).toContain("font-size:clamp(2.8rem,6vw,6.5rem)");
     expect(homeHtml).toContain("grid-template-columns:minmax(0,1fr) minmax(420px,.9fr)");
     expect(homeHtml).toContain("grid-template-columns:1fr 1.2fr");
-    expect(homeHtml).toContain("0px 0px 48px 2px rgba(142,232,255,.28)");
-    expect(homeHtml).toContain("border-color:rgba(255,255,255,.14)");
+    expect(homeHtml).toContain("0px 0px 48px 2px rgba(142, 232, 255, 0.28)");
+    expect(homeHtml).toContain("border-color:rgba(255, 255, 255, 0.14)");
     expect(homeHtml).toContain("border-width:1px");
     expect(homeHtml).toContain('data-surface="ambient-orbs"');
     expect(homeHtml).toContain('role="tablist"');
@@ -122,7 +122,7 @@ describe("Projekty Domów public runtime rendering", () => {
 
     const pricingHtml = render("cennik");
     expect(pricingHtml).toContain('data-section-id="pricing-packages"');
-    expect(pricingHtml).toContain("rgba(173,255,216,.28)");
+    expect(pricingHtml).toContain("rgba(173, 255, 216, 0.28)");
     expect(pricingHtml).toContain("Najczęściej wybierane");
 
     const contactHtml = render("kontakt");

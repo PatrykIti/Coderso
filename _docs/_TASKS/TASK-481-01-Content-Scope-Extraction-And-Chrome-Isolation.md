@@ -7,9 +7,10 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-477-02 (canvas neutral tokens + live swatch palette)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-19
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -22,10 +23,11 @@ badges, ghost "+" insert tiles, "add block beside" handle) so a later leaf can
 emit the SITE brand `--color-*` on the content scope WITHOUT recoloring chrome.
 
 Today the block frame `<div>` in `renderBlockFrame`
-(`core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` ~884–933) is a single element
+(`core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` ~1058–1102) is a single element
 that carries BOTH the chrome utility classes (`outline-primary`, `ring-primary/20`)
 AND `style={blockRenderProps.style}` — and `blockRenderProps.style`
-(`toPageBlockStyle` in `core/services/pages/pageRendererV2.tsx`:703) includes the
+(`toPageBlockStyle`, defined in `core/services/pages/pageBlockRenderStyles.ts`:266,
+imported by `core/services/pages/pageRendererV2.tsx`:903) includes the
 block's brand visual style (`backgroundColor`/`color`/`borderColor`, which may be
 `var(--color-accent)` etc.). Because chrome and content brand-consumers share one
 element and one variable cascade, emitting site brand vars there would recolor the
@@ -41,9 +43,9 @@ a structure + guard-test refactor that the emission subtask (02) builds on.
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-01-L01 | `data-page-editor-content` wrapper in renderBlockFrame + section content | Medium | ⏳ To Do |
-| TASK-481-01-L02 | `adminBrandColorCssVariableMap` re-assertion on section/block chrome | Small | ⏳ To Do |
-| TASK-481-01-L03 | Content-scope / chrome-isolation characterization tests | Small | ⏳ To Do |
+| TASK-481-01-L01 | `data-page-editor-content` wrapper in renderBlockFrame + section content | Medium | ✅ Done |
+| TASK-481-01-L02 | `adminBrandColorCssVariableMap` re-assertion on section/block chrome | Small | ✅ Done |
+| TASK-481-01-L03 | Content-scope / chrome-isolation characterization tests | Small | ✅ Done |
 
 ## Dependencies
 

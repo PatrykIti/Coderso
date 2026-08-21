@@ -16,10 +16,7 @@ import {
   type PageSectionType,
   type PageSectionVariant,
 } from "./pageDocumentV2";
-import {
-  control,
-  type PageEditorControlDefinition,
-} from "./pageEditorControlDefinition";
+import { control, type PageEditorControlDefinition } from "./pageEditorControlDefinition";
 import { getPageSectionVariantOptions } from "./pageSectionTemplates";
 
 export const pageUniversalSectionControls: readonly PageEditorControlDefinition[] = [
@@ -183,6 +180,9 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
       max: PAGE_PARALLAX_INTENSITY_CLAMP.max,
     },
     unit: "px",
+    // TASK-539: reachable only when the base scroll effect is parallax; the
+    // effective responsive target can never open or close this base-only gate.
+    showWhen: { path: ["style", "scrollEffect"], equals: "parallax" },
   }),
   ...(
     [

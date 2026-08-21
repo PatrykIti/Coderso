@@ -29,6 +29,10 @@ const rendererModules = [
   "pageLayoutBlockRenderer.tsx",
   "pageSectionRendererV2.tsx",
   "pageDocumentRenderState.ts",
+  // TASK-539-05-L01 — task-added pure direct owners (stable facade does not
+  // re-export their symbols; each stays acyclic and free of server coupling).
+  "pageRendererReplicaIdentity.ts",
+  "pageRendererTimelineGeometry.ts",
 ] as const;
 
 const directLocalImports = (file: string): string[] => {

@@ -135,6 +135,23 @@ export function toPageCanvasColorCssVariableMap(tokens: DesignTokens): Record<st
 }
 
 /**
+ * The four SITE BRAND page-color vars for the Page V2 editor canvas CONTENT scope
+ * (`data-page-editor-content`). Counterpart to {@link toPageCanvasColorCssVariableMap},
+ * which emits typography + neutrals on the canvas FRAME and intentionally omits
+ * brand (brand on the frame would recolor editor chrome). These four are safe ONLY
+ * inside the content scope, where chrome re-asserts the admin brand
+ * (`adminBrandColorCssVariableMap`). Mirrors the brand half of {@link toCssVariableMap}.
+ */
+export function toPageCanvasBrandColorCssVariableMap(tokens: DesignTokens): Record<string, string> {
+  return {
+    "--color-primary": tokens.colors.primary,
+    "--color-secondary": tokens.colors.secondary,
+    "--color-accent": tokens.colors.accent,
+    "--color-border": tokens.neutrals.border,
+  };
+}
+
+/**
  * CSS variable map for the Menu Design editor canvas frame: site typography
  * vars PLUS ALL SEVEN `--color-*` (primary/secondary/accent/bg/surface/border/
  * text). Unlike the page canvas map (which keeps the brand `--color-*` OFF the
@@ -159,6 +176,23 @@ export function toMenuCanvasColorCssVariableMap(tokens: DesignTokens): Record<st
     "--color-border": tokens.neutrals.border,
   };
 }
+
+/**
+ * Re-asserts the ADMIN brand `--color-*` (mirroring the `globals.css` `@theme {`
+ * brand mapping) so editor chrome keeps the admin theme even when nested inside a
+ * `data-page-editor-content` scope that defines the SITE brand vars (TASK-481).
+ * Static literals only — no token argument, no user input.
+ *
+ * The three NEUTRAL vars (`--color-bg/-surface/-text`) are intentionally omitted:
+ * no `core/admin/ui/pages` chrome consumes them, and re-asserting them would fight
+ * the TASK-477-02 neutral emission on the frame.
+ */
+export const adminBrandColorCssVariableMap: Record<string, string> = {
+  "--color-primary": "var(--primary)",
+  "--color-secondary": "var(--secondary)",
+  "--color-accent": "var(--accent)",
+  "--color-border": "var(--border)",
+};
 
 export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
   return {

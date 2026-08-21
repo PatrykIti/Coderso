@@ -7,9 +7,10 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-477-02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-19
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -25,8 +26,8 @@ emission leaf paints on.
 
 **Owning module(s) to create-or-extend:**
 - `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` — `SectionCanvas`'s
-  `renderBlockFrame` callback (frame `<div>` at ~884–933) and the `<section>` +
-  `PageSectionContent` region (~735–935).
+  `renderBlockFrame` callback (frame `<div>` at ~1058–1102) and the `<section>` +
+  `PageSectionContent` region (`<section>` ~903–908, `<PageSectionContent>` at :938).
 
 **Source-of-truth docs:**
 - `_docs/PAGE_MODEL.md` (page block/section model, `PageBlockStyleV2`).
@@ -58,7 +59,7 @@ Not a route/auth/data leaf — N/A by surface, stated explicitly for compliance:
 
 ## Implementation Pseudocode
 
-Current frame (`renderBlockFrame`, PageAuthoringCanvas.tsx ~884–933) — the SAME
+Current frame (`renderBlockFrame`, PageAuthoringCanvas.tsx ~1058–1102) — the SAME
 `<div>` carries chrome classes, block style, AND `{content}`:
 
 ```tsx
@@ -106,7 +107,8 @@ const contentVisualStyle = { color, backgroundColor, backgroundImage, background
 
 Notes / decisions for the implementer:
 - **Why move the visual style inward:** `blockRenderProps.style` (=`toPageBlockStyle`,
-  `pageRendererV2.tsx`:703) merges `toPageBlockVisualStyle` (brand bg/color/border,
+  defined in `core/services/pages/pageBlockRenderStyles.ts`:266, imported by
+  `pageRendererV2.tsx`:903) merges `toPageBlockVisualStyle` (brand bg/color/border,
   possibly `var(--color-accent)`) with `toPageBlockLayoutStyle` (padding/margin/
   align). Brand vars must be consumed on the SAME element the SITE brand map is
   defined on (the content scope), else they resolve against the admin cascade. Keep
@@ -118,8 +120,8 @@ Notes / decisions for the implementer:
   visual/layout split is a no-op for them and `content` already sits in the scope.
 - Apply the SAME `data-page-editor-content` wrapper inside the `<section>` around
   `PageSectionContent` (so section-level rendered content, not the section chrome
-  badges, sits in the scope for 481-02). The `<section>` chrome (outline, type
-  badge ~751, override badge ~754, visibility badges ~759) stays outside.
+  badges, sits in the scope for 481-02). The `<section>` chrome (outline, name
+  label ~917, override badge ~921, visibility badges ~925–935) stays outside.
 - Do not alter any `data-page-editor-*` attribute names or `onClick`
   selection/stop-propagation behavior; characterization tests (L03) pin them.
 - **Error handling:** none required — pure presentational JSX; no domain codes, no
@@ -140,3 +142,28 @@ is a sibling/ancestor NOT inside the content wrapper, and the block's
   stays on the frame; `data-page-editor-*` hooks + block selection click behavior
   unchanged; section content wrapped, section chrome badges outside.
 - No DB migration artifacts (no schema/DB change).
+
+## Line gate / PageAuthoringCanvas.tsx split
+
+`PageAuthoringCanvas.tsx` is 1,106 lines. Split it cohesively BEFORE adding the
+content-scope wrapper, so the brand-surface edits land on already-split modules:
+
+- `core/admin/ui/pages/editor/PageAuthoringCanvasInline.tsx` (new) — the inline
+  editable text + mark/color toolbar surface: `InlineEditableCanvasText`,
+  `inlineTextMarkPalette`, `MARK_TOOLBAR_DOCK_CYCLE`, the dock placement/icon consts,
+  the inline selection helpers, and the text-mark commit types
+  (`PageEditorInlineEditTarget`/`PageEditorInlineEditCommit`/
+  `PageEditorTextMarkCommit`/`PageEditorTextColorMarkCommit`/
+  `PageEditorMarkToolbarDock`).
+- `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` (retained facade) — `SectionCanvas`,
+  `SectionGapInsertZone`, `HiddenBlockGhost`, `CanvasGhostAddTile`, and named
+  re-exports of the public types above (no export-star) so `PageEditor.tsx` and the
+  tests keep importing from the unchanged path.
+
+Land order: perform this split first in L01, then add the `data-page-editor-content`
+wrapper inside `SectionCanvas`'s `renderBlockFrame` (facade). The inline toolbar
+surface is untouched by this leaf (its live-palette change is TASK-481-03-L01, which
+edits `PageAuthoringCanvasInline.tsx`).
+
+Post-split receipt: both modules `<=1000` lines (inline ~780, facade ~350); verify
+with `wc -l` and `git diff --check`.

@@ -7,8 +7,9 @@
 **Category:** Pages / Admin Editor Components
 **Estimated Effort:** Medium
 **Dependencies:** TASK-539-03-L01
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -177,6 +178,15 @@ pending and prove the old row control remounts and emits zero stale writes. Asse
 zero stale `onChange` calls and zero mount-time normalization writes.
 
 ## Validation and line receipt
+
+Known cross-leaf type transient (inherited from TASK-539-03-L01): the contract-
+mandated `PageEditorControlUiModel` union widening makes the L03-owned
+`core/admin/ui/pages/editor/PageEditorRegistryFields.tsx` default branch fail
+`lint:types` (TS2322 at ~:776) until L03 lands its render branches for
+`{kind:"galleryItems"}` / `{kind:"galleryCategoryTokens"}`. That single error is
+the L03-owned file, not a defect of this leaf. The gate below is green apart from
+that one documented transient, which must be resolved (lint:types fully green)
+once L03 lands, before any combined gate.
 
 ```bash
 bun --cwd core lint:types

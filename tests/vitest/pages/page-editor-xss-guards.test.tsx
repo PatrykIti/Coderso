@@ -233,6 +233,7 @@ test("SectionCanvas isolates harmless legacy customSvg author layout markers", (
       device="desktop"
       canAddBlockBeside={false}
       canvasDataByBlockId={{}}
+      contentBrandTokenVariables={{}}
       {...callbacks}
     />
   );

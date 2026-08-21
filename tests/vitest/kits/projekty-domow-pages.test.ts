@@ -211,7 +211,7 @@ describe("FormaDom Page v2 package documents", () => {
       backgroundType: "gradient",
       borderColor: "#8ee8ff",
       borderWidth: 2,
-      glow: { color: "rgba(173,255,216,.28)", blur: 48, spread: 3 },
+      glow: { color: "rgba(173, 255, 216, 0.28)", blur: 48, spread: 3 },
     });
   });
 

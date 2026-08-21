@@ -7,34 +7,38 @@
 **Category:** Pages / Public Renderer / Geometry
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-539-04-L02, TASK-539-03-L05, TASK-539-02-L01, TASK-539-01-L01
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
 ## Sole ownership and mandatory split
 
-Own the stable `core/services/pages/pageRendererV2.tsx` facade plus cohesive sibling
-modules:
+Own the stable `core/services/pages/pageRendererV2.tsx` composition root plus the
+landed support modules (TASK-547 already split the source; `pageRendererV2.tsx` is
+now 920 lines):
 
-- `pageRendererTypes.ts`
-- `pageRendererSectionStyles.ts`
-- `pageRendererBlockStyles.ts`
+- `pageRendererV2Contract.ts`
+- `pageSectionRenderStyles.ts`
+- `pageBlockRenderStyles.ts`
+- `pageSectionRendererV2.tsx`
+- `pageStaticBlockRenderers.tsx`
+- `pageDataBlockRenderers.tsx`
+- `pageLayoutBlockRenderer.tsx`
+- `pageDocumentRenderState.ts`
+
+plus the two new direct-owner modules this leaf creates:
+
 - `pageRendererReplicaIdentity.ts`
-- `pageRendererTextBlocks.tsx`
-- `pageRendererMediaBlocks.tsx`
-- `pageRendererDataBlocks.tsx`
-- `pageRendererSvgBlock.tsx`
-- `pageRendererLayoutBlocks.tsx`
 - `pageRendererTimelineGeometry.ts`
-- `pageRendererBlockFrame.tsx`
-- `pageRendererSections.tsx`
-- `pageRendererDocument.tsx`
 
-The facade explicitly re-exports every pre-task public symbol used by site shell,
-runtime, admin canvas, menus, and tests; `export *` is forbidden. Avoid circular
-facades: internal modules import their direct owner. Split by responsibility and
-extract further cohesive modules if any receipt exceeds 1,000.
+The composition root keeps its six direct declarations
+(`renderPageBlockContent`, `PageBlockContent`, `PageBlockFrame`, `PageSectionContent`,
+`PageSectionRender`, `PageDocumentRender`) and explicit named re-export clauses from
+the support modules; `export *` is forbidden. Avoid circular facades: internal
+modules import their direct owner. Add behavior into the landed modules by
+responsibility and extract further cohesive modules if any receipt exceeds 1,000.
 
 `pageRendererReplicaIdentity.ts` is the direct owner of the task-added pure replica
 identity types and helpers. It explicitly exports them for focused direct-owner
@@ -61,6 +65,10 @@ Also own the cohesive split/updates of:
 - `page-renderer-v2-composition.test.tsx`
 - `page-renderer-timeline-geometry.test.ts`
 - `tests/vitest/pages/task-534-interactivity-render.test.tsx`
+- `tests/vitest/pages/page-renderer-v2-module-boundaries.test.ts` (existing 113-line
+  suite; this leaf owns its rebaseline after the renderer split, updating the pinned
+  `rendererModules`/`documentModules` arrays to the landed contract without weakening
+  the acyclicity, facade identity, line-limit, or no-server-coupling assertions).
 
 Each suite must be independently runnable; shared fixtures may live in a focused
 `pageRendererV2TestFixtures.tsx` kept `<=1000`. Read the post-TASK-478 renderer fresh.
@@ -118,16 +126,17 @@ PageDocumentRender
 ```
 
 The L01-owned `page-renderer-v2-facade.test.tsx` uses the TypeScript compiler API to
-parse `pageRendererV2.tsx` as TSX. The facade is declaration-only: every top-level
-statement must be an `ExportDeclaration` with a string-literal direct-owner module
-specifier and an explicit `NamedExports` clause. Reject imports, locally exported
-functions/classes/variables/types/interfaces, export assignments/default exports,
-namespace exports, export-star declarations, missing module specifiers, mixed
-type/value clauses, aliases that change a public name, and a duplicate public name
-before converting either manifest to a set.
+parse `pageRendererV2.tsx` as TSX. The landed facade is a mixed layout: the six
+composition-root components above are declared directly, and the remaining surface
+comes from explicit `ExportDeclaration`s with a string-literal direct-owner module
+specifier and an explicit `NamedExports` clause. Reject imports beyond the landed
+set, locally exported functions/classes/variables/types/interfaces beyond the six
+composition-root components, export assignments/default exports, namespace exports,
+export-star declarations, missing module specifiers, aliases that change a public
+name, and a duplicate public name before converting either manifest to a set.
 
 All 12 type names above must occur exactly once in `export type { ... } from
-"./pageRendererTypes"` declarations. Compare the sorted
+"./pageRendererV2Contract"` declarations. Compare the sorted
 `type:<public-name>@<module-specifier>` signatures to that exact 12-entry owner map;
 type-only imports in the test then prove every facade type is usable. No extra type is
 allowed, including `PageReplicaIdentitySets`, `PageReplicaIdentityContext`,
@@ -488,6 +497,7 @@ bun --cwd core lint:types
 bun --cwd core lint
 bun run test:vitest -- \
   tests/vitest/pages/page-renderer-v2-facade.test.tsx \
+  tests/vitest/pages/page-renderer-v2-module-boundaries.test.ts \
   tests/vitest/pages/page-renderer-v2.test.tsx \
   tests/vitest/pages/page-renderer-v2-section-layout.test.tsx \
   tests/vitest/pages/page-renderer-v2-blocks.test.tsx \

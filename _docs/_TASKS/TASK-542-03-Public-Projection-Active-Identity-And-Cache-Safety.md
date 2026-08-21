@@ -7,8 +7,9 @@
 **Category:** Menus / Public Runtime / Admin Cache / Data Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-542-01, TASK-542-02, TASK-539
-**Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Status:** ✅ Done
+**Completed:** 2026-08-21
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
@@ -24,9 +25,9 @@ and Structure navigation loss.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-542-03-L01 | Create shared public navigation projection | new pure navigation module + direct owner suite | ⏳ To Do |
-| TASK-542-03-L02 | Use projection, active identity, and responsive gates at front | `core/site/siteShell.tsx` | ⏳ To Do |
-| TASK-542-03-L03 | Revalidate Menu Design without clobbering drafts | `MenuDesignEditor.tsx` | ⏳ To Do |
+| TASK-542-03-L01 | Create shared public navigation projection | new pure navigation module + direct owner suite | ✅ Done |
+| TASK-542-03-L02 | Use projection, active identity, and responsive gates at front | `core/site/siteShell.tsx` | ✅ Done |
+| TASK-542-03-L03 | Revalidate Menu Design without clobbering drafts | `MenuDesignEditor.tsx` | ✅ Done |
 
 ## Shared invariants
 

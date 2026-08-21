@@ -8,16 +8,45 @@
 **Category:** Menus / Responsive CSS
 **Estimated Effort:** Medium
 **Dependencies:** TASK-541-03-L01, TASK-542-01-L01
-**Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Status:** ✅ Done
+**Completed:** 2026-08-21
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
 ## Exclusive ownership
 
-- `core/site/menuDocumentCss.ts`
+- `core/site/menuDocumentCss.ts` (facade after the split below)
+- `core/site/menuDocumentCssCore.ts`
+- `core/site/menuDocumentCssRules.ts`
+- `core/site/menuDocumentCssDelta.ts`
 
-Do not edit menu model, `siteShell.tsx`, MenuDesignEditor, tests, or TASK-541.
+Do not edit menu model, `siteShell.tsx`, MenuDesignEditor, or TASK-541. The named
+direct gate suites (`tests/vitest/site/menu-document-css.test.ts`,
+`tests/vitest/services/menu-document-v2.test.ts`, `tests/unit/site/menu-document-render.test.tsx`)
+may receive mechanical/type-only adjustments when the split requires them
+(import/type fixes only, no assertion weakening); additive contract tests belong to
+TASK-542-04-L01.
+
+## Line-gate split plan
+
+`menuDocumentCss.ts` is 1,520 lines at HEAD 3c470092 and must be split in this
+same change (the 1,000-line gate applies at TASK-542 close). Split by cohesive
+responsibility and preserve the public facade so existing import sites keep
+importing `menuDocumentCss`.
+
+| New module | Responsibility |
+|---|---|
+| `menuDocumentCssCore.ts` | selectors/scopes (`menuDocScope`, hover/active selectors, level/container/dropdown/group-caret selectors), appearance defaults, shared caret/base literals, `BRAND_STYLE_COMPARE_KEYS`, `NAV_LEVEL_STYLE_COMPARE_KEYS`, `NAV_CHROME_COMPARE_KEYS`, `STRUCTURAL_BASE_ONLY_CHROME_KEYS`, shallow/deep equality helpers |
+| `menuDocumentCssRules.ts` | positive rule emitters: typography, dropdown, mobile-mode, divider, brand, indicator/caret/flyout/pill/submenu/accordion, level link/container/state, nesting, current-page, menu-bar extra/scrolled |
+| `menuDocumentCssDelta.ts` | brand/level/chrome delta collectors, `submenuPlacementDeltaRule`, `collectMenuBarExtraDeltaRules`, `collectDeltaRules`, `buildMenuRuleSetsForDocument`, `buildMenuDocumentCss`, `buildMenuDocumentPreviewCss`, canvas baseline/preview helpers |
+| `menuDocumentCss.ts` | facade: re-exports public symbols and keeps the existing `buildMenuDocumentCss`/`buildMenuDocumentPreviewCss` entry points |
+
+Land order: `Core → Rules → Delta → Facade`. Re-run `bun --cwd core lint:types`,
+`bun --cwd core lint`, and the owned `tests/vitest/site/menu-document-css-542.test.ts`
+after each step. Post-split receipt: each extraction module is at most 1,000
+physical lines (`wc -l`) and the facade is thin; record the verified line counts
+in closeout evidence.
 
 ## Grounded anchors
 
@@ -45,7 +74,7 @@ Do not edit menu model, `siteShell.tsx`, MenuDesignEditor, tests, or TASK-541.
 | `flyoutAnimation:"none"` | restore base hidden `display:none` and hover/focus `display:grid`; reset visibility/opacity/transform/transition |
 | L2 OFF after L1 ON | emit the same resets on exact L2 selectors so descendant L1 selectors cannot win |
 | one `containerPadding*` axis | missing axis uses `MENU_SHELL_SUBLIST_PADDING` (6), not 0 |
-| responsive `brand.iconColor` | base/device scoped `svg{color:<canonical>}`; compare list includes `iconColor` |
+| responsive `brand.iconColor` | base/device scoped `svg{color:<canonical>}`; add `iconColor` to `BRAND_STYLE_COMPARE_KEYS` (current anchor `menuDocumentCss.ts:905-921` omits it) so an icon-color-only device change re-emits CSS instead of being diffed away |
 
 ## Implementation Pseudocode
 
@@ -103,17 +132,21 @@ wrong selector/order.
 
 ## Tests owned by TASK-542-04
 
-`tests/vitest/site/menu-document-css.test.ts` gets table-driven base→tablet,
-base→mobile, L1→L2, orientation, all OFF values, padding X-only/Y-only/neither,
-icon base/tablet/mobile, and no-override byte-identity goldens. Include combined
-effects so one reset cannot mask another.
+`tests/vitest/site/menu-document-css-542.test.ts` (split out of the §1-§7
+`menu-document-css.test.ts` so both stay under the 1,000-line gate) gets the
+table-driven base→tablet, base→mobile, L1→L2, orientation, all OFF values,
+padding X-only/Y-only/neither, icon base/tablet/mobile, and no-override
+byte-identity goldens. Pin an
+icon-color-ONLY device change to produce a non-empty brand delta (proving
+`BRAND_STYLE_COMPARE_KEYS` includes `iconColor`), plus a base-only icon-color
+case. Include combined effects so one reset cannot mask another.
 
 ## Validation
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bunx vitest run tests/vitest/site/menu-document-css.test.ts \
+bunx vitest run tests/vitest/site/menu-document-css-542.test.ts \
   tests/vitest/services/menu-document-v2.test.ts
 bun test tests/unit/site/menu-document-render.test.tsx
 ```

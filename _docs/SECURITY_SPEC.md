@@ -628,19 +628,15 @@ Rotacja klucza:
   only escaped `url("...")` values. `url(javascript:...)`, expression-like CSS,
   protocol-relative media, and event-handler payloads fail closed to `null` or
   the documented default.
-- The supported Page admin color control now commits through the shared
-  canonical `authoring` profile. This browser adapter is not the backend trust
-  boundary: persistence and rendering still re-check through the independent
-  legacy Page sanitizer. That sanitizer allows only
-  `var(--color-primary|secondary|accent|bg|surface|text|border)` for token
-  references and rejects arbitrary `var()` expressions, URLs, delimiters, and
-  unsafe functions. Its separate alphabetic named-value branch still retains
-  current backend compatibility for values including `currentColor` and
-  `inherit`, and its functional branch is not yet the shared parser's semantic
-  range contract. Do not claim server-side shared-parser enforcement from the
-  admin control alone. TASK-539-02-L01 owns importing the shared parser while
-  retaining the exact seven-token filter and Page-specific
-  background/composite rules.
+- The supported Page admin color control commits through the shared canonical
+  `authoring` profile. That profile is now the server trust boundary:
+  persistence and rendering re-check through the Page sanitizer, which
+  delegates the untouched raw argument to TASK-541's
+  `parseCssColorValue(raw, "authoring")` and then accepts
+  `var(--color-primary|secondary|accent|bg|surface|text|border)` tokens only.
+  There is no legacy backend named-value branch: `currentColor`/`inherit` and
+  other named values are rejected at the write boundary because they are not
+  part of the `authoring` profile.
 - Page text marks (`heading`/plain `text`/`quote` `props.marks`) stay as
   bounded JSON ranges, not raw HTML. Color/highlight mark colors normalize
   through the CSS color sanitizer; link mark hrefs normalize through the Page
@@ -804,6 +800,69 @@ fail-closed:
 - **Allowlist** — every new key joins its `assertKnownKeys` allowlist AND the strict
   `pageDocumentV2JsonSchema` (`additionalProperties: false`) in lockstep with a
   round-trip test; an unknown prop throws `PageDocumentError` (fail-closed read trap).
+
+## Page v2 strict write and runtime security boundary (TASK-539)
+
+TASK-539 hardens the Page v2 write and render boundaries. It adds **no route,
+no public write, no RBAC change, no DDL, and no `PAGE_DOCUMENT_SCHEMA_VERSION`
+bump**; all exercised Page mutations stay internal `/admin/api/*` routes under
+the session cookie, CSRF, and the `admin_write` rate-limit bucket.
+
+- **Strict reject-unknown boundary.** PageDocumentV2 remains the fail-closed
+  persistence boundary. A nested unknown member (including unknown gallery
+  keys, legacy gallery aliases, and arbitrary responsive style keys) returns
+  `page_document_unknown_field` / 400 at the exact nested field path with **no
+  persistence**; unknown root fields reject the same way. Wrong shapes, missing
+  required fields, unsafe nonempty media URLs, invalid or duplicate category
+  tokens, limit overflow, and base-only keys written into a responsive override
+  return `page_document_invalid` / 400. Stored reads stay non-destructive:
+  legacy rows are adapted and pruned without rewriting caller data, and no
+  invalid stored member is ever promoted into a fresh write.
+- **Sanitizer fail-closed.** Author-controlled CSS, URLs, and category values
+  go through one positive grammar. Colors delegate to TASK-541's
+  `parseCssColorValue(raw, "authoring")` with the exact seven-token
+  `var(--color-*)` filter. Background paint is parsed once into validated image
+  layers plus an optional canonical final color; the raw whole value rejects on
+  any C0/C1 control, non-ASCII whitespace, BOM, unsafe function/protocol/
+  at-rule, imbalance, empty layer, or over-cap layer stack. Grid lengths allow
+  unitless zero only. Gallery category tokens are bounded kebab tokens
+  (`^[\w-]{1,48}$`, 1..12 per item) revalidated at render. Invalid input
+  produces a deterministic diagnostic and zero unsafe CSS bytes.
+- **Marquee replica security.** A seamless marquee replica is emitted only for
+  a recursively safe subtree; `video`/`form`/`collection`/`filters`/`embed`
+  and nested authored marquees are unsafe by exhaustive map. An approved
+  replica carries `aria-hidden` and native `inert` (focus and activation
+  suppression), namespaces local DOM/SVG ids and identifier-bearing data hooks
+  through separate eligibility sets, and rewrites `url(#...)`/`aria-*`/`htmlFor`
+  references only when the target is a locally emitted id. The two styling-only
+  replica scope aliases retain canonical original block ids and never act as
+  selection/runtime identities; no alias leaks to primary, non-seamless, unsafe
+  fallback, or non-owning output. An unsafe authored `seamless:true` degrades
+  to one canonical segment with exactly one script/nonce/global-runtime/
+  network-bearing surface.
+- **Effects runtime security.** The emitted runtime stays one static
+  dependency-free IIFE: fixed selectors and validated DOM data/custom
+  properties only — no interpolation of stored data, `eval`, `Function`,
+  `innerHTML`, network, or storage. Every binder rejects replica candidates
+  (self or ancestor) before listener/state attachment and before its WeakSet
+  mark. Spotlight writes only `--spotlight-x`/`--spotlight-y` on the matched
+  `[data-page-spotlight]` root; tilt and magnetic write/reset only their fixed
+  transform custom properties, never the whole `transform`. Switcher/gallery
+  remain functional under reduced motion; motion binders stay reduced-motion
+  and fine-pointer gated. Listener passivity is per-event and fixed: `keydown`
+  binds with `{passive:false}` only because switcher/gallery arrow-key roving
+  calls `preventDefault`; all other listeners stay `{passive:true}`. A blanket
+  `{passive:true}` would re-introduce the passive-listener `preventDefault`
+  console error and break keyboard roving.
+- **Rate limit and CSRF shape.** Session-backed Page mutations (create, update,
+  autosave, publish) charge the `admin_write` bucket and require the real
+  `X-CSRF-Token` header issued by the CSRF endpoint. Unauthenticated,
+  missing/invalid-CSRF, insufficient-RBAC, and writer-publish requests return
+  exact 401/403 envelopes with zero owned mutation.
+- **Present-only identity.** Un-authored TASK-539 keys emit zero bytes: no
+  seeded resolver default, no emitted style/CSS, and legacy/no-override
+  documents stay byte-identical. Secrets, session tokens, CSRF tokens, and
+  nonces never enter browser cache, debug payloads, or docs.
 
 ## Assistant security baseline (v1)
 

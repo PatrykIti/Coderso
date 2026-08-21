@@ -7,9 +7,10 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-481-01 (content scope + chrome isolation)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-19
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -23,11 +24,11 @@ admin brand from 481-01-L02) stays admin-themed.
 Two pieces:
 1. A new pure owner helper `toPageCanvasBrandColorCssVariableMap(tokens)` in
    `core/ui/theme/tokenCss.ts` that returns the four brand vars from the resolved
-   site `DesignTokens` (mirroring the brand half of `toCssVariableMap`:113 lines
-   115–121 of that file).
+   site `DesignTokens` (mirroring the brand half of `toCssVariableMap` at
+   tokenCss.ts:163–204; brand entries :165–171).
 2. Wiring that map onto the `data-page-editor-content` scope from
    `core/admin/ui/pages/PageEditor.tsx` → `SectionCanvas`/`renderBlockFrame`,
-   memoized off `useCanvasSiteTokens` (PageEditor.tsx:373) so the existing
+   memoized off `useCanvasSiteTokens` (PageEditor.tsx:682) so the existing
    settings cache-bus (`subscribeCacheEvents` on `cacheKeys.settingsRedacted`)
    live-repaints the canvas when the owner changes site tokens — with NO
    setState-in-effect and NO change to the neutral `canvasSiteTokenVariables`
@@ -37,8 +38,8 @@ Two pieces:
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-02-L01 | `toPageCanvasBrandColorCssVariableMap` + contract tests | Small | ⏳ To Do |
-| TASK-481-02-L02 | Wire brand map onto the content scope (live repaint) | Medium | ⏳ To Do |
+| TASK-481-02-L01 | `toPageCanvasBrandColorCssVariableMap` + contract tests | Small | ✅ Done |
+| TASK-481-02-L02 | Wire brand map onto the content scope (live repaint) | Medium | ✅ Done |
 
 ## Dependencies
 

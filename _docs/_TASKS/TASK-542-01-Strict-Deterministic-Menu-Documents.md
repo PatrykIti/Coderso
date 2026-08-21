@@ -7,8 +7,9 @@
 **Category:** Menus / Domain Model / Validation / Compatibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-541
-**Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Status:** ✅ Done
+**Completed:** 2026-08-21
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
@@ -23,7 +24,7 @@ version, migration, or automatic persistence rewrite is added.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-542-01-L01 | Require unique IDs, topology, and stable legacy reads | `core/services/menus/menuDocumentV2.ts` | ⏳ To Do |
+| TASK-542-01-L01 | Require unique IDs, topology, and stable legacy reads | `core/services/menus/menuDocumentV2.ts` | ✅ Done |
 
 ## Fixed contract
 

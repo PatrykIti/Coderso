@@ -8,17 +8,49 @@
 **Category:** Menus / Domain Model / Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-541-02-L02
-**Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Status:** ✅ Done
+**Completed:** 2026-08-21
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
 ## Exclusive ownership
 
-- `core/services/menus/menuDocumentV2.ts`
+- `core/services/menus/menuDocumentV2.ts` (facade after the split below)
+- `core/services/menus/menuDocumentV2Schema.ts`
+- `core/services/menus/menuDocumentV2Normalize.ts`
+- `core/services/menus/menuDocumentV2Devices.ts`
+- `core/services/menus/menuDocumentV2Ops.ts`
 
 Do not edit `menuDocumentCss.ts`, routes, service orchestration, renderer,
-MenuDesignEditor, tests, or TASK-541 color code.
+MenuDesignEditor, or TASK-541 color code. The named direct gate suites
+(`tests/vitest/services/menu-document-v2.test.ts`, `tests/unit/menus/menuService.test.ts`,
+`tests/integration/routes/menus.test.ts`) may receive mechanical/type-only adjustments
+when the facade split requires them (import/type fixes only, no assertion weakening);
+additive contract tests belong to TASK-542-04-L01.
+
+## Line-gate split plan
+
+`menuDocumentV2.ts` is 2,765 lines at HEAD 3c470092 and must be split in this
+same change: the 1,000-line gate applies at TASK-542 close, so deferring to a
+later family is not allowed. Split by cohesive responsibility and preserve the
+public facade so every existing import site keeps importing `menuDocumentV2`
+unchanged.
+
+| New module | Responsibility |
+|---|---|
+| `menuDocumentV2Schema.ts` | schema contract: type declarations, enum/const arrays, key sets, number ranges, defaults, `MenuDocumentError`, `isMenuDocumentError` |
+| `menuDocumentV2Normalize.ts` | strict normalization engine: primitive guards, deterministic ID allocation, block/section/leaf/segment/appearance normalizers, exact-key gates, topology assertion, `normalizeMenuDocumentV2ForWrite`, `normalizeStoredMenuDocumentV2ForRead`, empty-document constant |
+| `menuDocumentV2Devices.ts` | device resolvers plus read/patch/clear/has overrides (section appearance, block visibility, brand style, nav level, nav chrome) and `menuDocumentHasScrolledVariantForAnyDevice` |
+| `menuDocumentV2Ops.ts` | document CRUD (`createDefaultMenuBlock`, `createDefaultMenuDocumentV2`, `findMenuBlock`, `insertMenuBlock`, `deleteMenuBlock`, `reorderMenuBlock`) plus `normalizeMenuBoxShadowValue`, `resolveBrandImageSrc` |
+| `menuDocumentV2.ts` | facade: re-exports the four modules' public symbols; adds no new public surface |
+
+Land order: `Schema → Normalize → Devices → Ops → Facade`. Re-run
+`bun --cwd core lint:types`, `bun --cwd core lint`, and the owned
+`tests/vitest/services/menu-document-v2.test.ts` after each step. Post-split
+receipt: each extraction module is at most 1,000 physical lines (`wc -l`) and
+the facade is a thin re-export; record the verified line counts in closeout
+evidence.
 
 ## Grounded anchors
 

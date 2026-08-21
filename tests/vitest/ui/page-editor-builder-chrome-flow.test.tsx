@@ -765,7 +765,7 @@ test("PageEditor reserves right-rail padding on the canvas scroller while a sele
     // The editor auto-selects the first section, so the right rail is visible
     // and right padding is reserved from the start.
     expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeTruthy();
-    expect(scroller.style.paddingRight).toBe("300px");
+    expect(scroller.className).toContain("sm:pr-[300px] lg:pr-[300px]");
     // The builder branch never sets the legacy bottom-clearance var.
     expect(scroller.style.paddingBottom).toBe("");
     expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("");
@@ -775,12 +775,12 @@ test("PageEditor reserves right-rail padding on the canvas scroller while a sele
     dispatchDocumentKey("Escape");
     await flush();
     expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeFalsy();
-    expect(scroller.style.paddingRight).toBe("");
+    expect(scroller.className).not.toContain("sm:pr-[300px] lg:pr-[300px]");
 
     // Selecting a block restores the right padding.
     clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
     await flush();
-    expect(scroller.style.paddingRight).toBe("300px");
+    expect(scroller.className).toContain("sm:pr-[300px] lg:pr-[300px]");
   } finally {
     view.cleanup();
   }

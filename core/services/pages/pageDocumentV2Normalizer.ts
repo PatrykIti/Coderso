@@ -31,6 +31,7 @@ import {
 import {
   PAGE_DOCUMENT_SCHEMA_VERSION,
   PageDocumentError,
+  type PageBlockStyleV2,
   type PageBlockType,
   type PageBlockV2,
   type PageBreakpoint,
@@ -39,6 +40,7 @@ import {
   type PageSectionType,
   type PageSectionV2,
 } from "./pageDocumentV2Types";
+import type { PageBlockResponsiveLayerV2 } from "./pageResponsiveStyleV2";
 
 const toSectionName = (type: PageSectionType) =>
   type
@@ -221,6 +223,27 @@ export function resolvePageSectionForBreakpoint(
   };
 }
 
+/**
+ * TASK-539 present-key layer merge (single source for the resolver and the
+ * facade). Copies only OWN present `x`/`y`/`z` keys from the override onto a
+ * fresh copy of the base layer; override values win. It never spreads, clones,
+ * or casts a broad override into the result (so `anchor` can never leak in).
+ * Returns `undefined` when the merged layer would be empty.
+ */
+export function mergePageBlockLayerPresentKeys(
+  base: PageBlockStyleV2["layer"],
+  override: PageBlockResponsiveLayerV2 | undefined
+): PageBlockStyleV2["layer"] {
+  if (!base && !override) return undefined;
+  const merged: NonNullable<PageBlockStyleV2["layer"]> = { ...(base ?? {}) };
+  for (const key of ["x", "y", "z"] as const) {
+    if (override && Object.prototype.hasOwnProperty.call(override, key)) {
+      merged[key] = override[key];
+    }
+  }
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
 export function resolvePageBlockForBreakpoint(
   block: PageBlockV2,
   breakpoint: PageBreakpoint
@@ -243,6 +266,17 @@ export function resolvePageBlockForBreakpoint(
   if (!override) return resolvedSlots ? { ...base, slots: resolvedSlots } : base;
 
   const style = { ...(base.style ?? {}), ...(override.style ?? {}) };
+  // TASK-539: only nested `layer` receives present-key merge. When the helper
+  // returns a layer, assign it as an OWN `style.layer` key; when it returns
+  // undefined, delete the possibly spread `style.layer` key BEFORE deciding
+  // whether the style record itself is empty (no `undefined` own key, and no
+  // raw override layer surviving).
+  const mergedLayer = mergePageBlockLayerPresentKeys(base.style?.layer, override.style?.layer);
+  if (mergedLayer !== undefined) {
+    style.layer = mergedLayer;
+  } else {
+    delete style.layer;
+  }
   const resolved: PageBlockV2 = {
     ...base,
     props: { ...base.props, ...(override.props ?? {}) },

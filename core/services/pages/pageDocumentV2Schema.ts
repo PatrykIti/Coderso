@@ -3,6 +3,7 @@ import {
   booleanSchema,
   numericSchema,
   pageBlockDepthJsonSchemas,
+  pageBlockResponsiveStyleJsonSchema,
   pageBlockStyleJsonSchema,
   pageGlowJsonSchema,
   pageSectionBorderJsonSchema,
@@ -47,7 +48,16 @@ const partialSectionLayoutJsonSchema: RecordValue = {
   },
 };
 
-const partialSectionStyleJsonSchema: RecordValue = {
+/**
+ * TASK-539 dedicated responsive section style definition. Strict
+ * `additionalProperties:false` mirror of `PageSectionResponsiveStyleV2`:
+ * ONLY the paint fields that render per device. Every base-only/structural
+ * section key (`scrollEffect`, `parallaxIntensity`, `surfacePreset`,
+ * `composition`, `fullBleed`, `noiseOverlay`, `columnTemplate`, `border`) is
+ * absent, so a hand-authored responsive `style` carrying one rejects instead
+ * of round-tripping. Reuses the base owners' enum/bounds/nested schemas.
+ */
+const pageSectionResponsiveStyleJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -59,31 +69,9 @@ const partialSectionStyleJsonSchema: RecordValue = {
     accent: { type: "string" },
     radius: numericSchema(0, 64),
     shadow: { type: "string", enum: [...pageShadowTokens] },
-    // Harmless defence-in-depth mirror (TASK-521-01-L01): section effects render
-    // device-uniform, but a hand-authored responsive[bp].style carrying these
-    // round-trips instead of being rejected by additionalProperties:false.
-    scrollEffect: { type: "string", enum: [...pageSectionScrollEffects] },
-    parallaxIntensity: numericSchema(
-      PAGE_PARALLAX_INTENSITY_CLAMP.min,
-      PAGE_PARALLAX_INTENSITY_CLAMP.max
-    ),
-    // TASK-522-01-L03 section composition fields (present-only mirror).
-    surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
-    composition: { type: "string", enum: [...pageCompositions] },
-    // TASK-525-01-L02 full-bleed background (present-only boolean).
-    fullBleed: booleanSchema,
     // ── TASK-531 REGION: glow box-shadow (present-only mirror).
     glow: pageGlowJsonSchema,
     // ── END TASK-531 REGION ──────────────────────────────────────────────────
-    // ── TASK-534 ── static grain overlay (present-only boolean).
-    noiseOverlay: booleanSchema,
-    // ── TASK-533-01 REGION: asymmetric column ratio (value validated at
-    // normalize by sanitizeAuthoringGridTemplate; string shape only here).
-    columnTemplate: { type: "string" },
-    // ── END TASK-533-01 REGION ────────────────────────────────────────────────
-    // ── TASK-533-02 REGION: per-edge section border (present-only object).
-    border: pageSectionBorderJsonSchema,
-    // ── END TASK-533-02 REGION ────────────────────────────────────────────────
   },
 };
 
@@ -122,7 +110,9 @@ const sectionResponsiveJsonSchema: RecordValue = {
         additionalProperties: false,
         properties: {
           layout: partialSectionLayoutJsonSchema,
-          style: partialSectionStyleJsonSchema,
+          // TASK-539: dedicated strict responsive style definition, never the
+          // complete/partial base style object (base-only keys reject).
+          style: { $ref: "#/$defs/pageSectionResponsiveStyle" },
           spacing: partialSectionSpacingJsonSchema,
           visibility: partialSectionVisibilityJsonSchema,
         },
@@ -135,7 +125,15 @@ export const pageDocumentV2JsonSchema: RecordValue = {
   type: "object",
   required: ["schemaVersion", "sections"],
   additionalProperties: false,
-  $defs: { pageBlockStyle: pageBlockStyleJsonSchema, ...pageBlockDepthJsonSchemas },
+  $defs: {
+    pageBlockStyle: pageBlockStyleJsonSchema,
+    // TASK-539 strict dedicated responsive style definitions (see the owner
+    // modules for the exact allowed-key sets; block definition is owned by
+    // `pageBlockJsonSchemaV2` next to its base sibling).
+    pageBlockResponsiveStyle: pageBlockResponsiveStyleJsonSchema,
+    pageSectionResponsiveStyle: pageSectionResponsiveStyleJsonSchema,
+    ...pageBlockDepthJsonSchemas,
+  },
   properties: {
     schemaVersion: { const: PAGE_DOCUMENT_SCHEMA_VERSION },
     breakpoints: {

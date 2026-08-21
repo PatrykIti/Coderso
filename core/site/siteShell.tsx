@@ -3,13 +3,18 @@ import type { ReactNode } from "react";
 import {
   MENU_RESPONSIVE_BREAKPOINT_KEYS,
   hasMenuBlockVisibilityOverride,
+  menuDocumentHasScrolledVariantForAnyDevice,
   resolveBrandImageSrc,
   resolveMenuBlockVisibleForDevice,
   resolveMenuBrandStyleForDevice,
-  type MenuBarLayout,
   type MenuBlockV2,
   type MenuDocumentV2,
 } from "../services/menus/menuDocumentV2";
+import {
+  hasPublicNavigationHref,
+  projectPublicNavigationItems,
+  type PublicNavigationItem,
+} from "../services/navigation/publicNavigationProjection";
 import { lucideKebabIconComponents } from "../services/renderContracts/timelineLucideIcons";
 import type { MenuAppearance } from "../services/menus/normalizeMenuAppearance";
 import { sanitizeAuthoringLinkHref } from "../services/pages/pageAuthoringSanitizers";
@@ -109,10 +114,15 @@ export type SiteShellRenderProps = {
   footerDocument: PageDocumentV2 | null;
 };
 
-const isPubliclyVisibleNavigationItem = (item: NavigationItem) =>
-  item.meta?.visibility !== "logged_in";
+/**
+ * TASK-542-03: public visibility + renderability are owned by the shared
+ * projection (`projectPublicNavigationItems`, 542-03-L01). The rendered tree
+ * is projected ONCE per render and threaded into BOTH the active-identity
+ * resolver and the recursive renderer so index paths cannot drift.
+ */
 
-const hasRealHref = (href: string) => href.trim().length > 0 && href.trim() !== "#";
+/** DFS path key for an item's position in the projected tree ("0.2.1"). */
+const pathKey = (path: readonly number[]) => path.join(".");
 
 /**
  * TASK-504-03: normalize an href/path to a comparable root-relative pathname, or
@@ -147,10 +157,11 @@ export const resolveMenuActiveHref = (
   if (!activePath) return null; // absent ⇒ no stamp (byte-identical)
   const current = normalizeNavPath(activePath) ?? "/";
   let best: string | null = null;
-  const visit = (list: NavigationItem[]) => {
+  // TASK-542-03: the shared projection owns visibility + renderability, so the
+  // back-compat href winner walks the SAME projected tree the render consumes.
+  const projected = projectPublicNavigationItems(items);
+  const visit = (list: readonly PublicNavigationItem[]) => {
     for (const item of list) {
-      if (!isPubliclyVisibleNavigationItem(item)) continue; // subtree hidden (flatten parity)
-      if (!isRenderableNavItem(item)) continue; // never produces markup
       const target = normalizeNavPath(item.href);
       if (target) {
         const matches =
@@ -160,23 +171,49 @@ export const resolveMenuActiveHref = (
       if (item.children?.length) visit(item.children);
     }
   };
-  visit(items);
+  visit(projected);
   return best;
 };
 
 type SiteNavInteraction = "details" | "hover";
 
 /**
- * An item earns markup iff it links somewhere OR shelters a publicly visible
- * descendant that does — preserves the pre-502 "no empty dropdowns / no
- * dangling toggles" behavior at EVERY depth (the old flatten dropped groups
- * whose only content was unreachable descendants).
+ * TASK-542-03: identity-based current-page resolution. Walks the SAME
+ * PROJECTED tree the renderer consumes (renderable-only, hidden branches
+ * removed) so index paths cannot drift and a hidden item can never win.
+ * Returns the DFS path key ("0.2.1") of the winning link, or null when
+ * `activePath` is absent. Longest normalized target wins; an equal-length
+ * tie keeps the FIRST DFS match (so duplicate hrefs stamp exactly ONE
+ * link — the href-only `resolveMenuActiveHref` above stays exported for
+ * back-compat, but the render stamps by identity).
  */
-const isRenderableNavItem = (item: NavigationItem): boolean =>
-  hasRealHref(item.href) ||
-  (item.children ?? []).some(
-    (child) => isPubliclyVisibleNavigationItem(child) && isRenderableNavItem(child)
-  );
+export const resolveMenuActiveItemPath = (
+  items: readonly PublicNavigationItem[],
+  activePath: string | null | undefined
+): string | null => {
+  if (!activePath) return null; // absent ⇒ no stamp (byte-identical)
+  const current = normalizeNavPath(activePath) ?? "/";
+  let winnerLength = 0;
+  let winnerKey: string | null = null;
+  const visit = (nodes: readonly PublicNavigationItem[], parentPath: readonly number[] = []) => {
+    nodes.forEach((item, index) => {
+      const itemPath = [...parentPath, index];
+      const target = normalizeNavPath(item.href);
+      if (target) {
+        const matches =
+          target === "/" ? current === "/" : current === target || current.startsWith(`${target}/`);
+        // Strict `>` keeps the FIRST DFS match on equal-length duplicates.
+        if (matches && target.length > winnerLength) {
+          winnerLength = target.length;
+          winnerKey = pathKey(itemPath);
+        }
+      }
+      visit(item.children ?? [], itemPath);
+    });
+  };
+  visit(items);
+  return winnerKey;
+};
 
 /**
  * TASK-499-01: server-rendered "button" nav affordance. Applied via an inline
@@ -197,14 +234,17 @@ const siteNavButtonStyle = {
 
 const SiteNavLink = ({
   item,
-  activeHref,
+  itemPath,
+  activeIdentity,
 }: {
-  item: NavigationItem;
-  /** TASK-504-03: winning current-page path; default undefined ⇒ no stamp ⇒ legacy byte-identical. */
-  activeHref?: string | null;
+  item: PublicNavigationItem;
+  /** TASK-542-03: this item's DFS path in the projected tree ("0.2.1"). */
+  itemPath: readonly number[];
+  /** TASK-542-03: winning current-page path key; undefined ⇒ no stamp ⇒ legacy byte-identical. */
+  activeIdentity?: string | null;
 }) => {
   const isButton = item.meta?.variant === "button";
-  const isCurrent = activeHref != null && normalizeNavPath(item.href) === activeHref;
+  const isCurrent = activeIdentity != null && pathKey(itemPath) === activeIdentity;
   return (
     <a
       className="site-nav-link"
@@ -223,47 +263,50 @@ const SiteNavLink = ({
 
 const SiteNavItem = ({
   item,
+  itemPath,
   interaction = "details", // fail-safe default: works with the frozen base sheet alone
-  activeHref,
+  activeIdentity,
 }: {
-  item: NavigationItem;
+  item: PublicNavigationItem;
+  /** TASK-542-03: DFS path of THIS item ("0", "0.2", ...); children append their projected index. */
+  itemPath: readonly number[];
   interaction?: SiteNavInteraction;
-  /** TASK-504-03: forwarded to this item's link AND recursive children; default undefined ⇒ no stamp. */
-  activeHref?: string | null;
+  /** TASK-542-03: forwarded to this item's link AND recursive children; undefined ⇒ no stamp. */
+  activeIdentity?: string | null;
 }) => {
-  // Filter-then-recurse: an invisible item hides its WHOLE subtree (flatten
-  // parity), and non-renderable descendants never produce empty markup.
-  const children = (item.children ?? [])
-    .filter(isPubliclyVisibleNavigationItem)
-    .filter(isRenderableNavItem);
+  // TASK-542-03: `item.children` are already PROJECTED (hidden branches and
+  // dead leaves removed by the shared projection), so the recursive indices
+  // match the identity paths exactly.
+  const children = item.children ?? [];
 
   if (children.length === 0) {
-    if (!hasRealHref(item.href)) return null; // unchanged leaf semantics
+    if (!hasPublicNavigationHref(item.href)) return null; // unchanged leaf semantics
     return (
       <li className="site-nav-item">
-        <SiteNavLink item={item} activeHref={activeHref} />
+        <SiteNavLink item={item} itemPath={itemPath} activeIdentity={activeIdentity} />
       </li>
     );
   }
 
   const sublist = (
     <ul className="site-nav-sublist">
-      {interaction === "details" && hasRealHref(item.href) ? (
+      {interaction === "details" && hasPublicNavigationHref(item.href) ? (
         // Details-mode reachability convention (audit resolution, option (b)):
         // a <summary> is not a link, so the linked parent stays reachable as
         // the FIRST entry of its DIRECT sublist (never flattened descendants).
         // Conscious trade-off: the "label exactly once" guarantee is a
         // hover-mode property; details mode trades it for parent reachability.
         <li className="site-nav-item">
-          <SiteNavLink item={item} activeHref={activeHref} />
+          <SiteNavLink item={item} itemPath={itemPath} activeIdentity={activeIdentity} />
         </li>
       ) : null}
       {children.map((child, index) => (
         <SiteNavItem
           key={`${child.label}-${index}`}
           item={child}
+          itemPath={[...itemPath, index]}
           interaction={interaction}
-          activeHref={activeHref}
+          activeIdentity={activeIdentity}
         />
       ))}
     </ul>
@@ -288,8 +331,8 @@ const SiteNavItem = ({
   // the sublist without a `.site-nav-group` class.
   return (
     <li className="site-nav-item" data-site-nav-group="true">
-      {hasRealHref(item.href) ? (
-        <SiteNavLink item={item} activeHref={activeHref} />
+      {hasPublicNavigationHref(item.href) ? (
+        <SiteNavLink item={item} itemPath={itemPath} activeIdentity={activeIdentity} />
       ) : (
         // BOTH classes (502-02 Coordination): link color/typography/caret rules
         // target `.site-nav-link`, so group labels style with no new selectors.
@@ -328,7 +371,10 @@ export function SiteHeaderNav({
   /** Nav extras blocks (CTA button / logo image), already schema-sanitized. */
   extras?: PageBlockV2[] | null;
 }) {
-  const items = navigation.items.filter(isPubliclyVisibleNavigationItem);
+  // TASK-542-03: the shared projection owns public visibility + renderability
+  // (hidden subtrees, dead leaves, linkless-group preservation) — the legacy
+  // header renders the same projected tree the document path uses.
+  const items = projectPublicNavigationItems(navigation.items);
   const extraBlocks = extras ?? [];
   if (items.length === 0 && extraBlocks.length === 0) return null;
 
@@ -351,7 +397,12 @@ export function SiteHeaderNav({
             </details>
             <ul className="site-nav-list" data-site-nav-list="true">
               {items.map((item, index) => (
-                <SiteNavItem key={`${item.label}-${index}`} item={item} interaction="details" />
+                <SiteNavItem
+                  key={`${item.label}-${index}`}
+                  item={item}
+                  itemPath={[index]}
+                  interaction="details"
+                />
               ))}
             </ul>
           </nav>
@@ -458,14 +509,15 @@ const NavItemsRender = ({
   items,
   label,
   blockId,
-  activeHref,
+  activeIdentity,
 }: {
-  items: NavigationItem[];
+  /** TASK-542-03: the PROJECTED tree (hidden/dead branches already removed). */
+  items: PublicNavigationItem[];
   label: string;
   /** TASK-501-02: inert visibility hook stamped on the `<nav>` LANDMARK (the ancestor above `.site-nav-list`). */
   blockId: string;
-  /** TASK-504-03: winning current-page path forwarded into the recursive nav tree; null ⇒ no stamp. */
-  activeHref?: string | null;
+  /** TASK-542-03: winning current-page path key forwarded into the recursive nav tree; undefined ⇒ no stamp. */
+  activeIdentity?: string | null;
 }) => {
   if (items.length === 0) return null;
   return (
@@ -483,8 +535,9 @@ const NavItemsRender = ({
           <SiteNavItem
             key={`${item.label}-${index}`}
             item={item}
+            itemPath={[index]}
             interaction="hover"
-            activeHref={activeHref}
+            activeIdentity={activeIdentity}
           />
         ))}
       </ul>
@@ -541,17 +594,13 @@ const BrandRender = ({
       : undefined;
     if (Icon) {
       const iconSize = style.iconSize ?? 24;
-      graphic = (
-        <Icon
-          aria-hidden="true"
-          width={iconSize}
-          height={iconSize}
-          // `iconColor` is a validated color token (TASK-520-01). Defence in
-          // depth: it reaches ONLY an inline `style` as a whitelisted string,
-          // via `color` so lucide's `stroke=currentColor` inherits it.
-          style={style.iconColor ? { color: style.iconColor } : undefined}
-        />
-      );
+      // TASK-542-03: NO inline `style.color` — the doc-scoped CSS
+      // (`[data-menu-block-id] svg{color:...}`, TASK-542-02) owns the icon tint
+      // on BOTH front (`buildMenuDocumentCss`) and canvas preview
+      // (`buildMenuDocumentPreviewCss`); lucide fills `currentColor`. Width/
+      // height stay presentation attributes (SSR baseline, media-delta CSS
+      // overrides them per device).
+      graphic = <Icon aria-hidden="true" width={iconSize} height={iconSize} />;
     }
   } else if (block.props.mode === "image") {
     // TASK-504-03 (defect B1): resolve the brand image `src` through the SINGLE
@@ -672,28 +721,25 @@ export function SiteHeaderMenuDocumentRender({
    */
   activePath?: string | null;
 }) {
-  const items = (navigation?.items ?? []).filter(isPubliclyVisibleNavigationItem);
+  const items = projectPublicNavigationItems(navigation?.items ?? []);
   const navLabel = navigation?.label ?? "Site navigation";
-  const activeHref = resolveMenuActiveHref(items, activePath);
+  // TASK-542-03: identity-based winner over the SAME projected array the
+  // renderer consumes — indices cannot drift and duplicates stamp ONE link.
+  const activeIdentity = resolveMenuActiveItemPath(items, activePath);
   const blocks = document.sections[0]?.blocks ?? [];
 
   // TASK-520-04-L02: scroll-state machine gate. Emit the tiny front-only inline
   // script ONLY when (a) it is the front (activePath is a string; null in
-  // preview/canvas), AND (b) the menu bar is `sticky`, AND (c) at least one
-  // scrolled-variant key is authored — so legacy / no-scrolled docs stay
-  // byte-identical (no script). The base keys `radius`/`shadowCustom` are
+  // preview/canvas), AND (b) menuDocumentHasScrolledVariantForAnyDevice —
+  // ANY effective device layout (desktop/tablet/mobile) is sticky AND authors a
+  // scrolled-variant key. TASK-542-03 defect fix: the old gate read only
+  // `document.sections[0]?.layout` (the desktop base bar), so a tablet/mobile-
+  // only authored scrolled variant never armed the script. The CSS media rules
+  // decide which device visibly responds; the script remains ONE static,
+  // front-only instance. The base keys `radius`/`shadowCustom` are
   // state-independent and do NOT arm the machine.
-  const barLayout = document.sections[0]?.layout as MenuBarLayout | undefined;
-  const hasScrolledVariant =
-    !!barLayout &&
-    barLayout.sticky === true &&
-    (barLayout.surfaceColorScrolled != null ||
-      barLayout.borderColorScrolled != null ||
-      barLayout.borderWidthScrolled != null ||
-      barLayout.shadowScrolled != null ||
-      barLayout.shadowCustomScrolled != null);
   const isFront = typeof activePath === "string";
-  const emitScrollMachine = isFront && hasScrolledVariant;
+  const emitScrollMachine = isFront && menuDocumentHasScrolledVariantForAnyDevice(document);
 
   return (
     <header
@@ -714,7 +760,7 @@ export function SiteHeaderMenuDocumentRender({
                   items={items}
                   label={navLabel}
                   blockId={block.id}
-                  activeHref={activeHref}
+                  activeIdentity={activeIdentity}
                 />
               );
             case "brand":

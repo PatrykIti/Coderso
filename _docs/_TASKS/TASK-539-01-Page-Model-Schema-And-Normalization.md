@@ -7,8 +7,9 @@
 **Category:** Pages / PageDocumentV2 / Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-538, TASK-541; TASK-540 fully terminal; TASK-478/TASK-481 collision boundary resolved
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -28,17 +29,24 @@ unchanged. Optional values remain present-only.
 
 | Leaf | Scope | Status |
 |---|---|---|
-| TASK-539-01-L01 | Sole model/module/facade and Page model unit-test writer | ⏳ To Do |
-| TASK-539-01-L02 | Existing registered Bun/DB Page route proof only | ⏳ To Do |
+| TASK-539-01-L01 | Sole model/module/facade and Page model unit-test writer | ✅ Done |
+| TASK-539-01-L02 | Existing registered Bun/DB Page route proof only | ✅ Done |
 
 Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 
 ## Single-writer ownership
 
 - L01 is the sole TASK-539 writer of
-  `core/services/pages/pageDocumentV2.ts`, every new module under
-  `core/services/pages/pageDocumentV2/`, and the Page model Vitest split named in
-  its leaf, including the dedicated
+  `core/services/pages/pageDocumentV2.ts` and the landed flat document family
+  `pageDocumentV2Types.ts`, `pageDocumentV2Contract.ts`,
+  `pageDocumentV2Schema.ts`, `pageDocumentV2Normalizer.ts`,
+  `pageDocumentV2Normalization.ts`, `pageTextMarksV2.ts`,
+  `pageBlockJsonSchemaV2.ts`, `pageSectionNormalizerV2.ts`, and
+  `pageBlockNormalizerV2.ts` (no `pageDocumentV2/` directory), plus the two new
+  cohesive modules `pageGalleryV2.ts` (gallery type + seven `PAGE_GALLERY_*`
+  constants) and `pageResponsiveStyleV2.ts` (the three new dedicated responsive
+  style types) created by the L01 split, plus the Page model
+  Vitest split named in its leaf, including the dedicated
   `tests/vitest/pages/page-document-v2-facade.test.ts` source-manifest and
   reference-identity suite. It performs the source and test split before adding
   behavior.
@@ -55,10 +63,10 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 
 - `pageDocumentV2.ts` remains the stable public import path and contains explicit
   named value/type re-exports only; `export *` is forbidden.
-- The grounded pre-task facade surface is exactly 74 explicit type names plus 121
+- The grounded pre-task facade surface is exactly 74 explicit type names plus 125
   runtime names. L01 enumerates every baseline name and direct owner. The only
   additions are four types and eight runtime names, so the final facade is exactly
-  78 type names plus 129 runtime names (207 entries total); any extra, missing,
+  78 type names plus 133 runtime names (211 entries total); any extra, missing,
   duplicate, aliased, or owner-mismatched export fails the dedicated facade suite.
 - Each public runtime value is defined once in its cohesive owner module. Direct owner
   imports and facade imports are reference-identical; no facade wrapper, clone, or
@@ -145,7 +153,7 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
 - Existing public imports compile unchanged. The dedicated facade suite type-imports
   all exact
   78 type names, statically proves the complete sorted type/value owner maps, pins
-  `Object.keys` to the exact 129 runtime names, and proves every runtime export is
+  `Object.keys` to the exact 133 runtime names, and proves every runtime export is
   reference-identical to its direct owner.
 - Canonical gallery rows, including the empty draft sentinel, round-trip exactly.
 - Strict write errors and stored-read compatibility follow the locked matrix above.

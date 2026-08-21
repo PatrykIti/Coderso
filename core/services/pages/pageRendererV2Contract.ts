@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import type { PageBlockPath } from "./pageBlockPaths";
+import type { PageBlockGridPlacementTarget } from "./pageBlockGridPlacement";
+import type { PageReplicaIdentityContext } from "./pageRendererReplicaIdentity";
 import type { PageRuntimeDataByBlockId } from "./pageRuntimeBindingContract";
 import { PAGE_BLOCK_ID_ATTRIBUTE, PAGE_SECTION_ID_ATTRIBUTE } from "./pageResponsiveCss";
 import type { PageBlockSlotKey, PageBlockV2, PageSectionV2 } from "./pageDocumentV2Types";
@@ -29,8 +31,15 @@ export type PageSectionDataAttributes = {
 
 export type PageBlockDataAttributes = {
   "data-page-block": PageBlockV2["type"];
-  /** Scope hook consumed by the responsive CSS contract (`pageResponsiveCss`). */
-  [PAGE_BLOCK_ID_ATTRIBUTE]: string;
+  /**
+   * Canonical selection/runtime id. TASK-539-05-L01 — an APPROVED marquee
+   * replica frame deliberately omits it and emits the style-scope alias
+   * (`PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`) instead, so the
+   * replicated node never claims the canonical `data-block-id` (its value
+   * stays a single DOM node). Optional to model that one replica case; every
+   * primary/canonical frame still emits it.
+   */
+  [PAGE_BLOCK_ID_ATTRIBUTE]?: string;
 };
 
 export type PageSectionRenderProps = {
@@ -113,6 +122,40 @@ export type PageBlockRenderContext = {
   blockPath: PageBlockPath;
   depth: number;
   includeHiddenBlocks: boolean;
+  /**
+   * TASK-539-05-L01 — the owning section of the block being rendered. Root
+   * blocks receive the real section (for grid-placement classification and
+   * reveal-host stamping); nested slot children carry it through unchanged.
+   * Undefined only for direct, section-less `renderPageBlockContent` calls.
+   */
+  section?: PageSectionV2;
+  /**
+   * TASK-539-05-L01 — the L05-computed grid-item placement target for THIS
+   * block, computed exactly once at the section boundary
+   * (`resolvePageBlockGridPlacement`). `"block-frame"` keeps the base span
+   * style + `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE` on the frame;
+   * `"section-template-wrapper"` moves both to the template wrapper;
+   * `"none"` (nested children, per-column composition, non-default
+   * media-split) emits neither. Undefined only for section-less direct calls
+   * (keeps the legacy default span behavior).
+   */
+  spanTarget?: PageBlockGridPlacementTarget;
+  /**
+   * TASK-539-05-L01 — the approved marquee replica identity context. When
+   * present, every emitted DOM/SVG `id` definition, matching local reference,
+   * and identifier-bearing data hook is namespaced through the identity
+   * transformer, and block frames emit the style-scope aliases instead of the
+   * canonical selection/runtime hooks. Primary (non-replica) renders leave it
+   * undefined and stay byte-identical.
+   */
+  replicaIdentity?: PageReplicaIdentityContext;
+  /**
+   * TASK-539-05-L01 — a block under a revealing section receives the ONE
+   * transform host attribute so its per-child reveal composes through the
+   * reveal variable in the shared formula. Set by the section boundary for
+   * root blocks and propagated unchanged to every nested slot child.
+   */
+  transformHost?: boolean;
   renderBlockFrame?: PageBlockFrameRenderer;
   renderInlineText?: PageInlineTextRenderer;
   renderColumnsSlotTrailing?: PageColumnsSlotTrailingRenderer;

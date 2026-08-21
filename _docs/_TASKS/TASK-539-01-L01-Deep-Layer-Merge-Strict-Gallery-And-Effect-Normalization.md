@@ -7,32 +7,35 @@
 **Category:** Pages / PageDocumentV2 / Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01; post-TASK-540 audit pass
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
 ## Scope and ownership
 
-This leaf is the sole writer of the PageDocumentV2 source family and model-unit family:
+This leaf is the sole writer of the PageDocumentV2 source family and model-unit family.
+TASK-547 already landed the flat-file split, so the sole-writer set is the landed FLAT
+module set (no `pageDocumentV2/` directory is introduced):
 
 ```text
 core/services/pages/pageDocumentV2.ts                         # explicit facade
-core/services/pages/pageDocumentV2/vocabulary.ts
-core/services/pages/pageDocumentV2/types.ts
-core/services/pages/pageDocumentV2/errors.ts
-core/services/pages/pageDocumentV2/registry.ts
-core/services/pages/pageDocumentV2/schema.ts
-core/services/pages/pageDocumentV2/normalizePrimitives.ts
-core/services/pages/pageDocumentV2/textMarks.ts
-core/services/pages/pageDocumentV2/normalizeSettings.ts
-core/services/pages/pageDocumentV2/normalizeStyles.ts
-core/services/pages/pageDocumentV2/normalizeProps.ts
-core/services/pages/pageDocumentV2/normalizeTree.ts
-core/services/pages/pageDocumentV2/resolution.ts
+core/services/pages/pageDocumentV2Types.ts
+core/services/pages/pageGalleryV2.ts                          # NEW: gallery type + 7 PAGE_GALLERY_* constants
+core/services/pages/pageResponsiveStyleV2.ts                  # NEW: 3 dedicated responsive style types
+core/services/pages/pageDocumentV2Contract.ts
+core/services/pages/pageDocumentV2Schema.ts
+core/services/pages/pageDocumentV2Normalizer.ts
+core/services/pages/pageDocumentV2Normalization.ts
+core/services/pages/pageTextMarksV2.ts
+core/services/pages/pageBlockJsonSchemaV2.ts
+core/services/pages/pageSectionNormalizerV2.ts
+core/services/pages/pageBlockNormalizerV2.ts
 tests/vitest/pages/page-document-v2-test-helpers.ts
-tests/vitest/pages/page-document-v2-facade.test.ts
+tests/vitest/pages/page-document-v2-facade.test.ts            # create (missing today)
 tests/vitest/pages/page-document-v2.test.ts
+tests/vitest/pages/page-document-v2-idempotence.test.ts       # split from the main suite
 tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts
 tests/vitest/pages/page-document-v2-listing-and-settings.test.ts
 tests/vitest/pages/page-document-v2-style-contracts.test.ts
@@ -46,50 +49,67 @@ test. Read the post-TASK-540 files fresh before editing.
 
 ## Mandatory cohesive split
 
-The repair baseline has `pageDocumentV2.ts` at 4,676 lines and
-`page-document-v2.test.ts` at 3,279 lines. Split first, preserving behavior, then make
-the locked changes in the owning modules.
+TASK-547 already landed the source split: the repair baseline's `pageDocumentV2.ts`
+is now 217 lines (down from the pre-split 4,676) and `page-document-v2.test.ts` is
+now 849 lines (down from the pre-split 3,279). Re-ground against those landed flat
+files before adding behavior; do NOT create a `pageDocumentV2/` directory.
 
-Module responsibilities are exact:
+Landed module responsibilities are exact:
 
-- `vocabulary.ts`: schema version, enum/tuple vocabularies and their derived public
-  type aliases, clamps, patterns, predicates, the animated-icon resolver, and
-  typography CSS lookup tables.
-- `types.ts`: composite PageDocumentV2 public data types, including
-  `PageGalleryItemV2` and the three dedicated responsive types.
-- `errors.ts`: `PageDocumentError`, its code type, and `isPageDocumentError`.
-- `registry.ts`: defaults, prop keys, block/section capabilities, slot registry,
-  list-item constructors, and active-slot lookup.
-- `schema.ts`: all PageDocumentV2 JSON-schema construction and its public schema.
-- `normalizePrimitives.ts`: mode/context types, record/array/key assertions, safe
-  scalar readers, cloning, enum/number primitives, and ID primitives.
-- `textMarks.ts`: text-mark mutation input types and normalization/apply/remove
+- `pageDocumentV2Types.ts`: schema version, enum/tuple vocabularies and their derived
+  public type aliases, clamps, patterns, predicates, animated-icon/typography lookup,
+  switcher-aria helpers, `PageDocumentError`/`PageDocumentErrorCode`, and the
+  composite PageDocumentV2 public data types (the baseline composites listed in the
+  locked manifest below). This module is currently 955 physical lines; it must stay
+  `<=1000`. This leaf therefore performs a further cohesive split before adding
+  behavior: extract the new gallery surface and the three new dedicated responsive
+  style types into two new cohesive modules owned by this leaf,
+  `pageGalleryV2.ts` (the `PageGalleryItemV2` type plus the seven
+  `PAGE_GALLERY_*` constants) and `pageResponsiveStyleV2.ts` (the
+  `PageSectionResponsiveStyleV2`, `PageBlockResponsiveLayerV2`, and
+  `PageBlockResponsiveStyleV2` contracts). No baseline type or constant may move
+  owner. The existing `PageBlockResponsiveOverrideV2`/`PageSectionResponsiveOverrideV2`
+  stay in `pageDocumentV2Types.ts` but their `style` member is retyped to the new
+  responsive style types via an import from `pageResponsiveStyleV2.ts` (one-way
+  dependency, no cycle). The `pageDocumentV2.ts` facade re-exports the four new
+  types and seven constants from these new owner modules with the same per-specifier
+  `type X` modifiers; the final 78-type / 133-runtime surface and every owner map
+  below are updated accordingly.
+- `pageDocumentV2Contract.ts`: defaults, prop keys, block/section capabilities, slot
+  registry, list-item constructors, and active-slot lookup plus their types.
+- `pageDocumentV2Schema.ts`: all PageDocumentV2 JSON-schema construction and its
+  public schema.
+- `pageDocumentV2Normalizer.ts`: factories, write/read entry points, breakpoint
+  resolution, responsive clear helpers, publish stripping, `isPageDocumentError`,
+  and `isLegacyOrVersionlessPageDocument`.
+- `pageDocumentV2Normalization.ts`: internal mode/context types,
+  record/array/key assertions, safe scalar readers, cloning, enum/number/ID
+  primitives, SEO/collection/settings/styles/props/tree normalization, and legacy
+  stored-read adapters.
+- `pageTextMarksV2.ts`: text-mark mutation input types and normalization/apply/remove
   helpers.
-- `normalizeSettings.ts`: SEO, collection-link, menu appearance, settings, and
-  settings-effects normalization.
-- `normalizeStyles.ts`: section layout/style/spacing/visibility and block
-  style/visibility normalization.
-- `normalizeProps.ts`: list/filter/gallery and per-block prop normalization.
-- `normalizeTree.ts`: responsive/block/slot/section/document traversal, legacy
-  stored-read adapters, factories, write/read entry points, and publish stripping.
-- `resolution.ts`: breakpoint resolution, present-key layer merge, and responsive
-  clear helpers.
-- `pageDocumentV2.ts`: explicit named `export { ... }` and
-  `export type { ... }` declarations only. No `export *`, executable wrapper, cloned
-  registry, or second constant definition.
+- `pageBlockJsonSchemaV2.ts`, `pageSectionNormalizerV2.ts`, and
+  `pageBlockNormalizerV2.ts`: the existing internal block/section schema and
+  normalizer owners.
+- `pageDocumentV2.ts`: explicit named `export { ... } from` clauses only, where
+  every type is exported as a per-specifier `type X` modifier inside a value
+  block (see the locked manifest). No `export *`,
+  executable wrapper, cloned registry, or second constant definition.
 
 Internal modules import owners directly rather than importing the facade, preventing
 cycles. Preserve every baseline public value/type name and every existing external
-import path. The dedicated facade test compares all 129 runtime names by `toBe`
+import path. The dedicated facade test compares all 133 runtime names by `toBe`
 against their direct owner exports and statically enforces the complete manifest.
 
-Split the oversized test by cohesive `describe` ownership:
+The test split already landed except for the facade suite. Keep the landed split by
+cohesive `describe` ownership and create the missing facade suite as the only new
+test file:
 
-- `page-document-v2.test.ts`: core document/write/read/schema/error, base responsive,
-  typography, and text-mark contracts.
-- `page-document-v2-facade.test.ts`: complete static facade manifest/owner map,
-  compile-time type-import availability, exact runtime namespace, and direct-owner
-  identity.
+- `page-document-v2.test.ts` (849 lines): core document/write/read/schema/error, base
+  responsive, typography, and text-mark contracts.
+- `page-document-v2-facade.test.ts` (MISSING — create): complete static facade
+  manifest/owner map, compile-time type-import availability, exact runtime namespace,
+  and direct-owner identity.
 - `page-document-v2-tree-and-capabilities.test.ts`: prop enums/defaults, recursive
   slots, breakpoint tree resolution/clears, factories/publish stripping, and
   capabilities.
@@ -97,6 +117,7 @@ Split the oversized test by cohesive `describe` ownership:
   section effects, settings effects/background, animated icon, and custom SVG.
 - `page-document-v2-style-contracts.test.ts`: reveal/composition/glow, grid/span,
   borders, and all TASK-539 layer/gallery/effect/divider unit cases.
+- `page-document-v2-block-roundtrip.test.ts` (413 lines): existing round-trip contract.
 - `page-document-v2-test-helpers.ts`: fixtures/builders only; no hidden test
   registration or mutable shared state.
 
@@ -107,15 +128,17 @@ files must be at most 1,000 physical lines.
 
 ## Locked facade manifest
 
-The repair audit mechanically parsed
-`core/services/pages/pageDocumentV2.ts` at
-`7af0fc62c3a501ba1e56e4972973dd7ae3bdfa01`. The baseline has exactly 74 exported
-type-alias names and 121 runtime names, with no export block, default export, or
-export-star. The split replaces the direct declarations with a declaration-only
-facade: every statement in `pageDocumentV2.ts` must be an explicit
-`export type { ... } from "./pageDocumentV2/owner"` or
-`export { ... } from "./pageDocumentV2/owner"`. Imports, local/direct declarations,
-aliases, default exports, export-star, and duplicate names are forbidden.
+The repair audit re-parsed
+`core/services/pages/pageDocumentV2.ts` at the current post-TASK-547 HEAD
+`3c470092`. The baseline has exactly 74 exported
+type-alias names and 125 runtime names, with no default export or export-star. The
+landed facade is a mixed-clause explicit facade: it uses only
+`export { ... } from "./owner"` clauses (there are zero declaration-level
+`export type { ... } from` clauses), and every type is a per-specifier
+`type X` modifier inside a value export block (the landed
+`pageDocumentV2Contract` and `pageTextMarksV2` blocks do exactly that, and the
+other blocks carry the remaining per-specifier type modifiers). This leaf adds
+no import, local/direct declaration, alias, default export, or export-star.
 
 The counts refer to explicit type-only facade names and runtime facade names.
 `PageDocumentError` belongs only to the runtime manifest below (although a class
@@ -124,7 +147,7 @@ exact owner group. Flattening and sorting the groups is the canonical comparison
 
 ### Baseline type manifest: 74 names
 
-`./pageDocumentV2/vocabulary` owns these 39 baseline types:
+`pageDocumentV2Types.ts` owns these 39 baseline vocabulary types:
 
 ```text
 AnimatedIconAnimation, AnimatedIconName, PageBackgroundType, PageBadgeIcon,
@@ -141,7 +164,7 @@ PageTypographyFontFamily, PageTypographyFontSize, PageTypographyFontWeight,
 PageTypographyTextTransform
 ```
 
-`./pageDocumentV2/types` owns these 27 baseline types:
+`pageDocumentV2Types.ts` also owns these 27 baseline composite types:
 
 ```text
 PageBlockDecoration, PageBlockLayer, PageBlockMarquee,
@@ -157,29 +180,36 @@ PageTextHighlightMark, PageTextLinkMark, PageTextMark, PageTextStructuralMark
 The remaining eight baseline types have these exact owners:
 
 ```text
-./pageDocumentV2/errors:
+pageDocumentV2Types.ts:
   PageDocumentErrorCode
-./pageDocumentV2/registry:
+pageDocumentV2Contract.ts:
   PageBlockCapabilitiesV2, PageBlockPublicDataBinding,
   PageBlockRuntimeRendererState, PageListItemV2, PageSectionCapabilitiesV2
-./pageDocumentV2/textMarks:
+pageTextMarksV2.ts:
   PageBlockTextMarkInput, PageBlockTextMarkRemoveInput
 ```
 
-The only planned type additions are these four names, all owned by
-`./pageDocumentV2/types`:
+The only planned type additions are these four names, with exact owners:
 
 ```text
-PageBlockResponsiveLayerV2, PageBlockResponsiveStyleV2, PageGalleryItemV2,
-PageSectionResponsiveStyleV2
+pageResponsiveStyleV2.ts:
+  PageSectionResponsiveStyleV2, PageBlockResponsiveLayerV2,
+  PageBlockResponsiveStyleV2
+pageGalleryV2.ts:
+  PageGalleryItemV2
 ```
 
 The final explicit type-only manifest is therefore exactly 78 names. No other
 baseline type may move owner, disappear, or be joined by another public type.
 
-### Baseline runtime manifest: 121 names
+### Baseline runtime manifest: 125 names
 
-`./pageDocumentV2/vocabulary` owns these 94 baseline runtime names:
+`pageDocumentV2Types.ts` owns these 99 baseline runtime names: the 94 vocabulary
+names below, plus `PageDocumentError`, plus the four TASK-547 switcher-aria names
+`PAGE_SWITCHER_ARIA_LABEL_MAX_LENGTH`, `PAGE_SWITCHER_DEFAULT_ARIA_LABEL`,
+`normalizeSwitcherAriaLabel`, and `resolveSwitcherAriaLabel`.
+
+The 94 vocabulary names:
 
 ```text
 ANIMATED_ICON_NAME_PATTERN, ANIMATED_ICON_SIZE_CLAMP,
@@ -220,32 +250,29 @@ pageTypographyFontWeights, pageTypographyTextTransforms,
 resolveAnimatedIconName, scrollHintGlyphs, switcherVariants
 ```
 
-The remaining 27 baseline runtime names have these exact owners:
+The remaining 26 baseline runtime names have these exact owners:
 
 ```text
-./pageDocumentV2/errors:
-  PageDocumentError, isPageDocumentError
-./pageDocumentV2/registry:
+pageDocumentV2Contract.ts:
   createPageListItem, getPageBlockActiveSlotKeys, pageBlockCapabilities,
   pageBlockDefaultProps, pageBlockPropKeys, pageSectionCapabilities
-./pageDocumentV2/schema:
+pageDocumentV2Schema.ts:
   pageDocumentV2JsonSchema
-./pageDocumentV2/textMarks:
+pageTextMarksV2.ts:
   applyBlockTextMark, normalizeBlockTextColorMarks, normalizeBlockTextMarks,
   removeBlockTextMark
-./pageDocumentV2/normalizeTree:
-  createDefaultPageDocumentV2, createPageBlockV2, createPageDocumentId,
-  createPageSectionV2, isLegacyOrVersionlessPageDocument,
-  normalizePageDocumentV2, normalizePageDocumentV2ForWrite,
-  normalizeStoredPageDocumentV2ForRead, toPublishedPageDocumentV2
-./pageDocumentV2/resolution:
+pageDocumentV2Normalizer.ts:
   clearBlockResponsiveOverride, clearResponsiveOverride,
-  resolvePageBlockForBreakpoint, resolvePageDocumentForBreakpoint,
-  resolvePageSectionForBreakpoint
+  createDefaultPageDocumentV2, createPageBlockV2, createPageDocumentId,
+  createPageSectionV2, isLegacyOrVersionlessPageDocument, isPageDocumentError,
+  normalizePageDocumentV2, normalizePageDocumentV2ForWrite,
+  normalizeStoredPageDocumentV2ForRead, resolvePageBlockForBreakpoint,
+  resolvePageDocumentForBreakpoint, resolvePageSectionForBreakpoint,
+  toPublishedPageDocumentV2
 ```
 
 The only planned runtime additions are these seven
-`./pageDocumentV2/vocabulary` constants:
+`pageGalleryV2.ts` constants:
 
 ```text
 PAGE_GALLERY_ALT_MAX, PAGE_GALLERY_CAPTION_MAX, PAGE_GALLERY_CATEGORY_MAX,
@@ -253,14 +280,14 @@ PAGE_GALLERY_CATEGORY_TOKENS_MAX, PAGE_GALLERY_CATEGORY_TOKEN_MAX,
 PAGE_GALLERY_ITEMS_MAX, PAGE_GALLERY_SRC_MAX
 ```
 
-and this one `./pageDocumentV2/resolution` function:
+and this one `pageDocumentV2Normalizer.ts` function:
 
 ```text
 mergePageBlockLayerPresentKeys
 ```
 
-The final facade is therefore exactly 78 explicit type names plus 129 runtime names,
-207 entries in total. No internal helper, schema fragment, normalizer, or
+The final facade is therefore exactly 78 explicit type names plus 133 runtime names,
+211 entries in total. No internal helper, schema fragment, normalizer, or
 compatibility alias may widen it.
 
 ### Facade proof owned by this leaf
@@ -276,18 +303,27 @@ source and execute this exact proof:
 1. Require every top-level statement to be an `ExportDeclaration` with a string
    module specifier and a nonempty `NamedExports` clause. Reject imports, direct
    declarations, `export default`, `export *`, namespace exports, aliases
-   (`propertyName`), per-specifier type/value mixing, and duplicate exported names.
-2. Require type groups to use declaration-level `export type { ... } from` and value
-   groups to use declaration-level `export { ... } from`. Compare the sorted
-   `{name, ownerModule}` arrays to the exact 78-name and 129-name maps above. This
+   (`propertyName`), and duplicate exported names.
+2. Accept the landed mixed-clause layout: every clause is a declaration-level
+   `export { ... } from` value block (there are zero declaration-level
+   `export type { ... } from` clauses), and every type is a per-specifier
+   `type X` modifier inside one of those value blocks (the landed
+   `pageDocumentV2Contract` and `pageTextMarksV2` blocks do exactly that).
+   Declaration-only applies to this leaf's OWN additions: the four new types join
+   the `pageResponsiveStyleV2`/`pageGalleryV2` export blocks as per-specifier
+   `type X` modifiers and
+   the eight new runtime values join value blocks as plain specifiers; no new
+   import, direct declaration, alias, default export, or export-star is added.
+   Compare the sorted
+   `{name, ownerModule}` arrays to the exact 78-name and 133-name maps above. This
    catches extra types as well as missing/present-only checks and pins every direct
    owner.
 3. Type-import all 78 explicit type names from the facade in one compile-time
    fixture and use them in a type tuple/map so none is an unused decorative import.
 4. Import the facade namespace and assert
-   `Object.keys(facade).sort()` equals the exact sorted 129-name runtime list.
+   `Object.keys(facade).sort()` equals the exact sorted 133-name runtime list.
 5. Import every runtime name from its owner module and assert
-   `facade[name]` is `toBe(owner[name])` for all 129 entries. This applies equally
+   `facade[name]` is `toBe(owner[name])` for all 133 entries. This applies equally
    to primitives, functions, `PageDocumentError`, arrays, objects, registries, and
    `pageDocumentV2JsonSchema`; representative sampling is insufficient.
 
@@ -409,7 +445,7 @@ Valid canonical rows and normalize→normalize results are deterministic.
 
 ### Strict responsive styles, layer merge, and resolution
 
-`types.ts` owns and exports dedicated section and block responsive style contracts.
+`pageResponsiveStyleV2.ts` owns and exports dedicated section and block responsive style contracts.
 Do not reuse a broad base style behind a responsive override:
 
 ```ts
@@ -499,10 +535,13 @@ overrides.
 
 The `anchor?: never` and every forbidden `?: never` member are mandatory. A plain
 `Pick`/`Omit` relies on excess-property checking and can still admit a broader typed
-variable through structural assignment. `types.ts` owns all five responsive
-types above. The `pageDocumentV2.ts` facade explicitly includes
+variable through structural assignment. `pageResponsiveStyleV2.ts` owns the three
+new responsive style types above; `pageDocumentV2Types.ts` keeps the two existing
+`PageBlockResponsiveOverrideV2`/`PageSectionResponsiveOverrideV2` types and imports
+the new style types. The `pageDocumentV2.ts` facade explicitly includes
 `PageSectionResponsiveStyleV2`, `PageBlockResponsiveLayerV2`, and
-`PageBlockResponsiveStyleV2` in its named `export type { ... }` declaration; none is
+`PageBlockResponsiveStyleV2` in its named export blocks as per-specifier
+`type X` modifiers; none is
 redefined or exported through `export *`.
 
 Add compile-time contracts (for example `expectTypeOf` plus individual
@@ -517,7 +556,7 @@ Add compile-time contracts (for example `expectTypeOf` plus individual
   contains only `x/y/z`.
 
 Type proof alone is insufficient because untyped JSON reaches the write boundary.
-`schema.ts` therefore owns dedicated strict responsive style definitions/refs with
+`pageDocumentV2Schema.ts` therefore owns dedicated strict responsive style definitions/refs with
 `additionalProperties:false`:
 
 - the section definition contains only the allowed properties from the partial
@@ -534,7 +573,7 @@ do not duplicate grammars or numeric values. Schema tests compare the exact resp
 property-key sets, accept representative allowed values (including `style.column`),
 and reject every forbidden key and `layer.anchor`.
 
-`normalizeStyles.ts` owns readonly forbidden-key tuples matching the lists above and
+`pageDocumentV2Normalization.ts` owns readonly forbidden-key tuples matching the lists above and
 dedicated mode-aware normalizers:
 
 ```ts
@@ -661,7 +700,7 @@ resolvePageBlockForBreakpoint(...):
   undefined layer own key, then recurse through slots without input mutation
 
 run the owned schema/type/runtime matrices:
-  prove the exact 78-type/129-runtime facade and owner map, strict gallery,
+  prove the exact 78-type/133-runtime facade and owner map, strict gallery,
   responsive forbidden-key, layer reachability/present-key, effect/divider,
   idempotence, byte-identity, and frozen-input cases
 run every exact validation gate below and enforce <=1000 lines per touched file
@@ -685,9 +724,9 @@ run every exact validation gate below and enforce <=1000 lines per touched file
 
 The owned Vitest files must cover:
 
-- the dedicated facade suite's AST-enforced declaration-only exact 78-type and
-  129-runtime owner maps, all-type import fixture, exact runtime `Object.keys`, and
-  all-129 direct-owner `toBe` identity table;
+- the dedicated facade suite's AST-enforced exact 78-type and 133-runtime owner
+  maps (accepting the landed mixed-clause layout), all-type import fixture, exact
+  runtime `Object.keys`, and all-133 direct-owner `toBe` identity table;
 - each resulting file under the 1,000-line ceiling;
 - layer merge of base `{y,z,anchor}` plus override `{x,z}` (present keys, override
   precedence), own-key presence when defined, own-key omission when undefined,
@@ -750,7 +789,7 @@ Run these exact gates after the final L01 working tree exists:
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-document-v2-facade.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts tests/vitest/pages/page-document-v2-listing-and-settings.test.ts tests/vitest/pages/page-document-v2-style-contracts.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
+bun run test:vitest -- tests/vitest/pages/page-document-v2-facade.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-idempotence.test.ts tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts tests/vitest/pages/page-document-v2-listing-and-settings.test.ts tests/vitest/pages/page-document-v2-style-contracts.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
 node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```

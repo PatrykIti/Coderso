@@ -8,10 +8,10 @@ import {
 } from "./pageSectionTemplates";
 import {
   escapeAuthoringCssString,
+  parseAuthoringCssBackgroundPaint,
   sanitizeAuthoringCssColor,
   sanitizeAuthoringMediaUrl,
 } from "./pageAuthoringSanitizers";
-import { toGradientBackground } from "./pageBlockRenderStyles";
 import {
   joinPageRenderClasses,
   type PageSectionLayoutMode,
@@ -108,25 +108,26 @@ export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProp
   const template = resolvePageSectionTemplate(section);
   const spacing = toPageSectionVariantSpacing(section, template);
   const accent = sanitizeAuthoringCssColor(section.style.accent);
-  const backgroundColor =
-    section.style.backgroundType === "color"
-      ? sanitizeAuthoringCssColor(section.style.background)
-      : undefined;
+  // ── TASK-539-05-L01 — ONE canonical paint parse. After the write-time model
+  // sanitization, `parseAuthoringCssBackgroundPaint` splits the authored
+  // `background` value into its gradient image-layer stack and optional final
+  // canonical color; the renderer emits ONLY `paint.image` to
+  // `background-image` and ONLY `paint.color` to `background-color`. A
+  // combined representation is never re-rebuilt from an unparsed whole author
+  // string. The explicit `backgroundType:"none"` clear/reset and the separate
+  // `backgroundType:"image"` URL field keep their existing semantics.
+  const backgroundPaint =
+    section.style.backgroundType === "color" || section.style.backgroundType === "gradient"
+      ? parseAuthoringCssBackgroundPaint(section.style.background)
+      : null;
+  const backgroundColor = backgroundPaint?.color ?? undefined;
   const backgroundImageUrl =
     section.style.backgroundType === "image"
       ? sanitizeAuthoringMediaUrl(section.style.backgroundImage)
       : null;
-  // ── TASK-531: SECTION gradient branch (grounding correction: the BLOCK gradient
-  // is already wired; the section path was missing). CSS gradients paint via
-  // `background-image`; `toGradientBackground` (relaxed above) trusts the
-  // allowlisted sanitizer so a safe MULTI-LAYER value survives here too.
-  const backgroundGradient =
-    section.style.backgroundType === "gradient"
-      ? toGradientBackground(section.style.background)
-      : undefined;
   const backgroundImage = backgroundImageUrl
     ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
-    : backgroundGradient;
+    : (backgroundPaint?.image ?? undefined);
   // ── TASK-531: append the glow after the enum shadow (comma list = two stacked).
   const boxShadow = mergeShadows(
     toPageSectionBoxShadow(section.style.shadow),
@@ -185,24 +186,22 @@ export const toPageSectionBleedStyle = (
 ): PageSectionStyleProperties | undefined => {
   const template = resolvePageSectionTemplate(section);
   if (!isPageSectionFullBleed(section, template)) return undefined;
-  const backgroundColor =
-    section.style.backgroundType === "color"
-      ? sanitizeAuthoringCssColor(section.style.background)
-      : undefined;
+  // TASK-539-05-L01 — same ONE canonical paint parse as `toPageSectionStyle`:
+  // only `paint.image` reaches `background-image` and only `paint.color`
+  // reaches `background-color` on the full-bleed paint target; the explicit
+  // `backgroundType:"none"` clear/reset stays.
+  const backgroundPaint =
+    section.style.backgroundType === "color" || section.style.backgroundType === "gradient"
+      ? parseAuthoringCssBackgroundPaint(section.style.background)
+      : null;
+  const backgroundColor = backgroundPaint?.color ?? undefined;
   const backgroundImageUrl =
     section.style.backgroundType === "image"
       ? sanitizeAuthoringMediaUrl(section.style.backgroundImage)
       : null;
-  // ── TASK-531: the bleed box paints the section background/shadow, so it also
-  // gains the gradient branch + glow merge so a full-bleed gradient/glow bleeds
-  // edge-to-edge (mirrors toPageSectionStyle's non-bleed return).
-  const backgroundGradient =
-    section.style.backgroundType === "gradient"
-      ? toGradientBackground(section.style.background)
-      : undefined;
   const backgroundImage = backgroundImageUrl
     ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
-    : backgroundGradient;
+    : (backgroundPaint?.image ?? undefined);
   return {
     // FIXED-literal 100vw bleed centered on the section's own axis.
     width: "100vw",
@@ -381,9 +380,12 @@ export const toPageSectionRenderProps = (
  */
 export const PAGE_REVEAL_MOTION_CSS =
   "@media (prefers-reduced-motion: no-preference){" +
-  // Section-level hide-state (UNCHANGED — the <section> still composes its own reveal).
+  // Section-level hide-state. TASK-539-05-L01 — "Reveal CSS writes only reveal
+  // opacity/variable": the reveal-up translate now writes `--cx-reveal-y` on the
+  // revealing SECTION itself (the renderer stamps it as a transform host), so the
+  // ONE host formula composes it and no raw `transform` is written here.
   '[data-reveal-armed] [data-page-effect^="reveal"]:not([data-revealed]){opacity:0}' +
-  '[data-reveal-armed] [data-page-effect="reveal-up"]:not([data-revealed]){transform:translateY(1rem)}' +
+  '[data-reveal-armed] [data-page-effect="reveal-up"]:not([data-revealed]){--cx-reveal-y:1rem}' +
   // TASK-525-02-L02 per-CHILD hide-state + reveal transition so a revealing
   // section's blocks CASCADE instead of fading as one unit. Each [data-page-block]
   // frame carries its OWN opacity/transform transition; the transition-delay reads
@@ -419,13 +421,18 @@ export const PAGE_REVEAL_MOTION_CSS =
   // (present-only inline var stays byte-identical).
   '[data-reveal-armed] [data-page-effect^="reveal"] [data-page-block]' +
   "{--reveal-delay:0ms;transition:opacity .7s,transform .7s;transition-delay:var(--reveal-delay,0ms)}" +
-  // Hide-state visual values only (opacity/transform) gated by :not([data-revealed]).
+  // Hide-state visual values only (opacity/`--cx-reveal-y`) gated by
+  // :not([data-revealed]). The per-child reveal-up translate writes the reveal
+  // VARIABLE on the child frame (a transform host under a revealing section), so
+  // the shared formula composes it; the revealed reset writes only
+  // `--cx-reveal-y:0`, never a raw `transform:none` that would clobber the
+  // decoration/hover/tilt/magnetic channels composed by the same formula.
   '[data-reveal-armed] [data-page-effect^="reveal"]:not([data-revealed]) [data-page-block]' +
   "{opacity:0}" +
   '[data-reveal-armed] [data-page-effect="reveal-up"]:not([data-revealed]) [data-page-block]' +
-  "{transform:translateY(1rem)}" +
+  "{--cx-reveal-y:1rem}" +
   '[data-reveal-armed] [data-page-effect^="reveal"][data-revealed] [data-page-block]' +
-  "{opacity:1;transform:none}" +
+  "{opacity:1;--cx-reveal-y:0}" +
   "}";
 
 /**

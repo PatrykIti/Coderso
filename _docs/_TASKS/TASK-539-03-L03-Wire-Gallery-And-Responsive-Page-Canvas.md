@@ -7,15 +7,18 @@
 **Category:** Pages / PageEditor / Responsive UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-03-L02
-**Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Status:** ✅ Done
+**Completed:** 2026-08-20
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
 ## Sole ownership, split, and collision guard
 
-Own the stable `core/admin/ui/pages/PageEditor.tsx` facade and cohesive extraction
-under `core/admin/ui/pages/editor/`:
+The `core/admin/ui/pages/PageEditor.tsx` facade split (7 modules) was ALREADY landed
+by TASK-481-02-L02 using this exact shared module set. This leaf does NOT re-perform
+the split; it REBASES onto the split facade and owns the gallery/responsive surface
+on it, plus the flow-test split:
 
 - `PageEditorRoot.tsx`
 - `usePageEditorController.ts`
@@ -50,12 +53,68 @@ Also own the cohesive split of `tests/vitest/ui/page-editor-v2-flow.test.tsx` in
 - `page-editor-v2-settings-flow.test.tsx`
 - optional focused `pageEditorV2FlowHarness.tsx`, only for shared render/host fixtures.
 
+Implementation note (landed with this leaf): when `PageEditorToolbar.tsx` crossed the
+1,000-line gate during wiring, the canonical registry-block-target resolution was
+extracted as a further cohesive split into the new pure module
+`core/services/pages/pageEditorRegistryBlockTarget.ts` (with focused unit suite
+`tests/vitest/pages/page-editor-registry-block-target.test.ts`), per the line-gate
+split mandate below. It is Bun-free, imports only page-domain owners
+(`pageBlockPaths`, `pageBlockGridPlacement`, `pageDocumentV2`), and is consumed only
+by this leaf's `PageEditorToolbar.tsx`; module-boundary, `check:admin-boundary`, and
+`check:admin-bundle` all pass with it in place.
+
 Each suite must run independently. Extract by behavior, not arbitrary ranges; no
-generic dumping-ground helper. Baselines are 5,204 source lines and 6,813 test lines;
-every result must be `<=1000`.
+generic dumping-ground helper. Test baseline is 6,813 lines (the flow suite); the
+PageEditor source baseline is the post-TASK-481 split facade + 7 modules, each
+already `<=1000`; every result must be `<=1000`. Current headroom before this
+leaf's gallery/responsive wiring: `usePageEditorController.ts` 996,
+`pageEditorDocumentCommands.ts` 971, `PageEditorToolbar.tsx` 970,
+`PageEditorSettingsPanel.tsx` 951, and `PageEditorRoot.tsx` 875. If this leaf's
+own additions push any of these modules (or a touched split suite) over 1,000
+lines, it must first perform a further cohesive split of that module by
+responsibility (preserving the facade's exact public surface and all prior
+behavior), with each resulting file `<=1000`, before adding the new wiring. It
+must not delete, rebaseline, or weaken existing assertions to create headroom.
+
+Post-TASK-481 content-scope re-baseline (REQUIRED for the flow suite): TASK-481-01-L01
+moved the block brand visual style keys (`color`, `backgroundColor`, `backgroundImage`,
+`backgroundSize`, `backgroundPosition`, `borderColor`, `borderStyle`, `borderWidth`,
+`borderRadius`, `boxShadow`, `opacity`) from the block frame element onto the inner
+`[data-page-editor-content]` wrapper inside `renderBlockFrame`, and wrapped the
+section content in the same scope. When splitting `page-editor-v2-flow.test.tsx`,
+re-baseline any assertion that reads those visual props from the block frame or the
+section-content element to read them from the nearest `[data-page-editor-content]`
+descendant instead (frame/section chrome keep only layout style + the
+`--coderso-block-text` / `--coderso-block-surface` custom props). Known impacted
+assertions at split time:
+- `block.style.opacity/borderRadius/boxShadow` (`page-editor-v2-flow.test.tsx`
+  ~1562-1564, the "PageEditor block style controls update visible canvas style and
+  saved data" test);
+- `block.style.color === ""` (`page-editor-v2-flow.test.tsx` ~1764, the transparent
+  text-color clearing assertion): `color` now lives on the inner
+  `[data-page-editor-content]` wrapper, so the frame-level read becomes vacuous;
+  assert the wrapper's `style.color` (or the `--coderso-block-text` custom prop)
+  instead;
+- the canvas-scroller right-rail assertions (`page-editor-v2-flow.test.tsx`
+  ~6648/6658/6663, `expect(scroller.style.paddingRight).toBe("300px"|"")`): this
+  leaf removes the fixed inline `style={{paddingRight:300}}` (PageEditorRoot.tsx:209)
+  in favor of the conditional class tokens (`sm:pr-[300px] lg:pr-[300px]`), so the
+  JSDOM `inline style` read no longer resolves those tokens. Re-baseline these
+  assertions to the class-token contract (assert the scroller's `className` contains
+  the conditional token when the inspector is open and omits it when closed), which
+  matches the Vitest scope of the inspector-clearance contract; the real computed
+  padding proof lives in TASK-539-08's Playwright flows at 640px and `lg`.
+This is a structural re-baseline
+of the same rendered value, not a behavior change: the visible canvas style must
+still equal the saved style. Keep all other flow-suite behavior assertions intact.
 
 Forbidden: `CanvasEditor.tsx`, `PageAuthoringCanvas.tsx`, every Screen/Custom Screen
-file, renderer/model/runtime source, and foreign tests. Read TASK-478/TASK-481 output
+file, renderer/model/runtime source, and foreign tests. Reciprocal collision guard
+with TASK-481-02-L02: never edit TASK-481's brand-token content-scope surface inside
+the split modules — the `data-page-editor-content` wrapper, `canvasBrandTokenVariables`
+derivation, `PageEditorColorPaletteContext`/`usePageEditorColorPalette`
+provider/consumers, and the admin-brand re-assertion on chrome; changelog `1317` is
+created only by TASK-481 closure. Read TASK-478/TASK-481 output
 fresh before editing.
 
 ## Implementation Pseudocode
