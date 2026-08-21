@@ -18,7 +18,12 @@
 - new `core/services/navigation/publicNavigationProjection.ts`
 - new `tests/vitest/services/public-navigation-projection.test.ts`
 
-Do not modify the mapper, site shell, editor, widgets, other tests, or menu model.
+Do not modify the mapper, site shell, editor, widgets, or menu model. The named
+direct gate suites (`tests/vitest/services/menu-item-settings-variant.test.ts`,
+`tests/vitest/site/siteShell.test.tsx`) may receive mechanical/type-only adjustments
+(import/type fixes only, no assertion weakening); the new pure owner suite
+`tests/vitest/services/public-navigation-projection.test.ts` is authored in this leaf and
+TASK-542-04-L01 reruns it read-only.
 
 ## Grounded anchors
 

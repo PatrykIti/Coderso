@@ -22,7 +22,11 @@
 - `core/services/menus/menuDocumentV2Ops.ts`
 
 Do not edit `menuDocumentCss.ts`, routes, service orchestration, renderer,
-MenuDesignEditor, tests, or TASK-541 color code.
+MenuDesignEditor, or TASK-541 color code. The named direct gate suites
+(`tests/vitest/services/menu-document-v2.test.ts`, `tests/unit/menus/menuService.test.ts`,
+`tests/integration/routes/menus.test.ts`) may receive mechanical/type-only adjustments
+when the facade split requires them (import/type fixes only, no assertion weakening);
+additive contract tests belong to TASK-542-04-L01.
 
 ## Line-gate split plan
 

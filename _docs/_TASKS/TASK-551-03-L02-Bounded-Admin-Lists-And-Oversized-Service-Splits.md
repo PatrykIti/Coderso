@@ -151,6 +151,14 @@ at or below 1,000 lines:
 |---|---|
 | `DetailTemplateEditorPage.tsx` | `DetailTemplateRevisionPanel.tsx` |
 | `MenuDesignEditor.tsx` | `MenuDesignCanvas.tsx`; `MenuDesignInspector.tsx`; `MenuDesignDataSources.tsx` |
+
+> **Rebaseline note (TASK-542-03-L03):** this row's `MenuDesignEditor.tsx` split
+> names are superseded by the post-TASK-542 modules
+> `MenuDesignEditorCanvas/Controls/BarPanel/BrandNavControls/BlockPanel` (plus
+> optional `MenuDesignEditorBlockFields`). At this task's closure, rebaseline the
+> split table against the post-TASK-542 modules instead of splitting
+> `MenuDesignEditor.tsx` again; `MenuDesignEditor.tsx` remains a thin facade after
+> TASK-542.
 | `MenuEditorPage.tsx` | `MenuEditorWorkspace.tsx` (editor frame, add-items rail, canvas, and inspector composition; page retains loading, mutation, dialog, and cache orchestration) |
 | `PostEditorCanvas.tsx` | `PostEditorMediaControls.tsx` |
 | `ContentListEditors.tsx` | `ContentListSourceEditors.tsx`; `ContentListPresentationEditors.tsx` |

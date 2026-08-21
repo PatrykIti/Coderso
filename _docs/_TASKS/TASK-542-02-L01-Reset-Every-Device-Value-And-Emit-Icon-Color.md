@@ -20,7 +20,12 @@
 - `core/site/menuDocumentCssRules.ts`
 - `core/site/menuDocumentCssDelta.ts`
 
-Do not edit menu model, `siteShell.tsx`, MenuDesignEditor, tests, or TASK-541.
+Do not edit menu model, `siteShell.tsx`, MenuDesignEditor, or TASK-541. The named
+direct gate suites (`tests/vitest/site/menu-document-css.test.ts`,
+`tests/vitest/services/menu-document-v2.test.ts`, `tests/unit/site/menu-document-render.test.tsx`)
+may receive mechanical/type-only adjustments when the split requires them
+(import/type fixes only, no assertion weakening); additive contract tests belong to
+TASK-542-04-L01.
 
 ## Line-gate split plan
 
