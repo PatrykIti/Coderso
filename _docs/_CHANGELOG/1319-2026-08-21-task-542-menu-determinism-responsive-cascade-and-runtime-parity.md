@@ -62,11 +62,15 @@ TASK-542-03-L02, TASK-542-03-L03, TASK-542-04-L01)
   matrix (missing/blank/invalid/duplicate IDs, 160-char truncation with marker
   reservation, global section/block collisions, stable repeated legacy repair,
   read→unrelated-save), the scrolled-variant helper contract, the table-driven
-  TASK-542-02 neutralizer matrix (itemDivider/hoverUnderline/indicator/caret/
-  flyout/orientation/padding-axis resets), icon-color-only device deltas
-  (proving `BRAND_STYLE_COMPARE_KEYS` includes `iconColor`), and a no-override
+  TASK-542-02 neutralizer matrix with per-device goldens for base→tablet AND
+  base→mobile overrides (itemDivider/hoverUnderline/indicator/caret/flyout/
+  orientation/padding-axis resets plus a combined tablet+mobile row), a
+  shared-branch positive control on every zero-delta mobile row so the
+  assertions cannot pass vacuously, icon-color-only device deltas (proving
+  `BRAND_STYLE_COMPARE_KEYS` includes `iconColor`), and a no-override
   byte-identity golden. The TASK-508 golden suite moved to its own
-  `menu-document-css-508.test.ts` so the §1-§7 file stays under the 1,000-line
+  `menu-document-css-508.test.ts` and the TASK-542-02 matrix to
+  `menu-document-css-542.test.ts` so the §1-§7 file stays under the 1,000-line
   gate.
 - Runtime Bun coverage for menu routes, render byte-identity, site-shell
   projection/active identity, and legacy `<details>` compatibility pins.
@@ -90,12 +94,13 @@ TASK-542-03-L02, TASK-542-03-L03, TASK-542-04-L01)
 
 - `bun --cwd core lint:types` EXIT=0; `bun --cwd core lint` EXIT=0; root repo
   `tsc -p tsconfig.json --noEmit` EXIT=0.
-- Targeted Vitest: 8 menu service/site suites (menu-document-v2, menu-document-
+- Targeted Vitest: 12 menu service/site suites (menu-document-v2, menu-document-
   v2-devices, menu-document-v2-navchrome, menu-document-v2-styles, menu-document-
-  v2-scrolled, menu-document-css, menu-document-css-508, menuSchemas) 314/314
-  green plus 6 admin menu UI suites (menu-editor, menu-editor-validation,
-  menu-editor-shell-wave, menu-editor-refresh-policy, menu-design-editor,
-  menu-design-editor-revalidation) 117/117 green.
+  v2-scrolled, menu-document-css, menu-document-css-508, menu-document-css-542,
+  menu-item-settings-variant, menu-nav-extras, normalize-menu-appearance,
+  menuSchemas) 366/366 green plus 6 admin menu UI suites (menu-editor,
+  menu-editor-validation, menu-editor-shell-wave, menu-editor-refresh-policy,
+  menu-design-editor, menu-design-editor-revalidation) 117/117 green.
 - Targeted Bun lane: menuService + menu-document-render + menus routes +
   site-shell-runtime — 115/117 in the combined run; the two failures and the
   isolated run's single remaining failure are the documented pre-existing
