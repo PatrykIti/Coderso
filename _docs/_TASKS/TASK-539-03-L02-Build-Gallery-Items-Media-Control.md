@@ -7,7 +7,8 @@
 **Category:** Pages / Admin Editor Components
 **Estimated Effort:** Medium
 **Dependencies:** TASK-539-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---

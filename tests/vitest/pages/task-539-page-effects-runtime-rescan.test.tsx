@@ -3,10 +3,13 @@
 // and suites stay read-only. Proves parser-order rescan in both directions,
 // observation-only flag semantics, repeated-run cardinality, per-binder
 // WeakSets, failure isolation + retry, reduced-motion neutrality, transform
-// custom-property ownership, replica-safe marquee pre-bind rejection, unsafe
-// one-segment fallbacks, and zero console errors. Executes the static runtime
-// via the L01 happy-dom harness (new Function("window","document",…)); no
-// DOM/runtime kernel executes here.
+// custom-property ownership, and keyboard-roving listener passivity (keydown
+// non-passive, all other listeners passive — TASK-539-08-L01 smoke regression).
+// Replica-safe marquee pre-bind rejection, unsafe one-segment fallbacks, and
+// zero-console proofs live in the sibling
+// task-539-page-effects-runtime-replica-and-soft-fail.test.tsx. Executes the
+// static runtime via the L01 happy-dom harness
+// (new Function("window","document",…)); no DOM/runtime kernel executes here.
 // Contract: _docs/_TASKS/TASK-539-07-L02-Prove-Main-And-Footer-Idempotence.md
 import { Window } from "happy-dom";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -153,38 +156,6 @@ const mockRect = (el: unknown, width: number, height: number) => {
   ).getBoundingClientRect = () => ({ left: 0, top: 0, width, height });
 };
 
-// Captures console.error/warn from the happy-dom window and node around a run;
-// the captured list must stay empty for every fixture.
-const captureConsole = (win: Window, run: () => void): string[] => {
-  const captured: string[] = [];
-  const record = (...args: unknown[]) => {
-    captured.push(args.map(String).join(" "));
-  };
-  const winConsole = (win as unknown as { console?: unknown }).console as
-    { error?: (...a: unknown[]) => void; warn?: (...a: unknown[]) => void } | undefined;
-  const realWinError = winConsole?.error;
-  const realWinWarn = winConsole?.warn;
-  const realGlobalError = console.error;
-  const realGlobalWarn = console.warn;
-  if (winConsole) {
-    winConsole.error = record;
-    winConsole.warn = record;
-  }
-  console.error = record;
-  console.warn = record;
-  try {
-    run();
-  } finally {
-    if (winConsole) {
-      winConsole.error = realWinError;
-      winConsole.warn = realWinWarn;
-    }
-    console.error = realGlobalError;
-    console.warn = realGlobalWarn;
-  }
-  return captured;
-};
-
 // ── minimal fixed-DOM family fixture ─────────────────────────────────────────
 const SWITCHER_HTML = (prefix: string) =>
   "<div data-switcher>" +
@@ -253,14 +224,6 @@ const magneticBlock = (id: string): PageBlockV2 =>
     props: { label: "Go", href: "/go" },
     style: { magnetic: true },
   });
-const marqueeGroup = (children: PageBlockV2[]): PageBlockV2 =>
-  createPageBlockV2("group", {
-    id: "blk-mq",
-    props: { direction: "row", wrap: false, gap: 16 },
-    style: { marquee: { speed: 18, direction: "left", seamless: true } },
-    slots: { children },
-  });
-
 const sectionWithStyle = (
   id: string,
   style: Partial<PageSectionStyleV2>,
@@ -669,6 +632,65 @@ describe("failure isolation and retry (item 5)", () => {
     click(firstTabs[1]!, win);
     expect(firstPanels[1]!.hidden).toBe(false);
     expect(firstTabs[1]!.getAttribute("aria-selected")).toBe("true");
+  });
+
+  test("keydown roving listeners are non-passive; click/pointer stay passive", () => {
+    // Smoke finding (539-08-L01 flow 7): bindOne attached EVERY listener with
+    // {passive:true}; switcher/gallery roving calls preventDefault inside a
+    // passive keydown listener, so Chromium logged "Unable to preventDefault
+    // inside passive event listener" on each ArrowRight/Home/End. keydown must
+    // register non-passive while non-preventing pointer/click listeners keep
+    // the passive optimization.
+    const { win, doc } = createWindow(FAMILIES_HTML("kp"));
+    const seen: Array<{ type: string; passive?: boolean }> = [];
+    const rovingTargets = doc.querySelectorAll(
+      "[data-switcher-tab], [data-gallery-filter] [data-filter]"
+    );
+    const patch = (el: (typeof rovingTargets)[number]) => {
+      const real = (
+        el as unknown as {
+          addEventListener: (
+            t: string,
+            l: EventListenerOrEventListenerObject,
+            o?: boolean | AddEventListenerOptions
+          ) => void;
+        }
+      ).addEventListener.bind(el);
+      (
+        el as unknown as {
+          addEventListener: (
+            t: string,
+            l: EventListenerOrEventListenerObject,
+            o?: boolean | AddEventListenerOptions
+          ) => void;
+        }
+      ).addEventListener = (type, listener, options) => {
+        seen.push({
+          type,
+          passive: typeof options === "object" && options !== null ? options.passive : undefined,
+        });
+        return real(type, listener, options);
+      };
+    };
+    rovingTargets.forEach(patch);
+    runScript(win, doc);
+
+    const keydowns = seen.filter((s) => s.type === "keydown");
+    const others = seen.filter((s) => s.type !== "keydown");
+    expect(keydowns.length).toBeGreaterThan(0);
+    expect(keydowns.every((s) => s.passive !== true)).toBe(true);
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.every((s) => s.passive === true)).toBe(true);
+
+    // Roving still functional with the non-passive registration.
+    const tabs = [...doc.querySelectorAll("[data-switcher-tab]")];
+    const panels = [...doc.querySelectorAll("[data-switcher-panel]")] as unknown as HTMLElement[];
+    keydown(tabs[0]!, win, "ArrowRight");
+    expect(tabs[1]!.getAttribute("aria-selected")).toBe("true");
+    expect(panels[1]!.hidden).toBe(false);
+    const chips = [...doc.querySelectorAll("[data-gallery-filter] [data-filter]")];
+    keydown(chips[0]!, win, "ArrowRight");
+    expect(chips[1]!.getAttribute("tabindex")).toBe("0");
   });
 });
 

@@ -1670,7 +1670,17 @@ normalized model:
   emitted main/footer copy invokes the reusable controller; the parser-order
   rescan discovers later main/footer markup while binder-specific `WeakSet`s
   keep each element bound exactly once (reveal, parallax, spotlight, switcher,
-  gallery, tilt, magnetic).
+  gallery, tilt, magnetic). The rescan is parser-order only: a footer template
+  renders after main, so the page shell emits a second main/footer script copy
+  that the controller deduplicates through the shared `WeakSet`s. There is no
+  `MutationObserver`; authoring a block requires a new render, not a live DOM
+  mutation.
+- Listener passivity is per-event: `keydown` binds with `{passive:false}`
+  because switcher/gallery arrow-key roving calls `preventDefault`, while every
+  other listener (pointer, scroll, resize) stays `{passive:true}`. This is a
+  fixed invariant; regressing to a blanket `{passive:true}` re-introduces the
+  console error "Unable to preventDefault inside passive event listener" and
+  breaks arrow-key navigation under the keyboard contract.
 - Every binder rejects a candidate that is or descends from a marquee replica
   before listener/state attachment, so the inert replica keeps visual hooks
   without becoming interactive. Spotlight writes only `--spotlight-x`/`--spotlight-y`

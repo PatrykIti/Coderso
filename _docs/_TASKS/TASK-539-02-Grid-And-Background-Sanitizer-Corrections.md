@@ -7,7 +7,8 @@
 **Category:** Pages / CSS Security / Pure Domain
 **Estimated Effort:** Medium
 **Dependencies:** TASK-539-01, TASK-541
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
@@ -26,9 +27,9 @@ pretrims, lowercases, regex-classifies, or recreates color syntax.
 
 | Leaf | Scope | Status |
 |---|---|---|
-| TASK-539-02-L01 | Sole sanitizer source and existing compatibility-suite writer | ⏳ To Do |
-| TASK-539-02-L02 | One new immutable security-corpus suite only | ⏳ To Do |
-| TASK-539-02-L03 | Regenerate kit demo artifact + re-baseline kit color expectations (downstream of L01's TASK-541 delegation) | ⏳ To Do |
+| TASK-539-02-L01 | Sole sanitizer source and existing compatibility-suite writer | ✅ Done |
+| TASK-539-02-L02 | One new immutable security-corpus suite only | ✅ Done |
+| TASK-539-02-L03 | Regenerate kit demo artifact + re-baseline kit color expectations (downstream of L01's TASK-541 delegation) | ✅ Done |
 
 Land `TASK-539-02-L01 -> TASK-539-02-L02`. `TASK-539-02-L03` is an independent
 mechanical re-baseline discovered during implementation: L01's contract-mandated

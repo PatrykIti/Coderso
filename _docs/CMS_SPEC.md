@@ -121,6 +121,12 @@ widget surface:
   present-key layer offsets, parsed paint with full-bleed surface targeting,
   and one canonical segment per unsafe marquee subtree. No-effect documents
   stay byte-identical.
+- Page effects runtime: one static IIFE per render, main and footer emit their
+  own copy and the shared per-root controller deduplicates through binder
+  `WeakSet`s (parser-order rescan, no `MutationObserver`). Switcher and gallery
+  stay keyboard-functional under reduced motion with a fixed per-event listener
+  passivity contract (`keydown` non-passive so arrow-key roving can
+  `preventDefault`; all other listeners passive).
 - Page Templates (TASK-420-03) is the reusable-template surface: Page v2
   `sections[]` documents stored in `page_templates`, authored with the shared
   Page Editor v2 surface at `/advanced/page-templates`, previewed through

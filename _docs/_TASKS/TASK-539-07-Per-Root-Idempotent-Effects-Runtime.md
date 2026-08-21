@@ -7,7 +7,8 @@
 **Category:** Pages / Browser Runtime / Reliability
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-04 through TASK-539-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
@@ -26,8 +27,8 @@ against the post-TASK-540 HEAD and complete dirty state.
 
 | Leaf | Scope | Status |
 |---|---|---|
-| TASK-539-07-L01 | Sole runtime source and focused compatibility tests | ⏳ To Do |
-| TASK-539-07-L02 | New focused rescan/parser-order suite only | ⏳ To Do |
+| TASK-539-07-L01 | Sole runtime source and focused compatibility tests | ✅ Done |
+| TASK-539-07-L02 | New focused rescan/parser-order suite only | ✅ Done |
 
 ## Ownership
 

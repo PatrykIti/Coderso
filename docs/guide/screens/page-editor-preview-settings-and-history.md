@@ -287,6 +287,19 @@ Use this safe working order when you want the lowest chance of mistakes:
   first, then filter the gallery by pointer and keyboard, and confirm that a
   seamless marquee containing a form or a saved-query listing renders exactly
   one form, one result count, and one result set.
+- Keyboard behavior: switcher tabs, gallery filter chips, and gallery items
+  are fully navigable with the arrow keys, Home/End, and Enter/Space — the
+  same controls work on touch and mouse. Arrow-key navigation works even for
+  visitors who prefer reduced motion, so keyboard users are never blocked.
+- Narrow screens in the editor: at phone widths the selected block's panel
+  overlays the canvas instead of sitting beside it. The overlay can be closed
+  and reopened without trapping focus, the canvas reflows to the remaining
+  width, and edits made under the overlay save exactly like at wider
+  breakpoints.
+- After `Publish`, open the published page on the public site once to confirm
+  the live render matches the canvas — sections, gallery items and filters,
+  marquee content, and per-screen responsive overrides should all match what
+  you edited.
 - The standalone preview flow exists, but the primary editor workflow is the
   `Runtime preview` action from inside Page Editor.
 

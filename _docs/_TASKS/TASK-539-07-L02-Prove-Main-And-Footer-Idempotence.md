@@ -7,7 +7,8 @@
 **Category:** Pages / Vitest / Runtime Proof
 **Estimated Effort:** Medium
 **Dependencies:** TASK-539-07-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
@@ -90,3 +91,14 @@ git diff --check
 ```
 
 Rerun a named failing file once in isolation before classification.
+
+## Closure note (TASK-539-08-L01 smoke, changelog 1318)
+
+- The 08-L01 nine-flow smoke and post-audit added the keyboard-roving listener
+  passivity regression to this suite: `keydown` is bound `{passive:false}` so
+  switcher/gallery roving `preventDefault` is honored, every other listener
+  stays passive (see L01 closure note).
+- Post-audit lens 2 (LOW) cleanup: removed the stale header over-claim
+  (replica pre-bind/unsafe-fallback/zero-console proofs live in the sibling
+  replica-and-soft-fail suite) and the dead `captureConsole`/`marqueeGroup`
+  helpers that the 07-L02 split left behind.

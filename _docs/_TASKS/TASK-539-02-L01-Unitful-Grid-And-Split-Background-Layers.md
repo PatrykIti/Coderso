@@ -7,7 +7,8 @@
 **Category:** Pages / CSS Security / Pure Domain
 **Estimated Effort:** Medium
 **Dependencies:** TASK-539-02, TASK-541
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---

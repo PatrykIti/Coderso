@@ -7,7 +7,8 @@
 **Category:** Pages / Responsive CSS / Public Front
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01 through TASK-539-05, including TASK-539-03-L05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
@@ -28,8 +29,8 @@ must pin that baseline before the first source edit.
 
 | Leaf | Scope | Status |
 |---|---|---|
-| TASK-539-06-L01 | Sole responsive source/test split and behavior implementation | ⏳ To Do |
-| TASK-539-06-L02 | New focused TASK-539 responsive parity suite only | ⏳ To Do |
+| TASK-539-06-L01 | Sole responsive source/test split and behavior implementation | ✅ Done |
+| TASK-539-06-L02 | New focused TASK-539 responsive parity suite only | ✅ Done |
 
 ## Ownership
 

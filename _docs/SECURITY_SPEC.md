@@ -825,7 +825,11 @@ the session cookie, CSRF, and the `admin_write` rate-limit bucket.
   `[data-page-spotlight]` root; tilt and magnetic write/reset only their fixed
   transform custom properties, never the whole `transform`. Switcher/gallery
   remain functional under reduced motion; motion binders stay reduced-motion
-  and fine-pointer gated.
+  and fine-pointer gated. Listener passivity is per-event and fixed: `keydown`
+  binds with `{passive:false}` only because switcher/gallery arrow-key roving
+  calls `preventDefault`; all other listeners stay `{passive:true}`. A blanket
+  `{passive:true}` would re-introduce the passive-listener `preventDefault`
+  console error and break keyboard roving.
 - **Rate limit and CSRF shape.** Session-backed Page mutations (create, update,
   autosave, publish) charge the `admin_write` bucket and require the real
   `X-CSRF-Token` header issued by the CSRF endpoint. Unauthenticated,

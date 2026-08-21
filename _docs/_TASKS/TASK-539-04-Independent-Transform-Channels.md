@@ -7,7 +7,8 @@
 **Category:** Pages / Composition CSS / Interaction Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-03-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
@@ -27,8 +28,8 @@ This subtask does **not** own grid placement or
 
 | Order | Leaf | Scope | Status |
 |---|---|---|---|
-| 1 | TASK-539-04-L01 | Sole composition/interactivity CSS resolver change and source-owner expectation updates | ⏳ To Do |
-| 2 | TASK-539-04-L02 | New additive TASK-539 transform proof suite only | ⏳ To Do |
+| 1 | TASK-539-04-L01 | Sole composition/interactivity CSS resolver change and source-owner expectation updates | ✅ Done |
+| 2 | TASK-539-04-L02 | New additive TASK-539 transform proof suite only | ✅ Done |
 
 L01 solely writes `core/services/pages/pageCompositionEffects.tsx` and updates
 existing expectations in `page-composition-effects.test.ts` and

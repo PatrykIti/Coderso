@@ -7,7 +7,8 @@
 **Category:** Pages / Public Renderer / Geometry
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-539-04-L02; TASK-478 collision boundary resolved
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
@@ -23,8 +24,8 @@ emission, background channels, and orb/reveal hosts without changing no-effect b
 
 | Order | Leaf | Scope | Status |
 |---|---|---|---|
-| 1 | TASK-539-05-L01 | Sole renderer/source split and source-owner test split/updates | ⏳ To Do |
-| 2 | TASK-539-05-L02 | New additive TASK-539 renderer proof suite only | ⏳ To Do |
+| 1 | TASK-539-05-L01 | Sole renderer/source split and source-owner test split/updates | ✅ Done |
+| 2 | TASK-539-05-L02 | New additive TASK-539 renderer proof suite only | ✅ Done |
 
 L01 is the sole TASK-539 writer of the renderer facade/modules and existing renderer
 suites, including the exhaustive

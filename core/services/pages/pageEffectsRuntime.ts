@@ -18,9 +18,11 @@
  *     marker (`data-reveal-armed`) is set ONLY after it, BEFORE any observe loop
  *     (JS-required-to-HIDE — never permanently hidden). Switcher and gallery
  *     toggles are bound BEFORE the branch and stay functional for reduce users.
- *  3. Dependency-free; `passive` listeners + rAF; `try/catch` guards; per-binder
- *     and per-element failure isolation (one missing API or malformed node cannot
- *     block later binders).
+ *  3. Dependency-free; `passive` pointer/scroll listeners + rAF; keydown
+ *     listeners are NON-passive so roving preventDefault is honored without
+ *     Chromium console warnings; `try/catch` guards; per-binder and per-element
+ *     failure isolation (one missing API or malformed node cannot block later
+ *     binders).
  *  4. Root-scoped binding: every emitted copy calls `init(document)` on a shared
  *     controller (`window.__codersoPageEffectsV2`); a repeated scan skips only
  *     elements already in that binder's WeakSet, so the parser-order second copy
@@ -158,12 +160,16 @@ export const PAGE_EFFECTS_RUNTIME_SOURCE = [
   // Per-element listener attach with partial-rollback: if any addEventListener in
   // the spec list throws, the already-attached listeners are removed and the
   // caller leaves the element unmarked, so a retry can never duplicate them.
+  // Passive selection: pointer/scroll/resize stay passive (rAF-throttled, no
+  // preventDefault). keydown MUST be non-passive — the switcher/gallery roving
+  // handlers call preventDefault, and a passive keydown listener makes Chromium
+  // log "Unable to preventDefault inside passive event listener" on every rove.
   "function bindOne(specs){",
   " var attached=[];",
   " var ok=true;",
   " for(var i=0;i<specs.length;i++){",
   "  try{",
-  "   specs[i][0].addEventListener(specs[i][1],specs[i][2],{passive:true});",
+  "   specs[i][0].addEventListener(specs[i][1],specs[i][2],specs[i][1]==='keydown'?{passive:false}:{passive:true});",
   "   attached.push(specs[i]);",
   "  }catch(e){ok=false;break;}",
   " }",

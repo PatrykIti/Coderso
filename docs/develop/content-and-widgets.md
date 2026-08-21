@@ -193,6 +193,16 @@ semantic parser for ranges, function arity, and canonical output. TASK-541 adds
 no defaults: existing sparse fields remain present-only, while retained empty or
 explicit default sentinels stay byte-compatible with their owning domain.
 
+Page v2 effects runtime contract (TASK-539): one static dependency-free IIFE
+per render. Main and footer each emit a copy; the shared per-root controller
+(`window.__codersoPageEffectsV2` + `init(document)`) deduplicates through
+binder-specific `WeakSet`s, so the parser-order rescan handles a footer that
+renders after main with no `MutationObserver`. Listener passivity is per-event:
+`keydown` binds `{passive:false}` because switcher/gallery arrow-key roving
+calls `preventDefault`; all other listeners stay passive. Do not regress to a
+blanket `{passive:true}` — it surfaces the passive-listener console error and
+breaks keyboard roving.
+
 Domain policy remains explicit. The landed Page admin control uses the shared
 `authoring` profile, while the current Page backend still uses its independent
 legacy sanitizer. That sanitizer has the exact token allowlist (`primary`,

@@ -6,7 +6,8 @@
 **Category:** Pages / Builder / Public Render / Responsive CSS / Runtime / Security
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-521–535, TASK-538, TASK-541; TASK-540 must be fully terminal before implementation; collision dependencies TASK-478/TASK-481
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-20
 **Changelog:** 1318 (pinned; create only at implementation closure)
 **Contract Repair:** 2026-07-23 — refreshed against current source, tests, repository rules, and the active TASK-540 state
 
@@ -212,14 +213,14 @@ working tree, including paths committed at intermediate checkpoints. A result ab
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-539-01 | Page model, schema, and normalization | TASK-539-01-L01, L02 | ⏳ To Do |
-| TASK-539-02 | Grid and background sanitizer corrections | TASK-539-02-L01, L02 | ⏳ To Do |
-| TASK-539-03 | Gallery controls, gating, shared placement, and responsive canvas | TASK-539-03-L01..L05 | ⏳ To Do |
-| TASK-539-04 | Independent transform channels | TASK-539-04-L01, L02 | ⏳ To Do |
-| TASK-539-05 | Renderer behavior and geometry corrections | TASK-539-05-L01, L02 | ⏳ To Do |
-| TASK-539-06 | Responsive CSS parity | TASK-539-06-L01, L02 | ⏳ To Do |
-| TASK-539-07 | Per-root idempotent effects runtime | TASK-539-07-L01, L02 | ⏳ To Do |
-| TASK-539-08 | Tests, docs, smoke, and closure | TASK-539-08-L01 | ⏳ To Do |
+| TASK-539-01 | Page model, schema, and normalization | TASK-539-01-L01, L02 | ✅ Done |
+| TASK-539-02 | Grid and background sanitizer corrections | TASK-539-02-L01, L02 | ✅ Done |
+| TASK-539-03 | Gallery controls, gating, shared placement, and responsive canvas | TASK-539-03-L01..L05 | ✅ Done |
+| TASK-539-04 | Independent transform channels | TASK-539-04-L01, L02 | ✅ Done |
+| TASK-539-05 | Renderer behavior and geometry corrections | TASK-539-05-L01, L02 | ✅ Done |
+| TASK-539-06 | Responsive CSS parity | TASK-539-06-L01, L02 | ✅ Done |
+| TASK-539-07 | Per-root idempotent effects runtime | TASK-539-07-L01, L02 | ✅ Done |
+| TASK-539-08 | Tests, docs, smoke, and closure | TASK-539-08-L01 | ✅ Done |
 
 ## Finding coverage matrix
 
