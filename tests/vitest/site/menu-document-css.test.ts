@@ -115,6 +115,9 @@ describe("collectMenuBrandRules (§1)", () => {
 
   test("absent style ⇒ ZERO brand bytes", () => {
     const css = buildMenuDocumentCss(buildDoc());
+    // non-emptiness control: the builder still emits the doc-scoped shell, so
+    // the negative cannot pass on an empty/truncated stylesheet.
+    expect(css).toContain(`[data-site-menu-doc="true"]`);
     expect(css).not.toContain(`[data-menu-block-id="blk_brand"]`);
   });
 
@@ -259,6 +262,8 @@ describe("navLevelRules (§2)", () => {
 
   test("undefined levelStyles ⇒ ZERO level bytes", () => {
     const css = buildMenuDocumentCss(buildDoc());
+    // non-emptiness control (shell still emitted) before the negative.
+    expect(css).toContain(`[data-site-menu-doc="true"]`);
     expect(css).not.toContain(".site-nav-sublist .site-nav-link");
   });
 });
@@ -268,6 +273,8 @@ describe("navLevelRules (§2)", () => {
 describe("per-link padding/radius (§3)", () => {
   test("UNAUTHORED ⇒ ZERO bytes (present-only, no default seed)", () => {
     const css = buildMenuDocumentCss(buildDoc());
+    // non-emptiness control: the group-5 color rule still exists in the shell.
+    expect(css).toContain(".site-nav-link{");
     // the only .site-nav-link{...} rule is group 5 (color), never a padding rule.
     expect(css).not.toContain(`${SCOPE} .site-nav-link{padding:`);
     expect(css).not.toContain(`${SCOPE} .site-nav-link{border-radius:`);
@@ -352,9 +359,11 @@ describe("per-device brand + level deltas (§5)", () => {
       brandStyle: { fontSize: 20 },
       brandResponsive: { tablet: { style: { fontSize: 20 } } },
     });
-    expect(tabletBlockOf(buildMenuDocumentCss(doc))).not.toContain(
-      `[data-menu-block-id="blk_brand"]`
-    );
+    const css = buildMenuDocumentCss(doc);
+    // positive control: the ≥640 shell carries the brand rule, so the tablet
+    // negative cannot pass on a truncated/missing stylesheet.
+    expect(css).toContain(`[data-menu-block-id="blk_brand"]{font-size:20px}`);
+    expect(tabletBlockOf(css)).not.toContain(`[data-menu-block-id="blk_brand"]`);
   });
 
   test("brand delta diffs vs DESKTOP (mobile ≠ tablet)", () => {
@@ -363,6 +372,9 @@ describe("per-device brand + level deltas (§5)", () => {
       brandResponsive: { mobile: { style: { fontSize: 40 } } },
     });
     const css = buildMenuDocumentCss(doc);
+    // positive control: the ≥640 shell carries the desktop brand rule, so the
+    // tablet negative cannot pass on a truncated/missing stylesheet.
+    expect(css).toContain(`[data-menu-block-id="blk_brand"]{font-size:20px}`);
     expect(tabletBlockOf(css)).not.toContain(`[data-menu-block-id="blk_brand"]`); // tablet inherits desktop
     expect(mobileBranchOf(css)).toContain(`[data-menu-block-id="blk_brand"]{font-size:40px}`);
   });
@@ -661,6 +673,9 @@ describe("TASK-506-02 modern bundle emission goldens (§7)", () => {
   // Present-only + doc-scope + parity -----------------------------------------
   test("present-only: an unauthored doc emits ZERO bytes for EVERY new bundle", () => {
     const css = buildMenuDocumentCss(buildDoc());
+    // non-emptiness control: the doc-scoped shell is still emitted, so these
+    // negatives cannot pass on an empty/truncated stylesheet.
+    expect(css).toContain(`[data-site-menu-doc="true"]`);
     for (const marker of [
       "border-inline-end",
       "border-block-end",
@@ -752,6 +767,9 @@ describe("TASK-506-02 modern bundle emission goldens (§7)", () => {
         },
       })
     );
+    // positive control: the ≥640 shell emits the placement rule, so the tablet
+    // negative cannot pass on a truncated/missing stylesheet.
+    expect(css).toContain("top:100%");
     expect(tabletBlockOf(css)).not.toContain("top:100%");
   });
 
@@ -774,15 +792,20 @@ describe("TASK-506-02 modern bundle emission goldens (§7)", () => {
         },
       })
     );
+    // the fixture MUST produce bundle markers, otherwise the loop would run
+    // zero assertions and pass vacuously. Pin a minimum matched-line count.
+    let scopedMatches = 0;
     for (const line of css.split("\n")) {
       if (
         /border-inline-end|border-block-end|::before|scaleX|allow-discrete|content:none|rotate\(180deg\)|background:#eeeeee|padding:16px 20px/.test(
           line
         )
       ) {
+        scopedMatches += 1;
         // scoped either directly (selector starts with SCOPE) or inside @starting-style{SCOPE …}.
         expect(line.includes(SCOPE)).toBe(true);
       }
     }
+    expect(scopedMatches).toBeGreaterThan(0);
   });
 });

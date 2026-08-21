@@ -104,8 +104,10 @@ describe("TASK-508 R1(b)/R3a/R3b emission goldens (§9)", () => {
     expect(sharedBranchOf(css)).toContain(`${L2_LINK}{text-align:right}`);
     // link-level ⇒ re-emits at mobile via the linkOnly bucket:
     expect(mobileBranchOf(css)).toContain(`${L1_LINK}{text-align:center}`);
-    // unset ⇒ no text-align anywhere:
-    expect(buildMenuDocumentCss(buildDoc())).not.toContain("text-align:");
+    // unset ⇒ no text-align anywhere (non-emptiness control: shell still emitted):
+    const bare = buildMenuDocumentCss(buildDoc());
+    expect(bare).toContain(".site-nav-link{");
+    expect(bare).not.toContain("text-align:");
   });
 
   // R3a — unified direction: all four directions, both depths, all-four resets --
@@ -130,8 +132,12 @@ describe("TASK-508 R1(b)/R3a/R3b emission goldens (§9)", () => {
       buildDoc({ navProps: { navChrome: { submenuDirection: "down" } } })
     );
     expect(mobileBranchOf(css)).not.toContain(`${FIRST_DROPDOWN}{left:0;top:100%`);
-    // unset doc emits neither rule:
+    // positive control: the ≥640 shell DOES carry the direction rule, so the
+    // mobile negative cannot pass on a truncated/missing stylesheet.
+    expect(sharedBranchOf(css)).toContain(`${FIRST_DROPDOWN}{left:0;top:100%`);
+    // unset doc emits neither rule (shell still emitted as the control):
     const bare = buildMenuDocumentCss(buildDoc());
+    expect(bare).toContain(".site-nav-link{");
     expect(bare).not.toContain(`${FIRST_DROPDOWN}{left:0;top:100%`);
   });
 
@@ -163,6 +169,17 @@ describe("TASK-508 R1(b)/R3a/R3b emission goldens (§9)", () => {
     const tablet = tabletBlockOf(css);
     expect(tablet).not.toContain("bottom:100%"); // no direction delta
     expect(tablet).not.toContain("position:static"); // no accordion delta
+    // positive control: base-authored equivalents DO emit in the ≥640 shell,
+    // so these negatives cannot pass on a builder that dropped the rules.
+    const baseAuthored = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          navChrome: { submenuDirection: "up", submenuMode: "accordion" },
+        },
+      })
+    );
+    expect(sharedBranchOf(baseAuthored)).toContain(`${L2_CONTAINER}{left:0;bottom:100%`);
+    expect(sharedBranchOf(baseAuthored)).toContain(`${SCOPE} .site-nav-sublist{position:static`);
   });
 
   // R3b — accordion in-flow block ---------------------------------------------
