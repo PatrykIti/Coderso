@@ -43,7 +43,7 @@ importing `menuDocumentCss`.
 | `menuDocumentCss.ts` | facade: re-exports public symbols and keeps the existing `buildMenuDocumentCss`/`buildMenuDocumentPreviewCss` entry points |
 
 Land order: `Core → Rules → Delta → Facade`. Re-run `bun --cwd core lint:types`,
-`bun --cwd core lint`, and the owned `tests/vitest/site/menu-document-css.test.ts`
+`bun --cwd core lint`, and the owned `tests/vitest/site/menu-document-css-542.test.ts`
 after each step. Post-split receipt: each extraction module is at most 1,000
 physical lines (`wc -l`) and the facade is thin; record the verified line counts
 in closeout evidence.
@@ -132,9 +132,11 @@ wrong selector/order.
 
 ## Tests owned by TASK-542-04
 
-`tests/vitest/site/menu-document-css.test.ts` gets table-driven base→tablet,
-base→mobile, L1→L2, orientation, all OFF values, padding X-only/Y-only/neither,
-icon base/tablet/mobile, and no-override byte-identity goldens. Pin an
+`tests/vitest/site/menu-document-css-542.test.ts` (split out of the §1-§7
+`menu-document-css.test.ts` so both stay under the 1,000-line gate) gets the
+table-driven base→tablet, base→mobile, L1→L2, orientation, all OFF values,
+padding X-only/Y-only/neither, icon base/tablet/mobile, and no-override
+byte-identity goldens. Pin an
 icon-color-ONLY device change to produce a non-empty brand delta (proving
 `BRAND_STYLE_COMPARE_KEYS` includes `iconColor`), plus a base-only icon-color
 case. Include combined effects so one reset cannot mask another.
@@ -144,7 +146,7 @@ case. Include combined effects so one reset cannot mask another.
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bunx vitest run tests/vitest/site/menu-document-css.test.ts \
+bunx vitest run tests/vitest/site/menu-document-css-542.test.ts \
   tests/vitest/services/menu-document-v2.test.ts
 bun test tests/unit/site/menu-document-render.test.tsx
 ```

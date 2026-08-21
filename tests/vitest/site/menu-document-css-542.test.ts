@@ -100,6 +100,15 @@ describe("TASK-542-02 neutralizer matrix (tablet device deltas)", () => {
     expectAbsent: string[];
   }> = [
     {
+      id: "navChrome itemDividerShow OFF (top items)",
+      base: { navChrome: { itemDividerShow: true } },
+      tablet: { navChrome: { itemDividerShow: false } },
+      expectPresent: [
+        `${SCOPE} .site-nav-list > .site-nav-item:not(:last-child){border-inline-end:none;border-block-end:none}`,
+      ],
+      expectAbsent: [],
+    },
+    {
       id: "itemDividerShow OFF",
       base: { levelStyles: { 1: { itemDividerShow: true } } },
       tablet: { levelStyles: { 1: { itemDividerShow: false } } },
@@ -234,6 +243,14 @@ describe("TASK-542-02 neutralizer matrix (mobile device deltas)", () => {
     expectMobilePresent: string[];
     expectMobileAbsent: string[];
   }> = [
+    {
+      id: "navChrome itemDividerShow OFF (top items)",
+      base: { navChrome: { itemDividerShow: true } },
+      mobile: { navChrome: { itemDividerShow: false } },
+      sharedPositive: `${SCOPE} .site-nav-list > .site-nav-item:not(:last-child){border-inline-end:1px solid currentColor}`,
+      expectMobilePresent: [],
+      expectMobileAbsent: ["border-inline-end", "border-block-end"],
+    },
     {
       id: "itemDividerShow OFF",
       base: { levelStyles: { 1: { itemDividerShow: true } } },

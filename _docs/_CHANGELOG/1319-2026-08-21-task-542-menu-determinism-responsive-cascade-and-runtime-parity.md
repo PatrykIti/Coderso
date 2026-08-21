@@ -98,7 +98,7 @@ TASK-542-03-L02, TASK-542-03-L03, TASK-542-04-L01)
   v2-devices, menu-document-v2-navchrome, menu-document-v2-styles, menu-document-
   v2-scrolled, menu-document-css, menu-document-css-508, menu-document-css-542,
   menu-item-settings-variant, menu-nav-extras, normalize-menu-appearance,
-  menuSchemas) 366/366 green plus 6 admin menu UI suites (menu-editor,
+  menuSchemas) 368/368 green plus 6 admin menu UI suites (menu-editor,
   menu-editor-validation, menu-editor-shell-wave, menu-editor-refresh-policy,
   menu-design-editor, menu-design-editor-revalidation) 117/117 green.
 - Targeted Bun lane: menuService + menu-document-render + menus routes +

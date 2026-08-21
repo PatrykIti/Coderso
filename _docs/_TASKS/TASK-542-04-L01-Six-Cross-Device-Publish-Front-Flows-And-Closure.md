@@ -47,7 +47,7 @@ create changelog 1319 and close all physical descendants only after graph/gates 
 ```text
 tests/vitest/services/menu-document-v2.test.ts
 tests/vitest/services/public-navigation-projection.test.ts
-tests/vitest/site/menu-document-css.test.ts
+tests/vitest/site/menu-document-css-542.test.ts
 tests/vitest/site/siteShell.test.tsx
 tests/vitest/ui/menu-design-editor.test.tsx
 tests/vitest/admin/menusClient.test.ts
@@ -98,7 +98,7 @@ bun --cwd core lint
 bunx tsc -p tsconfig.json --noEmit
 bunx vitest run tests/vitest/services/menu-document-v2.test.ts \
   tests/vitest/services/public-navigation-projection.test.ts \
-  tests/vitest/site/menu-document-css.test.ts \
+  tests/vitest/site/menu-document-css-542.test.ts \
   tests/vitest/site/siteShell.test.tsx \
   tests/vitest/ui/menu-design-editor.test.tsx \
   tests/vitest/admin/menusClient.test.ts \
