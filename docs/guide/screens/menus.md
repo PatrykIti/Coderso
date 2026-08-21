@@ -162,6 +162,12 @@ with usable items.
     - `Save` stores the design on the menu draft and `Publish` makes it live;
       menu items stay read-only in this view (edit them in the structure
       editor).
+    - design settings are per device: switch the preview to Desktop, Tablet, or
+      Mobile and adjust the values for that breakpoint; any value you leave
+      unset keeps the baseline behavior for that device.
+    - if the same menu is changed in another tab, the editor keeps your unsaved
+      design and shows a `Menu design changed` notice: `Keep editing` keeps
+      your local design, `Reload` replaces it with the latest saved version.
 
 Use this safe working order when you want the fewest mistakes:
 

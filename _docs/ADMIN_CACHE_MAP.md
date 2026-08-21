@@ -363,6 +363,18 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Menu editor
   - UI: `core/admin/ui/menus/MenuEditorPage.tsx`
   - Cached APIs: `getMenuWithItemsCached`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
+- Menu design editor (TASK-542-03-L03)
+  - UI: `core/admin/ui/menus/MenuDesignEditorPage.tsx` ->
+    `core/admin/ui/menus/MenuDesignEditor.tsx`
+  - Cached APIs: `getMenuWithItemsCached`, `getCachedMenuDetail`,
+    `listPagesCached`, `getCachedPages`
+  - Cache policy: the synchronous cache paints the initial document, but the
+    editor ALWAYS force-revalidates `menus:detail:<id>` + `pages:list` on mount
+    (never TTL-pinned). `cacheBus` events for those keys trigger a background
+    revalidate that NEVER hydrates over a local dirty draft; a remote change
+    while dirty surfaces a "Menu design changed" notice (Keep editing /
+    Reload). The editor suppresses its own `menus:detail:<id>` events while
+    save/publish is in flight.
 - Search
   - UI: `core/admin/ui/search/SearchPage.tsx`,
     `core/admin/ui/search/useSearchResults.ts`

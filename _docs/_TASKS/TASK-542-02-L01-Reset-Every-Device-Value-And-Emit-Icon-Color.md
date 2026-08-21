@@ -8,7 +8,8 @@
 **Category:** Menus / Responsive CSS
 **Estimated Effort:** Medium
 **Dependencies:** TASK-541-03-L01, TASK-542-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-21
 **Changelog:** 1319 (pinned; closure only)
 
 ---

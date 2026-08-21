@@ -8,7 +8,8 @@
 **Category:** Menus / Domain Model / Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-541-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-21
 **Changelog:** 1319 (pinned; closure only)
 
 ---

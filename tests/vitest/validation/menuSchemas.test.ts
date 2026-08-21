@@ -84,6 +84,34 @@ test("menuUpdateSchema accepts a document object or null (TASK-499-02)", () => {
   ).toThrow("Invalid payload");
 });
 
+test("menuUpdateSchema document passthrough defers deep validation to the strict menu writer (TASK-542)", () => {
+  // The route schema only gates the passthrough SHAPE. The exact-key gate that
+  // rejects unknown top-level document keys (e.g. legacy flat `blocks`/`overrides`
+  // topology) lives server-side in `normalizeMenuDocumentV2ForWrite`; a widened
+  // `additionalProperties` here or a softened writer would silently launder it.
+  expect(() =>
+    validate(menuUpdateSchema, {
+      document: { schemaVersion: 1, sections: [] },
+    })
+  ).not.toThrow();
+
+  // A legacy flat document passes the SCHEMA boundary but must never be
+  // accepted by the strict writer (TASK-542-01 exact-key gate).
+  expect(() =>
+    validate(menuUpdateSchema, {
+      document: { blocks: [], overrides: {} },
+    })
+  ).not.toThrow();
+
+  // The schema-level reject-unknown guard still rejects unknown SIBLING keys.
+  expect(() =>
+    validate(menuUpdateSchema, {
+      document: { schemaVersion: 1, sections: [] },
+      legacyAppearance: true,
+    })
+  ).toThrow("Invalid payload");
+});
+
 test("menuItemsSchema accepts openInNewTab/variant on per-item settings (TASK-499-01)", () => {
   expect(() =>
     validate(menuItemsSchema, {

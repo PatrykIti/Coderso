@@ -8,7 +8,8 @@
 **Category:** Public Site / Menu Runtime / Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-542-02-L01, TASK-542-03-L01, TASK-539
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-21
 **Changelog:** 1319 (pinned; closure only)
 
 ---

@@ -11,6 +11,7 @@ import {
   SiteHeaderNav,
   normalizeNavPath,
   resolveMenuActiveHref,
+  resolveMenuActiveItemPath,
   type SiteShellNavigation,
 } from "../../../core/site/siteShell";
 import type { NavigationItem } from "../../../core/widgets/core/navigation";
@@ -198,4 +199,152 @@ test("text-mode brand renders the brand text (byte-stable text path)", () => {
 test("legacy SiteHeaderNav never emits aria-current (no activeHref reaches it)", () => {
   const html = renderToString(<SiteHeaderNav navigation={navigation} siteName="Acme" />);
   expect(countAriaCurrent(html)).toBe(0);
+});
+
+// --- resolveMenuActiveItemPath (TASK-542-03-L02) -----------------------------
+
+const dupeItems: NavigationItem[] = [
+  { label: "First", href: "/dupe" },
+  { label: "Second", href: "/dupe" },
+  { label: "Team", href: "/team", children: [{ label: "Nested dupe", href: "/dupe" }] },
+];
+
+test("resolveMenuActiveItemPath: absent activePath ⇒ null (no stamp)", () => {
+  expect(resolveMenuActiveItemPath(dupeItems, null)).toBeNull();
+  expect(resolveMenuActiveItemPath(dupeItems, undefined)).toBeNull();
+});
+
+test("resolveMenuActiveItemPath: duplicate hrefs stamp EXACTLY ONE DFS-first item", () => {
+  // Strict `>` keeps the FIRST DFS match on equal-length targets: "0", never "1".
+  expect(resolveMenuActiveItemPath(dupeItems, "/dupe")).toBe("0");
+});
+
+test("resolveMenuActiveItemPath: longest normalized target wins over siblings", () => {
+  const tree: NavigationItem[] = [
+    { label: "Blog", href: "/blog" },
+    { label: "Blog", href: "/blog", children: [{ label: "Post", href: "/blog/post" }] },
+  ];
+  expect(resolveMenuActiveItemPath(tree, "/blog/post")).toBe("1.0");
+  expect(resolveMenuActiveItemPath(tree, "/blog/other")).toBe("0");
+});
+
+test("resolveMenuActiveItemPath: a hidden (logged_in) subtree can never win", () => {
+  const tree: NavigationItem[] = [
+    {
+      label: "Members",
+      href: "/members",
+      meta: { visibility: "logged_in", badge: null, description: null, icon: null },
+    },
+    { label: "Public", href: "/members" },
+  ];
+  // The hidden sibling is dropped by the projection and the tree REINDEXES,
+  // so the public item is the sole candidate at "0".
+  expect(resolveMenuActiveItemPath(tree, "/members")).toBe("0");
+});
+
+test("duplicate hrefs in the menu-document render stamp exactly ONE aria-current", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={navOnlyDoc()}
+      navigation={{ label: "Dupe", items: dupeItems }}
+      activePath="/dupe"
+    />
+  );
+  expect(countAriaCurrent(html)).toBe(1);
+  // The FIRST DFS link (top-level /dupe) is the stamped one.
+  expect(html).toMatch(/href="\/dupe"[^>]*aria-current="page"/);
+});
+
+// --- responsive-only scroll-state machine gate (TASK-542-03-L02) --------------
+
+const scrollDoc = (
+  layout: Record<string, unknown>,
+  responsive?: Record<string, { layout: Record<string, unknown> }>
+): MenuDocumentV2 => ({
+  schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
+  sections: [
+    {
+      id: "sec_bar",
+      type: "menu-bar",
+      name: "Menu bar",
+      layout,
+      ...(responsive ? { responsive } : {}),
+      blocks: [{ id: "blk_nav", type: "nav-items", props: {} }],
+    },
+  ],
+});
+
+const scrollScriptCount = (html: string) => (html.match(/<script/g) ?? []).length;
+
+test("scroll machine: a DESKTOP-authored sticky scrolled variant emits the script on the front", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrollDoc({ sticky: true, surfaceColorScrolled: "#101827" })}
+      navigation={navigation}
+      activePath="/blog"
+    />
+  );
+  expect(scrollScriptCount(html)).toBe(1);
+});
+
+test("scroll machine: a TABLET-ONLY scrolled variant still arms the script (defect fix)", () => {
+  // 542-03-L02 defect: the old gate read only the desktop base layout, so a
+  // tablet/mobile-only authored scrolled variant never armed the machine.
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrollDoc(
+        { sticky: true },
+        { tablet: { layout: { surfaceColorScrolled: "#101827" } } }
+      )}
+      navigation={navigation}
+      activePath="/blog"
+    />
+  );
+  expect(scrollScriptCount(html)).toBe(1);
+});
+
+test("scroll machine: a MOBILE-ONLY scrolled variant also arms the script", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrollDoc(
+        { sticky: true },
+        { mobile: { layout: { borderColorScrolled: "#101827" } } }
+      )}
+      navigation={navigation}
+      activePath="/blog"
+    />
+  );
+  expect(scrollScriptCount(html)).toBe(1);
+});
+
+test("scroll machine: NO authored scrolled key ⇒ zero script (legacy byte-identical)", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrollDoc({ sticky: true })}
+      navigation={navigation}
+      activePath="/blog"
+    />
+  );
+  expect(scrollScriptCount(html)).toBe(0);
+});
+
+test("scroll machine: sticky false with scrolled keys never arms the machine", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrollDoc({ sticky: false, surfaceColorScrolled: "#101827" })}
+      navigation={navigation}
+      activePath="/blog"
+    />
+  );
+  expect(scrollScriptCount(html)).toBe(0);
+});
+
+test("scroll machine: preview/canvas (no activePath) never emits the script even with a scrolled variant", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrollDoc({ sticky: true, surfaceColorScrolled: "#101827" })}
+      navigation={navigation}
+    />
+  );
+  expect(scrollScriptCount(html)).toBe(0);
 });

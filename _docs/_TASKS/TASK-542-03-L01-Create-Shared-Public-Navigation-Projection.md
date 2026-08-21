@@ -8,7 +8,8 @@
 **Category:** Navigation / Pure Domain / Public Projection
 **Estimated Effort:** Small
 **Dependencies:** TASK-542-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-21
 **Changelog:** 1319 (pinned; closure only)
 
 ---

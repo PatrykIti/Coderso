@@ -8,7 +8,8 @@
 **Category:** Menu Design / Admin Cache / Responsive UI / Data Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-542-03-L01, TASK-542-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-21
 **Changelog:** 1319 (pinned; closure only)
 
 ---

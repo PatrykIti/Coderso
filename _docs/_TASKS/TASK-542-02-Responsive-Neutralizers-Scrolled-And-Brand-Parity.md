@@ -7,7 +7,8 @@
 **Category:** Menus / Responsive CSS / Present-Only Rendering
 **Estimated Effort:** Medium
 **Dependencies:** TASK-541, TASK-542-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-21
 **Changelog:** 1319 (pinned; closure only)
 
 ---
@@ -24,7 +25,7 @@ consumption of icon/scrolled state lands separately in TASK-542-03-L02.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-542-02-L01 | Reset every device value and emit icon color | `core/site/menuDocumentCss.ts` | ⏳ To Do |
+| TASK-542-02-L01 | Reset every device value and emit icon color | `core/site/menuDocumentCss.ts` | ✅ Done |
 
 ## Invariants
 

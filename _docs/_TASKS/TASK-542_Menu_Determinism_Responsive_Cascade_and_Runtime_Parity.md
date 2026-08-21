@@ -6,7 +6,8 @@
 **Category:** Menus / Validation / Responsive CSS / Public Runtime / Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-541, TASK-539
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-21
 **Changelog:** 1319 (pinned; closure only)
 
 ---
@@ -59,10 +60,10 @@ deterministic and non-destructive; new writes are canonical and reject unknowns.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-542-01 | Strict deterministic menu documents | TASK-542-01-L01 | ⏳ To Do |
-| TASK-542-02 | Responsive neutralizers, scrolled, and brand parity | TASK-542-02-L01 | ⏳ To Do |
-| TASK-542-03 | Public projection, active identity, and cache safety | TASK-542-03-L01..L03 | ⏳ To Do |
-| TASK-542-04 | Tests, smoke, and closure | TASK-542-04-L01 | ⏳ To Do |
+| TASK-542-01 | Strict deterministic menu documents | TASK-542-01-L01 | ✅ Done |
+| TASK-542-02 | Responsive neutralizers, scrolled, and brand parity | TASK-542-02-L01 | ✅ Done |
+| TASK-542-03 | Public projection, active identity, and cache safety | TASK-542-03-L01..L03 | ✅ Done |
+| TASK-542-04 | Tests, smoke, and closure | TASK-542-04-L01 | ✅ Done |
 
 ## Finding coverage matrix
 

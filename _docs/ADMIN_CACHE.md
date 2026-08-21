@@ -824,6 +824,20 @@ When adding a new resource:
   - does not auto-force on every route entry when detail cache exists,
   - suppresses its own `menus:detail:<id>` cache events while save/publish is
     in flight so editor mutations do not show as remote updates.
+- `MenuDesignEditorPage` (`/menus/:id/design`) mount policy (TASK-542-03-L03):
+  - synchronous `getCachedMenuDetail` paints the initial document,
+  - the mount effect ALWAYS force-revalidates `menus:detail:<id>` and
+    `pages:list` (`{ force: true }`) so a TTL-stale snapshot is replaced on
+    first paint, never deferred to the next interaction,
+  - a `cacheBus` event for `menus:detail:<id>` or `pages:list` revalidates in
+    the background; a clean editor adopts the authoritative document via the
+    guarded hydrate, a DIRTY editor never clobbers the draft and shows a
+    "Menu design changed" notice (Keep editing keeps the draft, Reload
+    discards via an explicit reset),
+  - the subscription skips the editor's OWN save/publish cache events while
+    the mutation is in flight (no redundant force loop),
+  - background failures show a retryable message WITHOUT clearing the cache or
+    the local draft.
 
 
 ## Route Map

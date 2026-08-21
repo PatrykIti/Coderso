@@ -1916,7 +1916,7 @@ the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
   `menus.settings.published`; menus issue no preview tokens — the live canvas
   IS the preview.
 
-## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504 / TASK-506 / TASK-508
+## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504 / TASK-506 / TASK-508 / TASK-542
 
 The Design tab of a menu edits a dedicated document contract owned by
 `core/services/menus/menuDocumentV2.ts` (NOT a Page v2 document). It persists
@@ -1946,6 +1946,22 @@ any invalid stored member degrades the WHOLE document to empty (designed blast
 radius, asserted in `tests/vitest/services/menu-document-v2.test.ts`) — which
 is why every new persisted key must be added to the section/block key
 allowlists consciously.
+
+**Deterministic IDs and topology (TASK-542):** `MENU_DOCUMENT_KEYS =
+["schemaVersion","sections"]` is an exact-key gate at the DOCUMENT level — any
+unknown top-level key (e.g. a legacy flat `blocks`/`overrides` shape) throws on
+write and fails the whole stored read. Write-mode IDs must match
+`^[a-z][a-z0-9_-]{0,159}$`; stored-read ID allocation is DETERMINISTIC and
+NON-PERSISTING: a valid non-colliding legacy ID is preserved verbatim, a
+missing/invalid ID gets the stable structural-path fallback
+(`sec-<i>-<type>` / `blk-<section>-<type>-<block>`), and a collision gets the
+next free numeric suffix (marker bytes reserved BEFORE slicing so a
+maximum-length duplicate stays in grammar). Repeated reads of the same legacy
+payload yield byte-identical documents with NO persistence rewrite. Topology is
+asserted at the document level: at most 2 sections, `sections[0].type ===
+"menu-bar"`, at most one `menu-drawer` (reserved), exactly one `menu-bar`;
+`MenuSectionV2` and `MenuBlockV2` keys are reject-unknown allowlists that every
+new persisted key must join (the fail-closed read trap above).
 
 **Responsive overrides (TASK-501 mobile v1; TASK-502 un-defers the tablet
 breakpoint — Pages cascade):** `MENU_RESPONSIVE_BREAKPOINT_KEYS =
