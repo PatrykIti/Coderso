@@ -29,10 +29,12 @@ import {
   clearMenuSectionBase,
   clearMenuSectionOverride,
   createDefaultMenuDocumentV2,
+  EMPTY_MENU_DOCUMENT,
   hasMenuBlockVisibilityOverride,
   hasMenuBrandStyleOverride,
   isEmptyMenuDocument,
   isMenuDocumentError,
+  menuDocumentHasScrolledVariantForAnyDevice,
   normalizeMenuBoxShadowValue,
   normalizeMenuDocumentV2ForWrite,
   normalizeStoredMenuDocumentV2ForRead,
@@ -377,3 +379,42 @@ const _levelKeyAnchor: keyof NavLevelStyle = "flyoutAnimation";
 const _chromeKeyAnchor: keyof NavChromeStyle = "navPillBackground";
 void _levelKeyAnchor;
 void _chromeKeyAnchor;
+
+describe("TASK-542-01-L01 menuDocumentHasScrolledVariantForAnyDevice (present-only, no seeding)", () => {
+  test("empty/absent and no-scrolled documents return false", () => {
+    expect(menuDocumentHasScrolledVariantForAnyDevice(EMPTY_MENU_DOCUMENT)).toBe(false);
+    const plain = normalizeMenuDocumentV2ForWrite(
+      doc([], { layout: { surfaceColor: "#101828", sticky: true } })
+    );
+    expect(menuDocumentHasScrolledVariantForAnyDevice(plain)).toBe(false);
+    // sticky alone is not a scrolled variant: an owned scrolled key must be authored.
+    expect(
+      menuDocumentHasScrolledVariantForAnyDevice(
+        normalizeMenuDocumentV2ForWrite(doc([], { layout: { sticky: true } }))
+      )
+    ).toBe(false);
+  });
+
+  test("a scrolled variant on ANY effective device returns true (responsive-only included)", () => {
+    const desktopOnly = normalizeMenuDocumentV2ForWrite(
+      doc([], { layout: { surfaceColorScrolled: "#101828", sticky: true } })
+    );
+    expect(menuDocumentHasScrolledVariantForAnyDevice(desktopOnly)).toBe(true);
+
+    const mobileOnly = normalizeMenuDocumentV2ForWrite(
+      doc([], {
+        responsive: { mobile: { layout: { surfaceColorScrolled: "#101828", sticky: true } } },
+      })
+    );
+    expect(menuDocumentHasScrolledVariantForAnyDevice(mobileOnly)).toBe(true);
+  });
+
+  test("does not mutate the document and keeps byte identity for no-scrolled docs", () => {
+    const plain = normalizeMenuDocumentV2ForWrite(
+      doc([], { layout: { surfaceColor: "#101828", sticky: true } })
+    );
+    const snapshot = JSON.stringify(plain);
+    expect(menuDocumentHasScrolledVariantForAnyDevice(plain)).toBe(false);
+    expect(JSON.stringify(plain)).toBe(snapshot);
+  });
+});

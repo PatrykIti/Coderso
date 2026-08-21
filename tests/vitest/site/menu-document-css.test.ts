@@ -2,19 +2,15 @@ import { describe, expect, test } from "vitest";
 
 import {
   MENU_DOCUMENT_SCHEMA_VERSION,
+  normalizeMenuDocumentV2ForWrite,
   type BrandStyle,
   type MenuDocumentV2,
-  type NavChromeStyle,
   type NavItemsProps,
-  type NavLevelStyle,
   type NavLevelStyles,
 } from "../../../core/services/menus/menuDocumentV2";
 import {
   buildMenuDocumentCss,
   buildMenuDocumentPreviewCss,
-  NAV_CHROME_COMPARE_KEYS,
-  NAV_LEVEL_STYLE_COMPARE_KEYS,
-  STRUCTURAL_BASE_ONLY_CHROME_KEYS,
 } from "../../../core/site/menuDocumentCss";
 
 /**
@@ -41,6 +37,11 @@ type DocOpts = {
     tablet?: { navProps?: NavItemsProps };
     mobile?: { navProps?: NavItemsProps };
   };
+  layout?: Record<string, unknown>;
+  responsive?: {
+    tablet?: { layout?: Record<string, unknown> };
+    mobile?: { layout?: Record<string, unknown> };
+  };
 };
 
 const buildDoc = (opts: DocOpts = {}): MenuDocumentV2 => ({
@@ -50,7 +51,7 @@ const buildDoc = (opts: DocOpts = {}): MenuDocumentV2 => ({
       id: "sec_bar",
       type: "menu-bar",
       name: "Menu bar",
-      layout: {},
+      layout: opts.layout ?? {},
       blocks: [
         {
           id: "blk_brand",
@@ -69,7 +70,9 @@ const buildDoc = (opts: DocOpts = {}): MenuDocumentV2 => ({
           props: opts.navProps ?? {},
         },
       ],
-      ...(opts.navResponsive ? { responsive: opts.navResponsive } : {}),
+      ...(opts.navResponsive || opts.responsive
+        ? { responsive: { ...opts.navResponsive, ...opts.responsive } }
+        : {}),
     },
   ],
 });
@@ -785,325 +788,191 @@ describe("TASK-506-02 modern bundle emission goldens (§7)", () => {
   });
 });
 
-// --- TASK-508 R1(b)/R3a/R3b emission goldens (§9) -----------------------------
-// The all-four-direction offset-reset matrix (Hard Invariant #5) + the linkAlign
-// text-align emission + accordion in-flow rules, asserted VERBATIM at both depths.
-describe("TASK-508 R1(b)/R3a/R3b emission goldens (§9)", () => {
-  const FIRST_DROPDOWN = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist`; // (0,4,0)
-  // R3a offset map — mirror directionOffsets() in menuDocumentCss.ts EXACTLY.
-  const DIRECTION_OFFSETS = {
-    down: "left:0;top:100%;right:auto;bottom:auto",
-    up: "left:0;bottom:100%;top:auto;right:auto",
-    right: "left:100%;top:0;right:auto;bottom:auto",
-    left: "right:100%;top:0;left:auto;bottom:auto",
-  } as const;
+// --- TASK-542-02 exact neutralizer matrix (table-driven, device deltas) -------
+// Each row flips a desktop-emitted value OFF (or restores it) on tablet and pins
+// the EXACT reset bytes the delta emits — proving the device branch re-paints
+// instead of leaving the desktop rule leaking through the media-query scope.
+describe("TASK-542-02 neutralizer matrix (tablet device deltas)", () => {
+  const tabletBlock = (css: string) =>
+    css.slice(
+      css.indexOf("@media (min-width: 640px) and (max-width: 1023px){"),
+      css.indexOf("@media (max-width: 639px){")
+    );
 
-  // R1(b) — linkAlign folds text-align into the per-level link decls -----------
-  test("R1(b) linkAlign emits text-align on LEVEL_LINK_SELECTORS[lvl] per level; absent ⇒ no text-align", () => {
+  const rows: Array<{
+    id: string;
+    base: NavItemsProps;
+    tablet: NavItemsProps;
+    expectPresent: string[];
+    expectAbsent: string[];
+  }> = [
+    {
+      id: "itemDividerShow OFF",
+      base: { levelStyles: { 1: { itemDividerShow: true } } },
+      tablet: { levelStyles: { 1: { itemDividerShow: false } } },
+      expectPresent: [
+        `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li:not(:last-child){border-block-end:none}`,
+      ],
+      expectAbsent: [],
+    },
+    {
+      id: "hoverUnderline OFF",
+      base: { levelStyles: { 1: { hoverUnderline: true } } },
+      tablet: { levelStyles: { 1: { hoverUnderline: false } } },
+      expectPresent: [`${L1_LINK}:hover,${L1_LINK}:focus-visible{text-decoration:none}`],
+      expectAbsent: [],
+    },
+    {
+      id: "indicator none",
+      base: { levelStyles: { 1: { indicator: "underline" } } },
+      tablet: { levelStyles: { 1: { indicator: "none" } } },
+      expectPresent: [`${L1_LINK}::before{content:none;opacity:1;transform:none;transition:none}`],
+      expectAbsent: [],
+    },
+    {
+      id: "showCaret restored",
+      base: { levelStyles: { 1: { showCaret: false } } },
+      tablet: { levelStyles: { 1: { showCaret: true } } },
+      expectPresent: [
+        `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link::after{content:" \\25BE";font-size:.7em}`,
+      ],
+      expectAbsent: [],
+    },
+    {
+      id: "caretRotateOnOpen OFF",
+      base: { levelStyles: { 1: { caretRotateOnOpen: true } } },
+      tablet: { levelStyles: { 1: { caretRotateOnOpen: false } } },
+      expectPresent: [
+        `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link::after{transform:none;transition:none}`,
+      ],
+      expectAbsent: [],
+    },
+    {
+      id: "flyoutAnimation none",
+      base: { levelStyles: { 1: { flyoutAnimation: "fade" } } },
+      tablet: { levelStyles: { 1: { flyoutAnimation: "none" } } },
+      expectPresent: [
+        `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{display:none;visibility:visible;opacity:1;transform:none;transition:none}`,
+        `${SCOPE} .site-nav-list > .site-nav-item:hover > .site-nav-sublist,${SCOPE} .site-nav-list > .site-nav-item:focus-within > .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none;transition:none}`,
+      ],
+      expectAbsent: [],
+    },
+  ];
+
+  test.each(rows)("$id re-emits the exact reset on tablet", ({ base, tablet, expectPresent }) => {
+    const css = buildMenuDocumentCss(
+      buildDoc({ navProps: base, navResponsive: { tablet: { navProps: tablet } } })
+    );
+    const block = tabletBlock(css);
+    for (const golden of expectPresent) expect(block).toContain(golden);
+  });
+
+  test("unchanged device record emits ZERO tablet delta bytes", () => {
     const css = buildMenuDocumentCss(
       buildDoc({
-        navProps: { levelStyles: { 1: { linkAlign: "center" }, 2: { linkAlign: "right" } } },
+        navProps: { levelStyles: { 1: { hoverUnderline: true } } },
+        navResponsive: { tablet: { navProps: { levelStyles: { 1: { hoverUnderline: true } } } } },
       })
     );
-    expect(sharedBranchOf(css)).toContain(`${L1_LINK}{text-align:center}`);
-    expect(sharedBranchOf(css)).toContain(`${L2_LINK}{text-align:right}`);
-    // link-level ⇒ re-emits at mobile via the linkOnly bucket:
-    expect(mobileBranchOf(css)).toContain(`${L1_LINK}{text-align:center}`);
-    // unset ⇒ no text-align anywhere:
-    expect(buildMenuDocumentCss(buildDoc())).not.toContain("text-align:");
+    const block = tabletBlock(css);
+    expect(block).not.toContain("text-decoration:none");
+    expect(block).not.toContain("blk_nav");
   });
 
-  // R3a — unified direction: all four directions, both depths, all-four resets --
-  test.each(["down", "up", "right", "left"] as const)(
-    "R3a submenuDirection:%s emits TWO rules (level-1 precise (0,4,0) + anchored (0,5,0)) with ALL FOUR offsets reset — no double-anchor stretch",
-    (dir) => {
-      const offsets = DIRECTION_OFFSETS[dir];
-      const shared = sharedBranchOf(
-        buildMenuDocumentCss(buildDoc({ navProps: { navChrome: { submenuDirection: dir } } }))
-      );
-      expect(shared).toContain(`${FIRST_DROPDOWN}{${offsets}}`); // rule A
-      expect(shared).toContain(`${L2_CONTAINER}{${offsets}}`); // rule B
-      // every offset axis is DECLARED exactly once per rule (no inherited left:100%):
-      for (const axis of ["left:", "right:", "top:", "bottom:"]) {
-        expect(offsets.includes(axis)).toBe(true);
-      }
-    }
-  );
-
-  test("R3a is ≥640-only (absent from the mobile branch) + present-only (unset ⇒ ZERO direction bytes)", () => {
-    const css = buildMenuDocumentCss(
-      buildDoc({ navProps: { navChrome: { submenuDirection: "down" } } })
-    );
-    expect(mobileBranchOf(css)).not.toContain(`${FIRST_DROPDOWN}{left:0;top:100%`);
-    // unset doc emits neither rule:
-    const bare = buildMenuDocumentCss(buildDoc());
-    expect(bare).not.toContain(`${FIRST_DROPDOWN}{left:0;top:100%`);
-  });
-
-  test("R3a precedence: submenuDirection is emitted BEFORE a granular level-2 submenuPlacement so the per-level override still WINS by source order", () => {
-    const shared = sharedBranchOf(
-      buildMenuDocumentCss(
-        buildDoc({
-          navProps: {
-            navChrome: { submenuDirection: "down" },
-            levelStyles: { 2: { submenuPlacement: "right" } },
-          },
-        })
-      )
-    );
-    const globalIdx = shared.indexOf(`${L2_CONTAINER}{left:0;top:100%;right:auto;bottom:auto}`); // global down
-    const placementIdx = shared.indexOf(`${L2_CONTAINER}{left:100%;right:auto;top:0;bottom:auto}`); // per-level right
-    expect(globalIdx).toBeGreaterThanOrEqual(0);
-    expect(placementIdx).toBeGreaterThan(globalIdx); // per-level wins (later source order)
-  });
-
-  test("R3a/R3b are BASE-ONLY: a tablet-authored submenuDirection / submenuMode produces ZERO tablet-delta bytes", () => {
-    const css = buildMenuDocumentCss(
-      buildDoc({
-        navResponsive: {
-          tablet: { navProps: { navChrome: { submenuDirection: "up", submenuMode: "accordion" } } },
-        },
-      })
-    );
-    const tablet = tabletBlockOf(css);
-    expect(tablet).not.toContain("bottom:100%"); // no direction delta
-    expect(tablet).not.toContain("position:static"); // no accordion delta
-  });
-
-  // R3b — accordion in-flow block ---------------------------------------------
-  test("R3b accordion emits vertical-stack + position:static + indent VERBATIM; a flyout-mode doc emits ZERO accordion bytes", () => {
-    const shared = sharedBranchOf(
-      buildMenuDocumentCss(buildDoc({ navProps: { navChrome: { submenuMode: "accordion" } } }))
-    );
-    expect(shared).toContain(`${SCOPE} .site-nav-list{flex-direction:column;align-items:stretch}`);
-    expect(shared).toContain(
-      `${SCOPE} .site-nav-sublist{position:static;box-shadow:none;border:0;min-width:0}`
-    );
-    expect(shared).toContain(`${SCOPE} .site-nav-sublist{padding-left:16px}`);
-    // flyout mode (default) ⇒ none of these bytes:
-    const flyout = buildMenuDocumentCss(
-      buildDoc({ navProps: { navChrome: { submenuMode: "flyout" } } })
-    );
-    expect(flyout).not.toContain("position:static");
-    expect(flyout).not.toContain(
-      `${SCOPE} .site-nav-list{flex-direction:column;align-items:stretch}`
-    );
-  });
-
-  test("R3b accordion gates the R2 flyout reveal OFF (no visibility:hidden over static content); the display:none→grid toggle stays", () => {
+  test("L2 OFF after L1 ON emits the reset on the exact L2 selector (descendant L1 cannot win)", () => {
     const css = buildMenuDocumentCss(
       buildDoc({
         navProps: {
-          navChrome: { submenuMode: "accordion" },
-          levelStyles: { 1: { flyoutAnimation: "slide" } },
+          levelStyles: { 1: { itemDividerShow: true }, 2: { itemDividerShow: true } },
         },
+        navResponsive: { tablet: { navProps: { levelStyles: { 2: { itemDividerShow: false } } } } },
       })
     );
-    expect(css).not.toContain("visibility:hidden");
-    expect(css).toContain(
-      `${SCOPE} .site-nav-item:hover>.site-nav-sublist,${SCOPE} .site-nav-item:focus-within>.site-nav-sublist{display:grid}`
+    const block = tabletBlock(css);
+    // L2's own reset, NOT a bare descendant match of the L1 reset.
+    expect(block).toContain(
+      `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist > li:not(:last-child){border-block-end:none}`
     );
   });
 
-  // R3b accordion — tablet-delta seam: the flyout skip must hold on the
-  // collectLevelDeltaRules(doc,"tablet") @920 path, not only desktopShared. A
-  // base accordion doc with a per-device TABLET flyoutAnimation must emit ZERO
-  // visibility:hidden bytes inside the tablet media block (else the accordion
-  // sublist reserves space but is invisible on tablet — a real visual gap).
-  test("R3b accordion gates the flyout reveal OFF in the tablet delta too (base accordion + per-device tablet flyoutAnimation ⇒ ZERO visibility:hidden bytes)", () => {
+  test("orientation flip clears BOTH divider axes before the new axis re-emits", () => {
     const css = buildMenuDocumentCss(
       buildDoc({
-        navProps: { navChrome: { submenuMode: "accordion" } },
-        navResponsive: {
-          // flyoutAnimation drives the seam (WOULD emit visibility:hidden absent
-          // the skip); linkColor co-varies so the tablet delta is non-empty even
-          // once the flyout rule is correctly skipped.
-          tablet: {
-            navProps: { levelStyles: { 1: { flyoutAnimation: "slide", linkColor: "#abcdef" } } },
-          },
-        },
+        layout: { orientation: "horizontal" },
+        responsive: { tablet: { layout: { orientation: "vertical" } } },
       })
     );
-    const tablet = tabletBlockOf(css);
-    // the tablet delta MUST have fired (level-1 re-emit present) but WITHOUT the
-    // flyout reveal — accordion is recomputed from the base doc in the seam.
-    expect(tablet).toContain(`${L1_LINK}{color:#abcdef}`);
-    expect(tablet).not.toContain("visibility:hidden");
-    // and no accordion visibility bytes leak into the whole output either:
-    expect(css).not.toContain("visibility:hidden");
-  });
-
-  // Compare-key coverage guard (cross-subtask test #4 / named guard #5) --------
-  // FAIL-CLOSED trip-wire: the field-enumeration objects below are typed
-  // `Record<keyof …, true>`, so a NEW NavLevelStyle/NavChromeStyle field is a
-  // COMPILE error here until listed; the runtime keys then drive the membership
-  // assertions, catching a field that was added to the type but never wired into
-  // its compare-key list (e.g. a missing `linkAlign`) — which would silently
-  // suppress every per-device override of that field.
-  const ALL_NAV_LEVEL_STYLE_FIELDS: Record<keyof NavLevelStyle, true> = {
-    linkColor: true,
-    linkHoverColor: true,
-    linkHoverTextColor: true,
-    linkActiveColor: true,
-    fontSize: true,
-    fontWeight: true,
-    gap: true,
-    paddingX: true,
-    paddingY: true,
-    background: true,
-    borderColor: true,
-    borderWidth: true,
-    radius: true,
-    shadow: true,
-    minWidth: true,
-    itemDividerShow: true,
-    itemDividerColor: true,
-    itemDividerWidth: true,
-    itemDividerStyle: true,
-    indicator: true,
-    indicatorColor: true,
-    indicatorThickness: true,
-    indicatorGrow: true,
-    hoverUnderline: true,
-    transitionMs: true,
-    hoverLift: true,
-    showCaret: true,
-    caretRotateOnOpen: true,
-    flyoutAnimation: true,
-    containerPaddingX: true,
-    containerPaddingY: true,
-    submenuPlacement: true,
-    linkAlign: true,
-  };
-  const ALL_NAV_CHROME_STYLE_FIELDS: Record<keyof NavChromeStyle, true> = {
-    navPillBackground: true,
-    navPillRadius: true,
-    navPillPaddingX: true,
-    navPillPaddingY: true,
-    itemDividerShow: true,
-    itemDividerColor: true,
-    itemDividerWidth: true,
-    itemDividerStyle: true,
-    indicator: true,
-    indicatorColor: true,
-    indicatorThickness: true,
-    indicatorGrow: true,
-    hoverUnderline: true,
-    transitionMs: true,
-    hoverLift: true,
-    showCaret: true,
-    caretRotateOnOpen: true,
-    submenuDirection: true,
-    submenuMode: true,
-  };
-
-  test("compare-key coverage guard: every NavLevelStyle field ∈ NAV_LEVEL_STYLE_COMPARE_KEYS; every NavChromeStyle field minus STRUCTURAL_BASE_ONLY_CHROME_KEYS ∈ NAV_CHROME_COMPARE_KEYS; the base-only keys are ABSENT", () => {
-    // (a) every NavLevelStyle field is wired into the level compare list.
-    for (const field of Object.keys(ALL_NAV_LEVEL_STYLE_FIELDS) as (keyof NavLevelStyle)[]) {
-      expect(NAV_LEVEL_STYLE_COMPARE_KEYS).toContain(field);
-    }
-    // (b) every NavChromeStyle field EXCEPT the structural base-only keys is
-    //     wired into the navChrome compare list.
-    const baseOnly = new Set<string>(STRUCTURAL_BASE_ONLY_CHROME_KEYS);
-    for (const field of Object.keys(ALL_NAV_CHROME_STYLE_FIELDS) as (keyof NavChromeStyle)[]) {
-      if (baseOnly.has(field)) {
-        expect(NAV_CHROME_COMPARE_KEYS).not.toContain(field);
-      } else {
-        expect(NAV_CHROME_COMPARE_KEYS).toContain(field);
-      }
-    }
-    // (c) SEPARATELY assert the two structural base-only keys are ABSENT — a later
-    //     accidental addition of a dead-data per-device delta is caught here.
-    expect(STRUCTURAL_BASE_ONLY_CHROME_KEYS).toEqual(["submenuDirection", "submenuMode"]);
-    expect(NAV_CHROME_COMPARE_KEYS).not.toContain("submenuDirection");
-    expect(NAV_CHROME_COMPARE_KEYS).not.toContain("submenuMode");
-  });
-
-  // Per-device linkAlign delta (mobile ≠ tablet, both diff vs desktop) ---------
-  test("R1(b) per-device: a tablet + mobile linkAlign override each diff vs DESKTOP; mobile ≠ tablet (linkAlign ∈ NAV_LEVEL_STYLE_COMPARE_KEYS)", () => {
-    const css = buildMenuDocumentCss(
-      buildDoc({
-        navProps: { levelStyles: { 1: { linkAlign: "center" } } },
-        navResponsive: {
-          tablet: { navProps: { levelStyles: { 1: { linkAlign: "right" } } } },
-          mobile: { navProps: { levelStyles: { 1: { linkAlign: "left" } } } },
-        },
-      })
+    const block = tabletBlock(css);
+    expect(block).toContain(
+      `${SCOPE} .site-nav-list > .site-nav-item:not(:last-child){border-inline-end:none;border-block-end:none}`
     );
-    expect(tabletBlockOf(css)).toContain(`${L1_LINK}{text-align:right}`);
-    expect(mobileBranchOf(css)).toContain(`${L1_LINK}{text-align:left}`);
-    // mobile carries its OWN value, never the tablet one:
-    expect(mobileBranchOf(css)).not.toContain(`${L1_LINK}{text-align:right}`);
   });
 
-  test("front↔canvas parity: the R3a direction + R3b accordion + R1(b) linkAlign rules appear in BOTH builders", () => {
-    const styled = buildDoc({
-      navProps: {
-        navChrome: { submenuDirection: "down", submenuMode: "accordion" },
-        levelStyles: { 1: { linkAlign: "center" } },
-      },
-    });
-    const front = buildMenuDocumentCss(styled);
-    const canvas = buildMenuDocumentPreviewCss(styled, "desktop");
-    for (const rule of [
-      `${FIRST_DROPDOWN}{left:0;top:100%;right:auto;bottom:auto}`,
-      `${SCOPE} .site-nav-sublist{position:static;box-shadow:none;border:0;min-width:0}`,
-      `${L1_LINK}{text-align:center}`,
-    ]) {
-      expect(front).toContain(rule);
-      expect(canvas).toContain(rule);
-    }
+  test("padding: missing axis falls back to MENU_SHELL_SUBLIST_PADDING (6), not 0", () => {
+    const xOnly = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 1: { containerPaddingX: 20 } } } })
+    );
+    expect(xOnly).toContain(`${L1_CONTAINER}{padding:6px 20px}`);
+    const yOnly = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 1: { containerPaddingY: 16 } } } })
+    );
+    expect(yOnly).toContain(`${L1_CONTAINER}{padding:16px 6px}`);
   });
 });
 
-// --- TASK-508-03 front↔CSS selector coherence (no dangling hook) --------------
-// The Bun render suite (`tests/unit/site/menu-document-render.test.tsx`
-// "TASK-508-03") is the AUTHORITATIVE proof that `SiteHeaderMenuDocumentRender`
-// renders every `.site-nav-*` hook the 508 fields target (and that `siteShell.tsx`
-// needs ZERO markup change). This Bun-free guard mirrors it at the CSS layer: it
-// derives the class-hook vocabulary the 508 selectors USE and asserts each hook is
-// one the front markup provides — so a typo'd/dangling selector (e.g. a new field
-// wired to a non-existent hook) fails here, not silently in production.
-describe("TASK-508-03 front↔CSS coherence (§8)", () => {
-  // The canonical `.site-nav-*` hooks SiteHeaderMenuDocumentRender emits (pinned by
-  // the Bun render suite). A selector referencing anything outside this set dangles.
-  const FRONT_NAV_HOOKS = new Set([
-    "site-nav-list",
-    "site-nav-item",
-    "site-nav-sublist",
-    "site-nav-link",
-    "site-nav-group", // details-mode <details class="site-nav-group"> (siteShell.tsx)
-    "site-nav-group-label",
-    "site-nav-disclosure",
-    "site-nav-utility",
-    "site-nav-extras",
-    "site-nav",
-  ]);
+// --- TASK-542-02 matrix #10: brand iconColor per-device deltas ----------------
+describe("TASK-542-02 brand iconColor device deltas", () => {
+  test("icon-color-ONLY device change re-emits the svg delta (iconColor in BRAND_STYLE_COMPARE_KEYS)", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        brandStyle: { iconColor: "#101828" },
+        brandResponsive: { mobile: { style: { iconColor: "#d92d20" } } },
+      })
+    );
+    expect(mobileBranchOf(css)).toContain(`[data-menu-block-id="blk_brand"] svg{color:#d92d20}`);
+  });
 
-  test("every nav class hook the 508 fields (linkAlign+direction+accordion+R2) emit resolves to a front markup hook", () => {
-    // Accordion doc — carries linkAlign + direction + accordion selectors.
-    const accordion = buildMenuDocumentCss(
+  test("base-only icon-color emits the svg rule in the base branch and ZERO device bytes", () => {
+    const css = buildMenuDocumentCss(buildDoc({ brandStyle: { iconColor: "#101828" } }));
+    expect(baseBranchOf(css)).toContain(`[data-menu-block-id="blk_brand"] svg{color:#101828}`);
+    expect(mobileBranchOf(css)).not.toContain("blk_brand");
+    expect(sharedBranchOf(css)).not.toContain("blk_brand");
+  });
+
+  test("iconColor equal across devices ⇒ NO brand delta (only the authored key differs on tablet)", () => {
+    const css = buildMenuDocumentCss(
       buildDoc({
-        navProps: {
-          navChrome: { submenuDirection: "down", submenuMode: "accordion" },
-          levelStyles: { 1: { linkAlign: "center" }, 2: { linkAlign: "center" } },
-        },
+        brandStyle: { iconColor: "#101828" },
+        brandResponsive: { tablet: { style: { iconColor: "#101828" } } },
       })
     );
-    // Flyout doc — carries the R2 perceptible reveal selectors (accordion gates R2 off).
-    const flyout = buildMenuDocumentCss(
+    expect(tabletBlockOf(css)).not.toContain("blk_brand");
+  });
+
+  test("iconSize + iconColor device change re-emits width/height AND color together", () => {
+    const css = buildMenuDocumentCss(
       buildDoc({
-        navProps: {
-          navChrome: { submenuDirection: "down" },
-          levelStyles: { 1: { linkAlign: "center", flyoutAnimation: "slide" } },
-        },
+        brandStyle: { iconSize: 24, iconColor: "#101828" },
+        brandResponsive: { tablet: { style: { iconSize: 32, iconColor: "#d92d20" } } },
       })
     );
-    for (const css of [accordion, flyout]) {
-      // Declarations never contain a class selector, so every `.site-nav-*` token is a hook.
-      const hooks = new Set([...css.matchAll(/\.site-nav-[a-z0-9-]+/g)].map((m) => m[0].slice(1)));
-      expect(hooks.size).toBeGreaterThan(0);
-      for (const hook of hooks) expect([...FRONT_NAV_HOOKS]).toContain(hook);
-    }
+    expect(tabletBlockOf(css)).toContain(
+      `[data-menu-block-id="blk_brand"] svg{width:32px;height:32px;color:#d92d20}`
+    );
+  });
+});
+
+// --- TASK-542-02 no-override byte identity -----------------------------------
+describe("TASK-542-02 no-override byte identity", () => {
+  test("a no-override doc emits byte-identical CSS through write→read round-trip", () => {
+    const bare = buildDoc({});
+    const css = buildMenuDocumentCss(bare);
+    expect(css).toBe(buildMenuDocumentCss(normalizeMenuDocumentV2ForWrite(bare)));
+  });
+
+  test("no per-device overrides ⇒ ZERO brand/nav delta rules in device branches", () => {
+    const css = buildMenuDocumentCss(buildDoc({}));
+    expect(tabletBlockOf(css)).not.toContain("blk_");
+    expect(mobileBranchOf(css)).not.toContain("blk_");
   });
 });

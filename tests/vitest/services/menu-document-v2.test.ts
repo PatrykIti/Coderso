@@ -695,3 +695,205 @@ describe("menuDocumentV2 responsive fail-closed read (TASK-501-01, conscious)", 
     }
   });
 });
+
+describe("menuDocumentV2 deterministic ID + topology (TASK-542-01-L01)", () => {
+  // Raw legacy/write fixtures bypass the shared `doc()` helper, which injects
+  // `blk-0-<index>` ids — these tests must exercise REAL missing/invalid ids.
+  const rawDoc = (blocks: unknown[]): Record<string, unknown> => ({
+    schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
+    sections: [
+      {
+        id: "sec-bar",
+        type: "menu-bar",
+        name: "Menu bar",
+        layout: {},
+        blocks,
+      },
+    ],
+  });
+
+  test("unknown top-level keys fail closed (legacy flat topology is never laundered)", () => {
+    const flat = rawDoc([{ type: "nav-items", props: {} }]) as Record<string, unknown>;
+    flat.blocks = flat.sections;
+    delete flat.sections;
+    expectDocError(() => normalizeMenuDocumentV2ForWrite(flat), "document.blocks");
+  });
+
+  test("write requires explicit valid IDs: missing, blank, and syntactically-invalid all throw", () => {
+    for (const blocks of [
+      [{ type: "nav-items", props: {} }], // missing id
+      [{ id: "   ", type: "nav-items", props: {} }], // blank
+      [{ id: "1bad", type: "nav-items", props: {} }], // leading digit
+      [{ id: "bad id", type: "nav-items", props: {} }], // space
+      [{ id: "bad/url", type: "nav-items", props: {} }], // slash
+      [{ id: "a".repeat(161), type: "nav-items", props: {} }], // too long
+    ]) {
+      expectDocError(
+        () => normalizeMenuDocumentV2ForWrite(rawDoc(blocks)),
+        "document.sections[0].blocks[0].id"
+      );
+    }
+  });
+
+  test("stored-read repairs missing legacy IDs with stable structural-path fallbacks", () => {
+    const read = normalizeStoredMenuDocumentV2ForRead(
+      rawDoc([
+        { type: "nav-items", props: {} },
+        { type: "brand", props: { mode: "text", href: "/" } },
+        { type: "nav-items", props: {} },
+      ])
+    );
+    expect(read.sections[0]?.blocks.map((b) => b.id)).toEqual([
+      "blk-0-nav-items-0",
+      "blk-0-brand-1",
+      "blk-0-nav-items-2",
+    ]);
+  });
+
+  test("stored-read repairs colliding legacy IDs with stable -N suffixes (document-wide Set)", () => {
+    const read = normalizeStoredMenuDocumentV2ForRead(
+      rawDoc([
+        { id: "blk-x", type: "nav-items", props: {} },
+        { id: "blk-x", type: "nav-items", props: {} },
+        { id: "blk-x", type: "brand", props: { mode: "text", href: "/" } },
+      ])
+    );
+    expect(read.sections[0]?.blocks.map((b) => b.id)).toEqual(["blk-x", "blk-x-2", "blk-x-3"]);
+  });
+
+  test("duplicate maximum-length IDs stay within the 160-char grammar (marker reserved before slicing)", () => {
+    const longId = "a".repeat(160);
+    const read = normalizeStoredMenuDocumentV2ForRead(
+      rawDoc([
+        { id: longId, type: "nav-items", props: {} },
+        { id: longId, type: "nav-items", props: {} },
+      ])
+    );
+    const ids = read.sections[0]?.blocks.map((b) => b.id) ?? [];
+    expect(ids[0]).toBe(longId);
+    expect(ids[1]).toBe(`${"a".repeat(158)}-2`);
+    for (const id of ids) {
+      expect(id.length).toBeLessThanOrEqual(160);
+      expect(/^[a-z][a-z0-9_-]{0,159}$/.test(id)).toBe(true);
+    }
+  });
+
+  test("suffix collisions after truncation allocate the next free suffix", () => {
+    const longId = "a".repeat(160);
+    const third = `${"a".repeat(158)}-2`; // collides with the generated suffix of the second
+    const read = normalizeStoredMenuDocumentV2ForRead(
+      rawDoc([
+        { id: longId, type: "nav-items", props: {} },
+        { id: longId, type: "nav-items", props: {} },
+        { id: third, type: "nav-items", props: {} },
+        { id: longId, type: "nav-items", props: {} },
+      ])
+    );
+    const ids = read.sections[0]?.blocks.map((b) => b.id) ?? [];
+    expect(ids[1]).toBe(`${"a".repeat(158)}-2`);
+    expect(ids[2]).toBe(`${"a".repeat(158)}-3`); // preferred collided → next free suffix
+    expect(ids[3]).toBe(`${"a".repeat(158)}-4`);
+    for (const id of ids) expect(id.length).toBeLessThanOrEqual(160);
+  });
+
+  test("section/block IDs share one document-wide uniqueness domain (global collisions)", () => {
+    const read = normalizeStoredMenuDocumentV2ForRead({
+      schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
+      sections: [
+        {
+          id: "sec-bar",
+          type: "menu-bar",
+          name: "Menu bar",
+          layout: {},
+          blocks: [{ id: "sec-bar", type: "nav-items", props: {} }],
+        },
+      ],
+    });
+    expect(read.sections[0]?.id).toBe("sec-bar");
+    expect(read.sections[0]?.blocks[0]?.id).toBe("sec-bar-2");
+  });
+
+  test("every invalid topology fails closed with a precise path", () => {
+    const bar = (blocks: unknown[] = []) => ({
+      id: "s1",
+      type: "menu-bar",
+      name: "Menu bar",
+      layout: {},
+      blocks,
+    });
+    const drawer = (blocks: unknown[] = []) => ({
+      id: "s2",
+      type: "menu-drawer",
+      name: "Drawer",
+      layout: {},
+      blocks,
+    });
+    const cases: Array<[string, unknown]> = [
+      [
+        "three sections",
+        { schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION, sections: [bar(), drawer(), drawer()] },
+      ],
+      [
+        "first is not menu-bar",
+        { schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION, sections: [drawer()] },
+      ],
+      [
+        "second is not menu-drawer",
+        { schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION, sections: [bar(), bar()] },
+      ],
+      [
+        "two menu-drawers",
+        { schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION, sections: [bar(), drawer(), drawer()] },
+      ],
+    ];
+    for (const [, input] of cases) {
+      expect(() => normalizeMenuDocumentV2ForWrite(input)).toThrow();
+    }
+    // Empty sections are the explicit clear sentinel and remain valid.
+    expect(
+      normalizeMenuDocumentV2ForWrite({ schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION, sections: [] })
+        .sections
+    ).toEqual([]);
+  });
+
+  test("stable repeated legacy repair: same malformed input read twice is deeply equal", () => {
+    const malformed = JSON.parse(
+      JSON.stringify(
+        rawDoc([
+          { type: "nav-items", props: {} },
+          { id: "blk-x", type: "nav-items", props: {} },
+          { id: "blk-x", type: "nav-items", props: {} },
+          { id: "1bad", type: "brand", props: { mode: "text", href: "/" } },
+        ])
+      )
+    );
+    const first = normalizeStoredMenuDocumentV2ForRead(malformed);
+    const second = normalizeStoredMenuDocumentV2ForRead(malformed);
+    expect(first).toEqual(second);
+  });
+
+  test("read → unrelated-save persists only the canonical adapted copy", () => {
+    const malformed = rawDoc([
+      { type: "nav-items", props: {} },
+      { id: "dup", type: "nav-items", props: {} },
+      { id: "dup", type: "nav-items", props: {} },
+    ]);
+    const read = normalizeStoredMenuDocumentV2ForRead(malformed);
+    const saved = normalizeMenuDocumentV2ForWrite(read); // the writer accepts the adapted copy
+    expect(saved.sections[0]?.blocks.map((b) => b.id)).toEqual([
+      "blk-0-nav-items-0",
+      "dup",
+      "dup-2",
+    ]);
+  });
+
+  test("valid canonical documents round-trip byte-identically through write → read", () => {
+    const canonical = normalizeMenuDocumentV2ForWrite(
+      rawDoc([
+        { id: "blk-nav", type: "nav-items", props: { itemGap: 8 } },
+        { id: "blk-brand", type: "brand", props: { mode: "text", href: "/", text: "Acme" } },
+      ])
+    );
+    expect(normalizeStoredMenuDocumentV2ForRead(canonical)).toEqual(canonical);
+  });
+});

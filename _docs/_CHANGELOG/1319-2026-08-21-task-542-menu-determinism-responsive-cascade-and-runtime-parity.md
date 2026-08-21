@@ -58,6 +58,16 @@ TASK-542-03-L02, TASK-542-03-L03, TASK-542-04-L01)
 - Additive Vitest coverage: projection semantics, schema reject-unknown and
   round-trip persistence, byte-identity defaults, responsive CSS emission
   goldens, site-shell binding, and draft-safe revalidation flows.
+- Post-audit remediation (0 HIGH / 0 MEDIUM gate): deterministic ID/topology
+  matrix (missing/blank/invalid/duplicate IDs, 160-char truncation with marker
+  reservation, global section/block collisions, stable repeated legacy repair,
+  read→unrelated-save), the scrolled-variant helper contract, the table-driven
+  TASK-542-02 neutralizer matrix (itemDivider/hoverUnderline/indicator/caret/
+  flyout/orientation/padding-axis resets), icon-color-only device deltas
+  (proving `BRAND_STYLE_COMPARE_KEYS` includes `iconColor`), and a no-override
+  byte-identity golden. The TASK-508 golden suite moved to its own
+  `menu-document-css-508.test.ts` so the §1-§7 file stays under the 1,000-line
+  gate.
 - Runtime Bun coverage for menu routes, render byte-identity, site-shell
   projection/active identity, and legacy `<details>` compatibility pins.
 - Seven distinct real-flow smoke scenarios (`wf542smoke`) across devices
@@ -80,9 +90,10 @@ TASK-542-03-L02, TASK-542-03-L03, TASK-542-04-L01)
 
 - `bun --cwd core lint:types` EXIT=0; `bun --cwd core lint` EXIT=0; root repo
   `tsc -p tsconfig.json --noEmit` EXIT=0.
-- Targeted Vitest: 8 suites, 240/240 green (menu-document-v2, public-navigation-
-  projection, menu-document-css, siteShell, menu-design-editor, menu-design-
-  editor-revalidation, menusClient, menuSchemas).
+- Targeted Vitest: 9 suites, 431/431 green (menu-document-v2, menu-document-v2-
+  devices, menu-document-v2-navchrome, menu-document-v2-styles, menu-document-v2-
+  scrolled, menu-document-css, menu-document-css-508, menu-design-editor +
+  revalidation, menusClient, menuSchemas) plus 117 admin menu UI tests.
 - Targeted Bun lane: menuService + menu-document-render + menus routes +
   site-shell-runtime — 115/117 in the combined run; the two failures and the
   isolated run's single remaining failure are the documented pre-existing
