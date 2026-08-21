@@ -90,10 +90,12 @@ TASK-542-03-L02, TASK-542-03-L03, TASK-542-04-L01)
 
 - `bun --cwd core lint:types` EXIT=0; `bun --cwd core lint` EXIT=0; root repo
   `tsc -p tsconfig.json --noEmit` EXIT=0.
-- Targeted Vitest: 9 suites, 431/431 green (menu-document-v2, menu-document-v2-
-  devices, menu-document-v2-navchrome, menu-document-v2-styles, menu-document-v2-
-  scrolled, menu-document-css, menu-document-css-508, menu-design-editor +
-  revalidation, menusClient, menuSchemas) plus 117 admin menu UI tests.
+- Targeted Vitest: 8 menu service/site suites (menu-document-v2, menu-document-
+  v2-devices, menu-document-v2-navchrome, menu-document-v2-styles, menu-document-
+  v2-scrolled, menu-document-css, menu-document-css-508, menuSchemas) 314/314
+  green plus 6 admin menu UI suites (menu-editor, menu-editor-validation,
+  menu-editor-shell-wave, menu-editor-refresh-policy, menu-design-editor,
+  menu-design-editor-revalidation) 117/117 green.
 - Targeted Bun lane: menuService + menu-document-render + menus routes +
   site-shell-runtime — 115/117 in the combined run; the two failures and the
   isolated run's single remaining failure are the documented pre-existing
