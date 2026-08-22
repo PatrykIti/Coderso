@@ -142,3 +142,27 @@ describe("relatedEntriesMapEqual (setState diff-guard)", () => {
     expect(relatedEntriesMapEqual(map(), {})).toBe(false);
   });
 });
+
+test("resolveRelatedEntries stringifies an array display field joined in stored order", async () => {
+  const readEntries = vi.fn(async () => [
+    {
+      id: "task-1",
+      title: "Draft spec",
+      data: { tags: ["alpha", "beta"], nested: { value: "v" } },
+    },
+    {
+      id: "task-2",
+      title: "Ship docs",
+      data: { tags: [] },
+    },
+  ]);
+
+  const result = await resolveRelatedEntries({
+    ids: ["task-2", "task-1"],
+    target: "tasks",
+    displayField: "tags",
+    readEntries,
+  });
+
+  expect(result.map((row) => row.displayValue)).toEqual(["", "alpha, beta"]);
+});

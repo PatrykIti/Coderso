@@ -790,3 +790,38 @@ test("updateCustomScreen resolves the content type from the locked row when the 
   expect(mockDb.state.lastUpdateValues?.contentTypeId).toBe("products");
   expect(result?.contentTypeId).toBe("products");
 });
+
+test("updateCustomScreen prunes a field-orphan binding and surfaces binding_field_removed (TASK-505-03)", async () => {
+  const orphanDefinition = makeV4Definition("field-1");
+  orphanDefinition.editorView.bindings = [
+    ...orphanDefinition.editorView.bindings,
+    {
+      id: "field-1-bathrooms",
+      blockId: "field-1", // LIVE block → field-orphan (field deleted from the content type)
+      propPath: "value",
+      source: "entry",
+      field: "bathrooms",
+      mode: "readwrite",
+    },
+  ];
+
+  mockDb.state.selectRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1") }),
+  ];
+  mockDb.state.updateRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1") }),
+  ];
+
+  const result = await updateCustomScreen("screen-1", {
+    definition: orphanDefinition,
+    expectedRevision: 1,
+  });
+
+  const writtenBindings = (
+    mockDb.state.lastUpdateValues?.definition as {
+      editorView: { bindings: Array<{ field: string }> };
+    }
+  ).editorView.bindings;
+  expect(writtenBindings.map((b) => b.field)).not.toContain("bathrooms");
+  expect(result?.warnings).toEqual([{ code: "binding_field_removed", fields: ["bathrooms"] }]);
+});

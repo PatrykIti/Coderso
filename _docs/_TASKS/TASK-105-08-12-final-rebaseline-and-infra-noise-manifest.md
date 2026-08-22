@@ -66,16 +66,19 @@ as `exclude-with-reason` in this contract/coverage manifest, NOT added to
 //
 // 3. Assert:
 //    - files with executable lines === 668
-//    - files below 100% lines === 9 (22 documented genuinely-unreachable residuals:
+//    - files below 100% lines === 14 (29 documented genuinely-unreachable residuals:
 //      TASK-105-08-01: entryData.ts:12, entriesClient.ts:500,
 //      mediaFoldersClient.ts:118, mediaFoldersClient.ts:135;
 //      TASK-105-08-02: ApiKeyDialog.tsx:73-74,77-78, AssistantSettingsPage.tsx:171-172,237,
 //      DesignTokensEditor.tsx:53, EmailSettingsPage.tsx:306,310,353,355,
-//      SecuritySettingsPage.tsx:72,426,475,478, StorageSettingsPage.tsx:354,531)
-//    - files at 100% lines === 659
-//    - uncovered lines === 22
+//      SecuritySettingsPage.tsx:72,426,475,478, StorageSettingsPage.tsx:354,531;
+//      TASK-105-08-10: bindingResolver.ts:148-150, customScreenDefinitionNormalizer.ts:359,
+//      screenDocumentMutations.ts:85, screenDocumentReadNormalizer.ts:285,
+//      screenEntryPresentationOverrideContract.ts:204)
+//    - files at 100% lines === 654
+//    - uncovered lines === 29
 //    - zero-executable files === 17 (the manifest above, unchanged)
-//    - total lines pct === 99.96 (668 files, 22 documented unreachable lines)
+//    - total lines pct === 99.96 (668 files, 29 documented unreachable lines)
 //
 // 4. Report statements/functions and branch honestly (a covered line can still have
 //    only one branch taken or share a line across statements, so stmts/funcs/branch
@@ -109,18 +112,20 @@ Test-only, no API surface. Coverage-manifest/docs change only.
 
 ## Acceptance Criteria
 
-1. Final rebaseline shows `99.96` lines with exactly `22` uncovered lines across exactly
-   `9` files below 100% lines among the 668 executable-line files, and the residual
+1. Final rebaseline shows `99.96` lines with exactly `29` uncovered lines across exactly
+   `14` files below 100% lines among the 668 executable-line files, and the residual
    set equals the documented genuinely-unreachable lines from `TASK-105-08-01`
    (`entryData.ts:12`, `entriesClient.ts:500`, `mediaFoldersClient.ts:118`,
-   `mediaFoldersClient.ts:135`) and `TASK-105-08-02` (`ApiKeyDialog.tsx:73-74,77-78`,
+   `mediaFoldersClient.ts:135`), `TASK-105-08-02` (`ApiKeyDialog.tsx:73-74,77-78`,
    `AssistantSettingsPage.tsx:171-172,237`, `DesignTokensEditor.tsx:53`,
    `EmailSettingsPage.tsx:306,310,353,355`, `SecuritySettingsPage.tsx:72,426,475,478`,
-   `StorageSettingsPage.tsx:354,531`). No other file is below 100% lines and no other
-   line is uncovered.
+   `StorageSettingsPage.tsx:354,531`), and `TASK-105-08-10` (`bindingResolver.ts:148-150`,
+   `customScreenDefinitionNormalizer.ts:359`, `screenDocumentMutations.ts:85`,
+   `screenDocumentReadNormalizer.ts:285`, `screenEntryPresentationOverrideContract.ts:204`).
+   No other file is below 100% lines and no other line is uncovered.
 2. The 17 infra-noise files are documented with `exclude-with-reason`, with no
    `coverage.exclude` widening and no istanbul-ignore additions.
-3. Before/after totals (`82.02 / 73.81 / 81.94 / 85.43` → `99.96` lines with `22`
+3. Before/after totals (`82.02 / 73.81 / 81.94 / 85.43` → `99.96` lines with `29`
    documented unreachable uncovered lines; stmts/funcs/branch reported honestly, not
    gated) are captured for `TASK-105-09`.
 4. Closure evidence is recorded; board/changelog sync is left to the orchestrator.

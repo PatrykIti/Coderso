@@ -5,14 +5,19 @@ import {
   applyBindingsToBlockData,
   collectBindingPropPaths,
   collectWritableBindingFields,
+  getWidgetBindingTarget,
   isBindingWriteAllowed,
+  isListRowFieldWritable,
+  listSelectedEntryWidgetBindingTargets,
   mergeBindingValuesIntoEntryData,
   readBindingPathValue,
   resolveCustomScreenBindingContracts,
+  resolveListRowFieldBinding,
   sanitizeUnsupportedWriteBindings,
   writeBindingPathValue,
 } from "../../../core/services/customScreens/bindingResolver";
 import type { CustomScreenBinding } from "../../../core/services/customScreens/customScreenSchemas";
+import type { ScreenFieldBinding } from "../../../core/services/customScreens/customScreenContracts";
 
 const bindings: CustomScreenBinding[] = [
   {
@@ -239,4 +244,219 @@ test("sanitizeUnsupportedWriteBindings downgrades stale screen-widget write mode
       mode: "readwrite",
     }),
   ]);
+});
+
+type LegacyWidgetDef = {
+  surfaces: readonly string[];
+  dataAccess: { source: string; modes?: Array<"read" | "write"> } | null;
+  bindingTargets: readonly {
+    propPath: string;
+    label: string;
+    description?: string;
+    modes?: Array<"read" | "write">;
+  }[];
+};
+
+const simpleWidget = (overrides: Partial<LegacyWidgetDef> = {}): LegacyWidgetDef => ({
+  surfaces: [],
+  dataAccess: { source: "selected-entry" },
+  bindingTargets: [
+    { propPath: "title", label: "Title" },
+    {
+      propPath: "summary",
+      label: "Summary",
+      description: "Short summary",
+      modes: ["read", "write"],
+    },
+  ],
+  ...overrides,
+});
+
+test("getWidgetBindingTarget resolves targets and falls back to read modes", () => {
+  const widget = simpleWidget();
+
+  const title = getWidgetBindingTarget(widget, "title");
+  expect(title).toMatchObject({
+    propPath: "title",
+    label: "Title",
+    modes: ["read"],
+  });
+
+  const summary = getWidgetBindingTarget(widget, "summary");
+  expect(summary).toMatchObject({
+    propPath: "summary",
+    label: "Summary",
+    description: "Short summary",
+    modes: ["read", "write"],
+  });
+
+  expect(getWidgetBindingTarget(widget, "missing")).toBeNull();
+  expect(getWidgetBindingTarget(widget, "")).toBeNull();
+  expect(getWidgetBindingTarget(null, "title")).toBeNull();
+});
+
+test("listSelectedEntryWidgetBindingTargets lists declared and compatibility bindings", () => {
+  const existingBindings: CustomScreenBinding[] = [
+    {
+      id: "hero-title",
+      widgetId: "hero-1",
+      propPath: "title",
+      field: "headline",
+      mode: "read",
+    },
+    {
+      id: "hero-custom",
+      widgetId: "hero-1",
+      propPath: "legacy.custom",
+      field: "legacyField",
+      mode: "read",
+    },
+  ];
+
+  const result = listSelectedEntryWidgetBindingTargets({
+    widget: simpleWidget(),
+    existingBindings,
+  });
+
+  expect(result).toEqual([
+    expect.objectContaining({ propPath: "title", kind: "declared" }),
+    expect.objectContaining({ propPath: "summary", kind: "declared", modes: ["read", "write"] }),
+    expect.objectContaining({ propPath: "legacy.custom", kind: "compatibility", modes: ["read"] }),
+  ]);
+});
+
+test("listSelectedEntryWidgetBindingTargets returns an empty list for non-entry widgets", () => {
+  expect(
+    listSelectedEntryWidgetBindingTargets({
+      widget: simpleWidget({ dataAccess: { source: "screen" } }),
+      existingBindings: [],
+    })
+  ).toEqual([]);
+});
+
+test("isBindingWriteAllowed falls back to mode-only when the widget contract is missing", () => {
+  const contracts = resolveCustomScreenBindingContracts([{ id: "hero-1", type: "hero", data: {} }]);
+
+  expect(
+    isBindingWriteAllowed(
+      {
+        widgetId: "missing-1",
+        propPath: "title",
+        field: "headline",
+        mode: "readwrite",
+      },
+      { contracts, fallbackToModeOnly: false }
+    )
+  ).toBe(false);
+  expect(
+    isBindingWriteAllowed(
+      {
+        widgetId: "missing-1",
+        propPath: "title",
+        field: "headline",
+        mode: "readwrite",
+      },
+      { contracts }
+    )
+  ).toBe(true);
+});
+
+test("applyBindingsToBlocks recurses into nested children", () => {
+  const result = applyBindingsToBlocks(
+    [
+      {
+        id: "root-1",
+        type: "hero",
+        data: {},
+        children: [
+          {
+            id: "hero-1",
+            type: "hero",
+            data: { heading: { title: "Fallback" } },
+          },
+        ],
+      },
+    ],
+    bindings,
+    { title: "Catalog", subtitle: "Ready" }
+  );
+
+  expect(result[0]?.children?.[0]?.data).toEqual({
+    heading: { title: "Catalog", subtitle: "Ready" },
+  });
+});
+
+test("resolveCustomScreenBindingContracts visits nested children and slot blocks", () => {
+  const contracts = resolveCustomScreenBindingContracts([
+    {
+      id: "root-1",
+      type: "hero",
+      data: {},
+      children: [{ id: "child-1", type: "text", data: {} }],
+      slots: {
+        aside: [{ id: "slot-1", type: "text", data: {} }],
+        empty: [],
+      },
+    },
+  ]);
+
+  expect(contracts.get("child-1")).toBeDefined();
+  expect(contracts.get("slot-1")).toBeDefined();
+});
+
+test("resolveListRowFieldBinding finds the entry value binding for a column", () => {
+  const column = {
+    id: "field-title",
+    source: "field" as const,
+    field: "headline",
+    label: "Headline",
+    formatter: "text" as const,
+    visible: true,
+  };
+
+  expect(
+    resolveListRowFieldBinding({
+      column,
+      rowTemplate: {
+        document: { schemaVersion: 1, sections: [] },
+        bindings: [
+          {
+            id: "b1",
+            blockId: "field-1",
+            propPath: "value",
+            source: "entry" as const,
+            field: "headline",
+            mode: "readwrite" as const,
+          },
+          {
+            id: "b2",
+            blockId: "field-2",
+            propPath: "value",
+            source: "entry" as const,
+            field: "other",
+            mode: "read" as const,
+          },
+        ],
+      },
+    })
+  ).toMatchObject({ id: "b1" });
+
+  expect(resolveListRowFieldBinding({ column })).toBeNull();
+});
+
+test("isListRowFieldWritable classifies write modes", () => {
+  const binding = (mode: "read" | "write" | "readwrite"): ScreenFieldBinding => ({
+    id: "b1",
+    blockId: "field-1",
+    propPath: "value",
+    source: "entry",
+    field: "headline",
+    mode,
+  });
+
+  expect(isListRowFieldWritable(binding("write"))).toBe(true);
+  expect(isListRowFieldWritable(binding("readwrite"))).toBe(true);
+  expect(isListRowFieldWritable(binding("read"))).toBe(false);
+  expect(isListRowFieldWritable(null)).toBe(false);
+  expect(isListRowFieldWritable(undefined)).toBe(false);
 });

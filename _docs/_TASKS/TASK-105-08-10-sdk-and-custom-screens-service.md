@@ -7,7 +7,31 @@
 **Dependencies:** None beyond parent (source files are all read-only; this leaf
 only writes tests)
 **Parent Task:** TASK-105-08  
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+
+**Started:** 2026-08-22  
+**Completed:** 2026-08-22
+
+## Implementation Notes and Residual Evidence
+
+Implemented by delegated agent (9router:ds/deepseek-v4-flash), verified independently by
+the orchestrator against local files and command output. Test-only: 15 new suites
+(`tests/vitest/customScreens/*`) + 5 extended suites; 14/19 target files at 100% lines.
+
+Residual set: exactly 7 lines across 5 files, all verified genuinely unreachable through
+the public API (each confirmed by reading the source):
+
+| File:Line | Evidence |
+|---|---|
+| `bindingResolver.ts:148-150` (3) | `resolveWidgetDefinition` returns `null` (retired types) or `LEGACY_WIDGET_PLACEHOLDER` whose `bindingTargets` is the literal `[]` (line 46-50), so `(widget?.bindingTargets ?? [])` is always empty and the `forEach` body (148-150) cannot run. |
+| `customScreenDefinitionNormalizer.ts:359` (1) | The `try` block's catch fallback: the block is only entered under `isRecord(rawInput.listView)` (line 299 guard returns default early otherwise), and every helper used inside (`readContentSchemaProperties`, `pickSchemaField`, `fieldColumn`, `systemColumn`, `buildDefaultListViewDefinition`) is total for any input; the catch cannot throw. |
+| `screenDocumentMutations.ts:85` (1) | `sameSiblingList` final `return false` fallthrough: the sole caller (`moveScreenBlockTo`, line 129) guards `target.kind === "section-index" \|\| target.kind === "slot-index"` before calling, and both branches return inside; the fallthrough is dead. |
+| `screenDocumentReadNormalizer.ts:285` (1) | Length-mismatch throw in `collectNormalizedUnsupportedButtonIds`: `repairLegacyScreenRecordForRead` is 1:1 block-preserving (only `.map` over arrays, value-level repair), so `repairedBlocks.length === normalizedBlocks.length` always; verified via `normalizeUniqueIds` + section-wrap analysis. |
+| `screenEntryPresentationOverrideContract.ts:204` (1) | Catch-all `throw invalidOverride()` in `normalizeOverrideValue`: `propPath` is validated by `normalizePropPath` against exactly the 5 enum values (`image`, `mediaAssetId`, `textSize`, `textEmphasis`, `tone`; lines 9-13), and all 5 are handled above the throw (mediaPropPathSet + the three owned-enum branches). |
+
+These join the 22 documented residuals from TASK-105-08-01/02; the total documented
+genuinely-unreachable set is now 29 across 14 files. No `coverage.exclude` widening and no
+istanbul-ignore anywhere (owner rule).
 
 ---
 

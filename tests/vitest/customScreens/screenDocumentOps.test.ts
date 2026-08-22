@@ -377,3 +377,31 @@ test("screenDocumentOps facade preserves the exact public manifest and owner ref
   ]);
   expect(Object.keys(screenDocumentContracts)).toEqual([]);
 });
+
+test("removeScreenBindingsForBlock drops every binding for the block id", () => {
+  const bindings = [
+    {
+      id: "field-1-value",
+      blockId: "field-1",
+      propPath: "value",
+      source: "entry" as const,
+      field: "headline",
+      mode: "readwrite" as const,
+    },
+    {
+      id: "field-2-value",
+      blockId: "field-2",
+      propPath: "value",
+      source: "entry" as const,
+      field: "summary",
+      mode: "read" as const,
+    },
+  ];
+
+  expect(screenDocumentBindingOps.removeScreenBindingsForBlock(bindings, "field-1")).toEqual([
+    expect.objectContaining({ blockId: "field-2" }),
+  ]);
+  expect(screenDocumentBindingOps.removeScreenBindingsForBlock(bindings, "missing")).toHaveLength(
+    2
+  );
+});
