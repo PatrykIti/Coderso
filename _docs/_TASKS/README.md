@@ -85,8 +85,10 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 192 tasks
 - **In Progress:** 3 tasks
-- **Done:** 3610 tasks
+- **Done:** 3611 tasks
 
+> 2026-08-22: TASK-105-08-07 assistant coverage leaf (changelog 1324) closed
+> from To Do to Done. Statistics delta applied: Done 3610 -> 3611.
 > 2026-08-19: TASK-105-04 (changelog 1320) and TASK-105-05 (changelog 1321)
 > closed from In Progress to Done; TASK-105-06 stays In Progress deferred to the
 > S6 coordination gate (pin 1322). Statistics delta applied: In Progress 6 -> 4,
