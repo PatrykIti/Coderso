@@ -227,6 +227,19 @@ At closure (`TASK-105-08-12`):
   to `99.99` lines / `4` documented residuals. Full vitest coverage run green
   (exit 0), `lint` 0, `lint:types` 0, `git diff --check` clean, all touched files
   <= 1000 lines.
+- 2026-08-22: TASK-105-08-02 implemented (settings UI). 1 existing suite extended +
+  15 new suites (27 files target). The implementer reported 20 residuals; the
+  orchestrator re-verified every line against the source and probed the disabled-button
+  semantics empirically (native `.click()` and `dispatchEvent` do NOT fire React
+  onClick on a `disabled` button). Final residual set: exactly 18 genuinely-unreachable
+  lines across 6 files (`ApiKeyDialog.tsx:73-74,77-78`, `AssistantSettingsPage.tsx:171-172,237`,
+  `DesignTokensEditor.tsx:53`, `EmailSettingsPage.tsx:306,310,353,355`,
+  `SecuritySettingsPage.tsx:72,426,475,478`, `StorageSettingsPage.tsx:354,531`), all
+  defensive validation branches blocked by a `disabled` button or fields with no
+  rendered control; documented with evidence in the leaf. Leaf-12 gate updated to
+  `99.96` lines / `22` residuals (L01+L02). Full vitest coverage run green (exit 0,
+  `89.13` lines), root `tsc` 0, `lint` 0, `lint:types` 0, `git diff --check` clean,
+  all touched files <= 1000 lines.
 
 ## Sub-Tasks
 

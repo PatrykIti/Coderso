@@ -136,5 +136,33 @@ Test-only, no API surface.
 
 ## Acceptance Criteria
 
-1. All 27 files reach `100%` lines.
+1. All 27 files reach `100%` lines, except the documented genuinely-unreachable
+   residuals listed below.
 2. Error and dirty-state branches are behavior-asserted, not skipped.
+
+## Documented Genuinely-Unreachable Residuals
+
+Verified by the orchestrator with source evidence and an empirical happy-dom probe.
+No `/* istanbul ignore */` is used anywhere (owner rule); these lines are reported
+honestly and stay uncovered. Every residual is a defensive validation branch whose
+precondition is already blocked by the UI (`disabled` button) or a render path with
+no user-editable control for the compared field. The disabled-button suppression of
+React `onClick` was probed empirically: both native `.click()` and
+`dispatchEvent(new MouseEvent("click"))` on a `disabled` button leave the handler at
+0 invocations in the happy-dom test runtime.
+
+| File:Line | Code | Evidence |
+|---|---|---|
+| `core/admin/ui/settings/ApiKeyDialog.tsx:73-74,77-78` | empty-name and empty-scopes `setLocalError` branches in `handleSubmit` | The Create button is `disabled={!canSubmit}` where `canSubmit = name.trim().length > 0 && selectedCount > 0 && !isSubmitting`; a disabled button never fires `onClick`, so `handleSubmit` can never run with an empty name or empty scopes. The existing "enforces a scope selection" test asserts the disabled behavior. |
+| `core/admin/ui/settings/AssistantSettingsPage.tsx:171-172` | `setReindexError("Enable assistant in saved settings before running reindex.")` | The reindex button is `reindexDisabled={busy \|\| !persistedValues.assistantEnabled}`; when the saved settings have `assistantEnabled: false` the button is disabled, so `handleReindex` never reaches the guard. |
+| `core/admin/ui/settings/AssistantSettingsPage.tsx:237` | `return previous` when provider/model mismatches `requestModel` | The metadata effect is keyed by `provider:model` (`modelMetadataRequestKey`) and sets `active = false` on cleanup, so any change that would make `current` differ from `requestModel` re-keys the effect and cancels the in-flight fetch before the `setFormState` callback runs. `previous.source === values` always holds in practice, making `current === requestModel`. |
+| `core/admin/ui/settings/DesignTokensEditor.tsx:53` | `setLocalDraft(draft)` in `applyDraft` catch | The Apply button is `disabled={Boolean(error)}` and `error` is set to `"Invalid JSON"` whenever `JSON.parse(draft)` throws; `applyDraft` can therefore never be invoked with unparseable draft content. |
+| `core/admin/ui/settings/EmailSettingsPage.tsx:306,310,353,355` | `invalid_port` and `password_required` throws plus their `setError` mappings | The Save button is `disabled={busy \|\| hasValidationErrors}` with `hasValidationErrors = portInvalid \|\| passwordInvalid`; invalid ports and missing passwords already disable the button (asserted by the "keeps Save disabled" tests), so `handleSave` never reaches the throw/catch path. |
+| `core/admin/ui/settings/SecuritySettingsPage.tsx:72` | `parseScore` `_invalid` throw | `saveDisabled = busy \|\| hasValidationErrors` includes `scoreInvalid`, and `performSave` also guards `if (busy \|\| hasValidationErrors) return false` before `parseScore` is reached at payload construction. |
+| `core/admin/ui/settings/SecuritySettingsPage.tsx:426,475,478` | `risks.push("Request ID header policy" / "Strict validation" / "Plugin safe mode")` | `requestIdEnabled`, `requestIdHeaderName`, `validationRejectUnknownFields` and `pluginSafeMode` have NO rendered controls in the page JSX (they only exist in types, defaults, normalization and the payload). With no user path to change them, `hasChanged(before, after, ...)` is always false. |
+| `core/admin/ui/settings/StorageSettingsPage.tsx:354,531` | `max_size_invalid` throw plus its `setError` mapping | The Save button is `disabled={busy \|\| hasValidationErrors}` with `hasValidationErrors = maxSizeInvalid`; an invalid max size disables the button, so `handleSave` never reaches the throw/catch path. |
+
+These 18 lines are the complete residual set after L02 implementation; every other
+line in the 27 files is covered by behavior-asserted tests. The residual set was
+cross-checked against the final coverage lane: exactly 18 uncovered lines across the
+6 files above.
