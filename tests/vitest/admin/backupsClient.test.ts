@@ -538,3 +538,143 @@ test("updateBackupSchedule patches schedule cache and broadcasts", async () => {
     restore();
   }
 });
+
+test("deleteBackup clears caches missing the item and leaves non-matching queries untouched", async () => {
+  const { restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const pageOne = { page: 1, limit: 25, query: "queued" };
+  const pageTwo = { page: 2, limit: 25, query: "queued" };
+  const otherQuery = { page: 1, limit: 25, query: "complete" };
+
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    if (url.startsWith("/admin/api/backups?")) {
+      if (url.includes("query=queued") && url.includes("page=1")) {
+        return jsonResponse(backupListResult([backupItem({ id: "backup-x", status: "queued" })]));
+      }
+      if (url.includes("query=queued") && url.includes("page=2")) {
+        return jsonResponse(backupListResult([backupItem({ id: "backup-y", status: "queued" })]));
+      }
+      return jsonResponse(backupListResult([backupItem({ id: "backup-z", status: "complete" })]));
+    }
+    return jsonResponse({ ok: true, id: "backup-x" });
+  };
+
+  try {
+    resetCsrfToken();
+    await listBackupsCached({ ...pageOne, force: true });
+    await listBackupsCached({ ...pageTwo, force: true });
+    await listBackupsCached({ ...otherQuery, force: true });
+
+    await deleteBackup("backup-x");
+    expect(getCachedBackups(pageOne)?.items.some((item) => item.id === "backup-x")).toBe(false);
+    // Same query but the item is absent: the cache is cleared instead of patched.
+    expect(getCachedBackups(pageTwo)).toBeNull();
+    // Different query that does not match the deleted item: untouched.
+    expect(getCachedBackups(otherQuery)?.items.some((item) => item.id === "backup-z")).toBe(true);
+
+    // Unknown id: every cache is left consistent.
+    await deleteBackup("backup-missing");
+    expect(getCachedBackups(otherQuery)?.items.some((item) => item.id === "backup-z")).toBe(true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
+
+test("clearBackupsCache clears only the requested page and query", async () => {
+  const { restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const pageOne = { page: 1, limit: 25 };
+  const pageTwo = { page: 2, limit: 25 };
+
+  globalThis.fetch = async () => jsonResponse(backupListResult([backupItem()]));
+
+  try {
+    await listBackupsCached({ ...pageOne, force: true });
+    await listBackupsCached({ ...pageTwo, force: true });
+    expect(getCachedBackups(pageOne)).not.toBeNull();
+    expect(getCachedBackups(pageTwo)).not.toBeNull();
+
+    clearBackupsCache(pageTwo);
+
+    expect(getCachedBackups(pageOne)).not.toBeNull();
+    expect(getCachedBackups(pageTwo)).toBeNull();
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
+
+test("listBackupsCached dedupes concurrent in-flight requests", async () => {
+  const { restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  const payload = backupListResult([backupItem({ id: "backup-shared" })]);
+
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    return jsonResponse(payload);
+  };
+
+  try {
+    const [first, second] = await Promise.all([
+      listBackupsCached({ page: 1, limit: 25 }),
+      listBackupsCached({ page: 1, limit: 25 }),
+    ]);
+    expect(fetchCount).toBe(1);
+    expect(first).toEqual(second);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
+
+test("getBackupScheduleCached fetches and caches when the cache is empty", async () => {
+  const { storage, restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  const weekly = backupSchedule({ frequency: "weekly" });
+
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return jsonResponse(weekly);
+  };
+
+  try {
+    await expect(getBackupScheduleCached()).resolves.toEqual(weekly);
+    expect(calls).toEqual(["/admin/api/backups/schedule"]);
+    expect(getCachedBackupSchedule()).toEqual(weekly);
+
+    await expect(getBackupScheduleCached()).resolves.toEqual(weekly);
+    expect(calls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
+
+test("getBackupScheduleCached dedupes concurrent fetches", async () => {
+  const { restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  const payload = backupSchedule({ frequency: "monthly" });
+
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    return jsonResponse(payload);
+  };
+
+  try {
+    const [first, second] = await Promise.all([
+      getBackupScheduleCached(),
+      getBackupScheduleCached(),
+    ]);
+    expect(fetchCount).toBe(1);
+    expect(first).toEqual(second);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});

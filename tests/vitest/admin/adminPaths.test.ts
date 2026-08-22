@@ -3,6 +3,8 @@ import { expect, test } from "vitest";
 import {
   DEFAULT_ADMIN_PATH,
   isAdminHrefActive,
+  mapNavItems,
+  mapNavSections,
   resolveAdminBasePath,
   resolveAdminHref,
   resolveAdminRoutePath,
@@ -107,4 +109,36 @@ test("isAdminHrefActive checks canonical and nested matches", () => {
       "/admin/advanced/custom-screens/screen-1/entries/entry-1"
     )
   ).toBe(true);
+});
+
+test("resolveAdminHref preserves hash and query suffix order", () => {
+  expect(resolveAdminHref("/admin", "/pages?view=grid#section")).toBe(
+    "/admin/pages?view=grid#section"
+  );
+  expect(resolveAdminHref("/admin", "/pages#section")).toBe("/admin/pages#section");
+});
+
+test("mapNavItems and mapNavSections canonicalize hrefs across items, groups, and trailing items", () => {
+  const items = mapNavItems([{ href: "/pages", label: "Pages" }], "/admin");
+  expect(items[0]?.href).toBe("/admin/pages");
+
+  const sections = mapNavSections(
+    [
+      {
+        id: "primary",
+        items: [{ href: "/forms/abc", label: "Forms" }],
+        itemsAfterGroups: [{ href: "/booking", label: "Booking" }],
+        groups: [{ label: "Group", items: [{ href: "/reviews", label: "Reviews" }] }],
+      },
+      { id: "empty" },
+    ],
+    "/admin"
+  );
+
+  expect(sections[0]?.items?.[0]?.href).toBe("/admin/advanced/forms/abc");
+  expect(sections[0]?.itemsAfterGroups?.[0]?.href).toBe("/admin/advanced/booking");
+  expect(sections[0]?.groups?.[0]?.items[0]?.href).toBe("/admin/advanced/reviews");
+  expect(sections[1]?.items).toBeUndefined();
+  expect(sections[1]?.itemsAfterGroups).toBeUndefined();
+  expect(sections[1]?.groups).toBeUndefined();
 });

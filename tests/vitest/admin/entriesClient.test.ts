@@ -858,3 +858,31 @@ test("getEntryCached reads from local storage", async () => {
     resetCaches("blog");
   }
 });
+
+test("entry data validators reject hostile array and object shapes without throwing", () => {
+  const oddProto: unknown[] = [];
+  Object.setPrototypeOf(oddProto, {});
+  expect(isEntryDataValue(oddProto)).toBe(false);
+
+  const missingLength = new Proxy([], {
+    getOwnPropertyDescriptor: () => ({
+      writable: true,
+      enumerable: false,
+      configurable: false,
+    }),
+  });
+  expect(isEntryDataValue(missingLength)).toBe(false);
+
+  const throwingOwnKeys = new Proxy(
+    {},
+    {
+      ownKeys: () => {
+        throw new Error("ownKeys trap");
+      },
+    }
+  );
+  expect(isEntryDataValue(throwingOwnKeys)).toBe(false);
+  expect(isEntryData(throwingOwnKeys)).toBe(false);
+
+  expect(isEntryData([1, 2])).toBe(false);
+});

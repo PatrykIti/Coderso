@@ -240,3 +240,46 @@ test("redirect mutations patch cached list and broadcast", async () => {
     restore();
   }
 });
+
+test("listRedirectsCached dedupes in-flight reads and primes the cache", async () => {
+  const { storage, restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([redirectItem({ id: "redirect-9" })]);
+  };
+
+  try {
+    const [first, second] = await Promise.all([listRedirectsCached(), listRedirectsCached()]);
+    expect(first).toEqual([redirectItem({ id: "redirect-9" })]);
+    expect(second).toEqual([redirectItem({ id: "redirect-9" })]);
+    expect(calls.filter((call) => String(call.input) === "/admin/api/redirects")).toHaveLength(1);
+    expect(getCachedRedirects()).toEqual([redirectItem({ id: "redirect-9" })]);
+    expect(JSON.parse(storage.getItem(cacheKeys.redirectsList) ?? "{}")).toHaveProperty("value");
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
+
+test("listRedirectsCached force refresh bypasses the in-flight promise", async () => {
+  const { restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([redirectItem({ id: "redirect-a" })]);
+  };
+
+  try {
+    const first = await listRedirectsCached();
+    const second = await listRedirectsCached({ force: true });
+    expect(first[0]?.id).toBe("redirect-a");
+    expect(second[0]?.id).toBe("redirect-a");
+    expect(calls.filter((call) => String(call.input) === "/admin/api/redirects")).toHaveLength(2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});

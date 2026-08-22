@@ -1,6 +1,13 @@
 import { expect, test } from "vitest";
 
-import { executeAssistantActions } from "../../../core/admin/services/assistantClient";
+import {
+  dryRunAssistantActions,
+  executeAssistantActions,
+  getAssistantModelMetadata,
+  getAssistantStatus,
+  invalidateAssistantStatusCache,
+  planAssistantActions,
+} from "../../../core/admin/services/assistantClient";
 import { registerCustomScreensCacheInvalidator } from "../../../core/admin/services/customScreensCache";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";

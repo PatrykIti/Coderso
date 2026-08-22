@@ -21,6 +21,7 @@ import {
   type CacheEventOperationToken,
   type CacheEventOrigin,
 } from "../../../core/admin/utils/cacheBus";
+import { writeLocalCache } from "../../../core/admin/utils/storageCache";
 import {
   createLocalStorage,
   deferred,
@@ -921,5 +922,32 @@ test("client registers a memory invalidator with the TASK-467-01 registry", asyn
   } finally {
     clearCustomScreensCache();
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("a storage-only detail without a committed version is evicted once a list commit exists", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  globalThis.fetch = async () => jsonResponse({ items: [makeScreen()] });
+
+  try {
+    clearCustomScreensCache();
+    await listCustomScreensCached({ force: true });
+    writeLocalCache(
+      cacheKeys.customScreenDetail("screen-orphan"),
+      makeScreen({ id: "screen-orphan", name: "Orphan detail" })
+    );
+    expect(getCachedCustomScreen("screen-orphan")).toBeNull();
+    expect(storage.getItem(cacheKeys.customScreenDetail("screen-orphan"))).toBeNull();
+  } finally {
+    clearCustomScreensCache();
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
   }
 });

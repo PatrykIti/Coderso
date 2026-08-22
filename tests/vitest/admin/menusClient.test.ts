@@ -11,6 +11,7 @@ import {
   listMenusCached,
   moveMenuToDraft,
   publishMenu,
+  replaceMenuItems,
   updateMenu,
   type MenuSummary,
 } from "../../../core/admin/services/menusClient";
@@ -389,6 +390,134 @@ test("deleteMenu removes list and detail cache entries", async () => {
     await deleteMenu("menu-1");
 
     expect(getCachedMenus()).toEqual([]);
+    expect(storage.getItem(cacheKeys.menuDetail("menu-1"))).toBeNull();
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("getMenuWithItemsCached fetches and writes the detail cache on a miss", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+  const detail = { menu: makeMenuSummary(), items: [] };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(detail);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const result = await getMenuWithItemsCached("menu-1");
+    expect(calls[0]?.input).toBe("/admin/api/menus/menu-1");
+    expect(result).toEqual(detail);
+
+    // The write primes the summary list and the local detail cache.
+    expect(getCachedMenus()).toMatchObject([{ id: "menu-1" }]);
+    expect(storage.getItem(cacheKeys.menuDetail("menu-1"))).toContain("Main");
+
+    // The second read is served entirely from the written caches.
+    await getMenuWithItemsCached("menu-1");
+    expect(calls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("updateMenu patches the cached detail in place", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse(makeMenuSummary({ name: "Renamed" }));
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    resetCsrfToken();
+    storage.setItem(
+      cacheKeys.menuDetail("menu-1"),
+      JSON.stringify({
+        value: { menu: makeMenuSummary({ name: "Old name" }), items: [] },
+        savedAt: Date.now(),
+      })
+    );
+
+    await updateMenu("menu-1", { name: "Renamed" });
+
+    // The cached detail is patched with the updated summary fields.
+    const patched = await getMenuWithItemsCached("menu-1");
+    expect(patched?.menu.name).toBe("Renamed");
+    expect(calls).toHaveLength(2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("replaceMenuItems replaces items via PUT and clears the detail cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ ok: true });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    resetCsrfToken();
+    storage.setItem(
+      cacheKeys.menuDetail("menu-1"),
+      JSON.stringify({
+        value: { menu: makeMenuSummary(), items: [] },
+        savedAt: Date.now(),
+      })
+    );
+
+    const items = [{ label: "Home", href: "/", orderIndex: 0 }];
+    const result = await replaceMenuItems("menu-1", items);
+
+    expect(result).toEqual({ ok: true });
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/menus/menu-1/items");
+    expect(calls[1]?.init?.method).toBe("PUT");
+    expect(calls[1]?.init?.body).toBe(JSON.stringify({ items }));
     expect(storage.getItem(cacheKeys.menuDetail("menu-1"))).toBeNull();
   } finally {
     globalThis.fetch = originalFetch;

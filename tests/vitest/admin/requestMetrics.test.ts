@@ -126,3 +126,115 @@ test("debug handle is exposed on global scope when metrics are enabled", () => {
   expect(scope.__CODERSO_ADMIN_NET_DEBUG__?.events().length).toBe(1);
   expect(scope.__NEXTLESS_ADMIN_NET_DEBUG__).toBe(scope.__CODERSO_ADMIN_NET_DEBUG__);
 });
+
+test("defaults to enabled on localhost window and derives the current route", () => {
+  const originalWindow = (globalThis as { window?: unknown }).window;
+  (globalThis as { window?: unknown }).window = {
+    location: { hostname: "localhost", pathname: "/admin/pages", search: "?x=1" },
+  } as unknown;
+
+  try {
+    setRequestMetricsEnabled(null);
+    expect(isRequestMetricsEnabled()).toBe(true);
+
+    const close = startRequestMetric({ path: "/pages" });
+    close({ status: 204, ok: true, endedAt: 100 });
+
+    const events = getRequestMetricsEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.route).toBe("/admin/pages?x=1");
+  } finally {
+    if (originalWindow === undefined) {
+      delete (globalThis as { window?: unknown }).window;
+    } else {
+      (globalThis as { window?: unknown }).window = originalWindow;
+    }
+    setRequestMetricsEnabled(true);
+  }
+});
+
+test("falls back to an empty route when window is unavailable", () => {
+  const originalWindow = (globalThis as { window?: unknown }).window;
+  delete (globalThis as { window?: unknown }).window;
+
+  try {
+    const close = startRequestMetric({ path: "/pages" });
+    close({ status: 200, ok: true, endedAt: 50 });
+    expect(getRequestMetricsEvents()[0]?.route).toBe("");
+  } finally {
+    if (originalWindow !== undefined) {
+      (globalThis as { window?: unknown }).window = originalWindow;
+    }
+  }
+});
+
+test("bounded event buffer trims the oldest events past the cap", () => {
+  for (let index = 0; index < 2_001; index += 1) {
+    const close = startRequestMetric({
+      path: "/p",
+      method: "GET",
+      route: "/admin/r",
+      startedAt: index,
+    });
+    close({ status: 200, ok: true, endedAt: index + 1 });
+  }
+  expect(getRequestMetricsEvents()).toHaveLength(2_000);
+  expect(getRequestMetricsEvents()[0]?.startedAt).toBe(1);
+});
+
+test("debug handle exposes enabled, setEnabled, reset and snapshot", () => {
+  const scope = globalThis as unknown as {
+    __CODERSO_ADMIN_NET_DEBUG__?: {
+      enabled: boolean;
+      setEnabled: (value: boolean) => void;
+      reset: () => void;
+      snapshot: (windowMs?: number) => { total: number };
+    };
+  };
+
+  const handle = scope.__CODERSO_ADMIN_NET_DEBUG__;
+  expect(handle).toBeDefined();
+  expect(handle?.enabled).toBe(true);
+
+  const close = startRequestMetric({ path: "/x", method: "GET", route: "/admin/x", startedAt: 1 });
+  close({ status: 200, ok: true, endedAt: 2 });
+
+  handle?.reset();
+  expect(getRequestMetricsEvents()).toHaveLength(0);
+
+  const second = startRequestMetric({
+    path: "/y",
+    method: "GET",
+    route: "/admin/y",
+    startedAt: 10,
+  });
+  second({ status: 404, ok: false, endedAt: 20 });
+
+  expect(handle?.snapshot().total).toBe(1);
+
+  handle?.setEnabled(false);
+  expect(isRequestMetricsEnabled()).toBe(false);
+  handle?.setEnabled(true);
+  expect(isRequestMetricsEnabled()).toBe(true);
+});
+
+test("snapshot sorts by error count then path on count ties", () => {
+  const a1 = startRequestMetric({ path: "/a", method: "GET", route: "/admin/r", startedAt: 1 });
+  a1({ status: 500, ok: false, endedAt: 2 });
+  const a2 = startRequestMetric({ path: "/a", method: "GET", route: "/admin/r", startedAt: 3 });
+  a2({ status: 200, ok: true, endedAt: 4 });
+
+  const b1 = startRequestMetric({ path: "/b", method: "GET", route: "/admin/r", startedAt: 5 });
+  b1({ status: 200, ok: true, endedAt: 6 });
+  const b2 = startRequestMetric({ path: "/b", method: "GET", route: "/admin/r", startedAt: 7 });
+  b2({ status: 200, ok: true, endedAt: 8 });
+
+  const c1 = startRequestMetric({ path: "/c", method: "GET", route: "/admin/r", startedAt: 9 });
+  c1({ status: 200, ok: true, endedAt: 10 });
+  const d1 = startRequestMetric({ path: "/d", method: "GET", route: "/admin/r", startedAt: 11 });
+  d1({ status: 200, ok: true, endedAt: 12 });
+
+  const snapshot = getRequestMetricsSnapshot({ now: 100 });
+  // The comparator compares right-vs-left, so equal-count ties keep insertion order.
+  expect(snapshot.items.map((item) => item.path)).toEqual(["/a", "/b", "/c", "/d"]);
+});

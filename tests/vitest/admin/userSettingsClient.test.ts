@@ -480,3 +480,68 @@ test("an abort after a refreshable CSRF response prevents the retry PATCH", asyn
     resetCsrfToken();
   }
 });
+
+test("getUserSetting keyed fetch merges into a warm aggregate cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push({ input, init });
+    if (url === "/admin/api/user-settings") {
+      return jsonResponse(makeSettings());
+    }
+    if (url === "/admin/api/user-settings/assistant.mode") {
+      return jsonResponse({ key: "assistant.mode", value: "llm-guide" });
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    const warm = await getUserSettings();
+    expect(warm["assistant.mode"]).toBe("docs-only");
+
+    const hit = await getUserSetting("assistant.mode");
+    expect(hit.value).toBe("docs-only");
+
+    const forced = await getUserSetting("assistant.mode", { force: true });
+    expect(forced.value).toBe("llm-guide");
+
+    const merged = await getUserSettings();
+    expect(merged["assistant.mode"]).toBe("llm-guide");
+
+    expect(calls.filter((call) => call.input === "/admin/api/user-settings").length).toBe(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("setUserSetting invalidates the aggregate cache when it is cold", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push({ input, init });
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url === "/admin/api/user-settings/media.openAfterUpload") {
+      return jsonResponse({ key: "media.openAfterUpload", value: true });
+    }
+    if (url === "/admin/api/user-settings") {
+      return jsonResponse(makeSettings());
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    const result = await setUserSetting("media.openAfterUpload", true);
+    expect(result.value).toBe(true);
+
+    await getUserSettings();
+    expect(calls.filter((call) => call.input === "/admin/api/user-settings").length).toBe(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

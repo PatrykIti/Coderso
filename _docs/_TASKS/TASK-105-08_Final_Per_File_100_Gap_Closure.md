@@ -218,6 +218,15 @@ At closure (`TASK-105-08-12`):
   leaf-12 gate reworded to lines-100% with stmts/funcs/branch reported honestly;
   happy-dom pragma mandated for render() suites; HEAD label updated to `998e4ed8`.
   Reconcile re-audit follows before implementation starts.
+- 2026-08-22: TASK-105-08-01 implemented (admin services+utils). 28 existing suites
+  extended + 19 new coverage suites (47 files target). Final residual set verified
+  empirically by the orchestrator: exactly 4 genuinely-unreachable lines
+  (`entryData.ts:12`, `entriesClient.ts:500`, `mediaFoldersClient.ts:118` and
+  `:135`), each documented with evidence in the leaf; no istanbul-ignore added
+  anywhere (owner rule). L01 acceptance amended accordingly, leaf-12 gate reworded
+  to `99.99` lines / `4` documented residuals. Full vitest coverage run green
+  (exit 0), `lint` 0, `lint:types` 0, `git diff --check` clean, all touched files
+  <= 1000 lines.
 
 ## Sub-Tasks
 

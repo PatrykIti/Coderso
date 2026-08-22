@@ -192,6 +192,26 @@ Test-only, no API surface.
 
 ## Acceptance Criteria
 
-1. All 47 files reach `100%` lines.
+1. All 47 files reach `100%` lines, except the documented genuinely-unreachable
+   residuals listed below.
 2. Cache-hit paths assert `apiRequest` was NOT called (no zero-query regression).
 3. Error/normalizer paths are behavior-asserted, not skipped.
+
+## Documented Genuinely-Unreachable Residuals
+
+Verified by the orchestrator with empirical probes (Bun 1.x and the Vitest worker
+node runtime) after the implementer's re-verification. No `/* istanbul ignore */`
+is used anywhere (owner rule); these lines are reported honestly and stay
+uncovered. Each line is unreachable through every real seam: the exported public
+API, the existing `apiClient` mock seam, and the real storage-cache path (which
+always `JSON.parse`es).
+
+| File:Line | Code | Evidence |
+|---|---|---|
+| `core/admin/services/entryData.ts:12` | `return null` after `!lengthDescriptor \|\| !("value" in lengthDescriptor) \|\| lengthDescriptor.enumerable` | `readArrayChildren` is only reached from `isEntryDataValue`/`isEntryData` through the `Array.isArray(value)` gate. A proxy over an array target makes `"length"` a non-configurable own property, so any descriptor that would satisfy the condition (`undefined`, accessor-only, or `enumerable: true`) throws `TypeError` at `getOwnPropertyDescriptor` and is caught by the caller, never taking this line. A proxy over a non-array target fails `Array.isArray` and never enters `readArrayChildren`. |
+| `core/admin/services/entriesClient.ts:500` | `getCachedEntryDetailVersionsMap(typeSlug).set(id, 0)` backfill | Guard requires the detail map to hold `id` while the version map lacks it. Every detail-map writer (`publishEntryDetailValue` 310, storage hydration 510) writes the version map in the same statement pair (311, 511); every deleter removes both maps in pairs (362/363, 449/450); whole-map clears are paired (539/540). No public sequence breaks the invariant. |
+| `core/admin/services/mediaFoldersClient.ts:118` | `return false` after `Reflect.ownKeys(value)` catch | `hasExactMediaFolderKeys` is only called from `isCanonicalMediaFolder` inside the cache validator, whose input always comes from `readStorageCacheEnvelope` → `JSON.parse` (plain object, `Reflect.ownKeys` cannot throw). The network normalizer path never calls `hasExactMediaFolderKeys`. |
+| `core/admin/services/mediaFoldersClient.ts:135` | `return null` after `Array.isArray(value)` catch | `readDenseArray` receives either the top-level `apiRequest` body or a `JSON.parse`d cache value. A revoked proxy as the API body is adopted as a thenable by promise resolution and rejects before `normalizeMediaFolderList` runs; `JSON.parse` can never produce a proxy. |
+
+These four lines are the complete residual set after L01 implementation; every
+other line in the 47 files is covered by behavior-asserted tests.

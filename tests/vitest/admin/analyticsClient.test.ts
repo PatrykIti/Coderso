@@ -195,3 +195,58 @@ test("exportTopContent hits the CSV export endpoint", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("in-flight overview and top-content requests are deduped", async () => {
+  const { restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  let resolveOverview!: (response: Response) => void;
+  const overviewDeferred = new Promise<Response>((resolve) => {
+    resolveOverview = resolve;
+  });
+  let overviewCalls = 0;
+  let topContentCalls = 0;
+
+  globalThis.fetch = (input) => {
+    const url = String(input).split("?")[0];
+    if (url.endsWith("/analytics/overview")) {
+      overviewCalls += 1;
+      return overviewDeferred;
+    }
+    if (url.endsWith("/analytics/top-content")) {
+      topContentCalls += 1;
+      return Promise.resolve(
+        jsonResponse([
+          {
+            id: "page-home",
+            type: "page",
+            title: "Home",
+            slug: "/",
+            updatedAt: "2026-06-01T00:00:00.000Z",
+            score: 1,
+          },
+        ])
+      );
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+
+  try {
+    const first = getOverviewCached(45);
+    const second = getOverviewCached(45);
+    resolveOverview(jsonResponse(overview(45)));
+    await expect(Promise.all([first, second])).resolves.toMatchObject([
+      { rangeDays: 45 },
+      { rangeDays: 45 },
+    ]);
+    expect(overviewCalls).toBe(1);
+
+    const contentA = getTopContentCached({ limit: 5, rangeDays: 45, type: "page" });
+    const contentB = getTopContentCached({ limit: 5, rangeDays: 45, type: "page" });
+    await expect(contentA).resolves.toHaveLength(1);
+    await expect(contentB).resolves.toHaveLength(1);
+    expect(topContentCalls).toBe(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
