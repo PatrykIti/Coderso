@@ -516,9 +516,9 @@ The mixed-module runner-eligibility track in `TASK-105-12` is now closed; the re
 7. `TASK-105-07_SDK_PluginManifest_and_Custom_Screens_Service_Wave.md`
 8. `TASK-105-08_Final_Per_File_100_Gap_Closure.md`
 9. `TASK-105-09_QA_Docs_Changelog_and_Closure.md`
-10. `TASK-105-11_Legacy_Bun_Free_Test_Migration_Cleanup.md`
-11. `TASK-105-12_Mixed_Module_Product_Refactors_for_Runner_Eligibility.md`
 10. `TASK-105-10_Coverage_Gap_Rebaseline_and_Lane_Backlog.md`
+11. `TASK-105-11_Legacy_Bun_Free_Test_Migration_Cleanup.md`
+12. `TASK-105-12_Mixed_Module_Product_Refactors_for_Runner_Eligibility.md`
 
 ## Implementation Order
 

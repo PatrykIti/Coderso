@@ -1,11 +1,12 @@
 # TASK-105-08: Final Per-File 100% Gap Closure
 # FileName: TASK-105-08_Final_Per_File_100_Gap_Closure.md
 
+**Parent Task:** TASK-105
 **Priority:** High  
 **Category:** QA + Coverage  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-01..07  
-**Status:** To Do
+**Status:** ⏳ To Do
 
 ---
 
