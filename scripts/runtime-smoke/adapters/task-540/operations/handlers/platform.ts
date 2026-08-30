@@ -325,6 +325,7 @@ export async function handlePlatformStoragePreflight(
   const sessionRows = await db
     .select({ id: sessions.id })
     .from(sessions)
+    .where(inArray(sessions.userAgent, input.userAgents))
     .orderBy(sessions.id)
     .limit(4097);
   if (auditRows.length > 4096 || accessRows.length > 4096 || sessionRows.length > 4096)

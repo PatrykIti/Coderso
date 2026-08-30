@@ -33,9 +33,18 @@ interface InventoryEntry {
   readonly destination: string | null;
 }
 
+interface CurrentDestinationDivergence {
+  readonly destination: string;
+  readonly historicalSha256: string;
+  readonly currentSha256: string;
+  readonly owner: string;
+  readonly rationale: string;
+}
+
 interface InventoryFixture {
-  readonly schemaVersion: number;
+  readonly schemaVersion: 2;
   readonly sourceManifestSha256: string;
+  readonly currentDestinationDivergences: readonly CurrentDestinationDivergence[];
   readonly counts: {
     readonly tracked: number;
     readonly reachability: Readonly<Record<Reachability, number>>;
@@ -162,7 +171,15 @@ const fixture = JSON.parse(
 ) as InventoryFixture;
 
 test("TASK-540 immutable legacy manifest proves the exact reviewed 169-file deletion", async () => {
-  expect(fixture.schemaVersion).toBe(1);
+  expect(fixture.schemaVersion).toBe(2);
+  expect(Object.keys(fixture).sort()).toEqual([
+    "counts",
+    "currentDestinationDivergences",
+    "destinationOwnership",
+    "entries",
+    "schemaVersion",
+    "sourceManifestSha256",
+  ]);
   expect(fixture.counts).toEqual(expectedCounts);
   expect(fixture.entries).toHaveLength(169);
   expect(new Set(fixture.entries.map(({ path: sourcePath }) => sourcePath)).size).toBe(169);
@@ -223,7 +240,7 @@ test("TASK-540 registered native tree has no executable docs dependency or dynam
   }
 });
 
-test("TASK-540 stable native relocation remains byte-identical, closed, and import-time pure", async () => {
+test("TASK-540 stable native relocation is closed, import-time pure, and permits only its reviewed divergence", async () => {
   const nativeEntries = fixture.entries.filter(
     (entry): entry is InventoryEntry & { readonly destination: string } =>
       entry.destination !== null
@@ -239,13 +256,60 @@ test("TASK-540 stable native relocation remains byte-identical, closed, and impo
       .sort()
   ).toEqual(nativePaths);
 
-  for (const entry of nativeEntries) {
+  const currentDestinations = await Promise.all(
+    nativeEntries.map(async (entry) => {
+      const source = await readFile(path.join(root, entry.destination));
+      return Object.freeze({
+        entry,
+        source,
+        currentSha256: sha256(source),
+      });
+    })
+  );
+  const actualDivergences = currentDestinations
+    .filter(({ entry, currentSha256 }) => currentSha256 !== entry.sha256)
+    .map(({ entry, currentSha256 }) =>
+      Object.freeze({
+        destination: entry.destination,
+        historicalSha256: entry.sha256,
+        currentSha256,
+      })
+    );
+
+  expect(fixture.currentDestinationDivergences).toHaveLength(1);
+  const [approvedDivergence] = fixture.currentDestinationDivergences;
+  if (approvedDivergence === undefined) throw new Error("missing TASK-105-08-16 divergence");
+  expect(Object.keys(approvedDivergence).sort()).toEqual([
+    "currentSha256",
+    "destination",
+    "historicalSha256",
+    "owner",
+    "rationale",
+  ]);
+  expect(approvedDivergence.destination).toBe(
+    "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/setup.mjs"
+  );
+  expect(approvedDivergence.historicalSha256).toBe(
+    "39c3c7c553b8f75473c226bff10e028a9a2266881bc4aef6c23ed85482ac606b"
+  );
+  expect(approvedDivergence.currentSha256).toBe(
+    "c5cacbd8e106563eed2c7cf9c9bae551de20796cf25f47aed5e5f2e73e35c038"
+  );
+  expect(approvedDivergence.owner).toBe("TASK-105-08-16");
+  expect(approvedDivergence.rationale).toBe(
+    "Corrects the active preflight description to the exact task-User-Agent bounded session baseline."
+  );
+  expect(actualDivergences).toEqual(
+    fixture.currentDestinationDivergences.map(({ destination, historicalSha256, currentSha256 }) =>
+      Object.freeze({ destination, historicalSha256, currentSha256 })
+    )
+  );
+
+  for (const { entry, source } of currentDestinations) {
     expect(
       entry.destination.startsWith(nativeContractRoot) ||
         entry.destination.startsWith(nativeSharedRoot)
     ).toBe(true);
-    const source = await readFile(path.join(root, entry.destination));
-    expect(sha256(source)).toBe(entry.sha256);
     const text = source.toString("utf8");
     expect(text).not.toContain("_docs/_workflows/task-540");
     expect(text).not.toMatch(
@@ -320,7 +384,7 @@ test("TASK-540 native contract retains seven scenarios, 496 actions, lane totals
     "408854beb345aba9057cb199f46c9bd0a753f945c913bf6eaceeae26731f7b63"
   );
   expect(sharedModule.hashBytes(Buffer.from(sharedModule.canonicalJson(plan.actionManifest)))).toBe(
-    "187439246ffd3cd9af132f9d58db032f5a7f0c7d1394327d6a112d643bf3ab76"
+    "847741d06227ff0c84af22ed79e4c387c8e00d850e4f70e21d0350bb1dff4c98"
   );
 
   const resetContracts = buildTask540ScenarioResetContracts(plan);

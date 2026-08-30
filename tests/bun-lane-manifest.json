@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-30T19:46:43.873Z",
+  "generatedAt": "2026-08-30T19:48:35.704Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -2158,6 +2158,12 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/runtime-smoke/task540-override-actions.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/runtime-smoke/task540-persistent-bridge.test.ts",
       "bucket": "A",
       "conflictKeys": [],
@@ -2165,6 +2171,12 @@
     },
     {
       "file": "tests/unit/runtime-smoke/task540-scenario-resets.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task540-storage-preflight-session-scope.test.ts",
       "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false

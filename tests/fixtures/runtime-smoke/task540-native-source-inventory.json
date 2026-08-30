@@ -1,6 +1,15 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "sourceManifestSha256": "5e2e2e7571deeede2db1c58ab3f2e4c4a7ad36952a38f2d90b392e643584c13f",
+  "currentDestinationDivergences": [
+    {
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/setup.mjs",
+      "historicalSha256": "39c3c7c553b8f75473c226bff10e028a9a2266881bc4aef6c23ed85482ac606b",
+      "currentSha256": "c5cacbd8e106563eed2c7cf9c9bae551de20796cf25f47aed5e5f2e73e35c038",
+      "owner": "TASK-105-08-16",
+      "rationale": "Corrects the active preflight description to the exact task-User-Agent bounded session baseline."
+    }
+  ],
   "counts": {
     "tracked": 169,
     "reachability": { "host-subprocess": 17, "registered-static": 148, "workflow-only": 4 },
