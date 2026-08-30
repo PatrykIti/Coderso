@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-30T19:48:35.704Z",
+  "generatedAt": "2026-08-30T22:28:43.707Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -88,9 +88,7 @@
     {
       "file": "tests/integration/routes/assistant-action-execute-routes.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "4dd7f4d4"
-      ],
+      "conflictKeys": ["4dd7f4d4"],
       "cWriteGlobal": true
     },
     {
@@ -168,9 +166,7 @@
     {
       "file": "tests/integration/routes/contentTypes.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -200,9 +196,7 @@
     {
       "file": "tests/integration/routes/detailPages.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -339,10 +333,7 @@
     {
       "file": "tests/integration/routes/popups-runtime-injection.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
       "cWriteGlobal": false
     },
     {
@@ -354,9 +345,7 @@
     {
       "file": "tests/integration/routes/postMetadataRbac.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.adminBaseUrl"
-      ],
+      "conflictKeys": ["site.adminBaseUrl"],
       "cWriteGlobal": false
     },
     {
@@ -374,11 +363,7 @@
     {
       "file": "tests/integration/routes/publicSiteAnalytics.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.previewEnabled"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
       "cWriteGlobal": true
     },
     {
@@ -426,9 +411,7 @@
     {
       "file": "tests/integration/routes/seo-pipeline.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": true
     },
     {
@@ -464,10 +447,7 @@
     {
       "file": "tests/integration/routes/sitemap.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
       "cWriteGlobal": true
     },
     {
@@ -479,10 +459,7 @@
     {
       "file": "tests/integration/routes/starterContent.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.navigationMenuId",
-        "site.homepageId"
-      ],
+      "conflictKeys": ["site.navigationMenuId", "site.homepageId"],
       "cWriteGlobal": true
     },
     {
@@ -500,9 +477,7 @@
     {
       "file": "tests/integration/routes/userSettings.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.adminBaseUrl"
-      ],
+      "conflictKeys": ["site.adminBaseUrl"],
       "cWriteGlobal": false
     },
     {
@@ -526,77 +501,49 @@
     {
       "file": "tests/integration/runtime/detail-page-composer-runtime.test.tsx",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.previewEnabled"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/detail-page-preview-cache.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.previewEnabled"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/detail-page-runtime-lite.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "4dd7f4d4"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "4dd7f4d4"],
       "cWriteGlobal": true
     },
     {
       "file": "tests/integration/runtime/detail-page-runtime.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/entry-password-gate.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/entry-visibility-cache.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.homepageId"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.homepageId"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/entry-visibility-gate.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/menu-design-extras-runtime.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
       "cWriteGlobal": false
     },
     {
@@ -608,30 +555,19 @@
     {
       "file": "tests/integration/runtime/pages-runtime-blocks.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.previewEnabled"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/pages-runtime-listings.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/pages-runtime-responsive.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.previewEnabled"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
       "cWriteGlobal": false
     },
     {
@@ -660,9 +596,7 @@
     {
       "file": "tests/integration/runtime/projekty-domow-detail-route.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -674,21 +608,13 @@
     {
       "file": "tests/integration/runtime/site-shell-runtime.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.previewEnabled"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/task-539-page-parity-runtime.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.cacheTtlSeconds",
-        "site.adminBaseUrl"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.adminBaseUrl"],
       "cWriteGlobal": false
     },
     {
@@ -700,9 +626,7 @@
     {
       "file": "tests/integration/server/assistantHouseProjectsCatalogPublicSite.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -720,9 +644,7 @@
     {
       "file": "tests/integration/server/formsWriteMounts.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.adminBaseUrl"
-      ],
+      "conflictKeys": ["site.adminBaseUrl"],
       "cWriteGlobal": false
     },
     {
@@ -1028,18 +950,13 @@
     {
       "file": "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "4dd7f4d4"
-      ],
+      "conflictKeys": ["site.contentRoutes", "4dd7f4d4"],
       "cWriteGlobal": true
     },
     {
@@ -1063,9 +980,7 @@
     {
       "file": "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -1089,10 +1004,7 @@
     {
       "file": "tests/unit/assistant/actionExecutorService.db.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "4dd7f4d4"
-      ],
+      "conflictKeys": ["site.contentRoutes", "4dd7f4d4"],
       "cWriteGlobal": true
     },
     {
@@ -1170,9 +1082,7 @@
     {
       "file": "tests/unit/auth/passwordResetService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "auth.resetTtlMinutes"
-      ],
+      "conflictKeys": ["auth.resetTtlMinutes"],
       "cWriteGlobal": false
     },
     {
@@ -1196,9 +1106,7 @@
     {
       "file": "tests/unit/auth/sessionService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "auth.sessionTtlDays"
-      ],
+      "conflictKeys": ["auth.sessionTtlDays"],
       "cWriteGlobal": false
     },
     {
@@ -1240,17 +1148,13 @@
     {
       "file": "tests/unit/backups/backupRestore.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/unit/backups/backupService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "backup_schedules"
-      ],
+      "conflictKeys": ["backup_schedules"],
       "cWriteGlobal": true
     },
     {
@@ -1328,9 +1232,7 @@
     {
       "file": "tests/unit/content/detailPageDocumentService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -1354,9 +1256,7 @@
     {
       "file": "tests/unit/content/entryRevisionRestore.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -1404,9 +1304,7 @@
     {
       "file": "tests/unit/content/listingQueriesService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -1430,9 +1328,7 @@
     {
       "file": "tests/unit/content/listingTemplatesService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -1456,9 +1352,7 @@
     {
       "file": "tests/unit/content/typeService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -1566,9 +1460,7 @@
     {
       "file": "tests/unit/forms/formsService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": true
     },
     {
@@ -1622,18 +1514,13 @@
     {
       "file": "tests/unit/kits/fullSiteInstallDbLedgerLifecycle.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.homepageId"
-      ],
+      "conflictKeys": ["site.homepageId"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteInstallService.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes",
-        "site.homepageId"
-      ],
+      "conflictKeys": ["site.contentRoutes", "site.homepageId"],
       "cWriteGlobal": false
     },
     {
@@ -1657,9 +1544,7 @@
     {
       "file": "tests/unit/kits/fullSiteLegacyLedgerRunInitialization.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -1688,9 +1573,7 @@
     {
       "file": "tests/unit/kits/fullSiteResourceAdapters.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.contentRoutes"
-      ],
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {
@@ -2000,6 +1883,12 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/runtime-smoke/evidence-session.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/runtime-smoke/lifecycle-timing.test.ts",
       "bucket": "A",
       "conflictKeys": [],
@@ -2068,14 +1957,66 @@
     {
       "file": "tests/unit/runtime-smoke/task-554-routing-lease.test.ts",
       "bucket": "C",
-      "conflictKeys": [
-        "site.adminBaseUrl"
-      ],
+      "conflictKeys": ["site.adminBaseUrl"],
       "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task-554-worker.test.ts",
       "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-adapter.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-auth.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-cleanup.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-descriptors.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-output-manifest.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-recovery-db.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-recovery-receipt.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-runner-redaction.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-worker-operations.test.ts",
+      "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false
     },
@@ -2677,6 +2618,12 @@
     },
     {
       "file": "tests/unit/workflows/smokeEvidenceDriver.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/workflows/smokeEvidenceFilesystem.test.ts",
       "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false

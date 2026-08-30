@@ -1104,6 +1104,65 @@ worker boundaries and never enter frames or reports. Cleanup derives its exact
 FK-safe scope from the shared ledger, removes owned observability rows before
 identities, and proves absence before completion.
 
+## 19. Operator-only cleanup after recovery-authority loss
+
+This procedure is permitted only for a senior operator or release owner after
+`task-105-l05` reports `manual_cleanup_required` because its live parent lost
+recovery authority. It is not a smoke resume, receipt recovery, or evidence
+repair. Never continue or reuse that session; a fresh later smoke must use a
+new session and start from normal preconditions. Manual cleanup cannot make the
+failed run passing and must not create `report.json`, `manifest.json`, a task
+receipt, or a closure claim.
+
+Do not call a public route or an internal runtime-smoke recovery endpoint for
+this procedure. Do not use, request, print, copy, or derive authority from an
+HMAC, recovery key, session/cookie value, token hash, raw receipt, database URL,
+raw log, or retained evidence. The session label is a namespace selector only;
+all deletion authority comes from fresh locked database identity proofs below.
+
+1. Start a fresh, direct maintenance session. Acquire the existing exclusive
+   native CMS writer fence and a task/session-specific advisory or maintenance
+   lock before inspecting state; retain both until every proof and mutation is
+   complete. If either lock cannot be acquired or verified, stop without a
+   mutation.
+2. Under those locks, prove the named same-session runner, worker pool, host,
+   browser dispatcher, and private workspace are absent. Record only a boolean
+   absence result for each resource—never a PID, command line, environment, or
+   process output. If any resource is live or cannot be proven absent, fail
+   closed and escalate; do not clean while a host can hold a stale setting.
+3. Independently lock and prove one complete fixture matrix. It must contain
+   exactly the role `task-105-l05-${session}-role` with description
+   `TASK-105 L05 synthetic role for ${session}` and the canonical seven
+   permissions; exactly one locked user-role link; one active synthetic user
+   reached through that link; one published page with slug
+   `task-105-l05-${session}-home`, title `TASK-105 L05 homepage ${session}`, and
+   that user as author; one published UI menu named
+   `TASK-105 L05 navigation ${session}` with exactly one item pointing to that
+   page; and that user's one task-owned dashboard layout. Also lock the seven
+   leased setting keys. Do not use an email hash, token hash, or receipt field
+   to find or prove the user/session identity.
+4. Restore settings only if an independently archived, non-secret baseline and
+   the current owned setting identities both match under the locks. The baseline
+   is not an HMAC receipt. If any setting baseline, permission order, link
+   cardinality, page/menu relation, role description, layout ownership, or
+   current-row identity differs, leave all records and settings untouched and
+   escalate to the owning team.
+5. Only after the complete identity and baseline proof, remove in FK-safe order:
+   restore or delete the exact seven settings as their verified baselines
+   require; invalidate affected caches only after host absence; delete the one
+   menu item and menu; delete the page; revoke/delete the owned session; delete
+   the user-role link/user and dashboard layout; then delete the role. Every
+   mutation uses a locked exact predicate with `RETURNING` of the exact ID and
+   a bounded reselect proof. A zero or multi-row result is a failure, not a
+   reason to broaden a predicate.
+6. Before releasing locks, reselect and prove absence of the task role, linked
+   user, link, session, page, menu/item, dashboard layout, recovery receipt,
+   and private workspace; prove cache invalidation only after host absence.
+   Record bounded boolean results and the operator escalation outcome, not
+   identifiers or sensitive values. Any failed proof leaves the maintenance
+   lock outcome as failed and requires escalation; it never authorizes a new
+   receipt, manifest, or same-session rerun.
+
 ## Common mistakes
 
 | Mistake | Correct pattern |

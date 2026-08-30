@@ -127,6 +127,7 @@ export interface SmokeEvidenceValidationOptions {
 export interface SmokeEvidenceAuditOptions extends SmokeEvidenceValidationOptions {
   readonly requireCheckpoint: boolean;
   readonly requireTracked: boolean;
+  readonly requirePrivateEvidenceFiles?: boolean;
 }
 
 export interface SmokeEvidenceProjectInput {
@@ -206,6 +207,11 @@ export function validateSmokeEvidence(options: SmokeEvidenceValidationOptions): 
 export function enumerateRegularFilesNoSymlinks(dir: string): Promise<readonly string[]>;
 export function sameSortedPaths(left: readonly string[], right: readonly string[]): boolean;
 export function auditSmokeEvidenceDirectory(options: SmokeEvidenceAuditOptions): Promise<SmokeEvidenceValidationResultV1>;
+export function readCanonicalSmokeEvidenceReport(input: {
+  readonly repoRoot: string;
+  readonly expectedTask: string;
+  readonly expectedSession: string;
+}): Promise<{ readonly report: Readonly<Record<string, unknown>>; readonly sha256: string }>;
 export function projectSmokeEvidenceManifest(input: SmokeEvidenceProjectInput): SmokeEvidenceManifestV1;
 export function writeSmokeEvidenceManifest(input: {
   readonly repoRoot: string;

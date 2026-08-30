@@ -10,6 +10,65 @@ export interface SmokeAdapterResult {
   readonly cleanup: Readonly<Record<string, boolean | number | string>>;
 }
 
+/** Closed declaration that the real driver reached every suite-owned resource. */
+export type Task105L05LifecycleRegistrationAttestation = Readonly<
+  Record<string, boolean | number | string>
+> &
+  Readonly<{
+    readonly contract: "task-105-l05-runtime-v1";
+    readonly workerPool: "registered";
+    readonly devHost: "registered";
+    readonly browserDispatch: "registered";
+    readonly workspace: "registered";
+    readonly fixtureCleanup: "registered";
+  }>;
+
+/** Bounded receipt summary retained in the terminal shared runner report. */
+export type Task105L05LifecycleAttestation = Task105L05LifecycleRegistrationAttestation &
+  Readonly<{
+    readonly receiptDigest: string;
+    readonly receiptConsoleErrors: 0;
+    readonly receiptPageErrors: 0;
+  }>;
+
+export const TASK105_L05_LIFECYCLE_REGISTRATION_ATTESTATION: Task105L05LifecycleRegistrationAttestation =
+  Object.freeze({
+    contract: "task-105-l05-runtime-v1",
+    workerPool: "registered",
+    devHost: "registered",
+    browserDispatch: "registered",
+    workspace: "registered",
+    fixtureCleanup: "registered",
+  });
+
+export function createTask105L05LifecycleAttestation(
+  receiptDigest: string
+): Task105L05LifecycleAttestation {
+  if (!/^[a-f0-9]{64}$/u.test(receiptDigest)) {
+    throw new Error("TASK-105 L05 receipt digest is invalid");
+  }
+  return Object.freeze({
+    ...TASK105_L05_LIFECYCLE_REGISTRATION_ATTESTATION,
+    receiptDigest,
+    receiptConsoleErrors: 0 as const,
+    receiptPageErrors: 0 as const,
+  });
+}
+
+export function isTask105L05LifecycleAttestation(
+  value: Readonly<Record<string, boolean | number | string>>
+): value is Task105L05LifecycleAttestation {
+  const expected = TASK105_L05_LIFECYCLE_REGISTRATION_ATTESTATION;
+  return (
+    Object.keys(value).length === Object.keys(expected).length + 3 &&
+    Object.entries(expected).every(([key, expectedValue]) => value[key] === expectedValue) &&
+    typeof value.receiptDigest === "string" &&
+    /^[a-f0-9]{64}$/u.test(value.receiptDigest) &&
+    value.receiptConsoleErrors === 0 &&
+    value.receiptPageErrors === 0
+  );
+}
+
 // Visible-evidence result extension (TASK-545-03-L01). The generic
 // SmokeScenarioResult gains optional strict `title`, `variants`, and
 // `screenshots` fields so existing non-manifest adapters remain
@@ -56,6 +115,7 @@ export interface SmokeAdapter {
   readonly suiteId: SmokeSuiteId;
   readonly supportedProfiles: readonly SmokeProfileId[];
   run(context: RuntimeSmokeContext): Promise<SmokeAdapterResult>;
+  readonly evidenceSessionPolicy?: "exclusive";
   /**
    * Optional absolute evidence session directory for the suite. When set, the
    * shared runner pre-creates report.json there before the adapter runs (so

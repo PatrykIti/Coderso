@@ -93,26 +93,99 @@ async function writePrivateStorageState(
   }
   let handle: FileHandle | undefined;
   try {
-    handle = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
+    handle = await open(
+      path,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+      0o600
+    );
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.nlink !== 1 || (opened.mode & 0o777) !== 0o600) {
+      throw new SmokeError("smoke_output_invalid", "Admin storage-state ownership is invalid");
+    }
     await handle.writeFile(value, "utf8");
     await handle.sync();
+    const written = await handle.stat();
+    const metadata = await lstat(path);
+    if (
+      metadata.isSymbolicLink() ||
+      !metadata.isFile() ||
+      metadata.nlink !== 1 ||
+      (metadata.mode & 0o777) !== 0o600 ||
+      metadata.size <= 0 ||
+      metadata.size > MAXIMUM_STORAGE_STATE_BYTES ||
+      written.dev !== opened.dev ||
+      written.ino !== opened.ino ||
+      metadata.dev !== written.dev ||
+      metadata.ino !== written.ino
+    ) {
+      throw new SmokeError("smoke_output_invalid", "Admin storage-state ownership is invalid");
+    }
   } catch (error) {
+    if (error instanceof SmokeError) throw error;
     throw new SmokeError("smoke_process_failed", "Admin storage state could not be written", {
       cause: error,
     });
   } finally {
     await handle?.close();
   }
-  const metadata = await lstat(path);
+}
+
+/**
+ * Environment-free, dynamic-base storage-state primitive (TASK-105 L04).
+ *
+ * Writes one exclusive, no-follow, 0600 browser storage-state file for an
+ * already-created session value. Accepts only a validated local dynamic admin
+ * base (not necessarily `/admin`); never reads ambient credential variables.
+ */
+export async function writeAdminSessionStorageState(input: {
+  readonly adminUrl: string;
+  readonly expectedAdminPath: string;
+  readonly workspace: string;
+  readonly storageStatePath: string;
+  readonly sessionValue: string;
+}): Promise<void> {
+  const url = new URL(input.adminUrl);
+  assertLocalOrigin(url.origin);
   if (
-    metadata.isSymbolicLink() ||
-    !metadata.isFile() ||
-    (metadata.mode & 0o777) !== 0o600 ||
-    metadata.size <= 0 ||
-    metadata.size > MAXIMUM_STORAGE_STATE_BYTES
+    !input.expectedAdminPath.startsWith("/") ||
+    input.expectedAdminPath.endsWith("/") ||
+    input.expectedAdminPath.includes("//") ||
+    input.expectedAdminPath.split("/").some((segment) => segment === "." || segment === "..") ||
+    url.pathname !== input.expectedAdminPath ||
+    url.search ||
+    url.hash ||
+    url.username ||
+    url.password
   ) {
-    throw new SmokeError("smoke_output_invalid", "Admin storage-state ownership is invalid");
+    throw new SmokeError(
+      "smoke_argument_invalid",
+      "Admin storage-state URL does not match the expected dynamic base"
+    );
   }
+  const sessionValue = boundedCredential(input.sessionValue);
+  if (sessionValue === null) {
+    throw new SmokeError("smoke_argument_invalid", "Admin session value is invalid");
+  }
+  const storageState = `${JSON.stringify(
+    {
+      cookies: [
+        {
+          name: "session",
+          value: sessionValue,
+          domain: url.hostname,
+          path: "/",
+          expires: -1,
+          httpOnly: true,
+          secure: url.protocol === "https:",
+          sameSite: "Strict",
+        },
+      ],
+      origins: [],
+    },
+    null,
+    2
+  )}\n`;
+  await writePrivateStorageState(input.workspace, input.storageStatePath, storageState);
 }
 
 export async function createAdminAuthStorageState(input: {

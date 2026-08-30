@@ -1,5 +1,5 @@
-import { constants } from "node:fs";
-import { access, realpath, stat } from "node:fs/promises";
+import { constants, type Stats } from "node:fs";
+import { access, readFile, realpath, stat } from "node:fs/promises";
 import { createServer, connect, type Server } from "node:net";
 import { rm } from "node:fs/promises";
 import { delimiter, isAbsolute, relative, resolve } from "node:path";
@@ -8,6 +8,10 @@ import type { LifecycleResource, RuntimeSmokeContext } from "../lifecycle";
 import { pollUntil } from "../polling";
 import type { ManagedProcessHandle } from "../process-supervisor";
 import { redactString } from "../redaction";
+import {
+  assertTask105L05FixedDevHostSourceInventory,
+  TASK105_L05_FIXED_DEV_HOST_ENTRY,
+} from "./fixed-dev-host";
 
 const LOOPBACK_HOST = "127.0.0.1";
 const MAXIMUM_PATH_ENTRIES = 64;
@@ -30,7 +34,11 @@ const FORBIDDEN_DEV_HOST_KEYS = new Set([
 
 export type SupervisedServerExecutable =
   | { readonly kind: "path-literal"; readonly name: "coderso-dev-core-host" }
-  | { readonly kind: "absolute"; readonly path: string };
+  | { readonly kind: "absolute"; readonly path: string }
+  | {
+      readonly kind: "fixed-bun-entry";
+      readonly entry: typeof TASK105_L05_FIXED_DEV_HOST_ENTRY;
+    };
 
 export interface SupervisedServerEnvironmentPolicy {
   readonly id: string;
@@ -67,6 +75,24 @@ export interface SupervisedServerLogSnapshot {
   readonly stderrBytes: number;
   readonly stdout: string;
   readonly stderr: string;
+}
+
+/**
+ * L04 is the sole consumer of this narrow capability. It prevents that host
+ * from selecting the legacy external launcher while retaining existing
+ * launcher support for unrelated adapters.
+ */
+export function assertTask105L05FixedDevHostCapability(
+  executable: unknown
+): asserts executable is Extract<SupervisedServerExecutable, { readonly kind: "fixed-bun-entry" }> {
+  if (!isPlainObject(executable)) failArgument("fixed Bun entry capability is invalid");
+  assertExactKeys(executable, ["kind", "entry"], "fixed Bun entry capability");
+  if (
+    executable.kind !== "fixed-bun-entry" ||
+    executable.entry !== TASK105_L05_FIXED_DEV_HOST_ENTRY
+  ) {
+    failArgument("fixed Bun entry capability rejected the selected launcher");
+  }
 }
 
 const DEV_HOST_REQUIRED_REPOSITORY_KEYS = Object.freeze([
@@ -314,40 +340,151 @@ export async function projectSupervisedServerEnvironment(input: {
   return Object.freeze(output);
 }
 
-async function resolveServerExecutable(
-  executable: SupervisedServerExecutable,
-  pathValue: string
-): Promise<string> {
-  if (!isPlainObject(executable)) failArgument("server executable is invalid");
+interface ResolvedServerCommand {
+  readonly executable: string;
+  readonly argsPrefix: readonly string[];
+  /** Revalidates a source-inspected fixed entry immediately before spawn. */
+  readonly assertBeforeSpawn?: () => Promise<void>;
+}
+
+interface FixedEntryFingerprint {
+  readonly dev: number;
+  readonly ino: number;
+  readonly mode: number;
+  readonly nlink: number;
+  readonly size: number;
+  readonly mtimeMs: number;
+  readonly ctimeMs: number;
+}
+
+function fixedEntryFingerprint(entry: Stats): FixedEntryFingerprint {
+  return Object.freeze({
+    dev: entry.dev,
+    ino: entry.ino,
+    mode: entry.mode,
+    nlink: entry.nlink,
+    size: entry.size,
+    mtimeMs: entry.mtimeMs,
+    ctimeMs: entry.ctimeMs,
+  });
+}
+
+function sameFixedEntryFingerprint(
+  left: FixedEntryFingerprint,
+  right: FixedEntryFingerprint
+): boolean {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.mode === right.mode &&
+    left.nlink === right.nlink &&
+    left.size === right.size &&
+    left.mtimeMs === right.mtimeMs &&
+    left.ctimeMs === right.ctimeMs
+  );
+}
+
+async function inspectFixedBunEntry(entry: string): Promise<() => Promise<void>> {
+  const before = await stat(entry).catch((error: unknown) =>
+    failArgument("fixed Bun entry is unavailable", error)
+  );
+  if (!before.isFile()) failArgument("fixed Bun entry identity is invalid");
+  const source = await readFile(entry, "utf8").catch((error: unknown) =>
+    failArgument("fixed Bun entry source is unavailable", error)
+  );
+  const after = await stat(entry).catch((error: unknown) =>
+    failArgument("fixed Bun entry is unavailable", error)
+  );
+  const fingerprint = fixedEntryFingerprint(before);
+  if (!sameFixedEntryFingerprint(fingerprint, fixedEntryFingerprint(after))) {
+    failArgument("fixed Bun entry source identity changed");
+  }
+  assertTask105L05FixedDevHostSourceInventory(source);
+
+  return async (): Promise<void> => {
+    const recheckBefore = await stat(entry).catch((error: unknown) =>
+      failArgument("fixed Bun entry is unavailable", error)
+    );
+    if (
+      !recheckBefore.isFile() ||
+      !sameFixedEntryFingerprint(fingerprint, fixedEntryFingerprint(recheckBefore))
+    ) {
+      failArgument("fixed Bun entry source identity changed");
+    }
+    const recheckedSource = await readFile(entry, "utf8").catch((error: unknown) =>
+      failArgument("fixed Bun entry source is unavailable", error)
+    );
+    const recheckAfter = await stat(entry).catch((error: unknown) =>
+      failArgument("fixed Bun entry is unavailable", error)
+    );
+    if (
+      recheckedSource !== source ||
+      !sameFixedEntryFingerprint(fingerprint, fixedEntryFingerprint(recheckAfter))
+    ) {
+      failArgument("fixed Bun entry source identity changed");
+    }
+    assertTask105L05FixedDevHostSourceInventory(recheckedSource);
+  };
+}
+
+async function resolvePathExecutable(name: string, pathValue: string): Promise<string> {
+  let selected = "";
+  for (const directory of pathValue.split(delimiter)) {
+    const candidate = resolve(directory, name);
+    try {
+      await access(candidate, constants.X_OK);
+      const canonical = await realpath(candidate);
+      if ((await stat(canonical)).isFile()) {
+        selected = canonical;
+        break;
+      }
+    } catch {
+      // Continue only through the already validated bounded PATH projection.
+    }
+  }
+  if (selected.length === 0) {
+    throw new SmokeError("smoke_process_spawn_failed", "server executable is unavailable");
+  }
+  return selected;
+}
+
+async function resolveServerCommand(input: {
+  readonly executable: SupervisedServerExecutable;
+  readonly pathValue: string;
+  readonly root: string;
+  readonly args: readonly string[];
+}): Promise<ResolvedServerCommand> {
+  if (!isPlainObject(input.executable)) failArgument("server executable is invalid");
   let selected: string;
-  if (executable.kind === "path-literal") {
-    assertExactKeys(executable, ["kind", "name"], "server literal executable");
-    if (executable.name !== "coderso-dev-core-host") {
+  let argsPrefix: readonly string[] = Object.freeze([]);
+  let assertBeforeSpawn: (() => Promise<void>) | undefined;
+  if (input.executable.kind === "path-literal") {
+    assertExactKeys(input.executable, ["kind", "name"], "server literal executable");
+    if (input.executable.name !== "coderso-dev-core-host") {
       failArgument("server literal executable is unsupported");
     }
-    selected = "";
-    for (const directory of pathValue.split(delimiter)) {
-      const candidate = resolve(directory, executable.name);
-      try {
-        await access(candidate, constants.X_OK);
-        const canonical = await realpath(candidate);
-        if ((await stat(canonical)).isFile()) {
-          selected = canonical;
-          break;
-        }
-      } catch {
-        // Continue only through the already validated bounded PATH projection.
-      }
-    }
-    if (selected.length === 0) {
-      throw new SmokeError("smoke_process_spawn_failed", "server executable is unavailable");
-    }
-  } else if (executable.kind === "absolute") {
-    assertExactKeys(executable, ["kind", "path"], "server absolute executable");
-    if (!isAbsolute(executable.path)) failArgument("server executable must be absolute");
-    selected = await realpath(executable.path).catch((error: unknown) =>
+    selected = await resolvePathExecutable(input.executable.name, input.pathValue);
+  } else if (input.executable.kind === "absolute") {
+    assertExactKeys(input.executable, ["kind", "path"], "server absolute executable");
+    if (!isAbsolute(input.executable.path)) failArgument("server executable must be absolute");
+    selected = await realpath(input.executable.path).catch((error: unknown) =>
       failArgument("server executable is unavailable", error)
     );
+  } else if (input.executable.kind === "fixed-bun-entry") {
+    assertTask105L05FixedDevHostCapability(input.executable);
+    if (!Array.isArray(input.args) || input.args.length !== 0) {
+      failArgument("fixed Bun entry arguments are invalid");
+    }
+    const expectedEntry = resolve(input.root, TASK105_L05_FIXED_DEV_HOST_ENTRY);
+    const entry = await realpath(expectedEntry).catch((error: unknown) =>
+      failArgument("fixed Bun entry is unavailable", error)
+    );
+    if (entry !== expectedEntry || !(await stat(entry)).isFile()) {
+      failArgument("fixed Bun entry identity is invalid");
+    }
+    assertBeforeSpawn = await inspectFixedBunEntry(entry);
+    selected = await resolvePathExecutable("bun", input.pathValue);
+    argsPrefix = Object.freeze(["--no-env-file", entry]);
   } else {
     return failArgument("server executable kind is unsupported");
   }
@@ -355,7 +492,7 @@ async function resolveServerExecutable(
     failArgument("server executable is not executable", error)
   );
   if (!(await stat(selected)).isFile()) failArgument("server executable is not a file");
-  return selected;
+  return Object.freeze({ executable: selected, argsPrefix, assertBeforeSpawn });
 }
 
 function listen(server: Server, port: number): Promise<void> {
@@ -719,9 +856,14 @@ export async function startSupervisedServer(
 
   try {
     const environment = await projectSupervisedServerEnvironment(spec.environment);
-    const executable = await resolveServerExecutable(spec.executable, environment.PATH!);
     const [root, cwd] = await Promise.all([realpath(context.root), realpath(spec.cwd)]);
     if (!isWithin(root, cwd)) failArgument("server cwd escapes the repository root");
+    const command = await resolveServerCommand({
+      executable: spec.executable,
+      pathValue: environment.PATH!,
+      root,
+      args: spec.args,
+    });
     // The dev host starts vite with --force, which rmdir's and rebuilds
     // core/node_modules/.vite; a leftover non-empty deps tree from a prior
     // run makes that rmdir fail with ENOTEMPTY and kills the whole host.
@@ -731,9 +873,10 @@ export async function startSupervisedServer(
     } catch {
       // Best-effort: a fresh install has no cache to clear.
     }
+    await command.assertBeforeSpawn?.();
     const handle = await context.processes.start({
-      executable,
-      args: spec.args,
+      executable: command.executable,
+      args: [...command.argsPrefix, ...spec.args],
       cwd,
       env: environment,
       family: spec.family,
