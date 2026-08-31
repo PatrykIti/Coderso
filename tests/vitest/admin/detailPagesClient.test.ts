@@ -402,3 +402,23 @@ test("detail page lifecycle and revision helpers use canonical endpoints", async
     fetchMock.restore();
   }
 });
+
+test("getDetailPageCached fetches and primes the detail cache when uncached", async () => {
+  const { restore } = installLocalStorage();
+  const fetchMock = installFetch(async () =>
+    jsonResponse(detailPageRecord({ id: "detail-page-fetch", name: "Fetched detail" }))
+  );
+
+  try {
+    clearDetailPagesCache();
+    const result = await getDetailPageCached("detail-page-fetch", { force: true });
+    expect(result.name).toBe("Fetched detail");
+    expect(getCachedDetailPage("detail-page-fetch")?.name).toBe("Fetched detail");
+    expect(
+      fetchMock.calls.some((call) => String(call.input).endsWith("/detail-pages/detail-page-fetch"))
+    ).toBe(true);
+  } finally {
+    fetchMock.restore();
+    restore();
+  }
+});

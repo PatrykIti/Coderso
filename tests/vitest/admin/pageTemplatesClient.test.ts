@@ -363,3 +363,55 @@ test("getPageTemplateCached reads detail from local storage without refetching",
     clearPageTemplatesCache();
   }
 });
+
+test("a detail-driven merge unshifts a new template into the cached full list", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => {
+    if (String(input).endsWith("/page-templates/tpl-new")) {
+      return jsonResponse({
+        ...templateDetail,
+        id: "tpl-new",
+        name: "New template",
+        slug: "new",
+      });
+    }
+    return jsonResponse({ items: [templateSummary] });
+  };
+
+  try {
+    clearPageTemplatesCache();
+    await listPageTemplatesCached();
+    await getPageTemplateCached("tpl-new");
+    const list = await listPageTemplatesCached();
+    expect(list.map((item) => item.id)).toEqual(["tpl-new", "tpl-1"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPageTemplatesCache();
+  }
+});
+
+test("deletePageTemplate prunes the cached full list", async () => {
+  const originalFetch = globalThis.fetch;
+  const secondSummary = { ...templateSummary, id: "tpl-2", name: "Other", slug: "other" };
+  globalThis.fetch = async (input, init) => {
+    if (String(input).endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (String(input).endsWith("/page-templates")) {
+      return jsonResponse({ items: [templateSummary, secondSummary] });
+    }
+    return jsonResponse({ ok: true });
+  };
+
+  try {
+    resetCsrfToken();
+    clearPageTemplatesCache();
+    await listPageTemplatesCached();
+    await deletePageTemplate("tpl-1");
+    const list = await listPageTemplatesCached();
+    expect(list.map((item) => item.id)).toEqual(["tpl-2"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPageTemplatesCache();
+  }
+});

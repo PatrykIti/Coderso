@@ -5,7 +5,8 @@
 **Category:** QA + Widgets  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-01  
-**Status:** 🚧 In Progress (2026-08-19 rebaseline; S6 coordination gate)
+**Status:** ⏭️ Superseded (2026-08-21)
+**Superseded By:** TASK-580 (changelog 1323)
 
 ---
 
@@ -420,8 +421,10 @@ explicit collision note against this wave.
 
 - If S6 CONFIRMS removal -> this wave is superseded into the S6 family: the
   editor tests die with their sources and S6 owns deletion + the coverage
-  rebaseline. Status flips to `⏭️ Superseded` with an S6 task link
-  once an S6 task file exists (do NOT supersede before then).
+  rebaseline. RESOLVED 2026-08-21: S6 confirmed removal and TASK-580 closed
+  (changelog 1323); this wave is superseded — the editor sources and their
+  tests were deleted with the system and the coverage rebaseline was folded
+  into TASK-580.
 - If S6 decides RETENTION/adapter -> resume implementation from this
   re-baselined contract: `46` files, `1556` uncovered lines / `2827`
   uncovered branches, worst files first (`FooterEditors` `51.69/49.72`,
@@ -491,6 +494,8 @@ shared fixture module):
 either way (S6-supersession closure or resumed implementation closure). Verify
 the live `_docs/_CHANGELOG/README.md` at closure (highest consumed row today:
 `1308`, next unreserved: `1309`; `1309-1319` are reserved for S1/S3).
+
+The retention/resume branch never applies: this task is terminal (Superseded).
 
 
 ## Testing Requirements

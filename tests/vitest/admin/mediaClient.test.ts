@@ -933,3 +933,25 @@ test("media A/B/C authority survives C-first success and C rejection followed by
     globalThis.fetch = originalFetch;
   }
 });
+
+test("clipboard helpers map gif, avif, svg and unknown mimes and keep well-named files", () => {
+  const fixedDate = new Date("2026-03-01T10:20:30.400Z");
+  expect(createClipboardImageFilename("image/gif", fixedDate)).toBe(
+    "clipboard-image-2026-03-01T10-20-30-400Z.gif"
+  );
+  expect(createClipboardImageFilename("image/avif", fixedDate)).toBe(
+    "clipboard-image-2026-03-01T10-20-30-400Z.avif"
+  );
+  expect(createClipboardImageFilename("image/svg+xml", fixedDate)).toBe(
+    "clipboard-image-2026-03-01T10-20-30-400Z.svg"
+  );
+  expect(createClipboardImageFilename("application/octet-stream", fixedDate)).toBe(
+    "clipboard-image-2026-03-01T10-20-30-400Z.png"
+  );
+  expect(createClipboardImageFilename("  image/gif  ", fixedDate)).toBe(
+    "clipboard-image-2026-03-01T10-20-30-400Z.gif"
+  );
+
+  const wellNamed = new File(["img"], "logo.png", { type: "image/png" });
+  expect(normalizeClipboardImageFile(wellNamed)).toBe(wellNamed);
+});

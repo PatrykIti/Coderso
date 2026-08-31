@@ -49,19 +49,13 @@ test("readSessionCache removes invalid, expired, and failed-validation entries",
   ).toBeNull();
   expect(storage.getItem("broken")).toBeNull();
 
-  storage.setItem(
-    "expired",
-    JSON.stringify({ value: "cached", savedAt: Date.now() - 5_000 })
-  );
+  storage.setItem("expired", JSON.stringify({ value: "cached", savedAt: Date.now() - 5_000 }));
   expect(
     readSessionCache("expired", 1_000, (value): value is string => typeof value === "string")
   ).toBeNull();
   expect(storage.getItem("expired")).toBeNull();
 
-  storage.setItem(
-    "invalid",
-    JSON.stringify({ value: 42, savedAt: Date.now() })
-  );
+  storage.setItem("invalid", JSON.stringify({ value: 42, savedAt: Date.now() }));
   expect(
     readSessionCache("invalid", 1_000, (value): value is string => typeof value === "string")
   ).toBeNull();
@@ -72,19 +66,13 @@ test("readSessionCache returns the cached value for a valid entry", () => {
   const storage = createSessionStorage();
   setSessionStorage(storage as unknown);
 
-  storage.setItem(
-    "valid",
-    JSON.stringify({ value: { id: "entry-1" }, savedAt: Date.now() })
-  );
+  storage.setItem("valid", JSON.stringify({ value: { id: "entry-1" }, savedAt: Date.now() }));
 
   const result = readSessionCache(
     "valid",
     1_000,
     (value): value is { id: string } =>
-      typeof value === "object" &&
-      value !== null &&
-      "id" in value &&
-      typeof value.id === "string"
+      typeof value === "object" && value !== null && "id" in value && typeof value.id === "string"
   );
 
   expect(result).toEqual({ id: "entry-1" });
@@ -106,4 +94,17 @@ test("writeSessionCache persists the value envelope and clearSessionCache remove
 
   clearSessionCache("entry");
   expect(storage.getItem("entry")).toBeNull();
+});
+
+test("readSessionCache evicts malformed envelopes", () => {
+  const storage = createSessionStorage();
+  setSessionStorage(storage);
+  storage.setItem("bad-null", JSON.stringify(null));
+  storage.setItem("bad-shape", JSON.stringify({ value: "x" }));
+
+  const validate = (value: unknown): value is string => typeof value === "string";
+  expect(readSessionCache("bad-null", 1_000, validate)).toBeNull();
+  expect(readSessionCache("bad-shape", 1_000, validate)).toBeNull();
+  expect(storage.getItem("bad-null")).toBeNull();
+  expect(storage.getItem("bad-shape")).toBeNull();
 });

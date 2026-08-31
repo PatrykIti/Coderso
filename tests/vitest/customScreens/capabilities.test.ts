@@ -189,3 +189,46 @@ test("resolveCustomScreenCapabilities derives editor mode from v4 screen documen
     supportsDedicatedEditor: true,
   });
 });
+
+test("resolveCustomScreenCapabilities derives dashboard mode from raw blocks and read bindings", () => {
+  expect(
+    resolveCustomScreenCapabilities({
+      blocks: [{ id: "hero-1", type: "hero", data: {} }],
+      bindings: [
+        {
+          id: "hero-title",
+          widgetId: "hero-1",
+          propPath: "heading.title",
+          field: "headline",
+          mode: "read",
+        },
+      ],
+    })
+  ).toMatchObject({
+    mode: "dashboard",
+    hasBlocks: true,
+    hasReadableBindings: true,
+    hasWritableBindings: false,
+  });
+});
+
+test("resolveCustomScreenCapabilities treats a raw write binding on a retired screen widget as non-writable", () => {
+  expect(
+    resolveCustomScreenCapabilities({
+      blocks: [{ id: "header-1", type: "screen-record-header", data: {} }],
+      bindings: [
+        {
+          id: "header-title",
+          widgetId: "header-1",
+          propPath: "title",
+          field: "headline",
+          mode: "write",
+        },
+      ],
+    })
+  ).toMatchObject({
+    mode: "collection-only",
+    hasWritableBindings: false,
+    hasReadableBindings: false,
+  });
+});

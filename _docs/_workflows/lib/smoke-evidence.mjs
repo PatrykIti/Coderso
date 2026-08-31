@@ -1,28 +1,70 @@
-// TASK-545 smoke evidence manifest: strict versioned envelope schema, bounded
-// fail-closed validation, canonical Git-bound working-tree revision, pure
-// manifest projection, and the read-only evidence audit driver. Environment-
-// neutral ESM (no repo/runtime/server/DB dependency) so Node and Bun unit tests
-// import it directly; the nested manifest/scenario/variant/assertion/screenshot
-// validators here are the single schema owner for every manifest-bearing suite.
-// `_docs/_workflows/` is globally ignored; this file lands through the owner's
-// explicit force-track/review handoff with `git ls-files`/`git show HEAD` byte
-// parity proof before dependents import it. Errors are machine-readable and
-// never carry manifest raw content, file bodies, or environment values.
+// Strict, bounded, fail-closed smoke-evidence manifest schema and audit facade.
+// Errors never carry raw evidence bytes or environment values.
 
-import { execFileSync } from "node:child_process";
-import { createHash, timingSafeEqual } from "node:crypto";
 import { constants } from "node:fs";
-import { lstat, mkdir, open, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { lstat, open } from "node:fs/promises";
+import { join, relative, resolve } from "node:path";
+import {
+  MAX_MANIFEST_BYTES,
+  MAX_REPORT_BYTES,
+  MAX_SCREENSHOT_BYTES,
+  SmokeEvidenceError,
+  canonicalRevisionStream,
+  canonicalStatusRecords,
+  captureCanonicalEvidenceAncestry,
+  computeWorkingTreeRevision,
+  ensureCanonicalEvidenceDirectory,
+  enumerateRegularFilesNoSymlinks,
+  fail,
+  isLowercaseHex,
+  isPlainRecord,
+  isStrictDescendant,
+  readCanonicalSmokeEvidenceReport,
+  readExactGitHead,
+  readPorcelainRecords,
+  readTrustedEvidenceDescendantBytesNoFollow,
+  readTrustedEvidenceDescendantJsonFile,
+  revalidateCanonicalEvidenceAncestry,
+  requireRealGitTopLevel,
+  requireRepoTaskId,
+  requireRuntimeSmokeSessionName,
+  resolveCanonicalEvidenceDirectory,
+  sameSortedPaths,
+  sha256,
+  timingSafeEqualHex,
+  verifyScenarioScreenshots,
+  git,
+} from "./smoke-evidence-filesystem.mjs";
+
+// Preserved public surface for the extracted filesystem/Git operations.
+export {
+  SmokeEvidenceError,
+  MAX_MANIFEST_BYTES,
+  MAX_REPORT_BYTES,
+  MAX_SCREENSHOT_BYTES,
+  canonicalRevisionStream,
+  canonicalStatusRecords,
+  computeWorkingTreeRevision,
+  enumerateRegularFilesNoSymlinks,
+  isStrictDescendant,
+  readCanonicalSmokeEvidenceReport,
+  readExactGitHead,
+  readPorcelainRecords,
+  requireRealGitTopLevel,
+  requireRepoTaskId,
+  requireRuntimeSmokeSessionName,
+  resolveCanonicalEvidenceDirectory,
+  sameSortedPaths,
+  sha256,
+  isLowercaseHex,
+  timingSafeEqualHex,
+} from "./smoke-evidence-filesystem.mjs";
+
 import { pathToFileURL } from "node:url";
 
 export const SMOKE_MANIFEST_SCHEMA_VERSION = 1;
 export const SMOKE_CHECKPOINT_SCHEMA_VERSION = 1;
-// Bounded evidence ingestion caps: manifest/report bytes before JSON parsing,
-// then string/array counts and each screenshot byte size before hashing.
-export const MAX_MANIFEST_BYTES = 1_048_576; // 1 MiB, mirrors the runner report cap
-export const MAX_REPORT_BYTES = 1_048_576;
-export const MAX_SCREENSHOT_BYTES = 8_388_608; // 8 MiB
+// Bounded evidence ingestion caps before JSON parsing/hashing.
 export const MAX_STRING_CHARS = 10_000;
 export const MAX_PATH_CHARS = 2_048;
 export const MIN_MANIFEST_SCENARIOS = 5;
@@ -36,32 +78,8 @@ const PROFILE_IDS = new Set(["fast", "certification"]);
 const SURFACES = new Set(["admin", "public"]);
 const THEMES = new Set(["light", "dark"]);
 const ASSERTION_KINDS = new Set(["computed-style", "geometry", "dom-state", "aria"]);
-const SESSION_PATTERN = /^[a-z][a-z0-9-]{2,63}$/u;
 const KEBAB_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const GENERATED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/u;
-
-export class SmokeEvidenceError extends Error {
-  constructor(code, label, detail) {
-    super(`${code}:${label}:${detail}`);
-    this.name = "SmokeEvidenceError";
-    this.code = code;
-    this.label = label;
-    this.detail = detail;
-  }
-}
-
-function fail(code, label, detail) {
-  throw new SmokeEvidenceError(code, label, detail);
-}
-
-function isPlainRecord(value) {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.getPrototypeOf(value) === Object.prototype
-  );
-}
 
 function sortCanonical(value) {
   if (Array.isArray(value)) return value.map(sortCanonical);
@@ -79,39 +97,7 @@ export function canonicalJson(value) {
   return JSON.stringify(sortCanonical(value));
 }
 
-export function sha256(input) {
-  return createHash("sha256").update(input).digest("hex");
-}
-
-export function isLowercaseHex(value, length) {
-  return typeof value === "string" && value.length === length && /^[0-9a-f]+$/u.test(value);
-}
-
-export function timingSafeEqualHex(actual, expected) {
-  if (!isLowercaseHex(actual, 64) || !isLowercaseHex(expected, 64)) fail("smoke_hash_invalid", "hash", "grammar");
-  return timingSafeEqual(Buffer.from(actual, "hex"), Buffer.from(expected, "hex"));
-}
-
 // Task IDs are exactly TASK-[0-9]{3} plus the sole reserved TASK-9999 sentinel.
-export function requireRepoTaskId(taskId) {
-  if (typeof taskId !== "string" || (!/^TASK-[0-9]{3}$/u.test(taskId) && taskId !== "TASK-9999")) {
-    fail("smoke_task_id_invalid", "task", "grammar");
-  }
-  return taskId;
-}
-
-export function requireRuntimeSmokeSessionName(session) {
-  if (
-    typeof session !== "string" ||
-    !SESSION_PATTERN.test(session) ||
-    /[./\\]/u.test(session) ||
-    /[\u0000-\u001f\u007f]/u.test(session)
-  ) {
-    fail("smoke_session_invalid", "session", "grammar");
-  }
-  return session;
-}
-
 export function requireExactKeys(value, expected, label) {
   if (!isPlainRecord(value)) fail("smoke_schema_invalid", label, "not_record");
   const actual = Object.keys(value).sort();
@@ -141,7 +127,11 @@ function requireUniqueIds(items, kind) {
   const seen = new Set();
   for (const item of items) {
     if (seen.has(item.id)) {
-      fail(kind === "scenario" ? "smoke_scenario_duplicate" : "smoke_variant_duplicate", `${kind}s`, item.id);
+      fail(
+        kind === "scenario" ? "smoke_scenario_duplicate" : "smoke_variant_duplicate",
+        `${kind}s`,
+        item.id
+      );
     }
     seen.add(item.id);
   }
@@ -160,7 +150,8 @@ export function requireSafeRepoRelativePath(value, label) {
     fail("smoke_path_invalid", label, "unsafe");
   }
   for (const segment of value.split("/")) {
-    if (segment.length === 0 || segment === "." || segment === "..") fail("smoke_path_invalid", label, "unsafe");
+    if (segment.length === 0 || segment === "." || segment === "..")
+      fail("smoke_path_invalid", label, "unsafe");
   }
   return value;
 }
@@ -168,8 +159,12 @@ export function requireSafeRepoRelativePath(value, label) {
 function validateViewport(value) {
   requireExactKeys(value, ["width", "height"], "viewport");
   if (
-    !Number.isSafeInteger(value.width) || value.width < 1 || value.width > 16_384 ||
-    !Number.isSafeInteger(value.height) || value.height < 1 || value.height > 16_384
+    !Number.isSafeInteger(value.width) ||
+    value.width < 1 ||
+    value.width > 16_384 ||
+    !Number.isSafeInteger(value.height) ||
+    value.height < 1 ||
+    value.height > 16_384
   ) {
     fail("smoke_variant_invalid", "viewport", "dimensions");
   }
@@ -177,7 +172,11 @@ function validateViewport(value) {
 }
 
 export function validateStrictAssertion(value) {
-  requireExactKeys(value, ["kind", "target", "property", "expected", "actual", "pass"], "assertion");
+  requireExactKeys(
+    value,
+    ["kind", "target", "property", "expected", "actual", "pass"],
+    "assertion"
+  );
   if (!ASSERTION_KINDS.has(value.kind)) fail("smoke_assertion_invalid", "assertion.kind", "enum");
   requireBoundedString(value.target, "assertion.target");
   requireBoundedString(value.property, "assertion.property");
@@ -195,21 +194,40 @@ export function validateStrictAssertion(value) {
 }
 
 export function validateStrictVariant(value) {
-  requireExactKeys(value, ["id", "surface", "theme", "viewport", "assertions", "consoleErrors"], "variant");
+  requireExactKeys(
+    value,
+    ["id", "surface", "theme", "viewport", "assertions", "consoleErrors"],
+    "variant"
+  );
   const id = requireBoundedString(value.id, "variant.id", 256);
   if (!KEBAB_PATTERN.test(id)) fail("smoke_variant_invalid", "variant.id", "grammar");
   if (!SURFACES.has(value.surface)) fail("smoke_variant_invalid", "variant.surface", "enum");
   if (!THEMES.has(value.theme)) fail("smoke_variant_invalid", "variant.theme", "enum");
   const viewport = validateViewport(value.viewport);
-  const assertions = requireBoundedArray(value.assertions, "variant.assertions", 1, MAX_ASSERTIONS_PER_VARIANT).map(
-    validateStrictAssertion
-  );
+  const assertions = requireBoundedArray(
+    value.assertions,
+    "variant.assertions",
+    1,
+    MAX_ASSERTIONS_PER_VARIANT
+  ).map(validateStrictAssertion);
   if (!assertions.every((assertion) => assertion.pass === true)) {
     fail("smoke_assertion_failed", "variant.assertions", "pass");
   }
-  const consoleErrors = requireBoundedArray(value.consoleErrors, "variant.consoleErrors", 0, MAX_CONSOLE_ERRORS_PER_VARIANT);
+  const consoleErrors = requireBoundedArray(
+    value.consoleErrors,
+    "variant.consoleErrors",
+    0,
+    MAX_CONSOLE_ERRORS_PER_VARIANT
+  );
   if (consoleErrors.length !== 0) fail("smoke_console_errors", "variant.consoleErrors", "nonempty");
-  return Object.freeze({ id, surface: value.surface, theme: value.theme, viewport, assertions, consoleErrors });
+  return Object.freeze({
+    id,
+    surface: value.surface,
+    theme: value.theme,
+    viewport,
+    assertions,
+    consoleErrors,
+  });
 }
 
 export function validateStrictScreenshot(value) {
@@ -230,21 +248,38 @@ function requireScenarioId(value) {
 // gains optional strict title/variants/screenshots; manifest-bearing suites
 // must provide all three and `pass` must be exactly true.
 export function validateStrictManifestableScenario(value) {
-  requireExactKeys(value, ["id", "pass", "elapsedMs", "title", "variants", "screenshots"], "scenario");
+  requireExactKeys(
+    value,
+    ["id", "pass", "elapsedMs", "title", "variants", "screenshots"],
+    "scenario"
+  );
   const id = requireScenarioId(value.id);
   if (value.pass !== true) fail("smoke_scenario_not_passed", "scenario.pass", "not_true");
   if (!Number.isSafeInteger(value.elapsedMs) || value.elapsedMs < 0) {
     fail("smoke_schema_invalid", "scenario.elapsedMs", "number");
   }
   const title = requireBoundedString(value.title, "scenario.title");
-  const variants = requireBoundedArray(value.variants, "scenario.variants", 1, MAX_VARIANTS_PER_SCENARIO).map(
-    validateStrictVariant
-  );
+  const variants = requireBoundedArray(
+    value.variants,
+    "scenario.variants",
+    1,
+    MAX_VARIANTS_PER_SCENARIO
+  ).map(validateStrictVariant);
   requireUniqueIds(variants, "variant");
-  const screenshots = requireBoundedArray(value.screenshots, "scenario.screenshots", 1, MAX_SCREENSHOTS_PER_SCENARIO).map(
-    validateStrictScreenshot
-  );
-  return Object.freeze({ id, pass: true, elapsedMs: value.elapsedMs, title, variants, screenshots });
+  const screenshots = requireBoundedArray(
+    value.screenshots,
+    "scenario.screenshots",
+    1,
+    MAX_SCREENSHOTS_PER_SCENARIO
+  ).map(validateStrictScreenshot);
+  return Object.freeze({
+    id,
+    pass: true,
+    elapsedMs: value.elapsedMs,
+    title,
+    variants,
+    screenshots,
+  });
 }
 
 // Manifest-side scenario: the persisted manifest omits runtime-only
@@ -254,13 +289,19 @@ export function validateManifestScenario(value) {
   requireExactKeys(value, ["id", "title", "variants", "screenshots"], "scenario");
   const id = requireScenarioId(value.id);
   const title = requireBoundedString(value.title, "scenario.title");
-  const variants = requireBoundedArray(value.variants, "scenario.variants", 1, MAX_VARIANTS_PER_SCENARIO).map(
-    validateStrictVariant
-  );
+  const variants = requireBoundedArray(
+    value.variants,
+    "scenario.variants",
+    1,
+    MAX_VARIANTS_PER_SCENARIO
+  ).map(validateStrictVariant);
   requireUniqueIds(variants, "variant");
-  const screenshots = requireBoundedArray(value.screenshots, "scenario.screenshots", 1, MAX_SCREENSHOTS_PER_SCENARIO).map(
-    validateStrictScreenshot
-  );
+  const screenshots = requireBoundedArray(
+    value.screenshots,
+    "scenario.screenshots",
+    1,
+    MAX_SCREENSHOTS_PER_SCENARIO
+  ).map(validateStrictScreenshot);
   return Object.freeze({ id, title, variants, screenshots });
 }
 
@@ -274,7 +315,8 @@ export function validateReportRef(value) {
 
 export function validateRevision(value) {
   requireExactKeys(value, ["gitHead", "workingTreeDirty", "workingTreeSha256"], "revision");
-  if (!isLowercaseHex(value.gitHead, 40)) fail("smoke_revision_invalid", "revision.gitHead", "grammar");
+  if (!isLowercaseHex(value.gitHead, 40))
+    fail("smoke_revision_invalid", "revision.gitHead", "grammar");
   if (typeof value.workingTreeDirty !== "boolean") {
     fail("smoke_revision_invalid", "revision.workingTreeDirty", "boolean");
   }
@@ -289,7 +331,11 @@ export function validateRevision(value) {
 }
 
 export function validateGeneratedAt(value) {
-  if (typeof value !== "string" || !GENERATED_AT_PATTERN.test(value) || Number.isNaN(Date.parse(value))) {
+  if (
+    typeof value !== "string" ||
+    !GENERATED_AT_PATTERN.test(value) ||
+    Number.isNaN(Date.parse(value))
+  ) {
     fail("smoke_schema_invalid", "generatedAt", "iso_utc");
   }
   return value;
@@ -316,11 +362,26 @@ function requireAdminThemeCoverage(scenarios) {
 export function validateSmokeEvidenceManifest(value) {
   requireExactKeys(
     value,
-    ["schemaVersion", "taskId", "suiteId", "profile", "session", "report", "revision", "generatedAt", "serverUp", "scenarios"],
+    [
+      "schemaVersion",
+      "taskId",
+      "suiteId",
+      "profile",
+      "session",
+      "report",
+      "revision",
+      "generatedAt",
+      "serverUp",
+      "scenarios",
+    ],
     "manifest"
   );
   if (value.schemaVersion !== SMOKE_MANIFEST_SCHEMA_VERSION) {
-    fail("smoke_manifest_version_unknown", "manifest.schemaVersion", `version=${String(value.schemaVersion)}`);
+    fail(
+      "smoke_manifest_version_unknown",
+      "manifest.schemaVersion",
+      `version=${String(value.schemaVersion)}`
+    );
   }
   const taskId = requireRepoTaskId(value.taskId);
   const suiteId = requireBoundedString(value.suiteId, "manifest.suiteId", 128);
@@ -331,9 +392,12 @@ export function validateSmokeEvidenceManifest(value) {
   const revision = validateRevision(value.revision);
   const generatedAt = validateGeneratedAt(value.generatedAt);
   if (value.serverUp !== true) fail("smoke_server_down", "manifest.serverUp", "not_true");
-  const scenarios = requireBoundedArray(value.scenarios, "manifest.scenarios", MIN_MANIFEST_SCENARIOS, MAX_SCENARIOS).map(
-    validateManifestScenario
-  );
+  const scenarios = requireBoundedArray(
+    value.scenarios,
+    "manifest.scenarios",
+    MIN_MANIFEST_SCENARIOS,
+    MAX_SCENARIOS
+  ).map(validateManifestScenario);
   requireUniqueIds(scenarios, "scenario");
   requireAdminThemeCoverage(scenarios);
   return Object.freeze({
@@ -370,7 +434,8 @@ export function uniqueScenarioScreenshotUnion(scenarios) {
   const out = [];
   for (const scenario of scenarios) {
     for (const shot of scenario.screenshots) {
-      if (seen.has(shot.path)) fail("smoke_screenshot_duplicate_ownership", "scenario.screenshots", shot.path);
+      if (seen.has(shot.path))
+        fail("smoke_screenshot_duplicate_ownership", "scenario.screenshots", shot.path);
       seen.add(shot.path);
       out.push(shot);
     }
@@ -384,14 +449,17 @@ export function requireCanonicalByteEquality(actual, expected, code, label) {
 
 export function requireEveryScenarioPassed(scenarios) {
   for (const scenario of scenarios) {
-    if (scenario.pass !== true) fail("smoke_scenario_not_passed", "report.scenarios", String(scenario.id));
+    if (scenario.pass !== true)
+      fail("smoke_scenario_not_passed", "report.scenarios", String(scenario.id));
   }
 }
 
 export function requireExactOrderedIds(actual, expected, label) {
-  if (actual.length !== expected.length) fail("smoke_manifest_report_evidence_mismatch", label, "count");
+  if (actual.length !== expected.length)
+    fail("smoke_manifest_report_evidence_mismatch", label, "count");
   for (let index = 0; index < actual.length; index += 1) {
-    if (actual[index].id !== expected[index].id) fail("smoke_manifest_report_evidence_mismatch", label, `index=${index}`);
+    if (actual[index].id !== expected[index].id)
+      fail("smoke_manifest_report_evidence_mismatch", label, `index=${index}`);
   }
 }
 
@@ -401,7 +469,11 @@ export function requireExactOrderedIds(actual, expected, label) {
 // screenshot union. Missing report evidence, manifest-only evidence, duplicate
 // ownership, or any difference fails before filesystem screenshot hashing.
 export function requireManifestEqualsRunnerReport(manifest, report) {
-  if (!isPlainRecord(report) || !Array.isArray(report.scenarios) || !Array.isArray(report.screenshots)) {
+  if (
+    !isPlainRecord(report) ||
+    !Array.isArray(report.scenarios) ||
+    !Array.isArray(report.screenshots)
+  ) {
     fail("smoke_report_invalid", "report", "shape");
   }
   const scenarios = report.scenarios.map(validateStrictManifestableScenario);
@@ -421,7 +493,14 @@ export function requireManifestEqualsRunnerReport(manifest, report) {
   );
 }
 
-export function requireRegisteredRuntimeSmokeIdentity({ suiteId, profile, session, expectedSuite, expectedProfile, expectedSession }) {
+export function requireRegisteredRuntimeSmokeIdentity({
+  suiteId,
+  profile,
+  session,
+  expectedSuite,
+  expectedProfile,
+  expectedSession,
+}) {
   if (suiteId !== expectedSuite) fail("smoke_suite_mismatch", "identity", "suite");
   if (profile !== expectedProfile) fail("smoke_profile_mismatch", "identity", "profile");
   if (session !== expectedSession) fail("smoke_session_mismatch", "identity", "session");
@@ -441,231 +520,47 @@ export function revisionEquals(left, right) {
   return canonicalJson(publicRevision(left)) === canonicalJson(publicRevision(right));
 }
 
-export function isStrictDescendant(root, candidate) {
-  const rel = relative(root, candidate);
-  if (rel === "" || rel === "." || rel.startsWith("..") || isAbsolute(rel)) return false;
-  if (rel.split(sep).includes("..")) return false;
-  return true;
-}
-
-// ---------------------------------------------------------------------------
-// Git-bound helpers
-// ---------------------------------------------------------------------------
-
-function git(repoRoot, args) {
-  try {
-    return execFileSync("git", args, {
-      cwd: repoRoot,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
-    });
-  } catch (error) {
-    fail("smoke_git_failed", "git", args[0] ?? "run");
-  }
-}
-
-export async function requireRealGitTopLevel(repoRoot) {
-  if (typeof repoRoot !== "string" || repoRoot.length === 0) fail("smoke_repository_invalid", "repoRoot", "missing");
-  const realRoot = await realpath(repoRoot);
-  const top = git(realRoot, ["rev-parse", "--show-toplevel"]).trim();
-  if (top.length === 0) fail("smoke_repository_invalid", "repoRoot", "top_level");
-  return realpath(top);
-}
-
-async function rejectSymlinkedExistingComponents(root, expected) {
-  const rel = relative(root, expected);
-  const parts = rel.split(sep).filter((part) => part.length > 0);
-  let current = root;
-  for (const part of parts) {
-    current = join(current, part);
-    try {
-      const entry = await lstat(current);
-      if (entry.isSymbolicLink()) fail("smoke_path_symlink", "evidence", relative(root, current));
-    } catch (error) {
-      if (error.code === "ENOENT") return; // remaining components do not exist yet
-      throw error;
-    }
-  }
-}
-
-// Derives the canonical evidence directory from the real Git top level, the
-// task ID, and the report-bound session. Callers cannot supply an evidence
-// root; traversal, symlinked components, and alternate same-basename roots are
-// rejected by construction.
-export async function resolveCanonicalEvidenceDirectory(repoRoot, expectedTask, expectedSession) {
-  requireRepoTaskId(expectedTask);
-  requireRuntimeSmokeSessionName(expectedSession);
-  const realRepoRoot = await requireRealGitTopLevel(repoRoot);
-  const expected = join(realRepoRoot, "_docs", "_workflows", "_smoke", "evidence", expectedTask.toLowerCase(), expectedSession);
-  await rejectSymlinkedExistingComponents(realRepoRoot, expected);
-  return expected;
-}
-
-export async function readExactGitHead(repoRoot) {
-  const head = git(repoRoot, ["rev-parse", "HEAD"]).trim();
-  if (!isLowercaseHex(head, 40)) fail("smoke_revision_invalid", "gitHead", "grammar");
-  return head;
-}
-
-// `git status --porcelain=v1 -z` records. Rename/copy entries emit the source
-// path as a separate NUL token followed by the destination; only the
-// destination participates in the canonical revision stream.
-export async function readPorcelainRecords(repoRoot, { includeUntracked = false } = {}) {
-  const args = ["status", "--porcelain=v1", "-z"];
-  if (includeUntracked) args.push("--untracked-files=all");
-  const raw = git(repoRoot, args);
-  const tokens = raw.split("\0").filter((token) => token.length > 0);
-  const records = [];
-  let index = 0;
-  while (index < tokens.length) {
-    const token = tokens[index];
-    if (token.length < 4) fail("smoke_repository_invalid", "porcelain", "record");
-    const status = token.slice(0, 2);
-    const path = token.slice(3);
-    if (status[0] === "R" || status[0] === "C") {
-      index += 1;
-      const destination = tokens[index];
-      if (destination === undefined) fail("smoke_repository_invalid", "porcelain", "rename_destination");
-      records.push({ status: status[0], path: destination });
-    } else {
-      records.push({ status: status[0], path });
-    }
-    index += 1;
-  }
-  return records;
-}
-
-// Bounded canonical status records: status, normalized repository-relative
-// path, mode, and content hash (or deletion marker). Symlinks hash their target
-// text; the manifest's own evidence directory is excluded from the revision.
-export async function canonicalStatusRecords(records, { repoRoot, excludeStrictDescendant } = {}) {
-  if (typeof repoRoot !== "string" || repoRoot.length === 0) {
-    fail("smoke_repository_invalid", "repoRoot", "missing");
-  }
-  const out = [];
-  for (const record of records) {
-    const abs = resolve(repoRoot, record.path);
-    if (excludeStrictDescendant !== undefined && isStrictDescendant(excludeStrictDescendant, abs)) {
-      continue;
-    }
-    let mode;
-    let contentHash;
-    try {
-      const entry = await lstat(abs);
-      mode = (entry.mode & 0o7777).toString(8).padStart(6, "0");
-      if (entry.isSymbolicLink()) {
-        contentHash = `link:${await readlink(abs)}`;
-      } else if (entry.isFile()) {
-        contentHash = sha256(await readFile(abs));
-      } else {
-        fail("smoke_repository_invalid", record.path, "not_regular_or_symlink");
-      }
-    } catch (error) {
-      if (error.code === "ENOENT") {
-        mode = "000000";
-        contentHash = "DELETED";
-      } else {
-        throw error;
-      }
-    }
-    out.push({ status: record.status, path: record.path, mode, contentHash });
-  }
-  return out;
-}
-
-export async function canonicalRevisionStream(gitHead, records, { repoRoot, excludeStrictDescendant } = {}) {
-  const canonical = await canonicalStatusRecords(records, { repoRoot, excludeStrictDescendant });
-  const lines = canonical
-    .map((record) => `${record.status}\0${record.path}\0${record.mode}\0${record.contentHash}`)
-    .sort();
-  return `${gitHead}\0${lines.join("\0")}`;
-}
-
-export async function computeWorkingTreeRevision(repoRoot, expectedTask, expectedSession) {
-  const evidenceRoot = await resolveCanonicalEvidenceDirectory(repoRoot, expectedTask, expectedSession);
-  const gitHead = await readExactGitHead(repoRoot);
-  const records = await readPorcelainRecords(repoRoot, { includeUntracked: true });
-  const outsideEvidence = await canonicalStatusRecords(records, { repoRoot, excludeStrictDescendant: evidenceRoot });
-  const canonical = await canonicalRevisionStream(gitHead, records, { repoRoot, excludeStrictDescendant: evidenceRoot });
-  return {
-    gitHead,
-    workingTreeDirty: outsideEvidence.length > 0,
-    workingTreeSha256: sha256(canonical),
-    records: outsideEvidence,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Evidence directory audit
-// ---------------------------------------------------------------------------
-
-async function requireExactRegularFile(path) {
-  try {
-    const entry = await lstat(path);
-    if (!entry.isFile() || entry.isSymbolicLink()) fail("smoke_evidence_file_invalid", path, "not_regular");
-  } catch (error) {
-    if (error.code === "ENOENT") fail("smoke_evidence_file_missing", path, "missing");
-    throw error;
-  }
-}
-
-async function readCappedJsonFile(path, maxBytes, code, label) {
-  await requireExactRegularFile(path);
-  let entry;
-  try {
-    entry = await stat(path);
-  } catch (error) {
-    if (error.code === "ENOENT") fail(code, label, "missing");
-    throw error;
-  }
-  if (entry.size > maxBytes) fail(code, label, `size=${entry.size}`);
-  const text = await readFile(path, "utf8");
-  if (Buffer.byteLength(text, "utf8") > maxBytes) fail(code, label, "size");
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    fail("smoke_json_invalid", label, "parse");
-  }
-}
-
-async function verifyScenarioScreenshots(root, manifest) {
-  const referenced = ["manifest.json", "report.json"];
-  const seen = new Set(referenced);
-  for (const scenario of manifest.scenarios) {
-    for (const shot of scenario.screenshots) {
-      const resolved = resolve(root, shot.path);
-      if (!isStrictDescendant(root, resolved)) fail("smoke_path_escape", "screenshot", shot.path);
-      await requireExactRegularFile(resolved);
-      const bytes = await readFile(resolved);
-      if (bytes.length > MAX_SCREENSHOT_BYTES) fail("smoke_screenshot_too_large", shot.path, `size=${bytes.length}`);
-      if (!timingSafeEqualHex(sha256(bytes), shot.sha256)) fail("smoke_hash_mismatch", shot.path, "bytes");
-      if (seen.has(shot.path)) fail("smoke_screenshot_duplicate", "screenshot", shot.path);
-      seen.add(shot.path);
-      referenced.push(shot.path);
-    }
-  }
-  return referenced.sort();
-}
-
-// Canonical read-only driver. Reads the strict manifest from the canonical
-// evidence directory, verifies schema/caps/version, identity and revision
-// equality, the byte-exact shared-runner report, and every screenshot hash.
-export async function validateSmokeEvidence(options) {
+// Canonical read-only evidence audit.
+async function validateSmokeEvidenceWithReadOptions(options, readOptions = undefined) {
   requireExactKeys(
     options,
-    ["repoRoot", "expectedTask", "expectedSuite", "expectedProfile", "expectedSession", "expectedRevision"],
+    [
+      "repoRoot",
+      "expectedTask",
+      "expectedSuite",
+      "expectedProfile",
+      "expectedSession",
+      "expectedRevision",
+    ],
     "validateSmokeEvidence"
   );
-  const { repoRoot, expectedTask, expectedSuite, expectedProfile, expectedSession, expectedRevision } = options;
+  const {
+    repoRoot,
+    expectedTask,
+    expectedSuite,
+    expectedProfile,
+    expectedSession,
+    expectedRevision,
+  } = options;
   requireRepoTaskId(expectedTask);
   requireRuntimeSmokeSessionName(expectedSession);
   if (!isPlainRecord(expectedRevision)) fail("smoke_revision_invalid", "expectedRevision", "shape");
-  const root = await resolveCanonicalEvidenceDirectory(repoRoot, expectedTask, expectedSession);
+  const ancestry = await captureCanonicalEvidenceAncestry(repoRoot, expectedTask, expectedSession, {
+    allowMissing: true,
+  });
+  const root = ancestry.path;
   const manifestPath = join(root, "manifest.json");
-  const raw = await readCappedJsonFile(manifestPath, MAX_MANIFEST_BYTES, "smoke_manifest_too_large", "manifest");
+  const raw = await readTrustedEvidenceDescendantJsonFile(
+    root,
+    manifestPath,
+    MAX_MANIFEST_BYTES,
+    "smoke_manifest_too_large",
+    "manifest",
+    readOptions
+  );
   const manifest = validateSmokeEvidenceManifest(raw);
-  if (manifest.taskId !== expectedTask) fail("smoke_task_manifest_mismatch", "manifest.taskId", "task");
+  if (manifest.taskId !== expectedTask)
+    fail("smoke_task_manifest_mismatch", "manifest.taskId", "task");
   requireRegisteredRuntimeSmokeIdentity({
     suiteId: manifest.suiteId,
     profile: manifest.profile,
@@ -674,14 +569,30 @@ export async function validateSmokeEvidence(options) {
     expectedProfile,
     expectedSession,
   });
-  if (!revisionEquals(manifest.revision, expectedRevision)) fail("smoke_revision_mismatch", "revision", "bytes");
+  if (!revisionEquals(manifest.revision, expectedRevision))
+    fail("smoke_revision_mismatch", "revision", "bytes");
   const reportPath = join(root, manifest.report.path);
-  const report = await readCappedJsonFile(reportPath, MAX_REPORT_BYTES, "smoke_report_too_large", "report");
-  if (!timingSafeEqualHex(sha256(await readFile(reportPath)), manifest.report.sha256)) {
+  const report = await readTrustedEvidenceDescendantJsonFile(
+    root,
+    reportPath,
+    MAX_REPORT_BYTES,
+    "smoke_report_too_large",
+    "report",
+    readOptions
+  );
+  const reportBytes = await readTrustedEvidenceDescendantBytesNoFollow(
+    root,
+    reportPath,
+    MAX_REPORT_BYTES,
+    "report",
+    readOptions
+  );
+  if (!timingSafeEqualHex(sha256(reportBytes), manifest.report.sha256)) {
     fail("smoke_hash_mismatch", "report.sha256", "bytes");
   }
   requireManifestEqualsRunnerReport(manifest, report);
-  const referencedFiles = await verifyScenarioScreenshots(root, manifest);
+  const referencedFiles = await verifyScenarioScreenshots(root, manifest, readOptions);
+  await revalidateCanonicalEvidenceAncestry(ancestry);
   return Object.freeze({
     pass: true,
     taskId: manifest.taskId,
@@ -694,36 +605,8 @@ export async function validateSmokeEvidence(options) {
   });
 }
 
-export async function enumerateRegularFilesNoSymlinks(dir) {
-  const out = [];
-  async function walk(current) {
-    let entries;
-    try {
-      entries = await readdir(current, { withFileTypes: true });
-    } catch (error) {
-      if (error.code === "ENOENT") return;
-      throw error;
-    }
-    for (const entry of entries) {
-      const abs = join(current, entry.name);
-      if (entry.isSymbolicLink()) fail("smoke_path_symlink", "evidence", relative(dir, abs));
-      if (entry.isDirectory()) {
-        await walk(abs);
-        continue;
-      }
-      if (entry.isFile()) {
-        out.push(relative(dir, abs));
-      } else {
-        fail("smoke_evidence_file_invalid", "evidence", relative(dir, abs));
-      }
-    }
-  }
-  await walk(dir);
-  return out.sort();
-}
-
-export function sameSortedPaths(left, right) {
-  return left.length === right.length && left.every((path, index) => path === right[index]);
+export async function validateSmokeEvidence(options) {
+  return validateSmokeEvidenceWithReadOptions(options);
 }
 
 // File-set parity audit: the present regular-file set under the canonical
@@ -731,25 +614,44 @@ export function sameSortedPaths(left, right) {
 // optional checkpoint control file. With requireTracked, that same exact set
 // must appear in `git ls-files`.
 export async function auditSmokeEvidenceDirectory(options) {
-  requireExactKeys(
-    options,
-    ["repoRoot", "expectedTask", "expectedSuite", "expectedProfile", "expectedSession", "expectedRevision", "requireCheckpoint", "requireTracked"],
-    "auditSmokeEvidenceDirectory"
-  );
-  const result = await validateSmokeEvidence({
+  const expectedOptionKeys = [
+    "repoRoot",
+    "expectedTask",
+    "expectedSuite",
+    "expectedProfile",
+    "expectedSession",
+    "expectedRevision",
+    "requireCheckpoint",
+    "requireTracked",
+  ];
+  // L04: optional backwards-compatible private-evidence audit flag.
+  if (options.requirePrivateEvidenceFiles !== undefined) {
+    expectedOptionKeys.push("requirePrivateEvidenceFiles");
+  }
+  requireExactKeys(options, expectedOptionKeys, "auditSmokeEvidenceDirectory");
+  const validationOptions = {
     repoRoot: options.repoRoot,
     expectedTask: options.expectedTask,
     expectedSuite: options.expectedSuite,
     expectedProfile: options.expectedProfile,
     expectedSession: options.expectedSession,
     expectedRevision: options.expectedRevision,
-  });
-  const taskDir = await resolveCanonicalEvidenceDirectory(options.repoRoot, options.expectedTask, options.expectedSession);
+  };
+  const readOptions =
+    options.requirePrivateEvidenceFiles === true ? { requiredMode: 0o600n } : undefined;
+  const result = await validateSmokeEvidenceWithReadOptions(validationOptions, readOptions);
+  const ancestry = await captureCanonicalEvidenceAncestry(
+    options.repoRoot,
+    options.expectedTask,
+    options.expectedSession
+  );
+  const taskDir = ancestry.path;
   const present = await enumerateRegularFilesNoSymlinks(taskDir);
   const expected = options.requireCheckpoint
     ? [...result.referencedFiles, "resume-checkpoint.json"].sort()
     : result.referencedFiles;
-  if (!sameSortedPaths(expected, present)) fail("smoke_evidence_file_set_mismatch", "evidence", "set");
+  if (!sameSortedPaths(expected, present))
+    fail("smoke_evidence_file_set_mismatch", "evidence", "set");
   if (options.requireTracked) {
     const raw = git(options.repoRoot, ["ls-files", "-z", "--", taskDir]);
     const tracked = raw
@@ -757,9 +659,12 @@ export async function auditSmokeEvidenceDirectory(options) {
       .filter((path) => path.length > 0)
       .map((path) => relative(taskDir, resolve(options.repoRoot, path)))
       .sort();
-    if (!sameSortedPaths(expected, tracked)) fail("smoke_evidence_untracked", "evidence", "tracked");
+    if (!sameSortedPaths(expected, tracked))
+      fail("smoke_evidence_untracked", "evidence", "tracked");
   }
-  return result;
+  const finalResult = await validateSmokeEvidenceWithReadOptions(validationOptions, readOptions);
+  await revalidateCanonicalEvidenceAncestry(ancestry);
+  return finalResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -771,10 +676,24 @@ export async function auditSmokeEvidenceDirectory(options) {
 // reinterpret, or mark passing a scenario, variant, assertion, console result,
 // or screenshot. The runner report is the sole authority for pass state and
 // evidence assignment.
-export function projectSmokeEvidenceManifest({ taskId, suiteId, profile, session, reportPath, reportSha256, revision, generatedAt, report }) {
+export function projectSmokeEvidenceManifest({
+  taskId,
+  suiteId,
+  profile,
+  session,
+  reportPath,
+  reportSha256,
+  revision,
+  generatedAt,
+  report,
+}) {
   requireRepoTaskId(taskId);
   requireRuntimeSmokeSessionName(session);
-  if (!isPlainRecord(report) || !Array.isArray(report.scenarios) || !Array.isArray(report.screenshots)) {
+  if (
+    !isPlainRecord(report) ||
+    !Array.isArray(report.scenarios) ||
+    !Array.isArray(report.screenshots)
+  ) {
     fail("smoke_report_invalid", "report", "shape");
   }
   const scenarios = report.scenarios.map(validateStrictManifestableScenario);
@@ -800,28 +719,84 @@ export function projectSmokeEvidenceManifest({ taskId, suiteId, profile, session
   });
 }
 
-// Writes the canonical manifest.json (canonical JSON plus one final LF, 0600)
-// into the canonical evidence directory. Refuses to overwrite an existing
-// manifest: evidence is created once by the owning workflow and never rewritten
-// during validation.
-export async function writeSmokeEvidenceManifest({ repoRoot, expectedTask, expectedSession, manifest }) {
-  const root = await resolveCanonicalEvidenceDirectory(repoRoot, expectedTask, expectedSession);
+// Writes canonical 0600 manifest.json once; evidence is never rewritten.
+export async function writeSmokeEvidenceManifest({
+  repoRoot,
+  expectedTask,
+  expectedSession,
+  manifest,
+}) {
   const validated = validateSmokeEvidenceManifest(manifest);
-  await mkdir(root, { recursive: true, mode: 0o700 });
+  // L04 hardening: the validated manifest identity must be bound to the
+  // expected canonical task and session before any file is created.
+  if (validated.taskId !== expectedTask)
+    fail("smoke_task_manifest_mismatch", "manifest.taskId", "task");
+  if (validated.session !== expectedSession)
+    fail("smoke_session_invalid", "manifest.session", "binding");
+  const ancestry = await ensureCanonicalEvidenceDirectory(repoRoot, expectedTask, expectedSession);
+  const root = ancestry.path;
   const manifestPath = join(root, "manifest.json");
+  await revalidateCanonicalEvidenceAncestry(ancestry);
+  try {
+    await lstat(manifestPath);
+    fail("smoke_manifest_conflict", "manifest", "exists");
+  } catch (error) {
+    if (error instanceof SmokeEvidenceError) throw error;
+    if (error.code !== "ENOENT") throw error;
+  }
   const bytes = `${canonicalJson(validated)}\n`;
-  if (Buffer.byteLength(bytes, "utf8") > MAX_MANIFEST_BYTES) fail("smoke_manifest_too_large", "manifest", "bytes");
+  if (Buffer.byteLength(bytes, "utf8") > MAX_MANIFEST_BYTES)
+    fail("smoke_manifest_too_large", "manifest", "bytes");
   let handle;
   try {
-    handle = await open(manifestPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600);
+    handle = await open(
+      manifestPath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+      0o600
+    );
+    const created = await handle.stat();
+    if (!created.isFile() || created.nlink !== 1 || (created.mode & 0o777) !== 0o600) {
+      fail("smoke_evidence_file_invalid", "manifest", "not_regular_single_link_0600");
+    }
     await handle.chmod(0o600);
     await handle.writeFile(bytes, "utf8");
+    await handle.sync();
+    const afterWrite = await handle.stat();
+    if (
+      !afterWrite.isFile() ||
+      afterWrite.nlink !== 1 ||
+      (afterWrite.mode & 0o777) !== 0o600 ||
+      afterWrite.dev !== created.dev ||
+      afterWrite.ino !== created.ino
+    ) {
+      fail("smoke_path_identity_changed", "manifest", "descriptor");
+    }
   } catch (error) {
     if (error.code === "EEXIST") fail("smoke_manifest_conflict", "manifest", "exists");
+    if (error.code === "ELOOP") fail("smoke_path_symlink", "manifest", "exists");
     throw error;
   } finally {
     if (handle !== undefined) await handle.close();
   }
+  const reread = await readTrustedEvidenceDescendantBytesNoFollow(
+    root,
+    manifestPath,
+    MAX_MANIFEST_BYTES,
+    "manifest",
+    { requiredMode: 0o600n }
+  );
+  if (reread.toString("utf8") !== bytes)
+    fail("smoke_evidence_file_invalid", "manifest", "post_write_reread");
+  const manifestEntry = await lstat(manifestPath);
+  if (
+    !manifestEntry.isFile() ||
+    manifestEntry.isSymbolicLink() ||
+    manifestEntry.nlink !== 1 ||
+    (manifestEntry.mode & 0o777) !== 0o600
+  ) {
+    fail("smoke_evidence_file_invalid", "manifest", "not_regular_single_link_0600");
+  }
+  await revalidateCanonicalEvidenceAncestry(ancestry);
   return { path: manifestPath, sha256: sha256(bytes) };
 }
 
@@ -881,8 +856,11 @@ async function runValidateTracked(flags) {
   const profile = flags.profile;
   const session = flags.session;
   if (
-    typeof repoRoot !== "string" || typeof task !== "string" || typeof suite !== "string" ||
-    typeof profile !== "string" || typeof session !== "string"
+    typeof repoRoot !== "string" ||
+    typeof task !== "string" ||
+    typeof suite !== "string" ||
+    typeof profile !== "string" ||
+    typeof session !== "string"
   ) {
     fail("smoke_cli_usage", "validate-tracked", "missing_required_flags");
   }
@@ -905,7 +883,9 @@ async function runValidateTracked(flags) {
   } else {
     await validateSmokeEvidence(options);
   }
-  process.stdout.write(`${JSON.stringify({ pass: true, taskId: task, suiteId: suite, profile, session, revision: expectedRevision })}\n`);
+  process.stdout.write(
+    `${JSON.stringify({ pass: true, taskId: task, suiteId: suite, profile, session, revision: expectedRevision })}\n`
+  );
 }
 
 async function main(argv) {
@@ -937,14 +917,19 @@ async function main(argv) {
   fail("smoke_cli_unknown_command", command, "command");
 }
 
-const isMain = process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+const isMain =
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 
 if (isMain) {
   main(process.argv.slice(2)).catch((error) => {
     if (error instanceof SmokeEvidenceError) {
-      process.stderr.write(`${JSON.stringify({ pass: false, code: error.code, label: error.label, detail: error.detail })}\n`);
+      process.stderr.write(
+        `${JSON.stringify({ pass: false, code: error.code, label: error.label, detail: error.detail })}\n`
+      );
     } else {
-      process.stderr.write(`${JSON.stringify({ pass: false, code: "smoke_cli_internal", detail: String((error && error.message) ?? error) })}\n`);
+      process.stderr.write(
+        `${JSON.stringify({ pass: false, code: "smoke_cli_internal", detail: String((error && error.message) ?? error) })}\n`
+      );
     }
     process.exitCode = 1;
   });

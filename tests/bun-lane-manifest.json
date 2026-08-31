@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T11:31:14.981Z",
+  "generatedAt": "2026-08-30T22:28:43.707Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -1883,6 +1883,12 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/runtime-smoke/evidence-session.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/runtime-smoke/lifecycle-timing.test.ts",
       "bucket": "A",
       "conflictKeys": [],
@@ -1957,6 +1963,60 @@
     {
       "file": "tests/unit/runtime-smoke/task-554-worker.test.ts",
       "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-adapter.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-auth.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-cleanup.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-descriptors.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-output-manifest.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-recovery-db.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-recovery-receipt.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-runner-redaction.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l05-worker-operations.test.ts",
+      "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false
     },
@@ -2039,6 +2099,12 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/runtime-smoke/task540-override-actions.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/runtime-smoke/task540-persistent-bridge.test.ts",
       "bucket": "A",
       "conflictKeys": [],
@@ -2046,6 +2112,12 @@
     },
     {
       "file": "tests/unit/runtime-smoke/task540-scenario-resets.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task540-storage-preflight-session-scope.test.ts",
       "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false
@@ -2287,12 +2359,6 @@
     {
       "file": "tests/unit/server/publicFormsUploadApi.test.ts",
       "bucket": "B",
-      "conflictKeys": [],
-      "cWriteGlobal": false
-    },
-    {
-      "file": "tests/unit/server/schemaValidator.test.ts",
-      "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false
     },
@@ -2552,6 +2618,12 @@
     },
     {
       "file": "tests/unit/workflows/smokeEvidenceDriver.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/workflows/smokeEvidenceFilesystem.test.ts",
       "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false

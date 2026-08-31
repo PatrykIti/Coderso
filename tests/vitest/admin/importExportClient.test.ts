@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import {
+  clearImportHistoryCache,
   exportConfig,
   getCachedImportHistory,
   importConfig,
@@ -9,6 +10,7 @@ import {
   upsertImportHistoryItem,
   writeImportHistoryCache,
 } from "../../../core/admin/services/importExportClient";
+import type { ImportHistoryItem } from "../../../core/admin/services/importExportClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { subscribeCacheEvents, type CacheEvent } from "../../../core/admin/utils/cacheBus";
@@ -225,4 +227,52 @@ test("import history cache stores preview and apply progress states", () => {
     status: "applied",
     progress: 100,
   });
+});
+
+test("upsertImportHistoryItem replaces an existing row and clearImportHistoryCache broadcasts", () => {
+  const history: ImportHistoryItem[] = [
+    {
+      id: "import-1",
+      createdAt: "2026-06-01T00:00:00.000Z",
+      fileName: "site.zip",
+      type: "ZIP bundle",
+      sizeBytes: 1024,
+      status: "applied",
+      progress: 100,
+      completedAt: "2026-06-01T00:01:00.000Z",
+      failureReason: null,
+      summary: null,
+    },
+    {
+      id: "import-2",
+      createdAt: "2026-06-02T00:00:00.000Z",
+      fileName: "site-2.zip",
+      type: "ZIP bundle",
+      sizeBytes: 2048,
+      status: "failed",
+      progress: 40,
+      completedAt: null,
+      failureReason: "invalid bundle",
+      summary: null,
+    },
+  ];
+  writeImportHistoryCache(history);
+
+  upsertImportHistoryItem({
+    id: "import-1",
+    createdAt: "2026-06-01T00:00:00.000Z",
+    fileName: "site.zip",
+    type: "ZIP bundle",
+    sizeBytes: 4096,
+    status: "applied",
+    progress: 100,
+    completedAt: "2026-06-01T00:01:00.000Z",
+    failureReason: null,
+    summary: null,
+  });
+  expect(getCachedImportHistory()?.[0]?.sizeBytes).toBe(4096);
+  expect(getCachedImportHistory()).toHaveLength(2);
+
+  clearImportHistoryCache();
+  expect(getCachedImportHistory()).toBeNull();
 });

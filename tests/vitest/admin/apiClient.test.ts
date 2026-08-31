@@ -251,3 +251,127 @@ test("shared api client helpers classify session-expired and csrf-refreshable fa
   expect(classifyAdminApiFailure(forbidden)).toBe("permission_denied");
   expect(isSessionExpiredApiError(authRequired)).toBe(true);
 });
+
+test("getCsrfToken returns null when the csrf request fails", async () => {
+  const fetchMock = installFetch(async () =>
+    jsonResponse({ error: { code: "server_error", message: "Boom" } }, 500)
+  );
+
+  try {
+    resetCsrfToken();
+    await expect(getCsrfToken()).resolves.toBeNull();
+  } finally {
+    fetchMock.restore();
+  }
+});
+
+test("getCsrfToken returns null on network failure", async () => {
+  const fetchMock = installFetch(async () => {
+    throw new TypeError("network down");
+  });
+
+  try {
+    resetCsrfToken();
+    await expect(getCsrfToken()).resolves.toBeNull();
+  } finally {
+    fetchMock.restore();
+  }
+});
+
+test("apiRequest falls back to a generic error for unparsable or unstructured error bodies", async () => {
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/pages/unstructured")) {
+      return jsonResponse({ message: "nope" }, 500);
+    }
+    return new Response("<html>bad gateway</html>", { status: 502, statusText: "Bad Gateway" });
+  });
+
+  try {
+    resetCsrfToken();
+    await expect(apiRequest("/pages/unstructured", {}, { withCsrf: true })).rejects.toMatchObject({
+      code: "request_failed",
+      status: 500,
+    });
+    await expect(apiRequest("/pages/non-json", {}, { withCsrf: true })).rejects.toMatchObject({
+      code: "request_failed",
+      status: 502,
+    });
+  } finally {
+    fetchMock.restore();
+  }
+});
+
+test("apiRequest reports a double csrf failure without recursing", async () => {
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return csrfErrorResponse("csrf_invalid");
+  });
+
+  try {
+    resetCsrfToken();
+    await expect(
+      apiRequest<{ ok: boolean }>(
+        "/pages/page-1",
+        { method: "POST", body: JSON.stringify({ title: "Updated" }) },
+        { withCsrf: true }
+      )
+    ).rejects.toMatchObject({
+      code: "csrf_invalid",
+      status: 403,
+      sharedFailureKind: "csrf_refresh",
+    });
+
+    expect(fetchMock.calls.map((call) => String(call.input))).toEqual([
+      "/admin/api/auth/csrf",
+      "/admin/api/pages/page-1",
+      "/admin/api/auth/csrf",
+      "/admin/api/pages/page-1",
+    ]);
+  } finally {
+    fetchMock.restore();
+  }
+});
+
+test("apiRequest returns undefined for 204 responses", async () => {
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return new Response(null, { status: 204 });
+  });
+
+  try {
+    resetCsrfToken();
+    await expect(apiRequest("/pages/archive", {}, { withCsrf: true })).resolves.toBeUndefined();
+  } finally {
+    fetchMock.restore();
+  }
+});
+
+test("apiRequest rethrows non-API errors such as malformed JSON", async () => {
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return new Response("not-json{{", {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+
+  try {
+    resetCsrfToken();
+    await expect(apiRequest("/pages", {}, { withCsrf: true })).rejects.toThrow(SyntaxError);
+  } finally {
+    fetchMock.restore();
+  }
+});

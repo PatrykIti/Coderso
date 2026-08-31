@@ -7,6 +7,8 @@ import {
   createAdminThemeProfile,
   createAdminThemeTemplate,
   deleteAdminThemeTemplate,
+  getCachedAdminThemeProfiles,
+  getCachedAdminThemeTemplates,
   listAdminThemeProfiles,
   listAdminThemeProfilesCached,
   listAdminThemeTemplates,
@@ -408,6 +410,75 @@ test("activateAdminThemeProfile invalidates read-through cache", async () => {
       (call) => String(call.input).endsWith("/admin-theme-profiles") && call.init?.method === "GET"
     );
     expect(profileCalls).toHaveLength(2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("listAdminThemeTemplatesCached fetches, primes, and dedupes templates", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  const items = [{ id: "tpl-1", name: "Minimal", tokens: sampleTokens }];
+
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return jsonResponse({ items });
+  };
+
+  try {
+    resetCaches();
+    const [first, second] = await Promise.all([
+      listAdminThemeTemplatesCached(),
+      listAdminThemeTemplatesCached(),
+    ]);
+    expect(calls).toEqual(["/admin/api/admin-theme-templates"]);
+    expect(first).toEqual(items);
+    expect(second).toEqual(items);
+    expect(getCachedAdminThemeTemplates()).toEqual(items);
+
+    // The primed cache serves the next read without another fetch.
+    await listAdminThemeTemplatesCached();
+    expect(calls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("listAdminThemeProfilesCached fetches, primes, and dedupes profiles", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  const items = [
+    {
+      id: "profile-1",
+      name: "Default",
+      tokens: sampleTokens,
+      isActive: true,
+      createdAt: "2026-06-01T00:00:00.000Z",
+      updatedAt: "2026-06-01T00:00:00.000Z",
+    },
+  ];
+
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return jsonResponse({ items });
+  };
+
+  try {
+    resetCaches();
+    const [first, second] = await Promise.all([
+      listAdminThemeProfilesCached(),
+      listAdminThemeProfilesCached(),
+    ]);
+    expect(calls).toEqual(["/admin/api/admin-theme-profiles"]);
+    expect(first).toEqual(items);
+    expect(second).toEqual(items);
+    expect(getCachedAdminThemeProfiles()).toEqual(items);
+
+    // The primed cache serves the next read without another fetch.
+    await listAdminThemeProfilesCached();
+    expect(calls).toHaveLength(1);
   } finally {
     globalThis.fetch = originalFetch;
     resetCaches();

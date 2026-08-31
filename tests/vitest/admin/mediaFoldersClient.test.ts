@@ -313,6 +313,12 @@ test("malformed network arrays and rows reject with the stable typed error witho
   });
   const revokedRow = Proxy.revocable(canonicalFolder(), {});
   revokedRow.revoke();
+  const badLengthArray = new Proxy([canonicalFolder()], {
+    getOwnPropertyDescriptor: (target, key) =>
+      key === "length"
+        ? { value: 1.5, enumerable: false }
+        : Reflect.getOwnPropertyDescriptor(target, key),
+  });
   const missingCreatedAt: Partial<MediaFolder> = canonicalFolder();
   delete missingCreatedAt.createdAt;
 
@@ -331,6 +337,7 @@ test("malformed network arrays and rows reject with the stable typed error witho
     [revokedRow.proxy],
     indexAccessor,
     throwingArrayProxy,
+    badLengthArray,
   ];
 
   for (const payload of malformed) {

@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 
 import {
   clearSearchCache,
+  clearSearchResultCache,
   getCachedRecentSearches,
   getCachedSearchResults,
   getSearchResultsCacheKey,
@@ -187,5 +188,63 @@ test("listRecentSearches hits GET /search/recent", async () => {
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("listRecentSearchesCached fetches, writes, and dedupes recent searches", async () => {
+  const { restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  const items = [{ query: "homepage", createdAt: "2026-06-01T00:00:00.000Z" }];
+
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return jsonResponse({ items });
+  };
+
+  try {
+    const [first, second] = await Promise.all([
+      listRecentSearchesCached(),
+      listRecentSearchesCached(),
+    ]);
+    expect(calls).toEqual(["/admin/api/search/recent"]);
+    expect(first).toEqual(items);
+    expect(second).toEqual(items);
+    expect(getCachedRecentSearches()).toEqual(items);
+
+    // The written cache serves the next read without another fetch.
+    await listRecentSearchesCached();
+    expect(calls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
+  }
+});
+
+test("clearSearchResultCache removes the memory and local response entries", async () => {
+  const { storage, restore } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  const payload = { items: [{ id: "p-1", title: "Home", type: "page", updatedAt: "now" }] };
+
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return jsonResponse(payload);
+  };
+
+  try {
+    const options = { limit: 12, dateRange: "last-30-days" as const };
+    await searchAllCached("homepage", options);
+    expect(getCachedSearchResults("homepage", options)).toEqual(payload);
+    const key = getSearchResultsCacheKey("homepage", options);
+    expect(storage.getItem(key)).toContain("Home");
+
+    clearSearchResultCache("homepage", options);
+
+    expect(getCachedSearchResults("homepage", options)).toBeNull();
+    expect(storage.getItem(key)).toBeNull();
+  } finally {
+    globalThis.fetch = originalFetch;
+    restore();
   }
 });

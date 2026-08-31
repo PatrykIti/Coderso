@@ -9,6 +9,8 @@ import {
   getEntryCached,
   listAllEntriesCached,
   listEntriesCached,
+  listEntryRevisionsCached,
+  publishEntry,
   updateEntry,
 } from "../../../core/admin/services/entriesClient";
 import type { EntryDetail, EntrySummary } from "../../../core/admin/services/entriesClient";
@@ -536,6 +538,111 @@ test("entry promise caches survive superseded rejection and retry authoritative 
     clearEntriesCache("entry-abc");
     clearEntriesCache("entry-retry");
     clearAllEntriesCache();
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("an in-flight list refresh reconciles a newer status authority when the server omits the item", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore } = installLocalStorage();
+  const refresh = createDeferred<Response>();
+  const typeSlug = "reconcile-status-unshift";
+  let listCalls = 0;
+
+  globalThis.fetch = (input, init) => {
+    const url = String(input);
+    if (url.endsWith(`/content/${typeSlug}/entries`)) {
+      listCalls += 1;
+      return listCalls === 1
+        ? Promise.resolve(jsonResponse([entrySummary("e1"), entrySummary("e2")]))
+        : refresh.promise;
+    }
+    if (url.endsWith(`/content/${typeSlug}/entries/e1/publish`)) {
+      return Promise.resolve(jsonResponse({ ok: true }));
+    }
+    throw new Error(`unexpected fetch ${url}`);
+  };
+
+  try {
+    resetCaches(typeSlug);
+    await listEntriesCached(typeSlug);
+    const refreshRequest = listEntriesCached(typeSlug, { force: true });
+    await publishEntry(typeSlug, "e1");
+    refresh.resolve(jsonResponse([entrySummary("e2")]));
+    await refreshRequest;
+
+    const reconciled = getCachedEntries(typeSlug) ?? [];
+    expect(reconciled.map((entry) => entry.id)).toEqual(["e1", "e2"]);
+    expect(reconciled.find((entry) => entry.id === "e1")?.status).toBe("published");
+  } finally {
+    resetCaches(typeSlug);
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getCachedEntryDetail drops stale storage details after a list commit", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore, storage } = installLocalStorage();
+  const typeSlug = "stale-storage-detail";
+
+  globalThis.fetch = () => Promise.resolve(jsonResponse([entrySummary("e1")]));
+
+  try {
+    resetCaches(typeSlug);
+    await listEntriesCached(typeSlug);
+    storage.setItem(
+      cacheKeys.entryDetail(typeSlug, "ghost"),
+      JSON.stringify({ value: entryDetail("ghost", "Stale"), savedAt: Date.now() })
+    );
+
+    expect(getCachedEntryDetail(typeSlug, "ghost")).toBeNull();
+    expect(storage.getItem(cacheKeys.entryDetail(typeSlug, "ghost"))).toBeNull();
+  } finally {
+    resetCaches(typeSlug);
+    restore();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listEntryRevisionsCached reads cached revisions from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const { restore, storage } = installLocalStorage();
+  const typeSlug = "revisions-storage";
+  const revisions = [
+    {
+      id: "rev-2",
+      entryId: "e1",
+      version: 2,
+      createdAt: "2026-07-14T00:00:00.000Z",
+      createdBy: { id: "user-1", name: "Ada", email: "ada@example.com" },
+    },
+    {
+      id: "rev-1",
+      entryId: "e1",
+      version: 1,
+      createdAt: "2026-07-13T00:00:00.000Z",
+      createdBy: null,
+    },
+  ];
+
+  globalThis.fetch = () => {
+    throw new Error("revisions storage hit must not fetch");
+  };
+
+  try {
+    resetCaches(typeSlug);
+    storage.setItem(
+      cacheKeys.entryRevisions("e1"),
+      JSON.stringify({ value: revisions, savedAt: Date.now() })
+    );
+
+    const result = await listEntryRevisionsCached(typeSlug, "e1");
+    expect(result).toEqual(revisions);
+    expect(result[0]?.version).toBe(2);
+  } finally {
+    resetCaches(typeSlug);
     restore();
     globalThis.fetch = originalFetch;
   }

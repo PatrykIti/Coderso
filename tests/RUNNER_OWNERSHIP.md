@@ -1,23 +1,68 @@
 # Runner Ownership Matrix
 
-Snapshot date: `2026-03-06`
+Snapshot date: `2026-08-21`
 
 This document is the practical ownership companion to `_docs/TESTING_STRATEGY.md`.
+It reflects the post-TASK-580 lane: the widget v1 surfaces (`core/widgets/*` and the
+legacy widget editor suites) were removed, and the Bun-free lane is fully owned by
+Vitest under `tests/vitest/`.
 
 ## Current classification snapshot
 
-- Likely `move to Vitest`: `256` unit suites
-- Likely `keep in Bun`: `60` unit suites
-- Likely `refactor first`: `113` unit suites
+- Vitest-owned test files under `tests/vitest/`: `958` (`.test.ts` / `.test.tsx`)
+- Bun-owned suites: `463` test files across `tests/unit` (`292`),
+  `tests/integration` (`152`), `tests/perf` (`5`), and `tests/security` (`14`)
+- The 2026-03-06 `move to Vitest` / `keep in Bun` / `refactor first` triage is
+  closed: the refactor-first blockers were either migrated to Vitest or
+  intentionally left in Bun for DB/runtime reasons. Ownership is now decided by
+  runtime requirement (Bun for DB/runtime/plugin/security/perf semantics) vs
+  Bun-free (Vitest).
 
 ## Strong Vitest ownership clusters
 
-- `tests/unit/ui/*`
-- `tests/unit/admin/*`
-- `tests/unit/widgets/*`
-- `tests/unit/pageBuilder/*`
-- `tests/unit/sdk/*`
-- `tests/integration/ui/*` (migrated to `tests/vitest/ui-integration/*`)
+- `tests/vitest/ui/*` (admin UI, including the menus, users/roles, and booking
+  families below)
+- `tests/vitest/ui-integration/*` (migrated from `tests/integration/ui/*`)
+- `tests/vitest/assistant/*` (assistant services, planner, and blueprint families)
+- `tests/vitest/pages/*`
+- `tests/vitest/posts/*`
+- `tests/vitest/forms/*`
+- `tests/vitest/search/*`
+- `tests/vitest/server/*`
+- `tests/vitest/validation/*`
+- `tests/vitest/sdk/*`
+
+### Split families (TASK-105-08-11, oversized-file line gate)
+
+The four pre-split monoliths were split by cohesive responsibility so owning
+leaves can extend them without exceeding the 1000-line gate. Each test part keeps
+the original test names and assertions and runs independently; shared builders
+live in the named fixture modules.
+
+- Menus (`tests/vitest/ui/`):
+  - `menu-design-editor-structure.test.tsx` (shell, seeding, composer, undo/redo)
+  - `menu-design-editor-canvas.test.tsx` (per-device overrides, badges, Reset,
+    canvas WYSIWYG, ghost)
+  - `menu-design-editor-brand-nav.test.tsx` (brand text/style/level/image, nav)
+  - `menu-design-editor-block-fields.test.tsx` (F1/F2, B1–B5, R1(b), R3a/R3b)
+  - `menu-design-editor-controls.test.tsx` (scrolled/radius/shadow, brand icon)
+  - `menuDesignEditorFixtures.tsx` (shared state, mocks, harness)
+- Users / roles (`tests/vitest/ui/`):
+  - `users-roles-users-invite.test.tsx` (user lifecycle, invite, reset, 403 refresh)
+  - `users-roles-permissions.test.tsx` (role duplication, read-only, access deny)
+  - `usersRolesFixtures.tsx` (shared mocks, harness, default state)
+- Booking (`tests/vitest/ui/`):
+  - `booking-page-wave.test.tsx`, `booking-page-errors.test.tsx`,
+    `booking-page-schedule-crud.test.tsx`, `booking-page-tabs.test.tsx` (importers)
+  - `bookingFixtures.resources.tsx` (state + booking client + ResourcesTab + harness)
+  - `bookingFixtures.services.tsx` (ServicesTab)
+  - `bookingFixtures.schedules.tsx` (AvailabilityTab)
+  - `bookingFixtures.submissions.tsx` (ReservationsTab + SlotPreviewTab)
+- Assistant blueprints (`tests/vitest/assistant/`):
+  - `blueprint-action-assembler-blocks.test.ts` (content-type / listing / query merges)
+  - `blueprint-action-assembler-bindings.test.ts` (merge key, conflict dedupe)
+  - `blueprint-action-assembler-sections.test.ts` (composed-plan graph flows)
+  - `blueprintActionAssemblerFixtures.ts` (shared plan/fragment/graph builders)
 
 ## Follow-up migration notes (2026-03-12)
 
@@ -62,7 +107,8 @@ These areas described the 2026-03-06 baseline and have since been addressed by t
 
 ## Bun coverage hotspots from baseline report
 
-Representative low-coverage files from `coverage/bun/lcov.info`:
+Representative low-coverage files from the historical `coverage/bun/lcov.info`
+baseline (pre-TASK-580):
 
 | File | Line coverage |
 |------|---------------|
@@ -71,7 +117,6 @@ Representative low-coverage files from `coverage/bun/lcov.info`:
 | `packages/sdk/src/pluginManifest.ts` | `3.50%` |
 | `core/services/search/filterContract.ts` | `3.79%` |
 | `core/services/customScreens/bindingResolver.ts` | `6.15%` |
-| `core/widgets/core/contentList.tsx` | `6.18%` |
 
 ## Operational rule
 

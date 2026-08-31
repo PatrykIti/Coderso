@@ -115,6 +115,88 @@ test("IntegrationDrawer requires confirmation before saving edited secrets", asy
   }
 });
 
+test("IntegrationDrawer validates required text fields before saving", async () => {
+  const onSave = vi.fn(async () => undefined);
+  const view = mount(
+    <IntegrationDrawer
+      open
+      onOpenChange={() => undefined}
+      onSave={onSave}
+      integration={{
+        id: "zapier",
+        name: "Zapier",
+        status: "disconnected",
+        description: "Automation triggers",
+        scopes: [],
+        fields: [
+          {
+            key: "webhookKey",
+            label: "Webhook Key",
+            type: "text",
+            required: true,
+            configured: false,
+            value: "",
+          },
+        ],
+      }}
+    />
+  );
+  try {
+    await clickButton("Save Changes");
+    expect(document.body.textContent).toContain("Fill in webhook key.");
+    expect(onSave).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("IntegrationDrawer clears a secret draft when the edit toggle is turned off", async () => {
+  const onSave = vi.fn(async () => undefined);
+  const view = mount(
+    <IntegrationDrawer
+      open
+      onOpenChange={() => undefined}
+      onSave={onSave}
+      integration={{
+        id: "resend",
+        name: "Resend",
+        status: "connected",
+        description: "Transactional email",
+        scopes: ["email:send"],
+        fields: [
+          {
+            key: "apiKey",
+            label: "API Key",
+            type: "secret",
+            required: true,
+            configured: true,
+            value: "re_existing",
+          },
+        ],
+      }}
+    />
+  );
+  try {
+    await clickButton("Update secret");
+    const secretInput = document.body.querySelector('input[type="password"]');
+    if (!(secretInput instanceof HTMLInputElement)) {
+      throw new Error("missing secret input");
+    }
+    React.act(() => {
+      setInputValue(secretInput, "re_draftValue");
+    });
+    await clickButton("Keep existing");
+    const clearedInput = document.body.querySelector('input[type="password"]');
+    expect((clearedInput as HTMLInputElement).value).toBe("");
+    expect((clearedInput as HTMLInputElement).disabled).toBe(true);
+    await clickButton("Save Changes");
+    await flushEffects();
+    expect(onSave).toHaveBeenCalledWith("resend", {});
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("IntegrationDrawer clears secret values without rendering existing secret payloads", async () => {
   const onSave = vi.fn(async () => undefined);
   const view = mount(

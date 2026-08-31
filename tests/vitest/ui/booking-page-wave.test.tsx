@@ -2,7 +2,10 @@
 
 import React from "react";
 import { afterEach, expect, test, vi } from "vitest";
-import { clickByText, flush, getBookingPageState, mount } from "./bookingPageFixtures";
+import { clickByText, flush, getBookingPageState, mount } from "./bookingFixtures.resources";
+import "./bookingFixtures.services";
+import "./bookingFixtures.schedules";
+import "./bookingFixtures.submissions";
 
 const bookingPageState = getBookingPageState();
 

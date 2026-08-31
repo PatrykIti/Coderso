@@ -19,6 +19,36 @@ function screenRoute(state: Task540RuntimeState): string {
   return `/custom-screens/${encodeURIComponent(capture(state.memory.captures, "screen.id"))}`;
 }
 
+function currentScreenRevision(screen: PlainJsonObject, label: string): number {
+  const revision = screen.revision;
+  runtimeInvariant(
+    typeof revision === "number" && Number.isSafeInteger(revision) && revision >= 1,
+    `${label} revision is invalid`
+  );
+  return revision;
+}
+
+async function patchScreenDefinition(
+  state: Task540RuntimeState,
+  definition: PlainJsonObject,
+  expectedRevision: number,
+  label: string
+): Promise<PlainJsonObject> {
+  const response = await bootstrap(state).request("PATCH", screenRoute(state), {
+    json: { schemaVersion: 4, definition, expectedRevision },
+  });
+  const saved = runtimeObject(response.value, `${label} save`);
+  runtimeInvariant(
+    deepJsonEqual(
+      runtimeObject(saved.definition, `${label} saved definition`) as PlainJsonValue,
+      definition as PlainJsonValue
+    ),
+    `${label} definition drifted`
+  );
+  runtimeInvariant(saved.revision === expectedRevision + 1, `${label} revision drifted`);
+  return saved;
+}
+
 function entryRoute(state: Task540RuntimeState): string {
   const type = fixtureObject(
     state.plan.fixtureBlueprint,
@@ -102,6 +132,7 @@ async function proveOverrides(state: Task540RuntimeState, empty: boolean) {
 async function patchUnsafeBinding(state: Task540RuntimeState) {
   const current = await bootstrap(state).request("GET", screenRoute(state), { csrf: false });
   const screen = runtimeObject(current.value, "TASK-540 unsafe Screen");
+  const expectedRevision = currentScreenRevision(screen, "TASK-540 unsafe Screen");
   const definition = structuredClone(
     runtimeObject(screen.definition, "TASK-540 unsafe definition")
   );
@@ -119,9 +150,7 @@ async function patchUnsafeBinding(state: Task540RuntimeState) {
   });
   runtimeInvariant(changed === 1, "TASK-540 unsafe binding target drifted");
   const patchedDefinition = { ...definition, editorView: { ...editor, bindings } };
-  await bootstrap(state).request("PATCH", screenRoute(state), {
-    json: { schemaVersion: 4, definition: patchedDefinition },
-  });
+  await patchScreenDefinition(state, patchedDefinition, expectedRevision, "TASK-540 unsafe Screen");
   return runtimeSafeProjection({ changed });
 }
 
@@ -150,16 +179,12 @@ async function resetScreen(state: Task540RuntimeState) {
   const body = state.screenBodies.get("main");
   runtimeInvariant(body !== undefined, "TASK-540 Screen baseline is absent");
   const definition = runtimeObject(body.definition, "TASK-540 Screen baseline definition");
-  const response = await bootstrap(state).request("PATCH", screenRoute(state), {
-    json: { schemaVersion: 4, definition },
-  });
-  runtimeInvariant(
-    deepJsonEqual(
-      runtimeObject(response.value, "TASK-540 Screen reset").definition as PlainJsonValue,
-      definition
-    ),
-    "TASK-540 Screen baseline reset drifted"
+  const current = await bootstrap(state).request("GET", screenRoute(state), { csrf: false });
+  const expectedRevision = currentScreenRevision(
+    runtimeObject(current.value, "TASK-540 Screen reset"),
+    "TASK-540 Screen reset"
   );
+  await patchScreenDefinition(state, definition, expectedRevision, "TASK-540 Screen reset");
   return runtimeSafeProjection({ reset: true });
 }
 

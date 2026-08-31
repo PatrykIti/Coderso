@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 
 import {
   broadcastCacheEvent,
@@ -222,5 +222,26 @@ test("broadcastCacheEvent notifies same-tab subscribers", () => {
     } else {
       (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
     }
+  }
+});
+
+test("cacheBus id falls back to a random value when crypto is unavailable", async () => {
+  const originalCrypto = (globalThis as { crypto?: unknown }).crypto;
+  const originalModule = await import("../../../core/admin/utils/cacheBus");
+  vi.resetModules();
+  delete (globalThis as { crypto?: unknown }).crypto;
+  try {
+    const fresh = await import("../../../core/admin/utils/cacheBus");
+    expect(typeof fresh.createCacheEventOperationToken()).toBe("symbol");
+    expect(fresh.broadcastCacheEvent).toBeTypeOf("function");
+  } finally {
+    if (originalCrypto === undefined) {
+      delete (globalThis as { crypto?: unknown }).crypto;
+    } else {
+      (globalThis as { crypto?: unknown }).crypto = originalCrypto;
+    }
+    vi.resetModules();
+    await import("../../../core/admin/utils/cacheBus");
+    void originalModule;
   }
 });

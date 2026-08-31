@@ -110,3 +110,39 @@ test("buildAdvancedFeatureFlagsForSolutionKit enables dependencies from the modu
   expect(flags.filters).toBe(true);
   expect(flags.search).toBe(false);
 });
+
+test("legacy storage key migrates to the canonical key on read", () => {
+  window.localStorage.setItem("nextless.solutionKits.activeKit.v1", "medical-clinic");
+  expect(getActiveSolutionKitId()).toBe("medical-clinic");
+  expect(window.localStorage.getItem("coderso.solutionKits.activeKit.v1")).toBe("medical-clinic");
+  expect(getActiveSolutionKitId()).toBe("medical-clinic");
+});
+
+test("subscribeActiveSolutionKitId ignores storage events for other keys", () => {
+  const listener = vi.fn();
+  const unsubscribe = subscribeActiveSolutionKitId(listener);
+  try {
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "unrelated-key", newValue: "medical-clinic" })
+    );
+    expect(listener).not.toHaveBeenCalled();
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("subscribeActiveSolutionKitId treats invalid storage values as null", () => {
+  const listener = vi.fn();
+  const unsubscribe = subscribeActiveSolutionKitId(listener);
+  try {
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "coderso.solutionKits.activeKit.v1",
+        newValue: "not-a-kit",
+      })
+    );
+    expect(listener).toHaveBeenCalledWith(null);
+  } finally {
+    unsubscribe();
+  }
+});

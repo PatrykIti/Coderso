@@ -96,7 +96,7 @@ Reusable local runtime smokes use one strict entry point:
 
 ```bash
 bun scripts/runtime-smoke.ts run \
-  --suite <task-540|task-547|task-554|widget-contract|production-boundary> \
+  --suite <task-540|task-547|task-554|widget-contract|production-boundary|task-105-l05> \
   --profile <fast|certification> \
   --session <task-scoped-name>
 ```
@@ -141,6 +141,11 @@ The current adapters are:
 - `production-boundary`: a certification-only production build/server probe
   covering install status, root/Admin, one built asset, exact `/peri` 404,
   clean logs, and PID/port release.
+- `task-105-l05`: five admin flows (menu structure/publish parity, menu design
+  visible effect, dashboard edit/save, dirty-draft remote-stale broadcast, and
+  solution-kit reviewed handoff) under an exclusive evidence-session policy,
+  a synthetic seven-permission fixture, a leased settings snapshot, and a
+  validated dynamic `<session>-admin` host base.
 
 Reports go to stdout as bounded canonical JSON and stderr as a concise Markdown
 summary; redirect them to a task-scoped file when durable evidence is required.

@@ -473,3 +473,184 @@ test("content slug helpers derive generic content route hints", () => {
     concrete: false,
   });
 });
+
+test("post slug helpers join relative patterns with a slash separator", () => {
+  expect(
+    resolvePostSlugDisplay(
+      { publicBaseUrl: "https://coderso.test", detailPathPattern: "posts/:slug" },
+      "launch-post"
+    )
+  ).toEqual({
+    label: "Public URL",
+    value: "https://coderso.test/posts/launch-post",
+    concrete: true,
+  });
+});
+
+test("updateSiteSettings sends navigation and footer template ids", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse(rawSiteSettingsPayload());
+  };
+
+  try {
+    resetCsrfToken();
+    await updateSiteSettings({ navigationMenuId: "menu-9", footerTemplateId: "tpl-9" });
+    const patch = calls.find((call) => String(call.input).endsWith("/settings"));
+    const body = JSON.parse(String(patch?.init?.body)) as Record<string, unknown>;
+    expect(body["site.navigationMenuId"]).toBe("menu-9");
+    expect(body["site.footerTemplateId"]).toBe("tpl-9");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getSiteSettingsCached discards redacted caches with invalid assistant or security sections", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input) => {
+    calls.push({ input });
+    return jsonResponse(rawSiteSettingsPayload({ "site.adminPath": "/fresh" }));
+  };
+
+  const validRedacted = () => ({
+    schemaVersion: 1,
+    general: {
+      siteName: "Coderso",
+      siteLocale: "en",
+      publicBaseUrl: "https://coderso.test",
+    },
+    runtime: { authSessionTtlDays: 14, authResetTtlMinutes: 60, setupCompleted: false },
+    assistant: {
+      enabled: false,
+      defaultMode: "docs-only",
+      docsReindexOnBoot: false,
+      launcherAvatarEnabled: false,
+      launcherAvatarAsset: null,
+      llmEnabled: false,
+      llmProvider: "none",
+      llmModel: "",
+      llmInputLimit: 12000,
+      llmOutputLimit: 1200,
+      llmTimeoutMs: 30000,
+      quotaRequestsPerMinute: 20,
+      quotaRequestsPerDay: 500,
+    },
+    site: {
+      adminBaseUrl: null,
+      publicBaseUrl: "https://coderso.test",
+      adminPath: "/stale",
+      adminRedirectEnabled: false,
+      homepageId: null,
+      notFoundPageId: null,
+      navigationMenuId: null,
+      footerTemplateId: null,
+      previewEnabled: true,
+      cacheTtlSeconds: 30,
+      contentRoutes: [],
+    },
+    securityConfigured: {
+      botProtectionEnabled: false,
+      botProtectionPublicConfigured: false,
+      botProtectionConfigured: false,
+      pepperConfigured: false,
+    },
+  });
+
+  type SettingsSeed = Record<string, unknown> & {
+    assistant: Record<string, unknown>;
+    securityConfigured: Record<string, unknown>;
+  };
+  const seeds: Array<(value: SettingsSeed) => SettingsSeed> = [
+    (value) => ({ ...value, assistant: { ...value.assistant, rogueKey: 1 } }),
+    (value) => ({ ...value, assistant: { ...value.assistant, defaultMode: "wizard" } }),
+    (value) => ({ ...value, assistant: { ...value.assistant, llmProvider: "google" } }),
+    (value) => ({ ...value, securityConfigured: { ...value.securityConfigured, rogueKey: true } }),
+  ];
+
+  try {
+    clearSiteSettingsCache();
+    for (const mutate of seeds) {
+      const baseline = calls.length;
+      storage.setItem(
+        cacheKeys.settingsRedacted,
+        JSON.stringify({ savedAt: Date.now(), value: mutate(validRedacted()) })
+      );
+      await expect(getSiteSettingsCached()).resolves.toMatchObject({ adminPath: "/fresh" });
+      expect(calls.length).toBe(baseline + 1);
+      clearSiteSettingsCache();
+    }
+  } finally {
+    clearSiteSettingsCache();
+    globalThis.fetch = originalFetch;
+    restoreStorage();
+  }
+});
+
+test("getCachedSiteSettings storageFirst reads the storage envelope over memory", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  try {
+    clearSiteSettingsCache();
+    storage.setItem(
+      cacheKeys.settingsRedacted,
+      JSON.stringify({
+        savedAt: Date.now(),
+        value: {
+          schemaVersion: 1,
+          general: {
+            siteName: "Coderso",
+            siteLocale: "en",
+            publicBaseUrl: "https://coderso.test",
+          },
+          runtime: { authSessionTtlDays: 14, authResetTtlMinutes: 60, setupCompleted: false },
+          assistant: {
+            enabled: false,
+            defaultMode: "docs-only",
+            docsReindexOnBoot: false,
+            launcherAvatarEnabled: false,
+            launcherAvatarAsset: null,
+            llmEnabled: false,
+            llmProvider: "none",
+            llmModel: "",
+            llmInputLimit: 12000,
+            llmOutputLimit: 1200,
+            llmTimeoutMs: 30000,
+            quotaRequestsPerMinute: 20,
+            quotaRequestsPerDay: 500,
+          },
+          site: {
+            adminBaseUrl: null,
+            publicBaseUrl: "https://coderso.test",
+            adminPath: "/storage-first",
+            adminRedirectEnabled: false,
+            homepageId: null,
+            notFoundPageId: null,
+            navigationMenuId: null,
+            footerTemplateId: null,
+            previewEnabled: true,
+            cacheTtlSeconds: 30,
+            contentRoutes: [],
+          },
+          securityConfigured: {
+            botProtectionEnabled: false,
+            botProtectionPublicConfigured: false,
+            botProtectionConfigured: false,
+            pepperConfigured: false,
+          },
+        },
+      })
+    );
+    expect(getCachedSiteSettings({ storageFirst: true })?.adminPath).toBe("/storage-first");
+  } finally {
+    clearSiteSettingsCache();
+    restoreStorage();
+  }
+});

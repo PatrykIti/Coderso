@@ -7,7 +7,7 @@ export const SETUP_ACTION_ROWS = deepFreezeExact([
     "set-001-storage-preflight",
     "runtime",
     "storage(preflight-and-snapshot)",
-    'helper stopped/no task-UA request issued -> first sub-proof requires exact persisted `setup.completed:true`, freezes the exact canonical bootstrap Admin identity/role, exact task-UA access/audit-log and complete bounded session-row baselines, plus proof-only complete `site.contentRoutes` row/absence with all task slugs absent; validates exact-one persisted `storage.driver:"local"` and private `storage.local.dir` rows equal top-level local config + `MEDIA_STORAGE`/`MEDIA_DIR` absent, then freezes the bound storage DB/root baseline; egress exact missing row/file zero only -> setup/bootstrap/routes/storage proven',
+    'helper stopped/no task-UA request issued -> first sub-proof requires exact persisted `setup.completed:true`, freezes the exact canonical bootstrap Admin identity/role, exact task-UA access/audit-log and exact task-User-Agent bounded session baseline, plus proof-only complete `site.contentRoutes` row/absence with all task slugs absent; validates exact-one persisted `storage.driver:"local"` and private `storage.local.dir` rows equal top-level local config + `MEDIA_STORAGE`/`MEDIA_DIR` absent, then freezes the bound storage DB/root baseline; egress exact missing row/file zero only -> setup/bootstrap/routes/storage proven',
     "- / absent -> absent",
   ],
   [

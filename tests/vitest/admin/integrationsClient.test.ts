@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 
 import {
+  checkIntegration,
   getIntegration,
   listIntegrations,
   requestIntegration,
@@ -195,6 +196,43 @@ test("requestIntegration posts the request payload with CSRF", async () => {
     expect(result.item.id).toBe("request-1");
   } finally {
     resetCsrfToken();
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("checkIntegration POSTs the check endpoint with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      item: {
+        id: "crm",
+        name: "CRM",
+        description: "desc",
+        category: "sales",
+        scopes: [],
+        status: "connected",
+        health: { status: "ok", lastCheckedAt: null, lastError: null },
+        updatedAt: null,
+        fields: [],
+      },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await checkIntegration("crm");
+    const checkCall = calls.find((call) => String(call.input).endsWith("/crm/check"));
+    expect(checkCall?.input).toBe("/admin/api/settings/integrations/crm/check");
+    expect(checkCall?.init?.method).toBe("POST");
+    const headers = checkCall?.init?.headers as Headers;
+    expect(headers.get("x-csrf-token")).toBe("csrf-token");
+  } finally {
     globalThis.fetch = originalFetch;
   }
 });

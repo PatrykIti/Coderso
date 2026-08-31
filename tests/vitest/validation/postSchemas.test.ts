@@ -6,6 +6,7 @@ import {
 } from "../../../core/server/validation/postSchemas";
 import { postMetadataSchema as ownedPostMetadataSchema } from "../../../core/services/posts/postMetadataContract";
 import { validate } from "../../../core/server/validation/schemaValidator";
+import { ApiError } from "../../../core/server/errorHandler";
 
 test("postAutosaveSchema accepts nullable SEO fields", () => {
   expect(() =>
@@ -59,4 +60,35 @@ test("postAutosaveSchema rejects invalid SEO field types", () => {
       },
     })
   ).toThrow("Invalid payload");
+});
+
+test("post and content metadata schemas accept date-time values", () => {
+  expect(() =>
+    validate(postMetadataSchema, {
+      tags: ["launch"],
+      taxonomy: { categoryId: "cat-1" },
+      seo: { robots: "index,follow" },
+    })
+  ).not.toThrow();
+  expect(() =>
+    validate(postAutosaveSchema, {
+      title: "Draft title",
+      tags: ["launch"],
+      taxonomy: { categoryId: "cat-1" },
+    })
+  ).not.toThrow();
+  expect(() =>
+    validate(postMetadataSchema, { scheduledAt: "2026-04-24T08:00:00.000Z" })
+  ).not.toThrow();
+});
+
+test("postMetadataSchema rejects invalid date-time values as ApiError", () => {
+  try {
+    validate(postMetadataSchema, { scheduledAt: "tomorrow" });
+    throw new Error("expected_validation_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe("validation_error");
+    expect((error as ApiError).status).toBe(400);
+  }
 });
