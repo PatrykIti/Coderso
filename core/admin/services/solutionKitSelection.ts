@@ -14,6 +14,7 @@ const solutionKitIds: SolutionKitId[] = [
   "automotive-workshop",
   "medical-clinic",
   "beauty-salon",
+  "local-service-business",
   "services-directory",
   "small-ecommerce",
 ];

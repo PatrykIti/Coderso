@@ -23,6 +23,33 @@ test("active solution kit preference round-trips through local storage", () => {
   expect(getActiveSolutionKitId()).toBeNull();
 });
 
+test("sixth solution kit round-trips through storage and same-tab events", () => {
+  const listener = vi.fn();
+  const unsubscribe = subscribeActiveSolutionKitId(listener);
+  try {
+    setActiveSolutionKitId("local-service-business");
+    expect(window.localStorage.getItem("coderso.solutionKits.activeKit.v1")).toBe(
+      "local-service-business"
+    );
+    expect(getActiveSolutionKitId()).toBe("local-service-business");
+    expect(listener).toHaveBeenLastCalledWith("local-service-business");
+    window.dispatchEvent(
+      new CustomEvent("coderso:solution-kit-selection", {
+        detail: { kitId: "local-service-business" },
+      })
+    );
+    expect(listener).toHaveBeenLastCalledWith("local-service-business");
+    window.localStorage.setItem("coderso.solutionKits.activeKit.v1", "unknown-kit");
+    expect(getActiveSolutionKitId()).toBeNull();
+    window.dispatchEvent(
+      new CustomEvent("coderso:solution-kit-selection", { detail: { kitId: "unknown-kit" } })
+    );
+    expect(listener).toHaveBeenLastCalledWith(null);
+  } finally {
+    unsubscribe();
+  }
+});
+
 test("subscribeActiveSolutionKitId reacts to same-tab updates", () => {
   const listener = vi.fn();
   const unsubscribe = subscribeActiveSolutionKitId(listener);

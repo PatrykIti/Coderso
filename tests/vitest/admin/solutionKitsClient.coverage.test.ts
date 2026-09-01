@@ -204,6 +204,37 @@ beforeEach(() => {
 });
 
 describe("solution kit cache helpers", () => {
+  test("accepts the sixth ID in cached list and detail payloads", async () => {
+    const localServiceSummary = summary({
+      id: "local-service-business",
+      title: "Local Service Business",
+    });
+    const localServiceDefinition = definition({
+      id: "local-service-business",
+      title: "Local Service Business",
+    });
+
+    writeLocalCache(cacheKeys.solutionKitsList, [localServiceSummary]);
+    expect(getCachedSolutionKits()).toEqual([localServiceSummary]);
+    writeLocalCache(cacheKeys.solutionKitDetail("local-service-business"), localServiceDefinition);
+    await expect(getSolutionKitCached("local-service-business")).resolves.toEqual(
+      localServiceDefinition
+    );
+  });
+
+  test("rejects unknown IDs in cached list and detail payloads", async () => {
+    writeLocalCache(cacheKeys.solutionKitsList, [summary({ id: "unknown-kit" })]);
+    expect(getCachedSolutionKits()).toBeNull();
+    writeLocalCache(
+      cacheKeys.solutionKitDetail("local-service-business"),
+      definition({ id: "unknown-kit" })
+    );
+    apiRequest.mockRejectedValueOnce(new Error("detail cache rejected"));
+    await expect(getSolutionKitCached("local-service-business")).rejects.toThrow(
+      "detail cache rejected"
+    );
+  });
+
   test("getCachedSolutionKits hydrates and returns null on miss", () => {
     expect(getCachedSolutionKits()).toBeNull();
     writeLocalCache(cacheKeys.solutionKitsList, [summary()]);
@@ -221,6 +252,21 @@ describe("solution kit cache helpers", () => {
 });
 
 describe("solution kit lists", () => {
+  test("passes the sixth ID through accepted list and detail network responses", async () => {
+    const localServiceSummary = summary({
+      id: "local-service-business",
+      title: "Local Service Business",
+    });
+    const localServiceDefinition = definition({
+      id: "local-service-business",
+      title: "Local Service Business",
+    });
+    apiRequest.mockResolvedValueOnce({ items: [localServiceSummary] });
+    await expect(listSolutionKits()).resolves.toEqual([localServiceSummary]);
+    apiRequest.mockResolvedValueOnce(localServiceDefinition);
+    await expect(getSolutionKit("local-service-business")).resolves.toEqual(localServiceDefinition);
+  });
+
   test("listSolutionKits issues GET and defaults missing items", async () => {
     apiRequest.mockResolvedValueOnce({});
     await expect(listSolutionKits()).resolves.toEqual([]);
@@ -299,6 +345,23 @@ describe("solution kit plan preview", () => {
 
   test("previewSolutionKitPlan rejects an invalid response shape", async () => {
     apiRequest.mockResolvedValueOnce({ recommendedKitId: "bogus" });
+    await expect(
+      previewSolutionKitPlan({ businessType: "custom", goals: [], locale: "pl" })
+    ).rejects.toThrow("Invalid solution kit plan response");
+  });
+
+  test("accepts the sixth recommended ID and rejects unknown recommended IDs", async () => {
+    const localServicePlan = planOutput({
+      recommendedKitId: "local-service-business",
+      recommendations: [
+        { kitId: "local-service-business", score: 0.9, reasons: ["local services"] },
+      ],
+    });
+    apiRequest.mockResolvedValueOnce(localServicePlan);
+    await expect(
+      previewSolutionKitPlan({ businessType: "custom", goals: [], locale: "pl" })
+    ).resolves.toEqual(localServicePlan);
+    apiRequest.mockResolvedValueOnce(planOutput({ recommendedKitId: "unknown-kit" }));
     await expect(
       previewSolutionKitPlan({ businessType: "custom", goals: [], locale: "pl" })
     ).rejects.toThrow("Invalid solution kit plan response");

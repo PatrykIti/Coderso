@@ -7,6 +7,7 @@ export type SolutionKitId =
   | "automotive-workshop"
   | "medical-clinic"
   | "beauty-salon"
+  | "local-service-business"
   | "services-directory"
   | "small-ecommerce";
 
@@ -27,12 +28,7 @@ export type SiteBuilderGoal =
   | "collect_qualified_leads";
 
 export type SiteBuilderPlanStepId =
-  | "settings"
-  | "content-model"
-  | "pages"
-  | "forms"
-  | "navigation"
-  | "qa";
+  "settings" | "content-model" | "pages" | "forms" | "navigation" | "qa";
 
 export type SolutionKitManifestIncludes = {
   contentTypes: string[];
@@ -111,12 +107,7 @@ export type SolutionKitPlanApplyInput = {
 export type SolutionKitInstallMode = "dry_run" | "apply" | "rollback";
 export type SolutionKitInstallStatus = "running" | "success" | "failed";
 export type SolutionKitInstallItemStatus = "planned" | "success" | "failed" | "skipped";
-export type SolutionKitInstallItemOperation =
-  | "create"
-  | "update"
-  | "noop"
-  | "delete"
-  | "restore";
+export type SolutionKitInstallItemOperation = "create" | "update" | "noop" | "delete" | "restore";
 
 export type SolutionKitInstallSummary = {
   total: number;
@@ -173,6 +164,7 @@ const solutionKitIds: SolutionKitId[] = [
   "automotive-workshop",
   "medical-clinic",
   "beauty-salon",
+  "local-service-business",
   "services-directory",
   "small-ecommerce",
 ];
@@ -321,15 +313,10 @@ const readKitsCache = () =>
 const readKitDetailCache = (id: string) =>
   readLocalCache(cacheKeys.solutionKitDetail(id), cacheTtlMs.detail, isSolutionKitDefinition);
 
-const runsListCacheKey = (kitId?: string | null) =>
-  cacheKeys.solutionKitRunsList(kitId ?? "all");
+const runsListCacheKey = (kitId?: string | null) => cacheKeys.solutionKitRunsList(kitId ?? "all");
 
 const readRunsListCache = (kitId?: string | null) =>
-  readLocalCache(
-    runsListCacheKey(kitId),
-    cacheTtlMs.list,
-    isInstallRunRecordList
-  );
+  readLocalCache(runsListCacheKey(kitId), cacheTtlMs.list, isInstallRunRecordList);
 
 const readRunDetailCache = (runId: string) =>
   readLocalCache(cacheKeys.solutionKitRunDetail(runId), cacheTtlMs.detail, isInstallRunDetail);
@@ -382,10 +369,7 @@ export async function getSolutionKit(id: SolutionKitId) {
   return item;
 }
 
-export async function getSolutionKitCached(
-  id: SolutionKitId,
-  options?: { force?: boolean }
-) {
+export async function getSolutionKitCached(id: SolutionKitId, options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = readKitDetailCache(id);
     if (cached) return cached;
@@ -411,10 +395,7 @@ export async function previewSolutionKitPlan(input: SiteBuilderPlanInput) {
   return payload;
 }
 
-const primeRunsCache = (
-  runs: SolutionKitInstallRunRecord[],
-  kitId?: string | null
-) => {
+const primeRunsCache = (runs: SolutionKitInstallRunRecord[], kitId?: string | null) => {
   writeLocalCache(runsListCacheKey(kitId), runs);
   cachedRunsPromises.delete(runsListCacheKey(kitId));
 };
