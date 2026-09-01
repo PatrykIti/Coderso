@@ -18,15 +18,13 @@ import type { PostSummary } from "@/services/postsClient";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
-  try {
-    return new Date(value).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return value;
-  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 const toInitials = (value: string) =>
