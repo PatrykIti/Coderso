@@ -1,0 +1,221 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 77,
+    "playwright-state-load": 1,
+    "playwright-tab-new": 2,
+    "playwright-tab-select": 5,
+    "task-105-l05-dev-host": 1,
+    "task105l05-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 0,
+      "id": "menu-structure-save-publish-parity",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-01-menu-structure-save-publish-parity.png",
+          "sha256": "ef5bdfbd2fe9934c2434995c35e4b9c1f042718f3c5902c87a7e0e7104112f3c"
+        }
+      ],
+      "title": "Menu structure save and publish parity through Site Shell",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "fixture-link",
+              "target": "public-navigation"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "public-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "menu-design-appearance-visible-effect",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-02-menu-design-appearance-visible-effect.png",
+          "sha256": "5e327af9121641eff4b8ceef90e9349a1a76b4a8df2a150f9341ef371bbd11e6"
+        }
+      ],
+      "title": "Menu design appearance control proves a visible effect",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "20px",
+              "expected": "20px",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "font-size",
+              "target": "menu-navigation"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "dashboard-edit-configure-save",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-03-dashboard-edit-configure-save.png",
+          "sha256": "6431e86c5678fa2f7ec273435aa60dad00a211c70c9da20488271bc0894dd9f5"
+        }
+      ],
+      "title": "Dashboard customize, configure, save, reload geometry proof",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "wide-layout",
+              "target": "quick-actions"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "dashboard-dirty-remote-stale",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-04-dashboard-dirty-remote-stale.png",
+          "sha256": "d570ae98d0ede4432c22b12f21e53f55d451e660260530cec5365321faeb1c0f"
+        }
+      ],
+      "title": "Dirty dashboard draft observes a remote save broadcast on page B",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "stale-draft",
+              "target": "dashboard-draft"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "solution-kit-select-reviewed-handoff",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-05-solution-kit-select-reviewed-handoff.png",
+          "sha256": "8427911e0f276e971173a8248c242d5feab64457dc37f97248d5a8c773041148"
+        }
+      ],
+      "title": "Solution kit selection and reviewed LLM guide handoff state",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "reviewed-prompt",
+              "target": "reviewed-guide"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-01-menu-structure-save-publish-parity.png",
+      "sha256": "ef5bdfbd2fe9934c2434995c35e4b9c1f042718f3c5902c87a7e0e7104112f3c"
+    },
+    {
+      "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-02-menu-design-appearance-visible-effect.png",
+      "sha256": "5e327af9121641eff4b8ceef90e9349a1a76b4a8df2a150f9341ef371bbd11e6"
+    },
+    {
+      "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-03-dashboard-edit-configure-save.png",
+      "sha256": "6431e86c5678fa2f7ec273435aa60dad00a211c70c9da20488271bc0894dd9f5"
+    },
+    {
+      "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-04-dashboard-dirty-remote-stale.png",
+      "sha256": "d570ae98d0ede4432c22b12f21e53f55d451e660260530cec5365321faeb1c0f"
+    },
+    {
+      "path": "screenshots/fast-task105-l05-fast-20260901-official-r2-05-solution-kit-select-reviewed-handoff.png",
+      "sha256": "8427911e0f276e971173a8248c242d5feab64457dc37f97248d5a8c773041148"
+    }
+  ],
+  "serverUp": true,
+  "session": "task105-l05-fast-20260901-official-r2",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "adapterRuntime": true,
+    "browserDispatch": true,
+    "cleanupFailures": 0,
+    "cleanupPass": true,
+    "contract": "task-105-l05-liveness-v1",
+    "devHost": true,
+    "fixtureCleanup": true,
+    "processSupervisor": true,
+    "receiptConsoleErrors": 0,
+    "receiptDigest": "92b3a06e2e84696522a275ce6f20cfadca95890655932356e4da5dfa3f4259e5",
+    "receiptPageErrors": 0,
+    "workerPool": true,
+    "workspace": true
+  },
+  "suiteId": "task-105-l05",
+  "timings": [
+    { "count": 1, "elapsedMs": 18196, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 180687, "failed": 0, "kind": "suite", "name": "task-105-l05" }
+  ]
+}

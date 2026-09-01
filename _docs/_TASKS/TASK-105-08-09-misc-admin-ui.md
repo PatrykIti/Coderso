@@ -1,148 +1,218 @@
 # TASK-105-08-09: Misc Admin UI Clusters
 # FileName: TASK-105-08-09-misc-admin-ui.md
 
-**Priority:** High  
-**Category:** QA + Coverage  
-**Estimated Effort:** Large  
-**Dependencies:** TASK-105-08-11 (splits `users-roles-page-wave.test.tsx` before this leaf extends it)  
-**Parent Task:** TASK-105-08  
-**Status:** ⏳ To Do
+**Priority:** High
+**Category:** QA + Coverage
+**Estimated Effort:** Small follow-up
+**Dependencies:** TASK-105-08-11 split handoff; fresh L01 contract audit
+**Parent Task:** TASK-105-08
+**Status:** 🚧 In Progress
+**Reopened:** 2026-08-29
 
 ---
 
 ## Overview
 
-Close every line gap in every remaining `core/admin/ui/**` cluster not owned by another
-leaf: auth, backups, setup, users, seo, popups, redirects, site, security, roles,
-reviews, store, import-export, contexts, analytics, authoring, layouts, navigation,
-preview, plugins, and shared. Test-only: no API surface, no production change.
+The prior L09 closure record is historical evidence, not a current terminal state. The raw
+L12 extraction has 52 residual records for this cluster. Current source review yields
+**11 reachable raw lines** and **41 unreachable raw lines** (the 29 inherited records, seven
+earlier corrections, and five newly verified corrections). L01 additionally preserves real
+public invitation and matrix failure/refresh behavior without misreporting it as coverage of
+the dead records. The only reopened scope is the users/roles interaction contract below; the
+prior 85-file inventory is not an active directory-wide ownership grant.
 
-## Scope
+## Current Reconciliation Scope
 
-Uncovered-line budget: **988** across 85 files (current covered/total + line%).
+| Source disposition | Source lines | L01 behavior |
+|---|---|---|
+| Public matrix failure/refresh behavior: PermissionsMatrixPage.tsx | 379-392, 411-420, 431-435 | Create real stale and 403 review failures; assert their actual visible outcomes, then make Refresh roles succeed and assert that it closes review. A save 403 does not set denied mode. |
+| **UNREACHABLE raw L12:** PermissionsMatrixPage.tsx | 177 (guard at 175-178) | No UI test targets this guard. Only load/refresh 403 sets denied mode; a real Refresh roles call begins before that state change and closes review, while denied mode removes the controls needed for another refresh. |
+| Public invitation replacement: UsersRolesPage.tsx | 402, 408-410 | Use visible Invite User, assert payload, refreshed selected invitee, notice, and dialog closure. This preserves the actual public behavior but is not reported as coverage of the dead UserEditor branch. |
+| **UNREACHABLE raw L12:** UsersRolesPage.tsx | 369, 375, 376, 383 | No UI test targets this branch. Every public UserEditor opener passes an existing user; page-level creation is Invite User -> handleInviteUser. |
+| UsersRolesPage.tsx | 394, 395, 396 | Open the real `InviteUserDialog` while writable, then revoke write permission on that mounted root before submit and assert access-denied feedback/no invite. |
+| UsersRolesPage.tsx | 450, 451 | Open the real status `ConfirmActionDialog` while writable, then revoke permission on that mounted root before Confirm and assert no mutation request. |
+| UsersRolesPage.tsx | 494, 495 | Repeat the already-open `ConfirmActionDialog` revocation path for an unprotected-user deletion. |
+| UsersRolesPage.tsx | 524, 525 | Repeat the already-open `ConfirmActionDialog` revocation path for a role deletion. |
+| UsersRolesPage.tsx | 554, 555 | Repeat the already-open `ConfirmActionDialog` revocation path for a high-risk role duplication. |
 
-- `auth/**` (7 files, 111): `InfoBanner.tsx` 0/1, `LoginPage.tsx` 10/43,
-  `OtpInput.tsx` 6/12, `ResetPasswordPage.tsx` 9/37, `SetPasswordPage.tsx` 20/47,
-  `TwoFactorPage.tsx` 8/21, `recaptcha.ts` 37/40.
-- `backups/**` (5 files, 104): `BackupImportDialog.tsx` 7/20, `BackupNowDialog.tsx` 25/27,
-  `BackupScheduleCard.tsx` 16/25, `BackupsPage.tsx` 183/254, `BackupsTable.tsx` 39/48.
-- `setup/**` (17 files, 92): `InstallerWizard.tsx` 40/46, `SetupWizard.tsx` 48/54,
-  `assistantSiteBuilderIntakeBrowserState.ts` 77/80, `assistantSiteBuilderIntakeUiState.ts`
-  58/73, `installerValidation.ts` 16/17, `setupWizardValidation.ts` 52/53,
-  `steps/IdentityStep.tsx` 1/2, `steps/LocaleStep.tsx` 3/4, `steps/StarterContentStep.tsx`
-  12/32, `steps/TimezoneStep.tsx` 3/4, `steps/UrlsStep.tsx` 3/5,
-  `steps/advanced/AdvancedStepShell.tsx` 4/5, `steps/advanced/AssistantStep.tsx` 16/19,
-  `steps/advanced/EmailStep.tsx` 18/25, `steps/advanced/SecurityStep.tsx` 13/17,
-  `steps/advanced/StorageStep.tsx` 21/39, `steps/advanced/advancedStepUtils.ts` 30/32.
-- `users/**` (4 files, 68): `InviteUserDialog.tsx` 30/32, `UserEditor.tsx` 28/29,
-  `UserList.tsx` 21/22, `UsersRolesPage.tsx` 312/376.
-- `seo/**` (4 files, 56): `SeoAuditDialog.tsx` 11/12, `SeoDrawer.tsx` 20/32,
-  `SeoManagerPage.tsx` 118/159, `SeoPerformancePanel.tsx` 13/15.
-- `popups/**` (6 files, 68): `PopupCardGrid.tsx` 15/28, `PopupEditorPage.tsx` 64/80,
-  `PopupsListPage.tsx` 27/39, `popupEditorModel.ts` 23/27, `components/PopupEditorForm.tsx`
-  15/33, `hooks/usePopups.ts` 27/32.
-- `redirects/**` (3 files, 76): `RedirectDrawer.tsx` 7/14, `RedirectsPage.tsx` 117/181,
-  `RedirectsTable.tsx` 10/15.
-- `site/**` (3 files, 83): `SiteSettingsPage.tsx` 137/208, `SiteShellCard.tsx` 34/37,
-  `siteSettingsValidation.ts` 76/85.
-- `security/**` (3 files, 43): `AccessLogDetailsDrawer.tsx` 3/5, `AccessLogsPage.tsx`
-  227/267, `AccessLogsTable.tsx` 9/10.
-- `roles/**` (2 files, 42): `PermissionsMatrixPage.tsx` 202/237, `RoleEditor.tsx` 67/74.
-- `reviews/**` (2 files, 24): `ReviewsModerationPage.tsx` 30/47, `hooks/useReviews.ts` 25/32.
-- `store/**` (3 files, 37): `PluginStorePage.tsx` 25/53, `StoreDetail.tsx` 11/17,
-  `StoreList.tsx` 9/12.
-- `import-export/**` (3 files, 36): `ExportCards.tsx` 23/27, `ImportDropzone.tsx` 88/117,
-  `ImportExportPage.tsx` 20/23.
-- `contexts/**` (2 files, 13): `AdminAuthContext.tsx` 17/18, `AdminRouterContext.tsx` 51/63.
-- `analytics/**` (2 files, 6): `AnalyticsPage.tsx` 75/79, `TopPagesDrawer.tsx` 26/28.
-- `authoring/**` (2 files, 6): `AuthoringCommandPalette.tsx` 8/10, `InlineEditWrapper.tsx` 15/19.
-- `layouts/**` (1 file, 20): `AdminShell.tsx` 90/110.
-- `preview/**` (1 file, 13): `RuntimePreviewDialog.tsx` 97/110.
-- `plugins/**` (1 file, 1): `PluginList.tsx` 8/9.
-- `shared/**` (14 files, 89): `AdminBreadcrumbs.tsx` 49/53, `AdminColorModeToggle.tsx` 34/37,
-  `AdminDirtyNavigationGuard.tsx` 38/39, `AdminLink.tsx` 12/27, `AdminThemeSwitcher.tsx`
-  15/47, `Charts.tsx` 34/35, `ClearableFields.tsx` 64/68, `ConfirmActionDialog.tsx` 46/50,
-  `EditorRail.tsx` 5/6, `ExportDialog.tsx` 33/51, `SharedColorControl.tsx` 42/43,
-  `TopBar.tsx` 27/28, `useCanvasSiteTokens.ts` 37/40, `useListPagination.ts` 26/27.
+### Source-Proven Reclassification
 
-## Single-Writer File Ownership
+The following five prior L01 records are **UNREACHABLE** through real UI flows and must not be
+hit with a fabricated callback or external state rerender:
 
-- This leaf is the SOLE writer of the 85 source files above and of its test files under
-  `tests/vitest/ui/*`, `tests/vitest/authUi/*`, `tests/vitest/backups/*`,
-  `tests/vitest/setup/*`, `tests/vitest/seo/*`, `tests/vitest/popups/*`,
-  `tests/vitest/storeUi/*`, and `tests/vitest/analytics/*`. The `tests/vitest/site/*`
-  claim covers only `siteShell.test.tsx`; the `menu-document-css-*.test.ts` suites
-  there belong to TASK-105-08-05 (menus), never this leaf.
-- Existing suites it may extend (owned by this leaf): `auth-shell.test.tsx`,
-  `admin-auth-identity.test.tsx`, `backups.test.tsx`,
-  `backups-page-wave.test.tsx`, `analytics.test.tsx` (single owner: this leaf;
-  `analytics-settings-entries-seo-leafs.test.tsx` is owned by TASK-105-08-02),
-  `admin-shell*.test.tsx`, `admin-link*.test.tsx`, `admin-breadcrumbs.test.tsx`,
-  `admin-router-context*.test.tsx`, `access-logs*.test.tsx`, and the
-  users/roles suite — `users-roles-page-wave.test.tsx` (1132) is split by TASK-105-08-11
-  FIRST; this leaf extends the split pieces.
-- New suites per component. No other leaf may edit these test files.
+- PermissionsMatrixPage.tsx:177 (guard at 175-178): `serverAccessDenied` is set only by the
+  load/refresh 403 catches at 201-205 and 248-252. The stale/403 save-failure block at 379-420
+  only records failures and may set `roleRefreshRequired`; it does not set denied mode.
+  `handleRefreshRoles` calls `refresh` and then closes review at 431-435. If that refresh gets
+  a 403, denied rendering removes the review controls at 490-497 and 529-563, so no second
+  public refresh can reach the guard.
+- UsersRolesPage.tsx:369,375,376,383: all three public `openUserEditor` call sites supply an
+  existing user (775, 890, 1016; `UserList.onEdit` requires and supplies `UserSummary` at
+  UserList.tsx:49,179). The only header creation action is `openInviteDialog` at 809, wired to
+  `handleInviteUser` at 957. The source-proven public alternative is
+  `handleInviteUser` at 402,408-410.
 
-## Pseudocode
+The raw L12 cluster disposition is therefore **29/23 raw -> 41 UNREACHABLE / 11
+REACHABLE-GAP** after this verified correction. The visible public alternatives above remain
+L01 behavior coverage, but they must not be counted as coverage of the five reclassified raw
+records.
 
-Mock seams: each page calls its admin client (`authClient`, `backupsClient`,
-`adminUsersClient`/`adminRolesClient`, `seoClient`, `popupsClient`, `redirectsClient`,
-`siteSettingsClient`, `importExportClient`, `adminThemeClient`, etc.); contexts call the
-router/auth stores. Pure helpers (`recaptcha.ts`, `installerValidation.ts`,
-`setupWizardValidation.ts`, `advancedStepUtils.ts`, `siteSettingsValidation.ts`,
-`popupEditorModel.ts`, `useListPagination.ts`) get direct table-driven unit tests.
+The following seven raw L12 REACHABLE-GAP records are **UNREACHABLE** through real UI flows
+and must not be hit with fake callback props:
 
-```tsx
-const login = vi.fn();
-vi.mock("@/services/authClient", () => ({ login /* ... */ }));
+- RoleEditor.tsx:162,168,183: every risky permission/full-access mutation passes
+  requestPermissionChange (RoleEditor.tsx:106-150). An unconfirmed risky draft opens an
+  apply confirmation and does not mutate the draft; confirming records its signature at
+  173-181. handleSave cannot observe a real unconfirmed risky draft.
+- PermissionsMatrixPage.tsx:300,301 and UsersRolesPage.tsx:422,423: these parent callbacks
+  depend on that impossible RoleEditor save-confirmation branch. Normal Save continues to use
+  the existing permission guards.
 
-function renderSubject() { return render(<LoginPage />); }
-```
+## Child Order and Single-Writer Boundaries
 
-Assertion shape per component:
+1. TASK-105-08-09-L01-users-roles-reachable-residuals.md — sole writer of two new,
+   isolated suites: permissions-matrix-page-revocation.test.tsx and
+   users-roles-create-and-revocation.test.tsx.
 
-1. Auth pages (`LoginPage`, `ResetPasswordPage`, `SetPasswordPage`, `TwoFactorPage`,
-   `OtpInput`): every submit/error/loading/two-factor branch, asserting visible effect and
-   the client payload. `recaptcha.ts` gets a table-driven unit test over its script-load
-   and token branches.
-2. `BackupsPage` (71), `SiteSettingsPage` (71), `RedirectsPage` (64),
-   `UsersRolesPage` (64), `SeoManagerPage` (41), `AccessLogsPage` (40),
-   `PermissionsMatrixPage` (35): full interaction suites for list/create/edit/delete,
-   validation errors, and confirmation flows.
-3. Setup wizard + steps: every step's next/back/validate/error branch, the installer
-   status gating, and `StarterContentStep` preview/apply.
-4. `shared/**`: `AdminThemeSwitcher` (32), `ExportDialog` (18), `AdminLink` (15) plus the
-   near-100% shared controls; assert each branch and visible effect.
-5. `AdminShell` (20), `RuntimePreviewDialog` (13), contexts, store, popups, roles,
-   reviews, analytics, authoring, layouts, preview, plugins: focused suites for the
-   remaining uncovered branches.
+All source files are read-only. UsersRolesPage.tsx is already 1,026 physical lines, so any
+production edit would require a separate split-first task. L01 must not extend the currently
+dirty users-roles-users-invite.test.tsx (807 lines) or users-roles-permissions.test.tsx; it
+uses the two new suites to prevent a writer collision.
 
-Work order (worst first): `BackupsPage` (71), `SiteSettingsPage` (71), `RedirectsPage`
-(64), `UsersRolesPage` (64), `SeoManagerPage` (41), `AccessLogsPage` (40),
-`PermissionsMatrixPage` (35), `LoginPage` (33), `ResetPasswordPage` (28),
-`SetPasswordPage` (27), `SiteSettingsPage` validation (9), then each remaining cluster
-by gap.
+## Implementation Pseudocode
 
-## Validation Gates
+~~~tsx
+render(<UsersRolesPage permissions={writablePermissions} />);
+openDestructiveConfirmation();
+rerender(<UsersRolesPage permissions={readOnlyPermissions} />);
+await user.click(screen.getByRole("button", { name: "Confirm" }));
+expect(mutationClient).not.toHaveBeenCalled();
+expect(screen.getByRole("alert")).toHaveTextContent(accessDeniedMessage);
+~~~
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- targeted Vitest, one file per invocation:
-  `export TMPDIR=/tmp && set -a && . ./.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/backups-page-wave.test.tsx`
-- `git diff --check`
-- line-count gate ≤ 1000 per added/modified file.
+The tests drive controls that remain mounted across a real permission re-render. They assert
+visible denial and absence of a side effect; they never call private handlers, supply an
+impossible RoleEditor draft, rerender PermissionsMatrixPage to manufacture denied mode, or
+weaken confirmation semantics. The `UsersRolesPage` test-local rerender is permitted only
+after the same mounted root has an already-open `InviteUserDialog` for lines 394-396 or an
+already-open `ConfirmActionDialog` for lines 450-555; it preserves that real dialog state and
+never manufactures a UserEditor/create state. The matrix test may spy on
+`AdminAuthProvider.refreshPermissions` but keeps supplied matrix permissions stable; it never
+changes props or an auth snapshot to manufacture denied mode.
+
+## Testing Requirements
+
+L01 runs the two exact new suites independently, then runs the following single scoped V8
+receipt. It has exactly the two L01-owned test operands and exactly the two read-only production
+coverage targets; it must not use a full-lane result or add another include. The current
+`vitest.config.ts` provider is V8, and the command explicitly writes this leaf's `lcov.info` to
+`coverage/task-105-08-09-l01` instead of the configured `coverage/vitest` directory:
+
+~~~bash
+coverage_dir="coverage/task-105-08-09-l01"
+export TMPDIR=/tmp
+if [[ -f .env ]]; then
+  set -a
+  . ./.env
+  set +a
+fi
+NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts \
+  --coverage \
+  --coverage.provider=v8 \
+  --coverage.clean \
+  --coverage.reporter=lcov \
+  "--coverage.reportsDirectory=$coverage_dir" \
+  --coverage.include=core/admin/ui/roles/PermissionsMatrixPage.tsx \
+  --coverage.include=core/admin/ui/users/UsersRolesPage.tsx \
+  tests/vitest/ui/permissions-matrix-page-revocation.test.tsx \
+  tests/vitest/ui/users-roles-create-and-revocation.test.tsx
+~~~
+
+The L01 `lcov.info` extractor records the exact raw `DA:<line>,<hits>` rows in
+`coverage/task-105-08-09-l01/da-rows.json` and fails unless every must-hit, public replacement,
+and matrix-reachable row has a positive count. It records the five source-proven unreachable
+rows as `UNREACHABLE` with a zero count; a positive count is a contract failure, not coverage
+credit. The source behavior ranges remain 379-392, 411-420, and 431-435, while current V8 emits
+the exact matrix rows 380,381,388,411,412,413,415,416,418,419,420,431-435. The full extractor
+and its 11 must-hit, four public-replacement, and five unreachable row lists are in L01. Then
+run:
+
+~~~bash
+bun --cwd core lint:types
+bun --cwd core lint
+bun run check:admin-boundary
+./node_modules/.bin/tsc -p tsconfig.json --noEmit --incremental false --pretty false
+git diff --check
+~~~
 
 ## 1000-Line Rule
 
-`users-roles-page-wave.test.tsx` (1132) is split by TASK-105-08-11 before this leaf
-extends it. Any new suite crossing 1000 lines splits by responsibility with a shared
-fixture module.
+Both L01 suites are new and must remain at most 800 lines by plan, then at most 1,000 lines
+by the hard gate. Do not touch the 1,026-line source module or the dirty 807-line invite suite.
+Run this per-file gate after implementation; the total is deliberately not used because the
+limits apply to each writer independently:
+
+~~~bash
+for test_path in \
+  tests/vitest/ui/permissions-matrix-page-revocation.test.tsx \
+  tests/vitest/ui/users-roles-create-and-revocation.test.tsx
+do
+  line_count="$(wc -l < "$test_path")"
+  printf '%s %s\n' "$line_count" "$test_path"
+  if (( line_count > 1000 )); then
+    echo "1000-line hard gate failed: $test_path has $line_count lines" >&2
+    exit 1
+  fi
+  if (( line_count > 800 )); then
+    echo "800-line L01 plan gate failed: split $test_path before closure" >&2
+    exit 1
+  fi
+done
+~~~
 
 ## Security Contract
 
-Test-only, no API surface.
+Test-only, non-API work. Existing internal-admin session authentication, server RBAC/CSRF
+enforcement, strict payload validation, and rate limits are unchanged. Permission-revocation
+tests prove the UI does not issue a mutation after write authority disappears; client UI is
+not treated as authorization and no public write/nonce/captcha behavior is introduced.
+
+## Historical Receipt
+
+The 2026-08-26 post-audit record remains historical. It cannot close this parent because it
+predates the corrected source-backed 11-line raw-L12 handoff.
+
+## Sub-Tasks
+
+- [ ] TASK-105-08-09-L01-users-roles-reachable-residuals.md
+
+## Documentation Updates Required
+
+Only the designated closure writer records L01 validation and the L12 disposition. Do not
+update board statistics, changelog, task-board rows, staging, or commits from this leaf.
 
 ## Acceptance Criteria
 
-1. All 85 files reach `100%` lines.
-2. Every auth/validation error branch is behavior-asserted, not skipped.
+1. The 11 remaining raw L12 lines have real UI interaction tests with visible or
+   no-side-effect assertions, and all five newly reclassified lines have source evidence.
+2. The actual public Invite User and matrix failure/refresh paths retain behavior coverage
+   without pretending to cover the reclassified lines.
+3. The five newly reclassified plus seven earlier reclassified lines remain source-proven
+   unreachable.
+4. L12 receives fresh artifact evidence before this parent can be terminal.
+
+## Orchestrator Attribution Note — 2026-09-01 (TASK-105 campaign closure)
+
+Bounded ownership assignment by the orchestrator (no leaf contract named these two
+files; confirmed by a full sweep of the `TASK-105-08-*` contracts):
+
+- `core/admin/ui/preview/RuntimePreviewDialog.tsx` — invoker focus is restored when
+  the runtime preview dialog closes (focus-survival fix chain motivated by the L07
+  smoke diagnosis).
+- `tests/vitest/ui/runtime-preview-dialog-gaps.test.tsx` — behavioral regression pin
+  for the fix.
+
+Evidence: the r44 acceptance run's `post-classic-edit-preview-focus-visible`
+scenario (focus-visible DOM state asserted through the supported editor→preview
+transition) and the dedicated suite above. These files ride TASK-105-08-09's
+closure commit (K7 in the delivery commit plan, handoff section 15).

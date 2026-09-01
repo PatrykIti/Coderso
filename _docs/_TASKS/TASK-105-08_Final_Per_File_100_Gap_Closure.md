@@ -1,278 +1,146 @@
 # TASK-105-08: Final Per-File 100% Gap Closure
 # FileName: TASK-105-08_Final_Per_File_100_Gap_Closure.md
 
-**Priority:** High  
-**Category:** QA + Coverage  
-**Estimated Effort:** Large  
-**Dependencies:** TASK-105-01..07 (all terminal; TASK-105-06 was superseded by TASK-580, changelog 1323, on 2026-08-21)  
-**Status:** ⏳ To Do (2026-08-21 FAZA 0 rebaseline)
+**Parent Task:** TASK-105
+**Priority:** High
+**Category:** QA + Coverage
+**Estimated Effort:** Large
+**Dependencies:** TASK-105-01..07; active TASK-105-08 children below
+**Status:** 🚧 In Progress
+**Started:** 2026-08-21
 
 ---
 
 ## Overview
 
-Close every remaining per-file gap so each Vitest-owned file with executable lines
-reaches `100%` lines. "Where applicable" means the zero-executable infrastructure-noise
-files are documented with an `exclude-with-reason` disposition, never gamed.
+TASK-105-08 remains the coordination task for source-wide Vitest coverage. The 2026-08-21
+5777-line inventory and the 2026-08-26 98.54%-line run are historical planning/evidence
+snapshots, not proof that the program is closed. The L12 extraction still identifies
+executable residuals; coverage may only be called final after a fresh artifact reconciles
+every remaining line with a current source-backed disposition.
 
-This is the final substantive coverage wave of `TASK-105` before the QA/docs/changelog
-closure in `TASK-105-09`. It is test-only: no API routes, no production behavior change,
-no schema/contract change. The only file-system surgery is the split of four oversized
-test modules and the `tests/RUNNER_OWNERSHIP.md` rewrite, both owned by `TASK-105-08-11`.
+This wave is test-only except for separately contracted source repairs. No leaf may use a
+coverage ignore, a private callback, invalid union data, or a production fallback merely to
+make a line execute.
 
-## Fresh Canonical Baseline (2026-08-21, HEAD 998e4ed8)
+## Historical Baseline
 
-Source: `bun scripts/run-vitest-coverage.ts` at `7029fb7e` (baseline numbers
-re-verified identical at HEAD `998e4ed8`); artifact
-`coverage/vitest/coverage-summary.json`; re-derived here from
-`bun scripts/analyze-vitest-gaps.ts` (script exists in `scripts/`).
+The original 2026-08-21 planning baseline was 5,777 uncovered lines across 668 executable
+files. The 2026-08-26 historical rebaseline reported 98.54% lines and 577 uncovered lines.
+Its raw L12 extraction has 515 records: 148 UNREACHABLE / 367 REACHABLE-GAP. Those values
+are not a current final total; active source audits may correct individual classifications.
+See TASK-105-08-12 for the reconciliation protocol and bounded verified deltas.
 
-- `% Stmts`: `82.02`
-- `% Branch`: `73.81`
-- `% Funcs`: `81.94`
-- `% Lines`: `85.43`
-- files with executable lines: `668`
-- files at `100%` lines: `261`
-- files below `100%` lines: `407`
-- uncovered lines total: `5777`
-- zero-executable files (infra-noise candidates): `17`
-- lane fact: `958` Vitest test files (`.test.ts` / `.test.tsx`) under `tests/vitest/`
+## Remaining Child Order
 
-## Gap Inventory (cluster → files / uncovered lines)
+The table is the current dependency order for unfinished work. It intentionally names the
+new descendants so a historical terminal parent cannot hide an active child.
 
-Generated from `bun scripts/analyze-vitest-gaps.ts`. Every cluster below is owned by
-exactly one leaf. Sum of leaf budgets = `5777` (verified).
-
-| Cluster | Files below 100% | Uncovered lines | Owning leaf |
-|---|---:|---:|---|
-| `core/admin/services/**` | 40 | 869 | TASK-105-08-01 |
-| `core/admin/utils/**` | 7 | 62 | TASK-105-08-01 |
-| `core/admin/ui/settings/**` | 27 | 552 | TASK-105-08-02 |
-| `core/admin/ui/content-types/**` | 21 | 787 | TASK-105-08-03 |
-| `core/admin/ui/custom-screens/**` | 38 | 448 | TASK-105-08-04 |
-| `core/admin/ui/menus/**` | 17 | 286 | TASK-105-08-05 |
-| `core/admin/ui/dashboard/**` | 6 | 58 | TASK-105-08-05 |
-| `core/admin/ui/kits/**` | 4 | 148 | TASK-105-08-05 |
-| `core/admin/ui/media/**` | 11 | 223 | TASK-105-08-06 |
-| `core/admin/ui/commerce/**` | 11 | 161 | TASK-105-08-06 |
-| `core/admin/ui/search/**` | 5 | 85 | TASK-105-08-06 |
-| `core/services/assistant/**` | 25 | 299 | TASK-105-08-07 |
-| `core/admin/ui/assistant/**` | 9 | 169 | TASK-105-08-07 |
-| `core/admin/ui/pages/**` | 20 | 153 | TASK-105-08-08 |
-| `core/admin/ui/posts/**` | 20 | 140 | TASK-105-08-08 |
-| `core/admin/ui/entries/**` | 16 | 84 | TASK-105-08-08 |
-| `core/admin/ui/forms/**` | 9 | 24 | TASK-105-08-08 |
-| `core/admin/ui/listings/**` | 11 | 67 | TASK-105-08-08 |
-| `core/admin/ui/themes/**` | 1 | 2 | TASK-105-08-08 |
-| `core/admin/ui/booking/**` | 1 | 1 | TASK-105-08-08 |
-| `core/admin/ui/audit/**` | 4 | 10 | TASK-105-08-08 |
-| misc `core/admin/ui/**` (auth, backups, setup, users, seo, popups, redirects, site, security, roles, reviews, store, import-export, contexts, analytics, authoring, layouts, preview, plugins, shared) | 85 | 988 | TASK-105-08-09 |
-| `core/services/customScreens/**` | 19 | 161 | TASK-105-08-10 |
-| `packages/sdk/src/**` | 0 (already 100% lines) | 0 | TASK-105-08-10 |
-
-Worst files, top 20 by uncovered lines (full file lists live in each leaf's Scope):
-
-| Uncovered | File | Covered/Total | Branch |
+| Remaining order | Leaf | Exact active scope | Budget / disposition |
 |---:|---|---|---:|
-| 226 | `core/admin/ui/content-types/ContentTypeEditor.tsx` | 75/301 | 21.4% |
-| 160 | `core/admin/services/bookingClient.ts` | 86/246 | 11.8% |
-| 129 | `core/admin/ui/media/MediaLibraryPage.tsx` | 439/568 | 66.8% |
-| 127 | `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` | 135/262 | 38.7% |
-| 122 | `core/admin/services/listingsClient.ts` | 55/177 | 23.6% |
-| 109 | `core/admin/ui/kits/hooks/useSolutionKitRuns.ts` | 0/109 | 0.0% |
-| 106 | `core/admin/ui/assistant/AssistantPanel.tsx` | 306/412 | 64.0% |
-| 98 | `core/admin/ui/content-types/DetailTemplateEditorPage.tsx` | 240/338 | 61.5% |
-| 98 | `core/admin/ui/menus/MenuEditorPage.tsx` | 309/407 | 68.5% |
-| 87 | `core/admin/ui/content-types/SchemaBuilderPage.tsx` | 63/150 | 40.3% |
-| 85 | `core/admin/ui/content-types/FieldEditor.tsx` | 17/102 | 25.4% |
-| 75 | `core/admin/ui/settings/SecuritySettingsPage.tsx` | 139/214 | 61.0% |
-| 71 | `core/admin/ui/backups/BackupsPage.tsx` | 183/254 | 54.5% |
-| 71 | `core/admin/ui/site/SiteSettingsPage.tsx` | 137/208 | 50.0% |
-| 69 | `core/admin/services/formsClient.ts` | 85/154 | 38.6% |
-| 68 | `core/admin/services/solutionKitsClient.ts` | 85/153 | 41.8% |
-| 68 | `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` | 1043/1111 | 84.7% |
-| 67 | `core/admin/ui/commerce/hooks/useCommerceCatalog.ts` | 23/90 | 6.9% |
-| 64 | `core/admin/ui/redirects/RedirectsPage.tsx` | 117/181 | 40.0% |
-| 64 | `core/admin/ui/users/UsersRolesPage.tsx` | 312/376 | 77.0% |
+| 1 | TASK-105-08-03-L01 → L02 → L03 | content list/workspace; detail templates; field/schema | 48 reachable lines |
+| 2 | TASK-105-08-04 | custom-screens owner audit/receipt | owner-defined |
+| 3 | TASK-105-08-14 → 15 → 16 | TASK-540 runtime-smoke recovery sequence | runtime integrity |
+| 4 | TASK-105-08-05 | menus/dashboard/kits declared descendants | owner-defined |
+| 5 | TASK-105-08-06-L01 → L02 | L06 reconciliation plus exact commerce/media root-TypeScript test repair | 5 coverage-unreachable / 0 coverage-reachable; 13 named test files |
+| 6 | TASK-105-08-07-L01 | boolean JSON-Schema property merger rejection | 1 reachable line |
+| 7 | TASK-105-08-08 | pages/posts/entries/forms/listings/themes/booking/audit | owner-defined |
+| 8 | TASK-105-08-09-L01 | users/roles reachable residuals | 11 raw reachable / 41 raw unreachable (current local reconciliation) |
+| 9 | TASK-105-08-10 | custom-screens recovery seam | owner-defined |
+| 10 | TASK-105-08-13 | inherited assistant-draft disposition | test integrity |
+| 11 | TASK-105-08-12 | fresh canonical rebaseline after active owners report | final artifact, not pre-seeded |
 
-## Pre-existing HEAD Blocker (resolved)
+The L09 disposition is local to that child and does not recompute or replace the historical L12
+ledger above.
 
-`tests/vitest/pages/task-539-renderer-effects-and-geometry.test.tsx` pinned absolute
-line receipts that went stale after the merged HEAD grew (TASK-580 / S3 growth). The
-orchestrator re-pinned them mechanically as commit `3298577c`
-(`test(vitest): re-pin task-539 renderer line receipts to merged HEAD lengths`), which
-is test-only and does not change the coverage baseline. Confirmed: at authoring time the
-file is clean (`git ls-files -v` reports `H`); the canonical baseline remains the
-`7029fb7e` run.
-
-## Oversized Test Files (line gate ≤ 1000)
-
-The following Vitest files exceed the 1000-line hard gate and MUST be split by cohesive
-responsibility (each part independently runnable) BEFORE any gap-filling extends them.
-Splitting is owned by `TASK-105-08-11`.
-
-| File | Lines |
-|---|---:|
-| `tests/vitest/ui/menu-design-editor.test.tsx` | 2711 |
-| `tests/vitest/ui/users-roles-page-wave.test.tsx` | 1132 |
-| `tests/vitest/ui/bookingPageFixtures.tsx` (fixture module) | 1123 |
-| `tests/vitest/assistant/blueprint-action-assembler.test.ts` | 1050 |
-
-Watch list: `37` Vitest test/fixture files sit in the `900–1000` line band (seed said
-`~38`; verified `37`). Any gap-filling that would push one of these over `1000` lines
-must split it first, not extend it.
-
-## Child Leaf Table
-
-Leaf IDs are fixed by the TASK-105-08 program plan. Land order reflects the split-first
-dependency: `TASK-105-08-11` must land first because leaves 05/07/08/09 extend the four
-files it splits.
-
-| Land order | Leaf | Scope | Uncovered-line budget |
-|---:|---|---|---:|
-| 1 | `TASK-105-08-11` | split 4 oversized test files + rewrite `tests/RUNNER_OWNERSHIP.md` | n/a (test split) |
-| 2 | `TASK-105-08-01` | `core/admin/services/**` + `core/admin/utils/**` | 931 |
-| 3 | `TASK-105-08-02` | `core/admin/ui/settings/**` | 552 |
-| 4 | `TASK-105-08-03` | `core/admin/ui/content-types/**` | 787 |
-| 5 | `TASK-105-08-04` | `core/admin/ui/custom-screens/**` | 448 |
-| 6 | `TASK-105-08-05` | menus + dashboard + kits | 492 |
-| 7 | `TASK-105-08-06` | media + commerce + search | 469 |
-| 8 | `TASK-105-08-07` | `core/services/assistant/**` + `core/admin/ui/assistant/**` | 468 |
-| 9 | `TASK-105-08-08` | pages + posts + entries + forms + listings + themes + booking + audit | 481 |
-| 10 | `TASK-105-08-09` | misc `core/admin/ui/**` clusters | 988 |
-| 11 | `TASK-105-08-10` | `packages/sdk/src/**` (line-complete) + `core/services/customScreens/**` | 161 |
-| 12 | `TASK-105-08-12` | final rebaseline + infra-noise manifest | n/a (closure) |
-
-Total product line budget: `5777`.
+TASK-105-08-07 and TASK-105-08-09 are reopened because they now have open physical
+children. TASK-105-08-12 is reopened because historical coverage evidence cannot close
+while these dependencies remain active. TASK-105-08-06-L01/L02 are test-integrity-only
+children: its five reviewed coverage records remain source-proven unreachable, and no
+fabricated coverage test is allowed.
 
 ## Single-Writer File Ownership
 
-- Each source file under `core/` or `packages/sdk/` has exactly ONE writer leaf; all
-  other leaves may only READ (import) it. Source modules are never edited by this wave
-  except where a split-first rule is documented in the owning leaf (none expected: the
-  wave is test-only).
-- Each test file is owned by exactly one leaf. The leaf creates new suites and may extend
-  existing suites that already belong to its cluster; it never edits another leaf's test
-  file. Ownership is by NAMED suite or named source module: a directory glob in one leaf
-  does NOT give it a non-settings/non-cluster suite in that directory, and the carve-outs
-  listed in the leaves (e.g. `custom-screen-schemas.test.ts` -> TASK-105-08-10,
-  `mediaClient.test.ts` -> TASK-105-08-01, `entryEditor.test.tsx` -> TASK-105-08-08,
-  `api-keys.test.tsx` -> TASK-105-08-02, `analytics-settings-entries-seo-leafs.test.tsx`
-  -> TASK-105-08-02, `menu-document-css-*.test.ts` -> TASK-105-08-05) are authoritative.
-- Only `TASK-105-08-11` edits `tests/RUNNER_OWNERSHIP.md` and the four oversized test
-  files it splits. Only `TASK-105-08-12` documents the infra-noise manifest and runs the
-  final rebaseline; it does not edit product or test code.
-- Leaves MUST NOT touch `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/*`, or any other
-  task/changelog file. Board sync is the orchestrator's closure job (`TASK-105-09`).
+- Every active child owns exactly its named source/test files; no directory glob grants
+  ownership.
+- The focused test-only children, including TASK-105-08-06-L01/L02 and
+  TASK-105-08-08-L08/L09/L10, own only the exact suites in their child contracts and treat
+  production source as read-only. A source change requires a fresh exact-writer contract
+  and the 1,000-line gate.
+- L12 owns only its reconciliation evidence; it never edits source/tests, task-board rows,
+  changelog, coverage configuration, or artifacts.
+- Existing dirty worktree changes belong to their current writers. A leaf rechecks the exact
+  file diff before adopting an untracked test draft and must not reset, clean, stage, or
+  commit it.
 
-## Gates
+## Implementation Pseudocode
 
-Per leaf:
+~~~ts
+for (const leaf of remainingLeavesInDeclaredOrder) {
+  await requireFreshContractAudit(leaf);
+  await requirePreviousReceipt(leaf);
+  await runExactOwnedValidation(leaf);
+  await recordSourceAndV8Evidence(leaf);
+}
 
-- Every suite that calls `render()` MUST declare `// @vitest-environment happy-dom`
-  as its first line (lane default is `node`; 263 of 404 `tests/vitest/ui/*` entries
-  carry an `@vitest-environment` pragma — 262 happy-dom + 1 node — of which 9 are
-  non-test helper/fixture files).
+await runFinalL12ArtifactOnlyAfterAllActiveLeaves();
+~~~
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- targeted Vitest, one file per invocation:
-  `export TMPDIR=/tmp && set -a && . ./.env && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts <file>`
-- `git diff --check`
-- line-count gate: every added/modified production or test file ≤ 1000 lines (split-first,
-  never extend an oversized file)
-
-At closure (`TASK-105-08-12`):
-
-- `bun scripts/run-vitest-coverage.ts` fresh rebaseline
-- rewrite `tests/RUNNER_OWNERSHIP.md` (owned by `TASK-105-08-11` before final rebaseline)
-- re-verify `tests/bun-lane-manifest.json` if any test-file list changed
-
-## Explicit Anti-Cheat
-
-- No `coverage.exclude` expansion beyond the 17 documented zero-executable infra-noise
-  files.
-- No `/* istanbul ignore */` abuse; ignore comments are allowed only for a documented
-  machine-generated or genuinely unreachable line, each with a code comment reason.
-- No file is removed from Vitest ownership to satisfy the metric.
-- Branch/statement hardening is in-scope where it rides along, but the closure metric of
-  this wave is `100%` LINES per file; residual branch-only gaps are reported honestly to
-  `TASK-105-09`.
-
-## Progress Notes
-
-- 2026-08-21: FAZA 0 rebaseline. TASK-105-06 superseded by TASK-580 (changelog 1323).
-  Canonical baseline `82.02 / 73.81 / 81.94 / 85.43` at `7029fb7e` (re-verified at
-  `998e4ed8`). task-539 line-receipt re-pin landed as `3298577c` (test-only, no
-  baseline impact). Leaf family authored; implementation not started.
-- 2026-08-21: pre-implementation audit round (vole 01-06, dragon 07-12, humpback
-  reconcile) returned 0 HIGH and 11 MEDIUM + 13 LOW, all evidence-backed. All MEDIUM
-  contract contradictions fixed in place: named-suite ownership replacing blanket
-  directory globs (contentUi, site, analytics, settings), carve-outs/in for
-  `custom-screen-schemas.test.ts` (-> 105-08-10), `mediaClient.test.ts` (-> 105-08-01),
-  `entryEditor.test.tsx` (-> 105-08-08), `api-keys.test.tsx` (-> 105-08-02),
-  `analytics-settings-entries-seo-leafs.test.tsx` (-> 105-08-02),
-  `menu-document-css-*.test.ts` (-> 105-08-05); nonexistent seams corrected
-  (`customScreensEntryOverridesClient` -> real clients, `dashboardWidgetRegistry` ->
-  `@/ui/dashboard/widgetRegistry`); SDK `shared.test.ts` marked as not-existing;
-  leaf-12 gate reworded to lines-100% with stmts/funcs/branch reported honestly;
-  happy-dom pragma mandated for render() suites; HEAD label updated to `998e4ed8`.
-  Reconcile re-audit follows before implementation starts.
-- 2026-08-22: TASK-105-08-01 implemented (admin services+utils). 28 existing suites
-  extended + 19 new coverage suites (47 files target). Final residual set verified
-  empirically by the orchestrator: exactly 4 genuinely-unreachable lines
-  (`entryData.ts:12`, `entriesClient.ts:500`, `mediaFoldersClient.ts:118` and
-  `:135`), each documented with evidence in the leaf; no istanbul-ignore added
-  anywhere (owner rule). L01 acceptance amended accordingly, leaf-12 gate reworded
-  to `99.99` lines / `4` documented residuals. Full vitest coverage run green
-  (exit 0), `lint` 0, `lint:types` 0, `git diff --check` clean, all touched files
-  <= 1000 lines.
-- 2026-08-22: TASK-105-08-02 implemented (settings UI). 1 existing suite extended +
-  15 new suites (27 files target). The implementer reported 20 residuals; the
-  orchestrator re-verified every line against the source and probed the disabled-button
-  semantics empirically (native `.click()` and `dispatchEvent` do NOT fire React
-  onClick on a `disabled` button). Final residual set: exactly 18 genuinely-unreachable
-  lines across 6 files (`ApiKeyDialog.tsx:73-74,77-78`, `AssistantSettingsPage.tsx:171-172,237`,
-  `DesignTokensEditor.tsx:53`, `EmailSettingsPage.tsx:306,310,353,355`,
-  `SecuritySettingsPage.tsx:72,426,475,478`, `StorageSettingsPage.tsx:354,531`), all
-  defensive validation branches blocked by a `disabled` button or fields with no
-  rendered control; documented with evidence in the leaf. Leaf-12 gate updated to
-  `99.96` lines / `22` residuals (L01+L02). Full vitest coverage run green (exit 0,
-  `89.13` lines), root `tsc` 0, `lint` 0, `lint:types` 0, `git diff --check` clean,
-  all touched files <= 1000 lines.
-
-## Sub-Tasks
-
-1. `TASK-105-08-01-admin-services-and-utils.md`
-2. `TASK-105-08-02-settings.md`
-3. `TASK-105-08-03-content-types.md`
-4. `TASK-105-08-04-custom-screens-ui.md`
-5. `TASK-105-08-05-menus-dashboard-kits.md`
-6. `TASK-105-08-06-media-commerce-search.md`
-7. `TASK-105-08-07-assistant.md`
-8. `TASK-105-08-08-pages-posts-entries-forms-listings-themes-booking-residual.md`
-9. `TASK-105-08-09-misc-admin-ui.md`
-10. `TASK-105-08-10-sdk-and-custom-screens-service.md`
-11. `TASK-105-08-11-oversized-test-splits-and-runner-docs.md`
-12. `TASK-105-08-12-final-rebaseline-and-infra-noise-manifest.md`
-
-## Acceptance Criteria
-
-1. Every Vitest-owned file with executable lines reaches `100%` lines; the 17
-   zero-executable infra-noise files are documented with `exclude-with-reason`.
-2. No file is removed from ownership just to satisfy the metric.
-3. The four oversized test files are split and each part stays independently runnable.
-4. `tests/RUNNER_OWNERSHIP.md` reflects the post-widget-removal lane.
-5. Final canonical rebaseline is captured with before/after totals for `TASK-105-09`.
+Each UI test must assert a visible effect, DOM/ARIA state, exact client payload, or absent
+side effect. Pure exports receive valid public-contract inputs. A line classified unreachable
+must carry current source proof rather than an impossible mock.
 
 ## Testing Requirements
 
-- per-leaf targeted `vitest` runs (one file per invocation)
-- `bun --cwd core lint` and `bun --cwd core lint:types` on every touched contract
-- final `bun scripts/run-vitest-coverage.ts`
+Each active child runs the named one-file-at-a-time Vitest command in its own contract,
+followed by the scoped V8 receipt when its contract owns coverage evidence, bun --cwd core
+lint:types, bun --cwd core lint, the relevant admin-boundary check, root TypeScript
+attribution, git diff --check, and the line-count gate. The L06-L01/L02 and
+TASK-105-08-08-L08/L09/L10 type-repair leaves return attribution receipts rather than V8 coverage
+claims. L12 then runs:
+
+~~~bash
+bun scripts/run-vitest-coverage.ts
+bun scripts/analyze-vitest-gaps.ts
+~~~
+
+## 1000-Line Rule
+
+No touched production or test module may exceed 1,000 physical lines. In particular,
+UsersRolesPage.tsx (1,026) and MediaLibraryPage.tsx (1,421) cannot receive a source
+edit under their test-only descendants; a dedicated split-first contract is required.
+
+## Security Contract
+
+Coverage work preserves existing internal-admin auth/RBAC/CSRF, strict validation, cache,
+and public-write protections. No child may create a route, bypass authorization, expose
+credentials, or weaken anti-abuse controls in test setup.
+
+## Sub-Tasks
+
+The current physical child task set includes the existing TASK-105-08-01..16 documents plus:
+
+- TASK-105-08-03-L01-content-list-workspace-residuals.md
+- TASK-105-08-03-L02-detail-template-residuals.md
+- TASK-105-08-03-L03-field-schema-residuals.md
+- TASK-105-08-06-L01-commerce-test-type-repair.md
+- TASK-105-08-06-L02-media-test-type-repair.md
+- TASK-105-08-07-L01-blueprint-schema-boolean-property-recovery.md
+- TASK-105-08-08-L08-audit-test-type-repair.md
+- TASK-105-08-08-L09-entries-test-type-repair.md
+- TASK-105-08-08-L10-forms-test-type-repair.md
+- TASK-105-08-09-L01-users-roles-reachable-residuals.md
 
 ## Documentation Updates Required
 
-- `tests/RUNNER_OWNERSHIP.md` (owned by `TASK-105-08-11`)
-- `tests/bun-lane-manifest.json` re-verification if test-file lists change
-- `_docs/_TASKS/README.md` and `_docs/_CHANGELOG/*` (orchestrator closure, NOT a leaf)
+Leaf implementers return targeted receipts only. The orchestrator alone updates board
+statistics, changelog, status-board rows, and commits after L12's fresh artifact proves the
+remaining disposition.
+
+## Acceptance Criteria
+
+1. Every active residual line has one current owner and source/test evidence.
+2. No parent is marked terminal while an active physical child exists.
+3. A final coverage claim uses only a fresh L12 artifact and exact reconciliation.
+4. Every inherited root-TypeScript diagnostic has an exact test/source owner; test-only
+   repairs do not claim a coverage delta.

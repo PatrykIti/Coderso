@@ -5,7 +5,8 @@
 **Category:** QA + Platform + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-102, TASK-104  
-**Status:** In Progress (2026-03-06)
+**Status:** 🚧 In Progress
+**Started:** 2026-03-06
 
 ---
 
@@ -34,7 +35,7 @@ Initial Vitest coverage snapshot (from `bun run test:coverage` on 2026-03-06):
 - `% Funcs`: `31.52`
 - `% Lines`: `40.18`
 
-Current Vitest coverage snapshot after the latest implemented waves (from `coverage/vitest/coverage-summary.json` on 2026-03-06):
+Historical Vitest coverage snapshot after the latest implemented waves (from `coverage/vitest/coverage-summary.json` on 2026-03-06):
 - `% Stmts`: `43.21`
 - `% Branch`: `38.55`
 - `% Funcs`: `37.69`
@@ -51,7 +52,7 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog already covered by open wave clusters `TASK-105-04..07`: `161`
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
-Current snapshot after the latest forms, listings, themes, booking, and widget-editor follow-up slices (from `bun run test:coverage` on 2026-03-08):
+Historical snapshot after the latest forms, listings, themes, booking, and widget-editor follow-up slices (from `bun run test:coverage` on 2026-03-08):
 - `% Stmts`: `52.40`
 - `% Branch`: `46.13`
 - `% Funcs`: `48.07`
@@ -97,7 +98,7 @@ Canonical full-lane rebaseline after the coverage report-path fix (from `coverag
 - aggregate `core/admin/ui/widgets/editors/*` -> `99.17%` lines, `77.13%` branches across `40` tracked files
 - previous “flat” comparisons against `/tmp/nextless-vitest-cov/coverage-summary.json` are superseded; that file was a stale artifact, not the current full-lane snapshot
 
-Current snapshot after the first `TASK-105-05` entries/pages/posts foundation slice (from `bun run test:coverage` on 2026-03-11):
+Historical snapshot after the first `TASK-105-05` entries/pages/posts foundation slice (from `bun run test:coverage` on 2026-03-11):
 - `% Stmts`: `61.76`
 - `% Branch`: `52.25`
 - `% Funcs`: `66.57`
@@ -107,7 +108,7 @@ Current snapshot after the first `TASK-105-05` entries/pages/posts foundation sl
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `71.26%` lines, `63.51%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines, `67.92%` branches
 
-Current snapshot after the `TASK-105-05` entries/pages follow-up slice (from `bun run test:coverage` on 2026-03-11):
+Historical snapshot after the `TASK-105-05` entries/pages follow-up slice (from `bun run test:coverage` on 2026-03-11):
 - `% Stmts`: `62.00`
 - `% Branch`: `52.60`
 - `% Funcs`: `66.84`
@@ -115,7 +116,7 @@ Current snapshot after the `TASK-105-05` entries/pages follow-up slice (from `bu
 - `core/admin/ui/entries/FieldRenderer.tsx` -> `94.73%` lines, `83.33%` branches
 - `core/admin/ui/pages/PageListPage.tsx` -> `78.78%` lines, `51.78%` branches
 
-Current snapshot after the `TASK-105-05` posts shell jump (from `bun run test:coverage` on 2026-03-11):
+Historical snapshot after the `TASK-105-05` posts shell jump (from `bun run test:coverage` on 2026-03-11):
 - `% Stmts`: `62.53`
 - `% Branch`: `52.99`
 - `% Funcs`: `67.18`
@@ -123,7 +124,7 @@ Current snapshot after the `TASK-105-05` posts shell jump (from `bun run test:co
 - `core/admin/ui/posts/PostsListPage.tsx` -> `79.54%` lines, `47.61%` branches
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines, `74.43%` branches
 
-Fresh canonical full-lane rebaseline after the latest `2026-03-14` run of `bun run test:coverage`:
+Historical canonical full-lane rebaseline after the latest `2026-03-14` run of `bun run test:coverage`:
 - `% Stmts`: `67.58`
 - `% Branch`: `58.19`
 - `% Funcs`: `71.25`
@@ -141,7 +142,7 @@ Fresh canonical full-lane rebaseline after the latest `2026-03-14` run of `bun r
 - current `TASK-105-04` hotspots are now booking leaf tabs (`AvailabilityTab.tsx`, `ReservationsTab.tsx`, `ServicesTab.tsx`, `SlotPreviewTab.tsx`), `ThemeExportDialog.tsx`, `ThemeTemplateDrawer.tsx`, `FormCanvas.tsx`, `FormListPage.tsx`, and `ListingListPage.tsx`
 - despite the gains in `TASK-105-04..06`, the lane still has major backlog outside those waves; `TASK-105-08` remains premature until broader low-line admin surfaces are folded into explicit follow-up slices
 
-Current snapshot after the latest `TASK-105-04` and `TASK-105-05` follow-up slice on `2026-03-14`:
+Historical snapshot after the latest `TASK-105-04` and `TASK-105-05` follow-up slice on `2026-03-14`:
 - `% Stmts`: `67.86`
 - `% Branch`: `58.51`
 - `% Funcs`: `71.59`
@@ -158,7 +159,7 @@ Current snapshot after the latest `TASK-105-04` and `TASK-105-05` follow-up slic
 - next `TASK-105-05` hotspots are now `PostEditorCanvas.tsx` (`85.29%` lines), `PostRichTextAdapter.tsx` (`86.47%`), `usePostEditorState.ts` (`90.10%`), `PageEditor.tsx` (`74.54%`), `PageSettingsDrawer.tsx` (`73.33%`), `PostBlockEditorShell.tsx` (`75.96%`), and `PostEditorPage.tsx` (`72.72%`)
 - next `TASK-105-04` hotspots remain booking leaf tab internals plus `FormCanvas.tsx`, `ListingListPage.tsx`, and `ThemeTemplateDrawer.tsx`
 
-Current snapshot after the deeper editor shell/canvas/state follow-up on `2026-03-14`:
+Historical snapshot after the deeper editor shell/canvas/state follow-up on `2026-03-14`:
 - `% Stmts`: `68.17`
 - `% Branch`: `58.83`
 - `% Funcs`: `71.76`
@@ -172,7 +173,7 @@ Current snapshot after the deeper editor shell/canvas/state follow-up on `2026-0
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `91.66%` lines / `76.54%` branches
 - next `TASK-105-05` hotspots are now concentrated in `PageEditor.tsx`, `PageSettingsDrawer.tsx`, `PostBlockEditorShell.tsx`, `PostEditorCanvas.tsx`, `PostRichTextAdapter.tsx`, and the remaining `usePostEditorState.ts` async branches
 
-Current snapshot after the page leaf / sidebar / toolbar / inserter follow-up on `2026-03-14`:
+Historical snapshot after the page leaf / sidebar / toolbar / inserter follow-up on `2026-03-14`:
 - `% Stmts`: `68.37`
 - `% Branch`: `59.11`
 - `% Funcs`: `71.93`
@@ -190,7 +191,7 @@ Current snapshot after the page leaf / sidebar / toolbar / inserter follow-up on
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `79.20%` branches
 - next `TASK-105-05` hotspots are now concentrated in `PageEditor.tsx`, `PageSettingsDrawer.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, `PostBlockEditorShell.tsx`, and `PostRichTextAdapter.tsx`
 
-Current snapshot after the latest page-settings and adapter follow-up on `2026-03-14`:
+Historical snapshot after the latest page-settings and adapter follow-up on `2026-03-14`:
 - `% Stmts`: `68.56`
 - `% Branch`: `59.26`
 - `% Funcs`: `72.24`
@@ -496,14 +497,47 @@ Completed waves:
 - deeper branch coverage for `SpacerEditors`
 - deeper line and branch coverage for `DividerEditors`
 
-Remaining large clusters:
+Historical March backlog (not current):
 - forms builder pages and panels
 - entries/pages/posts editor shells
 - widgets editor suites
 - deeper `listings` editor/page flows
 - settings, popups, audit, users, content-types, media, auth, and other non-wave admin surfaces now quantified by `TASK-105-10`
 
-The mixed-module runner-eligibility track in `TASK-105-12` is now closed; the remaining backlog is direct product coverage work rather than import-boundary cleanup.
+The March-era backlog list above is retained as historical context only. It was superseded
+for current planning by the August `Fresh Canonical Baseline (2026-08-21)` in
+`TASK-105-08_Final_Per_File_100_Gap_Closure.md` and the restarted `TASK-105-08` family.
+The later 2026-08-26 `98.54%`-line result in
+`TASK-105-08-12-final-rebaseline-and-infra-noise-manifest.md` is historical evidence, not
+a final whole-lane rebaseline or current canonical artifact; its raw ledger is 148
+UNREACHABLE / 367 REACHABLE-GAP. A whole-lane rerun attempted on 2026-08-29 failed only on
+an unrelated full-load timeout.
+
+Canonical artifact (2026-09-01): `bun scripts/run-vitest-coverage.ts` attempt 2 (276.98s,
+exit 0) emitted `coverage/vitest/coverage-summary.json` — `1186` test files / `10444` tests
+passed / `0` failures; statements `96.23` (`43518/45221`), branches `87.05`
+(`31184/35822`), functions `98.86` (`11711/11845`), lines `99.26` (`39427/39718`) — `291`
+uncovered executable lines across `698` tracked files (`594` at `100%` lines, `87` below,
+`17` zero-executable). The exact per-line residual ledger is published in
+`TASK-105-08-12` under `## Closure Evidence — Fresh Canonical Artifact (2026-09-01)`; no
+zero-residual claim is made and `coverage.exclude` was not widened. (Attempt 1 of the same
+command failed on the same full-load contention timeout class as 2026-08-29:
+`tests/vitest/pages/legacy-widget-block.test.tsx:150` at the wrapper's 15000ms budget; it
+passed unchanged on rerun.) Note: prose elsewhere in this program and on the board quoting
+`98.54%` lines / `577` uncovered is stale — the on-disk 2026-08-26 artifact actually read
+`98.48%` / `600` — and both are superseded by the 2026-09-01 artifact above.
+
+Closure state after `TASK-105-09` (changelog 1325, 2026-09-01): `TASK-105-08-12` is Done on
+its in-file canonical receipt, and the menus/dashboard/kits family
+(`TASK-105-08-05` plus `L01`, `L01-L01`, `L01-L02`, `L02`, `L02-L01`, `L03`, `L03-L01`,
+`L04`, with `L03-L02` preserved `⏭️ Superseded`) plus external prerequisite
+`TASK-105-08-01-S01` and `TASK-105-08-13` are Done with bounded receipts. The remaining
+`TASK-105-08` coverage leaves (`08-01`–`08-10` parents and their residual children,
+`08-14`–`08-16`) stay open and own their residual ledger entries. The current
+menus/dashboard/kits child authority is `TASK-105-08-05-menus-dashboard-kits.md`;
+`TASK-105` remains in progress and is not complete — `TASK-105-11` (legacy migration
+cleanup, including `11-03-05`, `11-03-08`, and closure leaf `11-04`) is open, and the
+delivery-branch merge decision belongs to the user.
 
 ## Sub-Tasks
 
@@ -516,9 +550,9 @@ The mixed-module runner-eligibility track in `TASK-105-12` is now closed; the re
 7. `TASK-105-07_SDK_PluginManifest_and_Custom_Screens_Service_Wave.md`
 8. `TASK-105-08_Final_Per_File_100_Gap_Closure.md`
 9. `TASK-105-09_QA_Docs_Changelog_and_Closure.md`
-10. `TASK-105-11_Legacy_Bun_Free_Test_Migration_Cleanup.md`
-11. `TASK-105-12_Mixed_Module_Product_Refactors_for_Runner_Eligibility.md`
 10. `TASK-105-10_Coverage_Gap_Rebaseline_and_Lane_Backlog.md`
+11. `TASK-105-11_Legacy_Bun_Free_Test_Migration_Cleanup.md`
+12. `TASK-105-12_Mixed_Module_Product_Refactors_for_Runner_Eligibility.md`
 
 ## Implementation Order
 
@@ -564,9 +598,9 @@ for (const wave of backlog) {
 - `tests/RUNNER_OWNERSHIP.md`
 - `_docs/_CHANGELOG/*.md`
 
-## Latest Snapshot
+## Historical Snapshot Archive
 
-Current snapshot after the latest page-editor and adapter micro-follow-up on `2026-03-14`:
+Historical snapshot after the latest page-editor and adapter micro-follow-up on `2026-03-14`:
 - `% Stmts`: `68.64`
 - `% Branch`: `59.37`
 - `% Funcs`: `72.27`
@@ -577,7 +611,7 @@ Current snapshot after the latest page-editor and adapter micro-follow-up on `20
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
 - next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
 
-Current snapshot after the latest page-editor, toolbar, inserter, and adapter follow-up on `2026-03-14`:
+Historical snapshot after the latest page-editor, toolbar, inserter, and adapter follow-up on `2026-03-14`:
 - `% Stmts`: `68.66`
 - `% Branch`: `59.38`
 - `% Funcs`: `72.31`
@@ -588,7 +622,7 @@ Current snapshot after the latest page-editor, toolbar, inserter, and adapter fo
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
 - next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
 
-Current snapshot after the latest page-editor reorder and shell-error follow-up on `2026-03-14`:
+Historical snapshot after the latest page-editor reorder and shell-error follow-up on `2026-03-14`:
 - `% Stmts`: `68.66`
 - `% Branch`: `59.38`
 - `% Funcs`: `72.31`
@@ -598,7 +632,7 @@ Current snapshot after the latest page-editor reorder and shell-error follow-up 
 - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `89.85%` lines / `76.27%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
 
-Current snapshot after the latest page-editor state and editor chrome input follow-up on `2026-03-14`:
+Historical snapshot after the latest page-editor state and editor chrome input follow-up on `2026-03-14`:
 - `% Stmts`: `68.89`
 - `% Branch`: `59.63`
 - `% Funcs`: `72.41`
@@ -613,7 +647,7 @@ Current snapshot after the latest page-editor state and editor chrome input foll
 - widget/editor line closure remains intact, but the best `TASK-105-05` ROI is now concentrated in `PostRichTextToolbar.tsx`, `PostRichTextAdapter.tsx`, `PostEditorCanvas.tsx`, and smaller residual page/shell edges
 - broader low-line admin backlog outside the active wave still materially dominates the program tail (`AuditTable.tsx`, `PopupEditorForm.tsx`, `WidgetTemplateCategoryDrawer.tsx`, `UserDetailsDrawer.tsx`, `BackupsPage.tsx`)
 
-Current snapshot after the latest editor canvas, adapter, and toolbar follow-up on `2026-03-14`:
+Historical snapshot after the latest editor canvas, adapter, and toolbar follow-up on `2026-03-14`:
 - `% Stmts`: `69.01`
 - `% Branch`: `59.75`
 - `% Funcs`: `72.51`
@@ -627,7 +661,7 @@ Current snapshot after the latest editor canvas, adapter, and toolbar follow-up 
 - `scripts/run-vitest-coverage.ts` no longer double-cleans the reports directory, which removes the intermittent `coverage/vitest/.tmp` / HTML report `ENOENT` failures during `bun run test:coverage`
 - the `TASK-105-05` hotspot list is now dominated by smaller shell/media/async residues, while the overall program tail is increasingly driven by low-line admin surfaces outside the current editor-focused wave
 
-Current snapshot after the latest shell/state/canvas branch-hardening follow-up on `2026-03-14`:
+Historical snapshot after the latest shell/state/canvas branch-hardening follow-up on `2026-03-14`:
 - `% Stmts`: `69.01`
 - `% Branch`: `59.91`
 - `% Funcs`: `72.51`
@@ -641,7 +675,7 @@ Current snapshot after the latest shell/state/canvas branch-hardening follow-up 
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
 - editor-shell branch hardening is now materially better, so the active-wave ROI is mostly residual async/media edges while the long-tail program backlog remains dominated by low-line admin surfaces outside `TASK-105-05`
 
-Current snapshot after the latest hook/helper follow-up on `2026-03-14`:
+Historical snapshot after the latest hook/helper follow-up on `2026-03-14`:
 - `% Stmts`: `69.03`
 - `% Branch`: `59.95`
 - `% Funcs`: `72.51`
@@ -653,7 +687,7 @@ Current snapshot after the latest hook/helper follow-up on `2026-03-14`:
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
 - helper-export hardening continues to move the lane, but the best remaining ROI is now mostly in residual async/media/preview branches and in low-line admin backlog outside the active editor wave
 
-Current snapshot after the latest adapter paste and typography follow-up on `2026-03-14`:
+Historical snapshot after the latest adapter paste and typography follow-up on `2026-03-14`:
 - `% Stmts`: `69.03`
 - `% Branch`: `60.00`
 - `% Funcs`: `72.51`
@@ -665,7 +699,7 @@ Current snapshot after the latest adapter paste and typography follow-up on `202
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
 - the active editor wave has now pushed the shipped Vitest lane to a clean `60.00%` branch baseline, and the remaining ROI is increasingly about residual edge-case flattening versus broader low-line admin backlog selection
 
-Current snapshot after the latest page-editor and listings list follow-up on `2026-03-14`:
+Historical snapshot after the latest page-editor and listings list follow-up on `2026-03-14`:
 - `% Stmts`: `69.05`
 - `% Branch`: `60.09`
 - `% Funcs`: `72.52`
@@ -678,7 +712,7 @@ Current snapshot after the latest page-editor and listings list follow-up on `20
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `78.44%` branches
 - the shipped Vitest lane is now above `60%` branches, `ListingListPage.tsx` is effectively closed, and the remaining ROI is increasingly split between residual editor-edge flattening and the broader low-line admin backlog
 
-Current snapshot after the latest forms and themes follow-up on `2026-03-14`:
+Historical snapshot after the latest forms and themes follow-up on `2026-03-14`:
 - `% Stmts`: `69.10`
 - `% Branch`: `60.17`
 - `% Funcs`: `72.60`
@@ -690,7 +724,7 @@ Current snapshot after the latest forms and themes follow-up on `2026-03-14`:
 - `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
 - the next best ROI now tilts more clearly toward `TASK-105-04` booking/theme residue and broader low-line admin backlog, because several former medium-coverage editor/forms/listings surfaces are now effectively closed
 
-Current snapshot after the latest booking services-tab follow-up on `2026-03-15`:
+Historical snapshot after the latest booking services-tab follow-up on `2026-03-15`:
 - `% Stmts`: `69.10`
 - `% Branch`: `60.20`
 - `% Funcs`: `72.60`
@@ -702,7 +736,7 @@ Current snapshot after the latest booking services-tab follow-up on `2026-03-15`
 - `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
 - the lane branch baseline moved again, and the remaining `TASK-105-04` ROI is now more clearly concentrated in booking leaf-tab line gaps plus residual `ThemeTemplateDrawer` work
 
-Current snapshot after the latest booking leaf interaction follow-up on `2026-03-15`:
+Historical snapshot after the latest booking leaf interaction follow-up on `2026-03-15`:
 - `% Stmts`: `69.27`
 - `% Branch`: `60.20`
 - `% Funcs`: `73.11`
@@ -715,7 +749,7 @@ Current snapshot after the latest booking leaf interaction follow-up on `2026-03
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
 - booking leaf tabs are now line-closed, so the next ROI shifts more cleanly to `ThemeTemplateDrawer` and broader low-line admin backlog outside the editor wave
 
-Current snapshot after the latest theme drawer and user details follow-up on `2026-03-15`:
+Historical snapshot after the latest theme drawer and user details follow-up on `2026-03-15`:
 - `% Stmts`: `69.62`
 - `% Branch`: `60.38`
 - `% Funcs`: `73.41`
@@ -727,7 +761,7 @@ Current snapshot after the latest theme drawer and user details follow-up on `20
 - `core/admin/ui/booking/components/ServicesTab.tsx` -> `100.00%` lines / `97.22%` branches
 - the remaining ROI is increasingly in residual theme/page-shell gaps and in the broader low-line admin backlog, because several table/drawer surfaces are now effectively closed
 
-Current snapshot after the latest audit table follow-up on `2026-03-15`:
+Historical snapshot after the latest audit table follow-up on `2026-03-15`:
 - `% Stmts`: `69.27`
 - `% Branch`: `60.20`
 - `% Funcs`: `73.11`
@@ -739,7 +773,7 @@ Current snapshot after the latest audit table follow-up on `2026-03-15`:
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
 - the low-line admin backlog is now more granular: single-table or single-drawer surfaces can still move the lane materially without reopening the large editor clusters
 
-Current snapshot after the latest low-line admin follow-up on `2026-03-15`:
+Historical snapshot after the latest low-line admin follow-up on `2026-03-15`:
 - `% Stmts`: `69.98`
 - `% Branch`: `60.76`
 - `% Funcs`: `73.79`
@@ -753,7 +787,7 @@ Current snapshot after the latest low-line admin follow-up on `2026-03-15`:
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
 - the full-lane tail is now more clearly dominated by a shrinking set of medium admin editors plus the remaining very low-line tables/drawers rather than by the former page/post editor hotspots
 
-Current snapshot after the latest theme and users/roles follow-up on `2026-03-15`:
+Historical snapshot after the latest theme and users/roles follow-up on `2026-03-15`:
 - `% Stmts`: `70.10`
 - `% Branch`: `60.83`
 - `% Funcs`: `74.09`
@@ -766,7 +800,7 @@ Current snapshot after the latest theme and users/roles follow-up on `2026-03-15
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
 - the active tail is now less about broad editor shells and more about selective theme cleanup plus the remaining low-line admin backlog outside the now-mature users/roles surfaces
 
-Current snapshot after the latest users shell and theme closure follow-up on `2026-03-15`:
+Historical snapshot retained for context (2026-03-15; not current):
 - `% Stmts`: `70.81`
 - `% Branch`: `61.35`
 - `% Funcs`: `74.92`
@@ -777,4 +811,8 @@ Current snapshot after the latest users shell and theme closure follow-up on `20
 - `core/admin/ui/users/UserEditor.tsx` -> `96.77%` lines / `94.44%` branches
 - `core/admin/ui/users/UserList.tsx` -> `100.00%` lines / `95.45%` branches
 - `core/admin/ui/users/UsersRolesPage.tsx` -> `88.39%` lines / `73.57%` branches
-- the remaining tail is now much less about users/roles core shells and more about the broader low-line admin backlog plus residual branch-only theme/page cleanup
+- the March figures in this archived block are historical only. The August 2026-08-21
+  baseline and the 2026-08-26 `98.54%`-line result are historical planning/evidence
+  snapshots; `TASK-105-08-12` remains In Progress pending a fresh canonical artifact. Its
+  2026-08-29 whole-lane rerun attempt failed only on an unrelated full-load timeout, so no
+  final whole-lane rebaseline or closure exists.
