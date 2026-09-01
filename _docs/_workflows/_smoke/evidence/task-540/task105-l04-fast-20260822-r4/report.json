@@ -1,0 +1,164 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-route-list": 1,
+    "playwright-run-code": 149,
+    "playwright-tab-close": 1,
+    "playwright-tab-new": 1,
+    "playwright-tab-select": 2,
+    "task540-dev-host": 1,
+    "task540-worker-bootstrap-preflight": 1,
+    "task540-worker-database": 1,
+    "task540-worker-schema-only": 1,
+    "task540-worker-user-identity-proof": 1,
+    "task540-worker-user-provisioning": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    { "elapsedMs": 107506, "id": "button-image", "pass": true },
+    { "elapsedMs": 54860, "id": "tabs-content", "pass": true },
+    { "elapsedMs": 35136, "id": "tabs-keyboard-aria", "pass": true },
+    { "elapsedMs": 33895, "id": "space-selection", "pass": true },
+    { "elapsedMs": 52240, "id": "dirty-guards", "pass": true },
+    { "elapsedMs": 66436, "id": "related-retry-cache", "pass": true },
+    { "elapsedMs": 182307, "id": "responsive-users", "pass": true }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-button-image-light.png",
+      "sha256": "025e40ae2dc557c30ccd06b460a6e3b06e51480318772b3547420b1edc86f30a"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-media-prior-pending.png",
+      "sha256": "a30384cc9ebbea4ab9afcc28d54f2f70787cc806d843d1fa6e5e1f7f18a35fad"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-tabs-content-dark.png",
+      "sha256": "ee40e08bda39adc8e1158c1afb956f03c725e790c5bd3fc8e1bc584bbc17ee73"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-tabs-keyboard-light.png",
+      "sha256": "9e7357d6c7af90a91600bdc069e55dcedc82db981246742504a363ef5b06ae12"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-space-selection-dark.png",
+      "sha256": "90137f455f4ccf6e63920afcc96f7820504242e3d09f1696139d9dee3bf6cdec"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-dirty-save-failure.png",
+      "sha256": "fbede38639e4a73716e18d9985b2100c83be231186dd0c4808eecad17842ad77"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-dirty-guards-final.png",
+      "sha256": "141082806eca0f8013098c6e04dc96d0c7ea13431113deb727bb3d937256e8e9"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-related-first-failure.png",
+      "sha256": "f6a3247fc19513c121d33cc7cf4c9ec1a6084069790c55187c64b820d2d31e36"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-related-a-stale.png",
+      "sha256": "8b56957d01ecf51304ffa76d8bc2557a5035939d99ad020a3d019eddba2de5be"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-related-b-dark.png",
+      "sha256": "8b56957d01ecf51304ffa76d8bc2557a5035939d99ad020a3d019eddba2de5be"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-responsive-user-a-light.png",
+      "sha256": "fa6952635517e2d050d301c4cbc77035624066e58780c4bbb5cdae7ae21b1ede"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-responsive-user-b-dark.png",
+      "sha256": "fa186c683b75db90b0e7e43087875b62d0f63e331ddf929cb63386b2882c6328"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/screenshots/task-540-wf540smoke-responsive-user-a-converged.png",
+      "sha256": "830fcb6e1e05a6a38f2fe46303ae1e3a90400fd8a7754f5977d8384762762f1a"
+    }
+  ],
+  "serverUp": true,
+  "session": "task105-l04-fast-20260822-r4",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "authWindowState": "restored",
+    "canonicalCleanupReceipts": 60,
+    "databaseBatches": 0,
+    "rows": 0,
+    "statements": 0,
+    "workerReconnects": 0,
+    "workerRequests": 31,
+    "workerStarts": 5
+  },
+  "suiteId": "task-540",
+  "timings": [
+    { "count": 1, "elapsedMs": 243, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 2346, "failed": 0, "kind": "phase", "name": "archive-screenshots" },
+    {
+      "count": 1,
+      "elapsedMs": 647,
+      "failed": 0,
+      "kind": "phase",
+      "name": "archive-screenshots-observe"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 2224,
+      "failed": 0,
+      "kind": "phase",
+      "name": "archive-screenshots-restore-flat"
+    },
+    { "count": 1, "elapsedMs": 2138, "failed": 0, "kind": "phase", "name": "auth-window-prepare" },
+    { "count": 1, "elapsedMs": 237, "failed": 0, "kind": "phase", "name": "auth-window-restore" },
+    { "count": 1, "elapsedMs": 6510, "failed": 0, "kind": "phase", "name": "cleanup" },
+    { "count": 1, "elapsedMs": 33895, "failed": 0, "kind": "phase", "name": "resource-cleanup" },
+    {
+      "count": 1,
+      "elapsedMs": 3658,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-apply"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 493,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-restore"
+    },
+    { "count": 1, "elapsedMs": 85738, "failed": 0, "kind": "phase", "name": "setup" },
+    { "count": 1, "elapsedMs": 107506, "failed": 0, "kind": "scenario", "name": "button-image" },
+    { "count": 1, "elapsedMs": 52240, "failed": 0, "kind": "scenario", "name": "dirty-guards" },
+    {
+      "count": 1,
+      "elapsedMs": 66435,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "related-retry-cache"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 182305,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "responsive-users"
+    },
+    { "count": 1, "elapsedMs": 33895, "failed": 0, "kind": "scenario", "name": "space-selection" },
+    { "count": 1, "elapsedMs": 54860, "failed": 0, "kind": "scenario", "name": "tabs-content" },
+    {
+      "count": 1,
+      "elapsedMs": 35136,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "tabs-keyboard-aria"
+    },
+    { "count": 1, "elapsedMs": 708039, "failed": 0, "kind": "suite", "name": "task-540" }
+  ]
+}
