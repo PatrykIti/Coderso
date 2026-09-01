@@ -47,7 +47,9 @@ vi.mock("@/components/ui/table", () => ({
   ),
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
   TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
-  TableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
+  TableRow: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <tr onClick={onClick}>{children}</tr>
+  ),
 }));
 
 import { AccessLogsTable } from "../../../core/admin/ui/security/AccessLogsTable";
@@ -182,6 +184,73 @@ test("AccessLogsTable enables Previous from loaded cursor state and disables Nex
     expect(next.disabled).toBe(true);
     expect(onPrevious).toHaveBeenCalledOnce();
     expect(onNext).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsTable invokes onView with the clicked log when a data row is selected", () => {
+  const onView = vi.fn();
+  const view = mount(
+    <AccessLogsTable
+      logs={logs}
+      onView={onView}
+      pageInfo={{
+        countCopy: "Showing 1 loaded access logs.",
+        canNext: false,
+        canPrevious: false,
+        onNext: vi.fn(),
+        onPrevious: vi.fn(),
+      }}
+    />
+  );
+
+  try {
+    const row = Array.from(view.container.querySelectorAll("tr")).find((candidate) =>
+      candidate.textContent?.includes("Ada Lovelace")
+    );
+    if (!(row instanceof HTMLTableRowElement)) {
+      throw new Error("Missing log row");
+    }
+    act(() => {
+      row.click();
+    });
+    expect(onView).toHaveBeenCalledWith(logs[0]);
+    expect(onView).toHaveBeenCalledTimes(1);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsTable renders inert rows without onView while pagination stays wired", () => {
+  const onNext = vi.fn();
+  const view = mount(
+    <AccessLogsTable
+      logs={logs}
+      pageInfo={{
+        countCopy: "Showing 1 loaded access logs.",
+        canNext: true,
+        canPrevious: false,
+        onNext,
+        onPrevious: vi.fn(),
+      }}
+    />
+  );
+
+  try {
+    const row = Array.from(view.container.querySelectorAll("tr")).find((candidate) =>
+      candidate.textContent?.includes("Ada Lovelace")
+    );
+    if (!(row instanceof HTMLTableRowElement)) {
+      throw new Error("Missing log row");
+    }
+    act(() => {
+      row.click();
+    });
+    expect(view.container.textContent).toContain("Ada Lovelace");
+    const next = clickSrOnlyButton(view.container, "Next page");
+    expect(next.disabled).toBe(false);
+    expect(onNext).toHaveBeenCalledOnce();
   } finally {
     view.cleanup();
   }

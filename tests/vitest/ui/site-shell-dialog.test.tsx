@@ -443,3 +443,70 @@ test("SiteShellDialog renders nothing while closed and loads nothing", async () 
     restoreStorage();
   }
 });
+
+test("changing the navigation menu picker marks the draft and persists the new value", async () => {
+  const { restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installFetch({
+    menus: () => [
+      menuSummary("menu-published", "Main menu"),
+      menuSummary("menu-footer", "Footer menu"),
+    ],
+    templates: () => [templateSummary("template-published", "Footer columns")],
+  });
+
+  try {
+    const view = mountOpenDialog();
+    await flushEffects();
+
+    const trigger = document.body.querySelector(
+      '[data-site-shell-field="navigation-menu"] button[role="combobox"]'
+    ) as HTMLElement | null;
+    expect(trigger).toBeTruthy();
+    await React.act(async () => {
+      trigger?.click();
+      await Promise.resolve();
+    });
+    const option = Array.from(document.body.querySelectorAll('[role="option"]')).find((entry) =>
+      entry.textContent?.includes("Footer menu")
+    );
+    expect(option).toBeTruthy();
+    await React.act(async () => {
+      option?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+
+    await clickButton(document.body, "Save changes");
+    await flushEffects();
+
+    const patchCall = fetchMock.calls.find(
+      (call) => String(call.input).endsWith("/settings") && call.init?.method === "PATCH"
+    );
+    expect(patchCall).toBeTruthy();
+    expect(JSON.parse(String(patchCall?.init?.body))).toEqual({
+      "site.navigationMenuId": "menu-footer",
+      "site.footerTemplateId": "template-published",
+    });
+    view.cleanup();
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("Cancel closes the dialog through the open-change callback", async () => {
+  const { restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installFetch();
+  const openChanges: boolean[] = [];
+
+  try {
+    const view = mountOpenDialog((open) => openChanges.push(open));
+    await flushEffects();
+
+    await clickButton(document.body, "Cancel");
+    expect(openChanges).toEqual([false]);
+    view.cleanup();
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});

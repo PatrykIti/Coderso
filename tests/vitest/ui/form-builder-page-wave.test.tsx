@@ -204,3 +204,22 @@ test("FormBuilderPage reports not-found, load, and save errors", async () => {
     saveView.cleanup();
   }
 });
+
+test("FormBuilderPage flags a remote update when the initial detail lands after a local change", async () => {
+  window.history.replaceState({}, "", "/admin/forms/form-1");
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
+
+  const view = mount(<FormBuilderPage />);
+
+  try {
+    // Make an unsaved change BEFORE the mount fetch resolves so the pending
+    // detail fetch sees hasUnsavedChangesRef already true.
+    clickByText(view.container, "add-library-field");
+    await flush();
+
+    expect(formsPageState.detailCalls).toContainEqual({ id: "form-1", force: true });
+    expect(view.container.textContent).toContain("Updated in another tab");
+  } finally {
+    view.cleanup();
+  }
+});

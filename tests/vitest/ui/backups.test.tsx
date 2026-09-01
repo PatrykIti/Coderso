@@ -81,6 +81,57 @@ vi.mock("@/components/ui/separator", () => ({
   Separator: () => <hr />,
 }));
 
+vi.mock("@/components/ui/select", () => ({
+  Select: ({
+    value,
+    onValueChange,
+    disabled,
+    children,
+  }: {
+    value?: string;
+    onValueChange?: (value: string) => void;
+    disabled?: boolean;
+    children: React.ReactNode;
+  }) => (
+    <select
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {children}
+    </select>
+  ),
+  // Trigger content (icons) must never land inside the <select>; only the
+  // SelectContent options are valid children there.
+  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
+  SelectTrigger: () => null,
+  SelectValue: () => null,
+}));
+
+vi.mock("@/ui/shared/SectionCard", () => ({
+  SectionCard: ({
+    title,
+    description,
+    action,
+    children,
+  }: {
+    title: string;
+    description: string;
+    action?: React.ReactNode;
+    children: React.ReactNode;
+  }) => (
+    <section>
+      <h3>{title}</h3>
+      <p>{description}</p>
+      {action}
+      {children}
+    </section>
+  ),
+}));
+
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
@@ -106,8 +157,11 @@ vi.mock("@/lib/utils", () => ({
   cn: (...values: Array<string | boolean | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
+import type { BackupListResult } from "../../../core/admin/services/backupsClient";
 import { BackupsPage } from "../../../core/admin/ui/backups/BackupsPage";
+import { BackupImportDialog } from "../../../core/admin/ui/backups/BackupImportDialog";
 import { BackupNowDialog } from "../../../core/admin/ui/backups/BackupNowDialog";
+import { BackupScheduleCard } from "../../../core/admin/ui/backups/BackupScheduleCard";
 import { BackupsTable } from "../../../core/admin/ui/backups/BackupsTable";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -340,5 +394,342 @@ test("BackupsTable shows worker boundary, disabled reasons, v2 import-only resto
     expect(onPageChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
+  }
+});
+
+test("BackupImportDialog requires file + passphrase, imports, and closes on success", async () => {
+  const onImport = vi.fn(async () => true);
+  const onOpenChange = vi.fn();
+  const view = mount(
+    <BackupImportDialog open onOpenChange={onOpenChange} onImport={onImport} isSubmitting={false} />
+  );
+
+  try {
+    // Empty form: submit is disabled and never calls onImport.
+    clickByText(view.container, "Import Backup");
+    expect(onImport).not.toHaveBeenCalled();
+
+    // Pick a file, type a passphrase, toggle restore users.
+    const fileInput = view.container.querySelector<HTMLInputElement>("#backup-import-file");
+    if (!(fileInput instanceof HTMLInputElement)) throw new Error("Missing file input");
+    const file = new File(["archive"], "backup.cbk", { type: "application/octet-stream" });
+    React.act(() => {
+      Object.defineProperty(fileInput, "files", { value: [file], configurable: true });
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    typeInto(view.container, "backup-import-passphrase", "secret");
+    React.act(() => {
+      view.container.querySelector<HTMLButtonElement>("[role='checkbox']")?.click();
+    });
+
+    await React.act(async () => {
+      clickByText(view.container, "Import Backup");
+      await Promise.resolve();
+    });
+
+    expect(onImport).toHaveBeenCalledWith({ file, passphrase: "secret", restoreUsers: true });
+    // Successful import closes the dialog through the parent callback.
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  } finally {
+    view.cleanup();
+  }
+
+  // Failed import keeps the dialog open.
+  const failingImport = vi.fn(async () => false);
+  const failingOpen = vi.fn();
+  const retryView = mount(
+    <BackupImportDialog
+      open
+      onOpenChange={failingOpen}
+      onImport={failingImport}
+      isSubmitting={false}
+    />
+  );
+
+  try {
+    const fileInput = retryView.container.querySelector<HTMLInputElement>("#backup-import-file");
+    if (!(fileInput instanceof HTMLInputElement)) throw new Error("Missing file input");
+    React.act(() => {
+      Object.defineProperty(fileInput, "files", {
+        value: [new File(["x"], "b.cbk")],
+        configurable: true,
+      });
+      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    typeInto(retryView.container, "backup-import-passphrase", "secret");
+    await React.act(async () => {
+      clickByText(retryView.container, "Import Backup");
+      await Promise.resolve();
+    });
+    expect(failingOpen).not.toHaveBeenCalled();
+  } finally {
+    retryView.cleanup();
+  }
+
+  // Close via the header X and Cancel button.
+  const closeView = mount(
+    <BackupImportDialog open onOpenChange={onOpenChange} onImport={onImport} isSubmitting={false} />
+  );
+  try {
+    closeView.container
+      .querySelector<HTMLButtonElement>('[aria-label="Close import dialog"]')
+      ?.click();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  } finally {
+    closeView.cleanup();
+  }
+
+  const cancelView = mount(
+    <BackupImportDialog open onOpenChange={onOpenChange} onImport={onImport} isSubmitting={false} />
+  );
+  try {
+    clickByText(cancelView.container, "Cancel");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  } finally {
+    cancelView.cleanup();
+  }
+});
+
+test("BackupNowDialog closes through header and cancel, and shows submitting state", () => {
+  const onOpenChange = vi.fn();
+  const view = mount(
+    <BackupNowDialog open onOpenChange={onOpenChange} onCreate={vi.fn()} isSubmitting={false} />
+  );
+
+  try {
+    view.container.querySelector<HTMLButtonElement>('[aria-label="Close backup dialog"]')?.click();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  } finally {
+    view.cleanup();
+  }
+
+  const cancelView = mount(
+    <BackupNowDialog open onOpenChange={onOpenChange} onCreate={vi.fn()} isSubmitting={false} />
+  );
+  try {
+    clickByText(cancelView.container, "Cancel");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  } finally {
+    cancelView.cleanup();
+  }
+
+  const submittingView = mount(
+    <BackupNowDialog open onOpenChange={vi.fn()} onCreate={vi.fn()} isSubmitting={true} />
+  );
+  try {
+    expect(submittingView.container.textContent).toContain("Starting...");
+  } finally {
+    submittingView.cleanup();
+  }
+});
+
+test("BackupsTable wires search, selection, actions, and both pagination buttons", () => {
+  const onToggleAll = vi.fn();
+  const onToggleBackup = vi.fn();
+  const onRestore = vi.fn();
+  const onDownload = vi.fn();
+  const onDelete = vi.fn();
+  const onPageChange = vi.fn();
+  const onQueryChange = vi.fn();
+
+  const result: BackupListResult = {
+    items: [
+      {
+        id: "backup-v1",
+        kind: "manual",
+        status: "complete",
+        storageDriver: "local",
+        artifactFormat: "v1",
+        artifactPath: "/tmp/backup.zip",
+        sizeBytes: 2048,
+        error: null,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        finishedAt: "2026-06-01T00:01:00.000Z",
+      },
+      {
+        id: "backup-failed",
+        kind: "manual",
+        status: "failed",
+        storageDriver: "local",
+        artifactFormat: null,
+        artifactPath: null,
+        sizeBytes: null,
+        error: "Disk full.",
+        createdAt: "2026-06-01T00:00:00.000Z",
+        finishedAt: null,
+      },
+      {
+        id: "backup-no-artifact",
+        kind: "manual",
+        status: "complete",
+        storageDriver: "local",
+        artifactFormat: null,
+        artifactPath: null,
+        sizeBytes: 512,
+        error: null,
+        createdAt: "2026-06-01T00:00:00.000Z",
+        finishedAt: "2026-06-01T00:01:00.000Z",
+      },
+      {
+        id: "backup-fresh-queued",
+        kind: "manual",
+        status: "queued",
+        storageDriver: "local",
+        artifactFormat: null,
+        artifactPath: null,
+        sizeBytes: null,
+        error: null,
+        createdAt: new Date().toISOString(),
+        finishedAt: null,
+      },
+    ],
+    page: 2,
+    limit: 10,
+    total: 11,
+    hasNext: true,
+    hasPrevious: true,
+    worker: {
+      mode: "internal",
+      healthy: true,
+      queuedCount: 1,
+      oldestQueuedAt: null,
+      message: "CMS backup worker is ready.",
+    },
+  };
+
+  const view = mount(
+    <BackupsTable
+      result={result}
+      query=""
+      isLoading={false}
+      isSaving={false}
+      onToggleAll={onToggleAll}
+      onToggleBackup={onToggleBackup}
+      onRestore={onRestore}
+      onDownload={onDownload}
+      onDelete={onDelete}
+      onRefresh={() => undefined}
+      onPageChange={onPageChange}
+      onQueryChange={onQueryChange}
+    />
+  );
+
+  try {
+    // Search input forwards changes.
+    const search = view.container.querySelector<HTMLInputElement>(
+      'input[placeholder="Search backups..."]'
+    );
+    if (!(search instanceof HTMLInputElement)) throw new Error("Missing search input");
+    React.act(() => {
+      search.value = "v1";
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(onQueryChange).toHaveBeenCalledWith("v1");
+
+    // Select-all and row checkbox (the Checkbox mock drops aria-label, so
+    // address the role-based buttons by order: 0 = select-all, 1 = first row).
+    const checkboxes = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>("[role='checkbox']")
+    );
+    React.act(() => {
+      checkboxes[0]?.click();
+    });
+    expect(onToggleAll).toHaveBeenCalled();
+    React.act(() => {
+      checkboxes[1]?.click();
+    });
+    expect(onToggleBackup).toHaveBeenCalledWith("backup-v1");
+
+    // Action buttons on the restorable v1 row.
+    view.container.querySelector<HTMLButtonElement>('[aria-label="Restore backup"]')?.click();
+    expect(onRestore).toHaveBeenCalledWith("backup-v1");
+    view.container.querySelector<HTMLButtonElement>('[aria-label="Download backup"]')?.click();
+    expect(onDownload).toHaveBeenCalledWith("backup-v1");
+    view.container.querySelector<HTMLButtonElement>('[aria-label="Delete backup"]')?.click();
+    expect(onDelete).toHaveBeenCalledWith("backup-v1");
+
+    // Both pagination directions are wired.
+    clickByText(view.container, "Previous");
+    expect(onPageChange).toHaveBeenCalledWith(1);
+    clickByText(view.container, "Next");
+    expect(onPageChange).toHaveBeenCalledWith(3);
+
+    // Disabled-reason and queue-message rendering.
+    expect(view.container.textContent).toContain("Disk full.");
+    expect(view.container.textContent).toContain("Backup artifact is not ready.");
+    expect(view.container.textContent).toContain("Processing backup.");
+    expect(view.container.textContent).toContain("2.0 KB");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BackupScheduleCard toggles include, changes frequency/storage, and saves", () => {
+  const onSave = vi.fn();
+  const schedule = {
+    enabled: true,
+    frequency: "daily",
+    storageDriver: "local",
+    include: ["database", "media"],
+  } as unknown as Parameters<typeof BackupScheduleCard>[0]["schedule"];
+
+  const view = mount(
+    <BackupScheduleCard schedule={schedule} isLoading={false} isSaving={false} onSave={onSave} />
+  );
+
+  try {
+    // Change frequency to weekly.
+    clickByText(view.container, "Weekly");
+    // Change storage driver to s3.
+    const select = view.container.querySelector<HTMLSelectElement>("select");
+    if (!(select instanceof HTMLSelectElement)) throw new Error("Missing select");
+    React.act(() => {
+      select.value = "s3";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    // Toggle settings on, then users on (both unchecked initially).
+    const checkboxes = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>("[role='checkbox']")
+    );
+    React.act(() => {
+      checkboxes[2]?.click(); // settings -> on
+      checkboxes[3]?.click(); // users -> on
+    });
+    expect(view.container.textContent).toContain(
+      "Users & roles are sensitive and require BACKUP_ENCRYPTION_PASSPHRASE"
+    );
+
+    clickByText(view.container, "Update Schedule");
+    expect(onSave).toHaveBeenCalledWith({
+      frequency: "weekly",
+      storageDriver: "s3",
+      include: ["database", "media", "settings", "users"],
+    });
+
+    // Toggle users back off.
+    React.act(() => {
+      checkboxes[3]?.click();
+    });
+    clickByText(view.container, "Update Schedule");
+    expect(onSave).toHaveBeenCalledWith({
+      frequency: "weekly",
+      storageDriver: "s3",
+      include: ["database", "media", "settings"],
+    });
+  } finally {
+    view.cleanup();
+  }
+
+  // Empty schedule: save guard + disabled button, and loading state text.
+  const emptyOnSave = vi.fn();
+  const emptyView = mount(
+    <BackupScheduleCard schedule={null} isLoading={false} isSaving={false} onSave={emptyOnSave} />
+  );
+  try {
+    expect(emptyView.container.textContent).toContain("Loading schedule");
+    clickByText(emptyView.container, "Update Schedule");
+    expect(emptyOnSave).not.toHaveBeenCalled();
+  } finally {
+    emptyView.cleanup();
   }
 });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Monitor, Smartphone, Tablet, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,7 @@ export type RuntimePreviewDeviceId = (typeof runtimePreviewDevices)[number]["id"
 type PreviewLoadError = "loopback_unreachable" | "timeout" | null;
 
 export type RuntimePreviewProbeFailureReason =
-  | "unreachable"
-  | "http_error"
-  | "redirect_blocked"
-  | "timeout"
-  | "invalid_target";
+  "unreachable" | "http_error" | "redirect_blocked" | "timeout" | "invalid_target";
 
 export type RuntimePreviewProbeResult =
   | {
@@ -308,11 +304,33 @@ export function RuntimePreviewDialog({
     };
   }, [iframeReady, isLoading, loadError, open, previewUrl, probeFailure]);
 
+  // WAI-ARIA dialog pattern: focus returns to the invoking element on close.
+  // Radix's default close handler prevents the focus scope's own snapshot
+  // restore and focuses DialogTrigger's triggerRef — null for this controlled
+  // usage (no DialogTrigger), so focus was landing on document.body. Capture
+  // the invoking element in a layout effect: it runs before the focus scope's
+  // passive mount focus, while focus is still on the trigger.
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (open) {
+      previouslyFocusedRef.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
+  }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-5xl"
         showCloseButton={false}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const target = previouslyFocusedRef.current;
+          previouslyFocusedRef.current = null;
+          if (target !== null && target.isConnected) {
+            target.focus();
+          }
+        }}
       >
         <DialogHeader className="flex flex-row items-center justify-between gap-4 border-b px-6 py-4">
           <div className="space-y-1">

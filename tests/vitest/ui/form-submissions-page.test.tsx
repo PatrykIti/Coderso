@@ -489,3 +489,96 @@ test("FormSubmissionsPage shows the error alert and re-enables buttons when expo
     view.cleanup();
   }
 });
+
+test("FormSubmissionsPage renders every payload value shape including non-serializable objects", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  const circular: Record<string, unknown> = { nested: {} };
+  circular.self = circular;
+  submissionsState.submissions = [
+    {
+      id: "sub-shapes",
+      formId: "form-1",
+      payload: {
+        count: 7,
+        accepted: true,
+        tags: ["a", "b"],
+        meta: { city: "Warsaw" },
+        broken: circular,
+      },
+      status: "new",
+      createdAt: "2026-06-12T13:30:00.000Z",
+      ip: null,
+      userAgent: null,
+    },
+  ];
+  const { FormSubmissionsPage } = await import("../../../core/admin/ui/forms/FormSubmissionsPage");
+
+  const view = mount(<FormSubmissionsPage />);
+  try {
+    await flush();
+    const text = view.container.textContent ?? "";
+    expect(text).toContain("count:");
+    expect(text).toContain("7");
+    expect(text).toContain("accepted:");
+    expect(text).toContain("true");
+    expect(text).toContain("tags:");
+    expect(text).toContain(`["a","b"]`);
+    expect(text).toContain("meta:");
+    expect(text).toContain(`{"city":"Warsaw"}`);
+    // The circular payload cannot be stringified; the fallback renders the
+    // String() representation instead of crashing the row.
+    expect(text).toContain("broken:");
+    expect(text).toContain("[object Object]");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormSubmissionsPage reports export failure when the Blob URL API is unavailable", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  const { FormSubmissionsPage } = await import("../../../core/admin/ui/forms/FormSubmissionsPage");
+
+  const view = mount(<FormSubmissionsPage />);
+  try {
+    await flush();
+    const originalCreate = URL.createObjectURL;
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      clickByText(view.container, "Export CSV");
+      await flush();
+      expect(submissionsState.exportCalls).toEqual([{ id: "form-1", format: "csv" }]);
+      expect(view.container.textContent).toContain("Failed to export submissions.");
+    } finally {
+      Object.defineProperty(URL, "createObjectURL", {
+        configurable: true,
+        value: originalCreate,
+      });
+    }
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormSubmissionsPage surfaces a failed refresh through the load-error alert", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  const { FormSubmissionsPage } = await import("../../../core/admin/ui/forms/FormSubmissionsPage");
+
+  const view = mount(<FormSubmissionsPage />);
+  try {
+    await flush();
+    expect(submissionsState.listCalls).toEqual(["form-1"]);
+
+    submissionsState.listError = submissionsState.apiError("Submissions denied");
+    clickByText(view.container, "Refresh");
+    await flush();
+
+    expect(submissionsState.listCalls).toEqual(["form-1", "form-1"]);
+    expect(view.container.textContent).toContain("Unable to load submissions");
+    expect(view.container.textContent).toContain("Submissions denied");
+  } finally {
+    view.cleanup();
+  }
+});

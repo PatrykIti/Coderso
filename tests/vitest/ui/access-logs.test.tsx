@@ -16,10 +16,11 @@ type ExportAccessLogsMock = (request: {
   format: "csv" | "json";
   columns: string[];
   filters: AccessLogQuery;
-}) => Promise<{ status: "downloaded"; filename: string; mimeType: string }>;
+}) => Promise<{ status: "downloaded" | "queued"; filename: string; mimeType: string }>;
 
 const accessState = vi.hoisted(() => ({
   nextError: null as unknown,
+  queuedExport: false,
   listAccessLogs: vi.fn<ListAccessLogsMock>(async () => ({ items: [], nextCursor: null })),
   revokeAccessFromLog: vi.fn<RevokeAccessFromLogMock>(async () => ({ ok: true })),
   exportAccessLogs: vi.fn<ExportAccessLogsMock>(async () => ({
@@ -29,14 +30,14 @@ const accessState = vi.hoisted(() => ({
   })),
   reset() {
     this.nextError = null;
+    this.queuedExport = false;
     this.listAccessLogs.mockReset();
     this.revokeAccessFromLog.mockReset();
     this.exportAccessLogs.mockReset();
     this.revokeAccessFromLog.mockResolvedValue({ ok: true });
-    this.exportAccessLogs.mockResolvedValue({
-      status: "downloaded",
-      filename: "access-logs-2026-06-01-all.csv",
-      mimeType: "text/csv",
+    this.exportAccessLogs.mockImplementation(async () => {
+      const base = { filename: "access-logs-2026-06-01-all.csv", mimeType: "text/csv" };
+      return { status: this.queuedExport ? "queued" : "downloaded", ...base };
     });
     this.listAccessLogs.mockImplementation(async (query) => {
       if (this.nextError) {
@@ -69,6 +70,21 @@ const accessState = vi.hoisted(() => ({
           nextCursor: null,
         };
       }
+      if (query?.query === "devices") {
+        return {
+          items: [
+            accessRecord({ id: "d-1", userAgent: null }),
+            accessRecord({ id: "d-2", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)" }),
+            accessRecord({ id: "d-3", userAgent: "Mozilla/5.0 (Linux; Android 14)" }),
+            accessRecord({ id: "d-4", userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0)" }),
+            accessRecord({ id: "d-5", userAgent: "PostmanRuntime/7.32.3" }),
+            accessRecord({ id: "d-6", userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }),
+            accessRecord({ id: "d-7", userAgent: "Mozilla/5.0 (X11; Linux x86_64)" }),
+            accessRecord({ id: "d-8", userAgent: "TotallyCustomBrowser/1.0" }),
+          ],
+          nextCursor: null,
+        };
+      }
       return {
         items: [
           accessRecord({ id: "access-1", userName: "Ada Lovelace" }),
@@ -87,14 +103,20 @@ const accessState = vi.hoisted(() => ({
     return { kind: "api", message, code };
   },
 }));
-
+const confirmDialogState = vi.hoisted(() => ({
+  lastConfirm: undefined as Promise<void> | undefined,
+}));
+const exportDialogState = vi.hoisted(() => ({
+  lastInvalid: undefined as Promise<unknown> | undefined,
+}));
 const routerState = vi.hoisted(() => ({
   navigate: vi.fn(),
+  noRouter: false,
   reset() {
     this.navigate.mockReset();
+    this.noRouter = false;
   },
 }));
-
 const toastState = vi.hoisted(() => ({
   success: vi.fn(),
   reset() {
@@ -166,7 +188,13 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/input", () => ({
-  Input: ({ onChange, ...props }: React.InputHTMLAttributes<HTMLInputElement>) => (
+  Input: ({
+    onChange,
+    ...props
+  }: {
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    [key: string]: unknown;
+  }) => (
     <input
       {...props}
       onInput={(event) => onChange?.(event as unknown as React.ChangeEvent<HTMLInputElement>)}
@@ -263,6 +291,17 @@ vi.mock("@/ui/shared/ExportDialog", () => ({
         >
           submit-export
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            exportDialogState.lastInvalid = Promise.resolve(
+              onExport?.({ format: "csv", fields: ["not-a-column"] })
+            );
+            void exportDialogState.lastInvalid.catch(() => undefined);
+          }}
+        >
+          submit-invalid-export
+        </button>
         <button type="button" onClick={() => onOpenChange(false)}>
           close-export
         </button>
@@ -288,7 +327,13 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
         <button type="button" onClick={() => onOpenChange(false)}>
           cancel-confirm
         </button>
-        <button type="button" onClick={() => void onConfirm()}>
+        <button
+          type="button"
+          onClick={() => {
+            confirmDialogState.lastConfirm = Promise.resolve(onConfirm());
+            void confirmDialogState.lastConfirm.catch(() => undefined);
+          }}
+        >
           {`confirm-${confirmLabel}`}
         </button>
       </div>
@@ -296,9 +341,7 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
 }));
 
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
-  useOptionalAdminRouter: () => ({
-    navigate: routerState.navigate,
-  }),
+  useOptionalAdminRouter: () => (routerState.noRouter ? null : { navigate: routerState.navigate }),
 }));
 
 vi.mock("../../../core/admin/ui/security/AccessLogDetailsDrawer", () => ({
@@ -353,6 +396,7 @@ vi.mock("../../../core/admin/ui/security/AccessLogsTable", () => ({
       id: string;
       user: { name: string };
       matchContext?: { label: string } | null;
+      device?: { label?: string } | null;
     }>;
     onView?: (log: never) => void;
     pageInfo?: {
@@ -376,6 +420,7 @@ vi.mock("../../../core/admin/ui/security/AccessLogsTable", () => ({
         <div key={log.id}>
           {log.user.name}
           {log.matchContext?.label}
+          <span>{log.device?.label}</span>
           <button type="button" onClick={() => onView?.(log as never)}>
             {`open-${log.id}`}
           </button>
@@ -453,10 +498,18 @@ function lastAccessQuery() {
   return accessState.listAccessLogs.mock.calls.at(-1)?.[0] ?? {};
 }
 
+async function mountPage() {
+  const view = mount(<AccessLogsPage />);
+  await flush();
+  return view;
+}
+
 beforeEach(() => {
   accessState.reset();
   routerState.reset();
   toastState.reset();
+  confirmDialogState.lastConfirm = undefined;
+  exportDialogState.lastInvalid = undefined;
 });
 
 afterEach(() => {
@@ -741,5 +794,215 @@ test("AccessLogsPage routes view session and confirms revoke with one API call",
     expect(view.container.textContent).toContain("Access session revoked.");
   } finally {
     view.cleanup();
+  }
+});
+
+test("AccessLogsPage resolves device labels from user agents", async () => {
+  const view = await mountPage();
+
+  try {
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search user or IP..."]'
+    ) as HTMLInputElement;
+    setInputValue(searchInput, "devices");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ query: "devices" }));
+    expect(view.container.textContent).toContain("Unknown device");
+    expect(view.container.textContent).toContain("iPhone / iOS");
+    expect(view.container.textContent).toContain("Android / Mobile");
+    expect(view.container.textContent).toContain("iPad / iPadOS");
+    expect(view.container.textContent).toContain("API client");
+    expect(view.container.textContent).toContain("Windows / Desktop");
+    expect(view.container.textContent).toContain("Linux / Desktop");
+    expect(view.container.textContent).toContain("Desktop / Unknown");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage sends date range from boundaries and chips for later ranges", async () => {
+  const view = await mountPage();
+  try {
+    const selects = view.container.querySelectorAll("select");
+    setSelectValue(selects[0] as HTMLSelectElement, "last-30-days");
+    await flush();
+    const from30 = new Date(lastAccessQuery().from as string).getTime();
+    expect(from30).toBeLessThanOrEqual(Date.now());
+    expect(from30).toBeGreaterThan(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    expect(view.container.textContent).toContain("Date: Last 30 days");
+    setSelectValue(selects[0] as HTMLSelectElement, "this-month");
+    await flush();
+    const fromMonth = new Date(lastAccessQuery().from as string).getTime();
+    expect(fromMonth).toBeLessThanOrEqual(Date.now());
+    expect(view.container.textContent).toContain("Date: This month");
+    clickByAriaLabel(view.container, "Clear Date: This month");
+    await flush();
+    expect(view.container.textContent).not.toContain("Date: This month");
+    expect(view.container.textContent).not.toContain("Date: Last 30 days");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage renders api and generic load error messages", async () => {
+  const view = await mountPage();
+  try {
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search user or IP..."]'
+    ) as HTMLInputElement;
+    accessState.nextError = accessState.apiError("Security service unavailable");
+    setInputValue(searchInput, "anything");
+    await flush();
+    expect(view.container.textContent).toContain("Security service unavailable");
+    accessState.nextError = new Error("boom");
+    setInputValue(searchInput, "anything-else");
+    await flush();
+    expect(view.container.textContent).toContain("Failed to load access logs.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage surfaces revoke failures through the confirm dialog promise", async () => {
+  const view = await mountPage();
+  const confirmRevoke = async () => {
+    clickByText(view.container, "open-access-1");
+    await flush();
+    clickByText(view.container, "request-revoke");
+    await flush();
+    clickByText(view.container, "confirm-Revoke access");
+    await flush();
+  };
+  try {
+    accessState.revokeAccessFromLog.mockRejectedValueOnce(
+      accessState.apiError("Revoke service offline", "revoke_failed")
+    );
+    await confirmRevoke();
+    await expect(confirmDialogState.lastConfirm).rejects.toThrow("Revoke service offline");
+    accessState.revokeAccessFromLog.mockRejectedValueOnce(new Error("boom"));
+    await confirmRevoke();
+    await expect(confirmDialogState.lastConfirm).rejects.toThrow("boom");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage queues queued exports and rejects invalid export fields", async () => {
+  const view = await mountPage();
+  try {
+    accessState.queuedExport = true;
+    clickByText(view.container, "Export");
+    await flush();
+    clickByText(view.container, "submit-export");
+    await flush();
+    expect(accessState.exportAccessLogs).toHaveBeenCalledTimes(1);
+    expect(toastState.success).toHaveBeenCalledWith("Access log export queued.");
+    clickByText(view.container, "Export");
+    await flush();
+    clickByText(view.container, "submit-invalid-export");
+    await flush();
+    await expect(exportDialogState.lastInvalid).rejects.toThrow(
+      "Access log export fields are invalid."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage clears advanced filters and closes the sheet via every affordance", async () => {
+  const view = await mountPage();
+  const open = async () => {
+    clickByAriaLabel(view.container, "Advanced access log filters");
+    await flush();
+  };
+  const applyAdvanced = async (method: string, ip: string) => {
+    const methodInput = view.container.querySelector("#access-method-filter") as HTMLInputElement;
+    const ipInput = view.container.querySelector("#access-ip-filter") as HTMLInputElement;
+    setInputValue(methodInput, method);
+    setInputValue(ipInput, ip);
+    clickByText(view.container, "Apply filters");
+    await flush();
+  };
+  try {
+    await open();
+    await applyAdvanced("post", "127.0.0.1");
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ method: "POST", ip: "127.0.0.1" }));
+    // Cancel leaves the active filters untouched.
+    await open();
+    clickByText(view.container, "Cancel");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ method: "POST", ip: "127.0.0.1" }));
+    // The X close button also closes the sheet without clearing filters.
+    await open();
+    clickByAriaLabel(view.container, "Close advanced access filters");
+    await flush();
+    expect(view.container.textContent).not.toContain("Advanced access filters");
+    // Clear advanced resets method and ip.
+    await open();
+    clickByText(view.container, "Clear advanced");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ method: "POST" }));
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ ip: "127.0.0.1" }));
+    // Re-apply a single advanced filter so the IP chip can be cleared on its own.
+    await applyAdvanced("post", "127.0.0.1");
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ method: "POST", ip: "127.0.0.1" }));
+    clickByAriaLabel(view.container, "Clear IP contains: 127.0.0.1");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.objectContaining({ method: "POST" }));
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ ip: "127.0.0.1" }));
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage clear chips reset search, user id, and status filters", async () => {
+  const view = await mountPage();
+  try {
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search user or IP..."]'
+    ) as HTMLInputElement;
+    const userIdInput = view.container.querySelector(
+      'input[placeholder="User ID"]'
+    ) as HTMLInputElement;
+    setInputValue(searchInput, "ada");
+    setInputValue(userIdInput, "user-1");
+    const selects = view.container.querySelectorAll("select");
+    setSelectValue(selects[1] as HTMLSelectElement, "failed");
+    await flush();
+    expect(view.container.textContent).toContain("Search: ada");
+    expect(view.container.textContent).toContain("User ID: user-1");
+    expect(view.container.textContent).toContain("Status: failed");
+    expect(lastAccessQuery()).toEqual(
+      expect.objectContaining({ query: "ada", userId: "user-1", status: "failed" })
+    );
+    clickByAriaLabel(view.container, "Clear Search: ada");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ query: "ada" }));
+    clickByAriaLabel(view.container, "Clear User ID: user-1");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ userId: "user-1" }));
+    clickByAriaLabel(view.container, "Clear Status: failed");
+    await flush();
+    expect(lastAccessQuery()).toEqual(expect.not.objectContaining({ status: "failed" }));
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AccessLogsPage falls back to window.location.assign without an admin router", async () => {
+  routerState.noRouter = true;
+  window.history.replaceState({}, "", "/admin/access-logs");
+  const assignSpy = vi.spyOn(window.location, "assign").mockImplementation(() => undefined);
+  const view = mount(<AccessLogsPage />);
+  try {
+    await flush();
+    clickByText(view.container, "open-access-1");
+    await flush();
+    clickByText(view.container, "view-session");
+    expect(assignSpy).toHaveBeenCalledWith("/admin/settings/security/sessions?sessionId=session-1");
+    expect(routerState.navigate).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+    assignSpy.mockRestore();
   }
 });
