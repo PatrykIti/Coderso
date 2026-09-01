@@ -192,11 +192,18 @@ export class RepositoryGuard {
     after: RepositorySnapshot,
     allowedPaths: readonly string[] = []
   ): void {
-    const allowed = new Set(allowedPaths.map(normalizePath));
+    const allowed = [...new Set(allowedPaths.map(normalizePath))].sort();
+    // An allowlist entry covers itself exactly and, when it is a directory
+    // entry, everything beneath it. Directory subtrees must be allowlistable
+    // because `_docs/_workflows/**` is un-ignored (.gitignore negation), so
+    // smoke-written workspace children (screenshot candidates) reach the
+    // porcelain snapshot even though parent patterns ignore images.
+    const isAllowed = (path: string): boolean =>
+      allowed.some((entry) => path === entry || path.startsWith(`${entry}/`));
     const beforeMap = new Map(before.files.map((file) => [file.path, file]));
     const afterMap = new Map(after.files.map((file) => [file.path, file]));
     for (const path of new Set([...beforeMap.keys(), ...afterMap.keys()])) {
-      if (allowed.has(path)) continue;
+      if (isAllowed(path)) continue;
       if (JSON.stringify(beforeMap.get(path)) !== JSON.stringify(afterMap.get(path))) {
         throw new SmokeError("smoke_repository_changed", "repository changed during smoke");
       }

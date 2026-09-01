@@ -1,3 +1,4 @@
+import { connect } from "node:net";
 import { resolve } from "node:path";
 
 type ViteDevServer = import("vite").ViteDevServer;
@@ -80,22 +81,79 @@ function assertNoArguments(): void {
   if (argv.length !== 0) fail("arguments_invalid");
 }
 
+/**
+ * Bun's node-compatible `listen` can resolve without the loopback socket ever
+ * becoming reachable (observed on bun 1.4.0 with Vite dev servers: the listen
+ * promise settles while nothing is bound on the port). The supervisor's
+ * readiness probes would then poll a dead port for the whole readiness window
+ * and the run would be reported failed with no server-side signal at all.
+ * Every Vite open is therefore verified by an actual loopback connection and
+ * retried a bounded number of times before the entry fails loudly.
+ */
+async function loopbackPortAccepts(port: number): Promise<boolean> {
+  return new Promise<boolean>((resolveProbe) => {
+    const socket = connect({ host: "127.0.0.1", port });
+    const settle = (accepted: boolean): void => {
+      socket.destroy();
+      resolveProbe(accepted);
+    };
+    socket.once("connect", () => settle(true));
+    socket.once("error", () => settle(false));
+    setTimeout(() => settle(false), 1_200);
+  });
+}
+
+async function waitForLoopbackListener(port: number, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await loopbackPortAccepts(port)) return true;
+    await new Promise<void>((resolveWait) => setTimeout(resolveWait, 250));
+  }
+  return loopbackPortAccepts(port);
+}
+
+async function closeWithTimeout(server: ViteDevServer, timeoutMs: number): Promise<void> {
+  await Promise.race([
+    server.close().catch(() => undefined),
+    new Promise<void>((resolveClose) => setTimeout(resolveClose, timeoutMs)),
+  ]);
+}
+
 async function createFixedViteServer(input: {
   readonly configFile: string;
   readonly port: number;
+  readonly label: string;
 }): Promise<ViteDevServer> {
   const { createServer } = await import("vite");
-  const server = await createServer({
-    configFile: input.configFile,
-    envFile: false,
-    server: {
-      host: "127.0.0.1",
-      port: input.port,
-      strictPort: true,
-    },
-  });
-  await server.listen();
-  return server;
+  // The same Bun flake has a second mode where `listen()` never settles at all;
+  // a healthy dev server binds in well under a second, so a hung listen is
+  // abandoned quickly and retried instead of burning the whole start budget.
+  for (let attempt = 1; attempt <= 6; attempt += 1) {
+    const server = await createServer({
+      configFile: input.configFile,
+      envFile: false,
+      server: {
+        host: "127.0.0.1",
+        port: input.port,
+        strictPort: true,
+      },
+    });
+    try {
+      await Promise.race([
+        server.listen(),
+        new Promise<never>((_, rejectListen) =>
+          setTimeout(() => rejectListen(new Error("vite listen timeout")), 8_000)
+        ),
+      ]);
+    } catch {
+      await closeWithTimeout(server, 3_000);
+      continue;
+    }
+    if (await waitForLoopbackListener(input.port, 4_000)) return server;
+    await closeWithTimeout(server, 3_000);
+    await new Promise<void>((resolveWait) => setTimeout(resolveWait, 300));
+  }
+  return fail(`${input.label}_listen_failed_attempts_exhausted`);
 }
 
 async function closeServers(input: {
@@ -133,16 +191,25 @@ export async function runTask105L05FixedDevHost(): Promise<void> {
     admin = await createFixedViteServer({
       configFile: resolve(coreRoot, "vite.config.ts"),
       port: ADMIN_VITE_PORT,
+      label: "admin_vite",
     });
     site = await createFixedViteServer({
       configFile: resolve(coreRoot, "vite.site.config.ts"),
       port: SITE_VITE_PORT,
+      label: "site_vite",
     });
     const { startHttpServer } = await import("../../../core/server/httpServer");
-    core = startHttpServer({
-      port: CORE_PORT,
-      adminDevUrl: `http://127.0.0.1:${ADMIN_VITE_PORT}`,
-    });
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      core = startHttpServer({
+        port: CORE_PORT,
+        adminDevUrl: `http://127.0.0.1:${ADMIN_VITE_PORT}`,
+      });
+      if (await waitForLoopbackListener(CORE_PORT, 4_000)) break;
+      core.stop(true);
+      core = null;
+      await new Promise<void>((resolveWait) => setTimeout(resolveWait, 300));
+      if (attempt === 4) fail("core_listen_failed");
+    }
     process.once("SIGINT", terminate);
     process.once("SIGTERM", terminate);
   } catch (error) {
@@ -154,8 +221,14 @@ export async function runTask105L05FixedDevHost(): Promise<void> {
 }
 
 if (import.meta.main) {
-  void runTask105L05FixedDevHost().catch(() => {
+  void runTask105L05FixedDevHost().catch((error: unknown) => {
+    // The generic line keeps the supervisor's stable marker; the reason line
+    // names the exact stage (`task105_l05_fixed_dev_host_<label>_listen_failed`)
+    // so a start failure is diagnosable from the captured server log alone.
     process.stderr.write("task105_l05_fixed_dev_host_failed\n");
+    process.stderr.write(
+      `task105_l05_fixed_dev_host_reason: ${error instanceof Error ? error.message : String(error)}\n`
+    );
     process.exitCode = 1;
   });
 }

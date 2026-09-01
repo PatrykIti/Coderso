@@ -79,8 +79,18 @@ export function task105L05Readiness(input: {
   const fetchImpl = input.fetch ?? globalThis.fetch;
   return Object.freeze([
     Object.freeze({
+      // The core server answers the public site only for configured site hosts,
+      // so a loopback Host on `/` is a permanent 404. The direct-core admin API
+      // route — mounted at `resolveAdminPath()/api`, which the applied settings
+      // lease pins to this suite's `adminBase` — is the core liveness signal
+      // (same route the task-540 host probes as `api-front`).
       id: "task105-l05-front-ready",
-      check: () => exactHttpReady("http://127.0.0.1:3000/", fetchImpl, 15_000),
+      check: () =>
+        exactHttpReady(
+          `http://127.0.0.1:3000${input.adminBase}/api/auth/install/status`,
+          fetchImpl,
+          15_000
+        ),
     }),
     Object.freeze({
       id: "task105-l05-admin-ready",
@@ -137,7 +147,14 @@ export function startTask105L05DevHost(
     readonly start?: typeof startSupervisedServer;
   }
 ): Promise<SupervisedServerResource> {
-  return (input.start ?? startSupervisedServer)(
+  const start = input.start ?? startSupervisedServer;
+  // Bun 1.4.0 can wedge dev-server socket startup for the WHOLE child process;
+  // the fixed entry defends itself with a bounded listen race plus loopback
+  // verification (see fixed-dev-host.ts). A process-level respawn here was
+  // tried and removed: startSupervisedServer must register its resource BEFORE
+  // spawning (cleanup safety), so any retry after a child death collides with
+  // the lifecycle's single-name invariant ("lifecycle resource is duplicated").
+  return start(
     context,
     createTask105L05HostSpec({
       context,

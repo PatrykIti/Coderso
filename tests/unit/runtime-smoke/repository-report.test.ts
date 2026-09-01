@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { SmokeError } from "../../../scripts/runtime-smoke/contracts";
@@ -40,6 +40,34 @@ test("repository guard hashes bounded candidates and detects mutation", async ()
     );
     expect(() => guard.assertUnchanged(before, after, ["tracked.txt"])).not.toThrow();
     expect(guard.count()).toBe(2);
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("directory allowlist entries cover new subtree files, others still throw", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "coderso-runtime-smoke-subtree-"));
+  try {
+    const root = await realpath(temporary);
+    const guard = new RepositoryGuard(root, async () =>
+      new TextEncoder().encode("? workspace/candidate.png\0? unowned.txt\0")
+    );
+    const before = await guard.snapshot();
+    await mkdir(join(root, "workspace"), { recursive: true });
+    await writeFile(join(root, "workspace", "candidate.png"), "candidate");
+    const afterSubtree = await guard.snapshot();
+    expect(() => guard.assertUnchanged(before, afterSubtree, ["workspace"])).not.toThrow();
+    expect(() => guard.assertUnchanged(before, afterSubtree, ["workspace/other"])).toThrowError(
+      expect.objectContaining({ code: "smoke_repository_changed" })
+    );
+    await writeFile(join(root, "unowned.txt"), "unowned");
+    const afterUnowned = await guard.snapshot();
+    expect(() => guard.assertUnchanged(before, afterUnowned, ["workspace"])).toThrowError(
+      expect.objectContaining({ code: "smoke_repository_changed" })
+    );
+    expect(() =>
+      guard.assertUnchanged(before, afterUnowned, ["workspace", "unowned.txt"])
+    ).not.toThrow();
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

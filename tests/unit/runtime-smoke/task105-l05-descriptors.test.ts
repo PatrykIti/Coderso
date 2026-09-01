@@ -225,6 +225,8 @@ describe("TASK-105 L05 browser receipt validator", () => {
           semanticFacts: [
             { endpointId: "dashboard-layout-write", method: "POST", status: 200, count: 1 },
             { endpointId: "solution-kits-read", method: "GET", status: 200, count: 1 },
+            { endpointId: "solution-kits-runs-read", method: "GET", status: 200, count: 1 },
+            { endpointId: "public-popups-read", method: "GET", status: 200, count: 1 },
           ],
           authFactTotal: 2,
         })
@@ -236,6 +238,50 @@ describe("TASK-105 L05 browser receipt validator", () => {
           semanticFacts: [
             { endpointId: "solution-kits-read", method: "POST", status: 200, count: 1 },
           ],
+        })
+      )
+    ).toThrow();
+  });
+
+  test("admits the dashboard widget-data read only as an exact GET 200", () => {
+    expect(() =>
+      validateTask105L05BrowserReceipt(
+        validReceipt({
+          semanticFacts: [
+            { endpointId: "dashboard-widget-data-read", method: "GET", status: 200, count: 1 },
+            { endpointId: "content-types-read", method: "GET", status: 200, count: 1 },
+          ],
+          authFactTotal: 2,
+        })
+      )
+    ).not.toThrow();
+    expect(() =>
+      validateTask105L05BrowserReceipt(
+        validReceipt({
+          semanticFacts: [
+            { endpointId: "dashboard-widget-data-read", method: "POST", status: 200, count: 1 },
+          ],
+          authFactTotal: 2,
+        })
+      )
+    ).toThrow();
+    expect(() =>
+      validateTask105L05BrowserReceipt(
+        validReceipt({
+          semanticFacts: [
+            { endpointId: "dashboard-widget-data-read", method: "GET", status: 204, count: 1 },
+          ],
+          authFactTotal: 2,
+        })
+      )
+    ).toThrow();
+    expect(() =>
+      validateTask105L05BrowserReceipt(
+        validReceipt({
+          semanticFacts: [
+            { endpointId: "content-types-read", method: "POST", status: 200, count: 1 },
+          ],
+          authFactTotal: 2,
         })
       )
     ).toThrow();

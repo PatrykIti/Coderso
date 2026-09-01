@@ -29,6 +29,7 @@ import {
 } from "../../../scripts/runtime-smoke/adapters/task-105-l05/browser-drivers";
 import {
   TASK_105_L05_SCENARIO_DESCRIPTORS,
+  TASK105_L05_AUTH_FACT_LIMIT,
   TASK105_L05_BOOTSTRAP_ENDPOINTS,
   validateTask105L05BrowserReceipt,
   validateTask105L05BrowserReceipts,
@@ -380,6 +381,9 @@ describe("TASK-105 L05 fixed-entry host", () => {
       }) as typeof fetch,
     });
     expect(await Promise.all(probes.map(({ check }) => check()))).toEqual([true, true, true, true]);
+    // The core server permanently 404s a loopback Host on `/`, so the front
+    // probe must target the direct-core admin API route, never the site root.
+    expect(requested).toContain(`http://127.0.0.1:3000${adminBase}/api/auth/install/status`);
     expect(requested).toContain(`http://127.0.0.1:5173${adminBase}/`);
     expect(requested).toContain(`http://127.0.0.1:5173${adminBase}/api/auth/install/status`);
   });
@@ -522,7 +526,7 @@ describe("TASK-105 L05 injected browser observer lifecycle", () => {
       "solution-kits-list",
       "solution-kits-read",
       "solution-kit-detail",
-      "unknown",
+      "solution-kits-runs-read",
       "dashboard-layout-read",
       "dashboard-layout-write",
       "unknown",
@@ -676,7 +680,11 @@ describe("TASK-105 L05 receipt contracts", () => {
     expect(() => validateTask105L05BrowserReceipts({ receiptA: a, receiptB: b })).not.toThrow();
     expect(() => validateTask105L05BrowserReceipts({ receiptA: receipt(), receiptB: b })).toThrow();
     expect(() =>
-      validateTask105L05BrowserReceipts({ receiptA: a, receiptB: { ...b, authFactTotal: 8 } })
+      validateTask105L05BrowserReceipts({
+        receiptA: a,
+        // 4 + (LIMIT - 3) = LIMIT + 1 exceeds the combined auth budget.
+        receiptB: { ...b, authFactTotal: TASK105_L05_AUTH_FACT_LIMIT - 3 },
+      })
     ).toThrow();
   });
 });
