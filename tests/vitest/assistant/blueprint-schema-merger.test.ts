@@ -207,3 +207,25 @@ test("mergeBlueprintSchemas preserves Mabudo-like house-project pricing and clas
     },
   });
 });
+
+test("mergeBlueprintSchemas rejects boolean child property definitions", () => {
+  let thrown: unknown;
+  try {
+    mergeBlueprintSchemas([
+      {
+        type: "object",
+        additionalProperties: false,
+        properties: { enabled: true },
+      },
+    ]);
+  } catch (error) {
+    thrown = error;
+  }
+
+  expect(thrown).toBeInstanceOf(BlueprintSchemaMergeError);
+  expect(thrown).toMatchObject({
+    code: "schema_merge_conflict",
+    fieldName: "enabled",
+  });
+  expect((thrown as Error).message).toBe('Field "enabled" must be a JSON schema object.');
+});

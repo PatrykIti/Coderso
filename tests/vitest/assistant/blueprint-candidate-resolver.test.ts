@@ -18,6 +18,21 @@ test("resolveBlueprintCandidates returns product catalog primary with inquiry an
   ]);
 });
 
+test("resolveBlueprintCandidates adds services directory as an adjunct for offer prompts", () => {
+  const candidates = resolveBlueprintCandidates({
+    prompt: "Stwórz katalog produktów z ofertą usług i listą rozwiązań.",
+    context: {
+      page: "/admin/advanced/entries/products",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(candidates.map((candidate) => [candidate.capabilityId, candidate.role])).toEqual([
+    ["product-catalog", "primary"],
+    ["services-directory", "adjunct"],
+  ]);
+});
+
 test("resolveBlueprintCandidates keeps booking gated and adds lead capture for mixed house-project prompts", () => {
   const candidates = resolveBlueprintCandidates({
     prompt: "Build a Mabudo-like house projects catalog with contact form and appointment booking.",
