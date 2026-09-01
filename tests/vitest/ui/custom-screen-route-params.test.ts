@@ -51,6 +51,13 @@ test("custom screen workspace route helpers encode and decode entry paths", () =
   });
 });
 
+test("custom screen entry params fail closed outside the custom-screens workspace", () => {
+  expect(resolveCustomScreenEntryParams("/admin/advanced/content-types")).toEqual({
+    screenId: null,
+    entryId: null,
+  });
+});
+
 test("custom screen workspace helpers resolve admin hrefs and prefetch targets", () => {
   expect(
     buildCustomScreenWorkspaceHref("/admin", {

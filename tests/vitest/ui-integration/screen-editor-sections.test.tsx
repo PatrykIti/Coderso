@@ -345,6 +345,9 @@ test("selected-section chrome renames (label + title), reorders with boundary no
     expect(view.container.querySelector("[data-screen-section-move-down]")).not.toBeNull();
     expect(view.container.querySelector("[data-screen-section-delete]")).not.toBeNull();
 
+    // A click inside the rename input must not bubble into section selection.
+    click(rename);
+
     // Rename commits on Enter and updates the rendered title.
     React.act(() => {
       rename!.value = "Overview";

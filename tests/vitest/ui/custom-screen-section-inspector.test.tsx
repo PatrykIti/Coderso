@@ -117,6 +117,34 @@ test("ScreenSectionInspector renders the Columns control + gap input for a secti
   }
 });
 
+test("ScreenSectionInspector: choosing a Columns preset commits the style via onPatchSection", () => {
+  const onPatchSection = vi.fn();
+  const view = mount(
+    <ScreenSectionInspector section={section()} onPatchSection={onPatchSection} />
+  );
+  try {
+    const trigger = view.container.querySelector<HTMLElement>('[aria-label="Columns"]');
+    expect(trigger).not.toBeNull();
+    React.act(() => {
+      trigger?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+      trigger?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+      trigger?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true }));
+      trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    const option = Array.from(document.body.querySelectorAll<HTMLElement>("[role='option']")).find(
+      (node) => node.textContent?.trim() === "2 equal"
+    );
+    expect(option).not.toBeNull();
+    React.act(() => {
+      option?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+      option?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(onPatchSection).toHaveBeenCalledWith({ style: { columns: "2" } });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("ScreenSectionInspector: null section → dashed placeholder, no controls", () => {
   const view = mount(<ScreenSectionInspector section={null} onPatchSection={vi.fn()} />);
   try {

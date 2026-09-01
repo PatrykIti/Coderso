@@ -558,3 +558,24 @@ test("related loading is enabled only for an open editor preview with a valid pl
     view.cleanup();
   }
 });
+
+test("dialog device buttons switch the preview frame width", async () => {
+  const view = mount(previewDialogNode({ open: true, mode: "editor-view" }));
+  try {
+    await flush();
+    expect(document.body.querySelector('[data-preview-device="desktop"]')).not.toBeNull();
+    const tablet = Array.from(document.body.querySelectorAll<HTMLButtonElement>("button")).find(
+      (button) => button.textContent?.trim() === "Tablet"
+    );
+    expect(tablet).not.toBeNull();
+    React.act(() => {
+      tablet?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    await flush();
+    const frame = document.body.querySelector('[data-preview-device="tablet"]');
+    expect(frame).not.toBeNull();
+    expect(frame?.getAttribute("style")).toContain("width: 900px");
+  } finally {
+    view.cleanup();
+  }
+});

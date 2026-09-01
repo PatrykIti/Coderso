@@ -192,6 +192,106 @@ test("list view canvas reorders visible columns in the header and keeps hidden c
   }
 });
 
+const richContentType = {
+  id: "type-2",
+  name: "Rich",
+  slug: "rich",
+  status: "published" as const,
+  schema: {
+    type: "object" as const,
+    additionalProperties: false as const,
+    properties: {
+      count: { type: "number" as const, title: "Count", xFieldType: "number" },
+      featured: { type: "boolean" as const, title: "Featured", xFieldType: "boolean" },
+      priority: { type: "string" as const, title: "Priority", xFieldType: "select" },
+      hero: { type: "string" as const, title: "Hero", xFieldType: "media" },
+      author: { type: "string" as const, title: "Author", xFieldType: "relation" },
+    },
+  },
+  createdAt: "2026-05-02T00:00:00.000Z",
+  updatedAt: "2026-05-02T00:00:00.000Z",
+};
+
+test("list view canvas previews non-text field formatters and renders the empty content-type state", () => {
+  const emptyView = mount();
+  try {
+    expect(emptyView.container.querySelector("[data-column-select]")).not.toBeNull();
+  } finally {
+    emptyView.cleanup();
+  }
+
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  React.act(() => {
+    root.render(
+      <ListViewCanvas
+        contentType={richContentType}
+        listView={initialListView}
+        selectedColumnId={null}
+        onSelectColumn={() => undefined}
+        onMoveColumn={() => undefined}
+      />
+    );
+  });
+  try {
+    expect(container.querySelectorAll("tbody tr").length).toBe(2);
+    expect(container.textContent).toContain("House Aurora");
+    expect(container.textContent).toContain("House Nova");
+  } finally {
+    React.act(() => root.unmount());
+    container.remove();
+  }
+
+  const emptyContainer = document.createElement("div");
+  document.body.appendChild(emptyContainer);
+  const emptyRoot = createRoot(emptyContainer);
+  React.act(() => {
+    emptyRoot.render(
+      <ListViewCanvas
+        contentType={null}
+        listView={initialListView}
+        selectedColumnId={null}
+        onSelectColumn={() => undefined}
+        onMoveColumn={() => undefined}
+      />
+    );
+  });
+  try {
+    expect(emptyContainer.textContent).toContain(
+      "Select a content type before configuring List View."
+    );
+  } finally {
+    React.act(() => emptyRoot.unmount());
+    emptyContainer.remove();
+  }
+});
+
+test("list view canvas moves a visible column right and selects a hidden column from the tray", () => {
+  const view = mount();
+  try {
+    const moveRecordRight = Array.from(
+      view.container.querySelectorAll('button[aria-label="Move Record right"]')
+    ) as HTMLButtonElement[];
+    expect(moveRecordRight[0]?.disabled).toBe(false);
+    React.act(() => {
+      moveRecordRight[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(headerOrder(view.container)).toEqual(["Project title", "Record", "Status label"]);
+
+    const hiddenCity = view.container.querySelector<HTMLButtonElement>(
+      '[data-hidden-column-id="city"]'
+    );
+    expect(hiddenCity).not.toBeNull();
+    React.act(() => {
+      hiddenCity?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(hiddenCity?.className).toContain("border-primary");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("custom screen editor renders the entry-view builder and no List-view editor surface", () => {
   const html = renderAdminUi(<CustomScreenEditorPage />, {
     path: "/admin/advanced/custom-screens/new",

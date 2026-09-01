@@ -3,6 +3,7 @@
 // TASK-498-02 B-runtime: basic leaf rendering, media and Button provenance,
 // and the final ASCII-control URL sink contract.
 
+import React from "react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type {
@@ -15,8 +16,13 @@ import {
   mediaUuidA,
   mediaUuidB,
   mediaUuidC,
+  recordHeaderBlock,
+  recordHeaderTitleBinding,
   render,
+  richTextBlock,
   staticImageBlock,
+  tabsBlock,
+  tabsSlotEndTarget,
 } from "./support/customScreenRuntimeRendererHarness";
 
 vi.mock("@/ui/media/MediaPicker", () => ({
@@ -632,6 +638,93 @@ test("Button binding is re-sanitized and an unsafe bound value cannot fall back 
     expect(el?.querySelector("a")).toBeNull();
     expect(el?.querySelector('[aria-disabled="true"]')).not.toBeNull();
     expect(el?.innerHTML).not.toContain("/safe-static");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("record-header inline commit pushes the edited title through onFieldChange", () => {
+  const onFieldChange = vi.fn();
+  const view = render(
+    [recordHeaderBlock],
+    "entry",
+    [recordHeaderTitleBinding],
+    { headline: "Old Title" },
+    { enableInlineFieldEditing: true, onFieldChange }
+  );
+  try {
+    const textbox = view.container.querySelector('[role="textbox"][aria-label="Headline"]');
+    expect(textbox).not.toBeNull();
+    React.act(() => {
+      (textbox as HTMLElement).textContent = "New Title";
+      textbox?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(onFieldChange).toHaveBeenCalledWith("headline", "New Title");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("rich-text block renders its static content in preview mode", () => {
+  const view = render([richTextBlock], "preview", [], {});
+  try {
+    const el = view.container.querySelector('[data-screen-block-id="body-1"]');
+    expect(el).not.toBeNull();
+    expect(el?.textContent).toContain("Add supporting text");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("empty tab slot dropzone arms and deselects the insert point", () => {
+  const onSetInsertPoint = vi.fn();
+  const view = render(
+    [tabsBlock],
+    "builder",
+    [],
+    {},
+    {
+      onSetInsertPoint,
+      insertPoint: null,
+    }
+  );
+  try {
+    const dropzone = view.container.querySelector<HTMLButtonElement>(
+      '[data-screen-slot-dropzone="tab-1"]'
+    );
+    expect(dropzone).not.toBeNull();
+    expect(dropzone?.getAttribute("data-armed")).toBe("false");
+    React.act(() => {
+      dropzone?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(onSetInsertPoint).toHaveBeenCalledWith(tabsSlotEndTarget);
+    expect(onSetInsertPoint).toHaveBeenLastCalledWith(tabsSlotEndTarget);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("armed tab slot dropzone click deselects the insert point", () => {
+  const onSetInsertPoint = vi.fn();
+  const view = render(
+    [tabsBlock],
+    "builder",
+    [],
+    {},
+    {
+      onSetInsertPoint,
+      insertPoint: tabsSlotEndTarget,
+    }
+  );
+  try {
+    const dropzone = view.container.querySelector<HTMLButtonElement>(
+      '[data-screen-slot-dropzone="tab-1"]'
+    );
+    expect(dropzone?.getAttribute("data-armed")).toBe("true");
+    React.act(() => {
+      dropzone?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(onSetInsertPoint).toHaveBeenCalledWith(null);
   } finally {
     view.cleanup();
   }

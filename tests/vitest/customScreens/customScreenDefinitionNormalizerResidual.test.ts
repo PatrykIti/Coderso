@@ -170,3 +170,43 @@ test("normalizeCustomScreenDefinitionForRead falls back to a v1 migration when t
     legacyWidgetType: "text",
   });
 });
+
+test("normalizeCustomScreenDefinitionForRead recovers a v2 listView whose columns getter throws", () => {
+  // customScreenDefinitionNormalizer.ts:358 recovery catch: the exported read
+  // normalizer accepts unknown input, and a v2 definition with a Proxy listView
+  // whose columns getter throws must fall back to the default v2 list view.
+  // The throwing proxy is local to this test (contract: keep it local).
+  const throwingListView = new Proxy(
+    {
+      // Presents as a real v2 list view (hasV2ListViewKeys checks rowClick/createMode
+      // via the `in` operator, which uses the has trap), but its `columns` getter
+      // throws, exercising the recovery catch at customScreenDefinitionNormalizer.ts:358.
+      filters: [],
+      defaultSort: { field: "updatedAt", direction: "desc" },
+      rowClick: "editor-view",
+      createMode: "drawer",
+      bulkActions: { delete: true, publish: true, unpublish: true },
+    },
+    {
+      get(target, prop) {
+        if (prop === "columns") throw new Error("proxy columns getter exploded");
+        return Reflect.get(target, prop);
+      },
+    }
+  );
+
+  const result = normalizeCustomScreenDefinitionForRead(
+    {
+      schemaVersion: 2,
+      listView: throwingListView,
+      editorView: makeV2().editorView,
+    },
+    { contentType: contentTypeContext() }
+  );
+
+  expect(result.schemaVersion).toBe(4);
+  // The recovery returned the default v2 list view (not an empty shell):
+  expect(result.listView.columns.length).toBeGreaterThan(0);
+  expect(result.listView.defaultSort).toEqual({ field: "updatedAt", direction: "desc" });
+  expect(result.listView.rowTemplate).toBeDefined();
+});
