@@ -14,6 +14,15 @@ const apiPrefix = `${adminPath}/api`;
 
 export default defineConfig(({ command }) => ({
   root: path.resolve(__dirname, "./admin"),
+  // Own dep cache. The runtime-smoke dev host boots the admin (:5173) and site
+  // (:5174) Vite servers from one process, and both defaulted to
+  // `node_modules/.vite`; because the two configs hash differently, the second
+  // boot re-optimized into that one shared cache and deleted the live server's
+  // copy. Dep requests then failed with 504 Outdated Optimize Dep,
+  // `lazyNamedRoute`'s memoized import never retried, and the editor stayed on
+  // "Admin route failed to load" (TASK-105-08-08-L07 r40/r41).
+  // vite.site.config.ts declares the complementary directory.
+  cacheDir: "../node_modules/.vite/task105-admin",
   base: command === "build" ? "./" : normalizedAdminBase,
   plugins: [
     react(),
