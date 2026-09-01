@@ -103,3 +103,60 @@ test("a valid rename after a collision clears the message and emits", () => {
     view.cleanup();
   }
 });
+
+test("editing an existing attribute value emits onSet", () => {
+  const view = mount();
+  try {
+    const valueInput = view.container.querySelector('[aria-label="Attribute value for color"]');
+    setValue(valueInput, "dark oak");
+    expect(view.onSet).toHaveBeenCalledWith("color", "dark oak");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("typing a key with a draft value auto-commits the pair and resets the draft row", () => {
+  const view = mount();
+  try {
+    const valueInput = view.container.querySelector('[aria-label="New attribute value"]');
+    setValue(valueInput, "L");
+    const keyInput = view.container.querySelector('[aria-label="New attribute key"]');
+    setValue(keyInput, "size");
+    expect(view.onSet).toHaveBeenCalledWith("size", "L");
+    expect((keyInput as HTMLInputElement).value).toBe("");
+    expect((valueInput as HTMLInputElement).value).toBe("");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("typing a value without a draft key stores the draft until the Add button commits", () => {
+  const view = mount();
+  try {
+    const valueInput = view.container.querySelector('[aria-label="New attribute value"]');
+    setValue(valueInput, "XL");
+    const keyInput = view.container.querySelector('[aria-label="New attribute key"]');
+    setValue(keyInput, "size");
+    expect(view.onSet).toHaveBeenCalledWith("size", "XL");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Add attribute button commits the draft pair and fires onSet", () => {
+  const view = mount();
+  try {
+    const keyInput = view.container.querySelector('[aria-label="New attribute key"]');
+    const valueInput = view.container.querySelector('[aria-label="New attribute value"]');
+    setValue(keyInput, "material");
+    setValue(valueInput, "walnut");
+    const addButton = view.container.querySelector('[aria-label="Add attribute"]') as HTMLElement;
+    React.act(() => {
+      addButton.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(view.onSet).toHaveBeenCalledWith("material", "walnut");
+    expect((keyInput as HTMLInputElement).value).toBe("");
+  } finally {
+    view.cleanup();
+  }
+});

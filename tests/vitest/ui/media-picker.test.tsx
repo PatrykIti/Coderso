@@ -118,6 +118,8 @@ test("normalizeMediaPickerValue preserves string ids and rejects non-string ids"
   expect(normalizeMediaPickerValue(42, false)).toBeNull();
   expect(normalizeMediaPickerValue({ id: "asset-1" }, false)).toBeNull();
   expect(normalizeMediaPickerValue(["asset-1", 42, { id: "asset-2" }], true)).toEqual(["asset-1"]);
+  expect(normalizeMediaPickerValue(42, true)).toEqual([]);
+  expect(normalizeMediaPickerValue(null, true)).toEqual([]);
 });
 
 test("MediaPicker shows loading state for selected media until assets are resolved", () => {
