@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-30T22:28:43.707Z",
+  "generatedAt": "2026-09-01T18:09:45.748Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -2016,6 +2016,24 @@
     },
     {
       "file": "tests/unit/runtime-smoke/task105-l05-worker-operations.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l08-adapter.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l08-descriptors.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/runtime-smoke/task105-l08-output-manifest.test.ts",
       "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false
