@@ -99,8 +99,23 @@ function MenuItemDrawerContent({
     return Object.keys(nextErrors).length === 0;
   };
 
+  const helperText = useMemo(() => {
+    if (!item) return "Select a menu item to edit details.";
+    if (draft.linkType === "page" && pages.length === 0) {
+      return "Create at least one page to link a menu item.";
+    }
+    return "Update the selected menu item settings.";
+  }, [item, draft.linkType, pages.length]);
+
+  if (!item) {
+    return (
+      <div className="flex h-full flex-col justify-center text-sm text-muted-foreground">
+        {helperText}
+      </div>
+    );
+  }
+
   const handleSave = () => {
-    if (!item) return;
     if (!validate()) return;
     const badgeLabel = draft.badgeLabel.trim();
     onSave({
@@ -123,22 +138,6 @@ function MenuItemDrawerContent({
       }),
     });
   };
-
-  const helperText = useMemo(() => {
-    if (!item) return "Select a menu item to edit details.";
-    if (draft.linkType === "page" && pages.length === 0) {
-      return "Create at least one page to link a menu item.";
-    }
-    return "Update the selected menu item settings.";
-  }, [item, draft.linkType, pages.length]);
-
-  if (!item) {
-    return (
-      <div className="flex h-full flex-col justify-center text-sm text-muted-foreground">
-        {helperText}
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full flex-col">

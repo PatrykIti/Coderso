@@ -7,12 +7,15 @@ import {
   brandBlock,
   canvasFrame,
   clickButton,
+  clickFirstSwatch,
   clickSegmented,
   clickSelector,
   findHint,
   findReset,
   flush,
+  flushIcons,
   hasGroup,
+  mediaState,
   mount,
   navBlock,
   readLastSavedDocument,
@@ -21,7 +24,9 @@ import {
   seedDocument,
   segmentedOption,
   selectBlockRow,
+  setInputValue,
   setSliderValue,
+  setToggle,
   sliderReadout,
   sliderValue,
   switchDevice,
@@ -313,10 +318,7 @@ test("B-controls fork per device (Mobile ⇒ sparse override) and the Default se
   clickSegmented(container, "Indicator", "overline");
   clickButton(container, "Save");
   await flush();
-  const override = (
-    readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps as
-      { levelStyles?: Record<string, Record<string, unknown>> } | undefined
-  )?.levelStyles;
+  const override = readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps?.levelStyles;
   expect(override?.[1]).toEqual({ indicator: "overline" });
   // Base props untouched by the mobile fork.
   expect(navBlock(readLastSavedDocument())?.props.levelStyles).toBeUndefined();
@@ -395,10 +397,7 @@ test("R1(b) linkAlign forks per device (Mobile ⇒ sparse override + Reset), bas
   ).toBe("override");
   clickButton(container, "Save");
   await flush();
-  const override = (
-    readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps as
-      { levelStyles?: Record<string, Record<string, unknown>> } | undefined
-  )?.levelStyles;
+  const override = readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps?.levelStyles;
   expect(override?.[1]).toEqual({ linkAlign: "right" });
   // Desktop base never mutated by the mobile fork; tablet never inherits mobile.
   expect(navBlock(readLastSavedDocument())?.props.levelStyles).toBeUndefined();
@@ -547,5 +546,300 @@ test("R2 §2b: a Level-0 nav selection force-opens the FIRST dropdown in the can
   clickSelector(container, '[data-menu-design-canvas-scroller="true"]');
   expect(styleText()).not.toContain(depth1Open);
 
+  cleanup();
+});
+
+// --- TASK-105-08-05 residuals: level-0 nav writes, brand styles, logo picker --//
+
+test("level-0 nav fields write base colors, typography, padding, chrome, and direction", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Nav base scalars (setNavField on the desktop base).
+  setSliderValue(container, "Font size", "20");
+  clickSegmented(container, "Text transform", "uppercase");
+  clickFirstSwatch(container, "Link color");
+  clickFirstSwatch(container, "Hover background");
+  clickFirstSwatch(container, "Active background");
+  clickFirstSwatch(container, "Hover text");
+  setSliderValue(container, "Link padding X", "14");
+  setSliderValue(container, "Link padding Y", "10");
+  setSliderValue(container, "Link radius", "8");
+
+  // Nav chrome sub-record (chromeSwatch / chromeSlider / chromeSeg / chromeToggle).
+  clickFirstSwatch(container, "Pill background");
+  setSliderValue(container, "Pill radius", "12");
+  clickSegmented(container, "Item divider", "on");
+  clickFirstSwatch(container, "Divider color");
+  clickSegmented(container, "Divider style", "dashed");
+  clickSegmented(container, "Indicator", "underline");
+  setSliderValue(container, "Transition", "250");
+  clickSegmented(container, "Show caret", "on");
+
+  // Device-defining base writers (dropdown direction + submenu globals).
+  clickSegmented(container, "Dropdown direction", "top");
+  clickSegmented(container, "Open direction", "down");
+  clickSegmented(container, "Submenu mode", "accordion");
+
+  clickButton(container, "Save");
+  await flush();
+  const nav = navBlock(readLastSavedDocument());
+  expect(nav?.props).toMatchObject({
+    fontSize: 20,
+    textTransform: "uppercase",
+    linkPaddingX: 14,
+    linkPaddingY: 10,
+    linkRadius: 8,
+    dropdownDirection: "top",
+  });
+  expect(nav?.props.linkColor).toBeTruthy();
+  expect(nav?.props.linkHoverColor).toBeTruthy();
+  expect(nav?.props.linkActiveColor).toBeTruthy();
+  expect(nav?.props.linkHoverTextColor).toBeTruthy();
+  expect(nav?.props.navChrome).toMatchObject({
+    navPillRadius: 12,
+    itemDividerShow: true,
+    itemDividerStyle: "dashed",
+    indicator: "underline",
+    transitionMs: 250,
+    showCaret: true,
+    submenuDirection: "down",
+    submenuMode: "accordion",
+  });
+  expect(
+    (nav?.props.navChrome as Record<string, unknown> | undefined)?.navPillBackground
+  ).toBeTruthy();
+  expect(
+    (nav?.props.navChrome as Record<string, unknown> | undefined)?.itemDividerColor
+  ).toBeTruthy();
+  cleanup();
+});
+
+test("mobile nav writes forked overrides and device resets prune them", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  switchDevice(container, "Mobile");
+
+  // Mobile menu is base-DEFINING (writes the base regardless of the device).
+  clickSegmented(container, "Mobile menu", "inline");
+  // Forked nav-base + chrome override writes.
+  clickSegmented(container, "Text transform", "uppercase");
+  clickFirstSwatch(container, "Pill background");
+  // Device Reset prunes both override records (resetNav + resetChrome).
+  const navReset = findReset(container, "Text transform");
+  expect(navReset?.getAttribute("data-menu-responsive-reset-kind")).toBe("override");
+  clickSelector(container, '[data-menu-responsive-reset="Text transform"]');
+  clickSelector(container, '[data-menu-responsive-reset="Pill background"]');
+  clickButton(container, "Save");
+  await flush();
+  const doc = readLastSavedDocument();
+  expect(navBlock(doc)?.props.mobileMode).toBe("inline");
+  const section = doc?.sections[0] as unknown as {
+    responsive?: {
+      mobile?: { navProps?: Record<string, unknown>; navChrome?: Record<string, unknown> };
+    };
+  };
+  expect(section?.responsive?.mobile?.navProps?.textTransform).toBeUndefined();
+  expect(section?.responsive?.mobile?.navChrome?.navPillBackground).toBeUndefined();
+  cleanup();
+});
+
+test("level 1 and 2 controls write levelStyles and render the inherit badges", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  // The per-level set renders with the level-inherit badge chrome.
+  expect(container.querySelector('[data-menu-level-field="inherited"]')).toBeTruthy();
+  clickFirstSwatch(container, "Link color");
+  setSliderValue(container, "Font size", "17");
+  clickSegmented(container, "Font weight", "600");
+  clickSegmented(container, "Shadow", "md");
+  setSliderValue(container, "Min width", "220");
+  clickSegmented(container, "Link alignment", "center");
+  clickSegmented(container, "Item divider", "on");
+  clickFirstSwatch(container, "Divider color");
+  clickSegmented(container, "Divider style", "dotted");
+  clickSegmented(container, "Indicator", "overline");
+  clickSegmented(container, "Grow on hover", "on");
+  clickSegmented(container, "Underline on hover", "on");
+  clickSegmented(container, "Show caret", "on");
+  clickSegmented(container, "Rotate caret on open", "on");
+  clickSegmented(container, "Flyout animation", "fade");
+
+  // Level 2 adds the nested-submenu placement axis.
+  clickSegmented(container, "Nesting level", "2");
+  clickSegmented(container, "Submenu placement", "left");
+
+  clickButton(container, "Save");
+  await flush();
+  const styles = seededLevelStyles(readLastSavedDocument()) ?? {};
+  expect(styles["1"]).toMatchObject({
+    fontSize: 17,
+    fontWeight: 600,
+    shadow: "md",
+    minWidth: 220,
+    linkAlign: "center",
+    itemDividerShow: true,
+    itemDividerStyle: "dotted",
+    indicator: "overline",
+    indicatorGrow: true,
+    hoverUnderline: true,
+    showCaret: true,
+    caretRotateOnOpen: true,
+    flyoutAnimation: "fade",
+  });
+  expect(styles["1"]?.linkColor).toBeTruthy();
+  expect(styles["1"]?.itemDividerColor).toBeTruthy();
+  expect(styles["2"]).toMatchObject({ submenuPlacement: "left" });
+  cleanup();
+});
+
+test("a level-1 override on Mobile resets via the device Reset (resetLevel)", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+  switchDevice(container, "Mobile");
+  clickFirstSwatch(container, "Link color");
+  const reset = findReset(container, "Link color");
+  expect(reset?.getAttribute("data-menu-responsive-reset-kind")).toBe("override");
+  clickSelector(container, '[data-menu-responsive-reset="Link color"]');
+  clickButton(container, "Save");
+  await flush();
+  const doc = readLastSavedDocument();
+  const levelStyles = doc?.sections[0]?.responsive?.mobile?.navProps?.levelStyles;
+  expect(levelStyles?.[1]?.linkColor).toBeUndefined();
+  cleanup();
+});
+
+test("brand text-mode style controls write props.style and base reset clears", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Brand");
+  setSliderValue(container, "Brand font size", "22");
+  clickSegmented(container, "Brand font weight", "700");
+  clickFirstSwatch(container, "Brand color");
+  clickSegmented(container, "Brand text transform", "uppercase");
+  setSliderValue(container, "Letter spacing", "2");
+  // Base-reset the letter spacing back out (clearMenuBrandStyleBase path).
+  const reset = findReset(container, "Letter spacing");
+  expect(reset?.getAttribute("aria-label")).toBe("Reset Letter spacing to default");
+  clickSelector(container, '[data-menu-responsive-reset="Letter spacing"]');
+  clickButton(container, "Save");
+  await flush();
+  const style = brandBlock(readLastSavedDocument())?.props.style as
+    Record<string, unknown> | undefined;
+  expect(style).toMatchObject({ fontSize: 22, fontWeight: 700, textTransform: "uppercase" });
+  expect(style?.color).toBeTruthy();
+  expect(Object.prototype.hasOwnProperty.call(style ?? {}, "letterSpacing")).toBe(false);
+  cleanup();
+});
+
+test("brand icon-mode style writes icon color; the canvas renders the graphic", async () => {
+  seedDocument((doc) => {
+    const brand = doc.sections[0]!.blocks.find((block) => block.type === "brand");
+    if (brand?.type === "brand") {
+      brand.props.mode = "icon";
+      brand.props.icon = "star";
+    }
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  await flushIcons();
+  selectBlockRow(container, "Brand");
+  clickFirstSwatch(container, "Icon color");
+  setSliderValue(container, "Icon size", "30");
+  clickButton(container, "Save");
+  await flush();
+  const style = brandBlock(readLastSavedDocument())?.props.style as
+    Record<string, unknown> | undefined;
+  expect(style?.iconColor).toBeTruthy();
+  expect(style?.iconSize).toBe(30);
+  cleanup();
+});
+
+test("brand image-mode logo picker resolves the asset and clear removes the image", async () => {
+  // Cold media cache: the picker loads the library on mount (currentSrc set).
+  mediaState.cached = null;
+  seedDocument((doc) => {
+    const brand = doc.sections[0]!.blocks.find((block) => block.type === "brand");
+    if (brand?.type === "brand") {
+      brand.props.mode = "image";
+      brand.props.image = { src: "/media/logo.svg", alt: "" };
+    }
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Brand");
+  await flush();
+  // The library load resolves the stored src to its asset id.
+  expect(
+    container
+      .querySelector('[data-shared-media-picker="true"]')
+      ?.getAttribute("data-media-picker-value")
+  ).toBe("asset-logo");
+  // Image-mode brand style also exposes the bounded max-width/height sliders.
+  setSliderValue(container, "Logo max width", "120");
+  setSliderValue(container, "Logo height", "48");
+  // Picking a new asset resolves through the library and writes its URL.
+  clickSelector(container, '[data-menu-media-pick="true"]');
+  clickButton(container, "Save");
+  await flush();
+  expect(brandBlock(readLastSavedDocument())?.props.image).toMatchObject({
+    src: "/media/logo.svg",
+  });
+  const brandStyle = brandBlock(readLastSavedDocument())?.props.style as
+    Record<string, unknown> | undefined;
+  expect(brandStyle?.maxWidth).toBe(120);
+  expect(brandStyle?.height).toBe(48);
+  // Clearing drops the present-only image key entirely.
+  clickSelector(container, '[data-menu-media-clear="true"]');
+  clickButton(container, "Save");
+  await flush();
+  expect(
+    Object.prototype.hasOwnProperty.call(brandBlock(readLastSavedDocument())?.props ?? {}, "image")
+  ).toBe(false);
+  cleanup();
+});
+
+test("brand text and link inputs patch the brand block; cta fields patch the leaf", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Button");
+  setInputValue(container, "Button label", "Join now");
+  setInputValue(container, "Button link", "/join");
+  clickSegmented(container, "Variant", "secondary");
+  clickSegmented(container, "Size", "lg");
+  setToggle(container, "Open in new tab", true);
+
+  // Switch selection via the canvas brand mark (the bar list is hidden once a
+  // block is selected).
+  const brandMark = canvasFrame(container).querySelector(".site-header-brand");
+  expect(brandMark).toBeTruthy();
+  React.act(() => {
+    brandMark?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  // Clearing the brand text drops the sparse prop (site-name fallback).
+  setInputValue(container, "Brand text", "");
+  setInputValue(container, "Brand link", "/home");
+
+  clickButton(container, "Save");
+  await flush();
+  const doc = readLastSavedDocument();
+  const brand = brandBlock(doc);
+  expect(Object.prototype.hasOwnProperty.call(brand?.props ?? {}, "text")).toBe(false);
+  expect(brand?.props.href).toBe("/home");
+  const cta = doc?.sections[0]?.blocks.find((block) => block.type === "cta-button");
+  expect(cta?.props).toMatchObject({
+    label: "Join now",
+    href: "/join",
+    variant: "secondary",
+    size: "lg",
+    target: "blank",
+  });
   cleanup();
 });

@@ -23,18 +23,23 @@ import { afterEach, beforeEach, expect, vi } from "vitest";
  */
 
 type MenuSettings = Record<string, unknown> | null;
+type MenusClient = typeof import("../../../core/admin/services/menusClient");
+type MenuUpdateInput = Parameters<MenusClient["updateMenu"]>[1];
 
 const menusClientState = vi.hoisted(() => {
-  const buildMenu = (settings: MenuSettings) => ({
+  const buildMenu = (
+    settings: MenuSettings,
+    status: MenuSummary["status"] = "draft"
+  ): MenuSummary => ({
     id: "menu-1",
     name: "Main menu",
     location: "primary",
-    status: "draft" as const,
+    status,
     publishedAt: null,
     createdAt: "2026-06-12T09:00:00.000Z",
     settings,
   });
-  const buildItems = () => [
+  const buildItems = (): MenuItemNode[] => [
     {
       id: "item-home",
       label: "Home",
@@ -57,26 +62,36 @@ const menusClientState = vi.hoisted(() => {
   const state = {
     cachedSettings: null as MenuSettings,
     items: buildItems(),
-    updateCalls: [] as Array<Record<string, unknown>>,
+    updateCalls: [] as MenuUpdateInput[],
     publishCalls: [] as string[],
-    getCachedMenuDetail: vi.fn((_id: string) =>
+    getCachedMenuDetail: vi.fn((_id: string): MenuWithItems | null =>
       state.cachedSettings === null && state.forceNoCache
         ? null
         : { menu: buildMenu(state.cachedSettings), items: state.items }
     ),
-    getMenuWithItemsCached: vi.fn(async () => ({
-      menu: buildMenu(state.cachedSettings),
-      items: state.items,
-    })),
-    updateMenu: vi.fn(async (_menuId: string, input: Record<string, unknown>) => {
-      state.updateCalls.push(input);
-      return buildMenu(state.cachedSettings);
+    getMenuWithItemsCached: vi.fn(async (): Promise<MenuWithItems | null> => {
+      if (state.failMenuLoad) throw state.failMenuLoad;
+      if (state.nullDetail) return null;
+      return {
+        menu: buildMenu(state.cachedSettings),
+        items: state.items,
+      };
     }),
-    publishMenu: vi.fn(async (menuId: string) => {
+    updateMenu: vi.fn(async (_menuId: string, input: MenuUpdateInput): Promise<MenuSummary> => {
+      state.updateCalls.push(input);
+      if (state.updateError) throw state.updateError;
+      return buildMenu(state.cachedSettings, input.status);
+    }),
+    publishMenu: vi.fn(async (menuId: string): Promise<MenuSummary> => {
       state.publishCalls.push(menuId);
-      return buildMenu(state.cachedSettings);
+      if (state.publishError) throw state.publishError;
+      return buildMenu(state.cachedSettings, "published");
     }),
     forceNoCache: true,
+    failMenuLoad: null as Error | null,
+    nullDetail: false,
+    updateError: null as unknown | null,
+    publishError: null as unknown | null,
     setLegacy(settings: MenuSettings) {
       state.cachedSettings = settings;
       state.forceNoCache = false;
@@ -87,6 +102,10 @@ const menusClientState = vi.hoisted(() => {
       state.items = buildItems();
       state.updateCalls = [];
       state.publishCalls = [];
+      state.failMenuLoad = null;
+      state.nullDetail = false;
+      state.updateError = null;
+      state.publishError = null;
       state.getCachedMenuDetail.mockClear();
       state.getMenuWithItemsCached.mockClear();
       state.updateMenu.mockClear();
@@ -94,6 +113,49 @@ const menusClientState = vi.hoisted(() => {
     },
   };
   return state;
+});
+
+const cacheBusState = vi.hoisted(() => {
+  const handlers: Array<(event: { key: string }) => void> = [];
+  return {
+    handlers,
+    subscribe(handler: (event: { key: string }) => void) {
+      handlers.push(handler);
+      return () => undefined;
+    },
+    emit(key: string) {
+      for (const handler of handlers) {
+        handler({ key });
+      }
+    },
+    reset() {
+      handlers.length = 0;
+    },
+  };
+});
+
+const mediaState = vi.hoisted(() => {
+  const buildMediaItems = (): MediaRecord[] => [
+    {
+      id: "asset-logo",
+      key: "media/logo.svg",
+      url: "/media/logo.svg",
+      type: "image",
+      mimeType: "image/svg+xml",
+      size: 1024,
+      alt: "Logo",
+      createdAt: "2026-06-12T09:00:00.000Z",
+    },
+  ];
+  const items = buildMediaItems();
+  return {
+    items,
+    cached: [] as MediaRecord[] | null,
+    reset() {
+      items.splice(0, items.length, ...buildMediaItems());
+      mediaState.cached = [];
+    },
+  };
 });
 
 const navigateState = vi.hoisted(() => ({
@@ -160,10 +222,11 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
   ConfirmActionDialog: ({ open }: { open: boolean }) => (open ? <div role="dialog" /> : null),
 }));
 
-vi.mock("@/services/apiClient", () => ({
-  isApiClientError: () => false,
-  isSessionExpiredApiError: () => false,
-}));
+vi.mock("@/services/apiClient", async () =>
+  vi.importActual<typeof import("../../../core/admin/services/apiClient")>(
+    "../../../core/admin/services/apiClient"
+  )
+);
 
 vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
@@ -251,13 +314,13 @@ vi.mock("@/ui/assistant/activeSurfaceContext", () => ({
 }));
 
 vi.mock("@/utils/cacheBus", () => ({
-  subscribeCacheEvents: vi.fn(() => () => undefined),
+  subscribeCacheEvents: cacheBusState.subscribe,
   broadcastCacheEvent: vi.fn(),
 }));
 
 vi.mock("@/services/mediaClient", () => ({
-  getCachedMedia: () => [],
-  listMediaCached: async () => [],
+  getCachedMedia: () => mediaState.cached,
+  listMediaCached: async () => mediaState.items,
 }));
 
 vi.mock("@/services/formsClient", () => ({
@@ -283,7 +346,22 @@ vi.mock("@/services/listingsClient", () => ({
 }));
 
 vi.mock("@/ui/media/MediaPicker", () => ({
-  MediaPicker: () => <div data-shared-media-picker="true" />,
+  MediaPicker: ({
+    value,
+    onChange,
+  }: {
+    value: unknown;
+    onChange: (value: MediaPickerSelectionValue) => void;
+  }) => (
+    <div data-shared-media-picker="true" data-media-picker-value={String(value ?? "")}>
+      <button type="button" data-menu-media-pick="true" onClick={() => onChange("asset-logo")}>
+        Pick media
+      </button>
+      <button type="button" data-menu-media-clear="true" onClick={() => onChange(null)}>
+        Clear media
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
@@ -304,7 +382,15 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
 import {
   createDefaultMenuDocumentV2,
   type MenuDocumentV2,
+  type NavLevelStyles,
 } from "../../../core/services/menus/menuDocumentV2";
+import type {
+  MenuItemNode,
+  MenuSummary,
+  MenuWithItems,
+} from "../../../core/admin/services/menusClient";
+import type { MediaRecord } from "../../../core/admin/services/mediaClient";
+import type { MediaPickerSelectionValue } from "../../../core/admin/ui/media/mediaPickerValue";
 import { loadFullTimelineIcons } from "../../../core/services/renderContracts/timelineIcons";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -406,6 +492,8 @@ beforeEach(() => {
   menusClientState.reset();
   navigateState.reset();
   settingsState.reset();
+  cacheBusState.reset();
+  mediaState.reset();
 });
 
 afterEach(() => {
@@ -426,7 +514,7 @@ type SavedMenuBlock = {
 };
 type SavedMenuSectionOverride = {
   layout?: Record<string, unknown>;
-  navProps?: Record<string, unknown>;
+  navProps?: Record<string, unknown> & { levelStyles?: NavLevelStyles };
 };
 type SavedMenuDocument = {
   sections: Array<{
@@ -565,7 +653,7 @@ const sliderReadout = (container: ParentNode, label: string) =>
 const seededNavChrome = (doc?: SavedMenuDocument) =>
   navBlock(doc)?.props.navChrome as Record<string, unknown> | undefined;
 const seededLevelStyles = (doc?: SavedMenuDocument) =>
-  navBlock(doc)?.props.levelStyles as Record<string, Record<string, unknown>> | undefined;
+  navBlock(doc)?.props.levelStyles as NavLevelStyles | undefined;
 
 // ---------------------------------------------------------------------------
 // TASK-508-04 — R1(b) link alignment, R3a/R3b nav-global direction + mode,
@@ -596,6 +684,7 @@ const flushIcons = async () => {
 
 export {
   brandBlock,
+  cacheBusState,
   canvasBlock,
   canvasFrame,
   clickButton,
@@ -611,6 +700,7 @@ export {
   flushIcons,
   getBlockRowLabels,
   hasGroup,
+  mediaState,
   menusClientState,
   mount,
   navigateState,
