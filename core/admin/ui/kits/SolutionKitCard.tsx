@@ -30,13 +30,12 @@ const KIT_VISUALS: Record<SolutionKitId, KitVisual> = {
   "automotive-workshop": { icon: Car, tone: "bg-warning-soft text-warning" },
   "medical-clinic": { icon: Stethoscope, tone: "bg-info-soft text-info" },
   "beauty-salon": { icon: Scissors, tone: "bg-primary-soft text-primary" },
+  "local-service-business": { icon: Boxes, tone: "bg-muted text-muted-foreground" },
   "services-directory": { icon: ListChecks, tone: "bg-success-soft text-success" },
   "small-ecommerce": { icon: ShoppingBag, tone: "bg-primary-soft text-primary" },
 };
 
-const FALLBACK_VISUAL: KitVisual = { icon: Boxes, tone: "bg-muted text-muted-foreground" };
-
-const visualFor = (id: SolutionKitId): KitVisual => KIT_VISUALS[id] ?? FALLBACK_VISUAL;
+const visualFor = (id: SolutionKitId): KitVisual => KIT_VISUALS[id];
 
 export function SolutionKitCard({ kit, isActive, onSelect }: SolutionKitCardProps) {
   const { icon: Icon, tone } = visualFor(kit.id);

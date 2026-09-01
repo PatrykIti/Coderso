@@ -62,7 +62,7 @@ export function getWidgetRenderer<T extends DashboardWidgetType>(type: T): Widge
 }
 
 // Per-type "is there anything to show?" predicate. Pure + exhaustive; a new data
-// variant without a branch is a COMPILE error via the `never` default.
+// variant without a branch is a COMPILE error.
 export function isWidgetDataEmpty(data: DashboardWidgetData): boolean {
   switch (data.type) {
     case "recent-activity":
@@ -80,10 +80,6 @@ export function isWidgetDataEmpty(data: DashboardWidgetData): boolean {
     case "site-health":
     case "security-summary":
       return false;
-    default: {
-      const _never: never = data;
-      return _never ? true : false;
-    }
   }
 }
 

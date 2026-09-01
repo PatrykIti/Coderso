@@ -170,8 +170,6 @@ function reducer(state: BuilderState, action: BuilderAction): BuilderState {
       return { ...state, saving: false, error: action.error };
     case "remote:stale":
       return { ...state, remoteStale: true };
-    default:
-      return state;
   }
 }
 
@@ -255,13 +253,6 @@ function AddWidgetCatalog({
   onAdd: (type: DashboardWidgetType) => void;
 }) {
   const entries = dashboardWidgetCatalog.filter((item) => canRenderWidgetType(item.type, can));
-  if (entries.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
-        No widget types are available for your permissions.
-      </div>
-    );
-  }
   return (
     <div className="grid gap-2 md:grid-cols-3">
       {entries.map((item) => {
