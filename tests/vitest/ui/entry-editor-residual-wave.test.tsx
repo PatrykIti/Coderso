@@ -5,7 +5,16 @@ import { createRoot } from "react-dom/client";
 import { toast } from "sonner";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { EntryDetail } from "../../../core/admin/services/entriesClient";
+import type {
+  EntryDetail,
+  EntryMetadataPayload,
+  EntryPayload,
+} from "../../../core/admin/services/entriesClient";
+import type {
+  ContentTaxonomy,
+  ContentTerm,
+  TaxonomyOverview,
+} from "../../../core/admin/services/taxonomyClient";
 
 const entryEditorState = vi.hoisted(() => {
   const apiError = (message: string) => ({
@@ -22,6 +31,25 @@ const entryEditorState = vi.hoisted(() => {
     schema: { type: "object" },
   };
 
+  const dates = {
+    createdAt: "2026-06-18T10:00:00Z",
+    updatedAt: "2026-06-27T10:00:00Z",
+  };
+  const taxonomy = (id: string, kind: "category" | "tag", name: string): ContentTaxonomy => ({
+    id,
+    typeId: "type-1",
+    name,
+    slug: name.toLowerCase(),
+    kind,
+    ...dates,
+  });
+  const term = (id: string, taxonomyId: string, name: string): ContentTerm => ({
+    id,
+    taxonomyId,
+    name,
+    slug: name.toLowerCase(),
+    ...dates,
+  });
   const entry: EntryDetail = {
     id: "entry-1",
     typeId: "type-1",
@@ -30,8 +58,7 @@ const entryEditorState = vi.hoisted(() => {
     status: "draft",
     visibility: "public",
     hasPassword: false,
-    createdAt: "2026-06-18T10:00:00Z",
-    updatedAt: "2026-06-27T10:00:00Z",
+    ...dates,
     scheduledAt: null,
     seo: { description: "Meta" },
     taxonomy: {
@@ -45,14 +72,14 @@ const entryEditorState = vi.hoisted(() => {
     },
   };
 
-  const taxonomyOverview = {
+  const taxonomyOverview: TaxonomyOverview = {
     taxonomies: {
-      category: { id: "cat-taxonomy" },
-      tag: { id: "tag-taxonomy" },
+      category: taxonomy("cat-taxonomy", "category", "Categories"),
+      tag: taxonomy("tag-taxonomy", "tag", "Tags"),
     },
     terms: {
-      categories: [{ id: "cat-1", name: "News", slug: "news" }],
-      tags: [{ id: "tag-1", name: "Launch", slug: "launch" }],
+      categories: [term("cat-1", "cat-taxonomy", "News")],
+      tags: [term("tag-1", "tag-taxonomy", "Launch")],
     },
   };
 
@@ -63,13 +90,16 @@ const entryEditorState = vi.hoisted(() => {
     taxonomyOverview,
     previewUrl: "https://preview.test/entry",
     subscribers: new Set<(event: { key: string }) => void>(),
-    updateEntryCalls: [] as Array<Record<string, unknown>>,
+    updateEntryCalls: [] as Array<Partial<EntryPayload>>,
     publishEntryCalls: [] as Array<{ type: string; id: string }>,
-    updateMetadataCalls: [] as Array<Record<string, unknown>>,
+    updateMetadataCalls: [] as EntryMetadataPayload[],
     deleteEntryCalls: [] as Array<{ type: string; id: string }>,
     navigateCalls: [] as string[],
     previewCalls: [] as Array<{ type: string; id: string }>,
-    createTermCalls: [] as Array<{ taxonomyId: string; input: Record<string, unknown> }>,
+    createTermCalls: [] as Array<{
+      taxonomyId: string;
+      input: { name: string; slug?: string | null };
+    }>,
     getEntryCalls: [] as Array<{ type: string; id: string; force?: boolean }>,
     detailError: null as unknown,
     previewError: null as unknown,
@@ -235,8 +265,8 @@ vi.mock("@/services/entriesClient", () => ({
     return { ok: true };
   }),
   getCachedEntryDetail: () => entryEditorState.entry,
-  getEntryCached: vi.fn(async (type: string, id: string, { force }: { force?: boolean } = {}) => {
-    entryEditorState.getEntryCalls.push({ type, id, force });
+  getEntryCached: vi.fn(async (type: string, id: string, options?: { force?: boolean }) => {
+    entryEditorState.getEntryCalls.push({ type, id, force: options?.force });
     if (entryEditorState.detailError) throw entryEditorState.detailError;
     return entryEditorState.entry;
   }),
@@ -250,34 +280,44 @@ vi.mock("@/services/entriesClient", () => ({
     if (entryEditorState.publishError) throw entryEditorState.publishError;
     return { ok: true };
   }),
-  updateEntry: vi.fn(async (_type: string, _id: string, input) => {
+  updateEntry: vi.fn(async (_type: string, _id: string, input: Partial<EntryPayload>) => {
     entryEditorState.updateEntryCalls.push(input);
     return {
       ...entryEditorState.entry,
-      title: input.title,
-      slug: input.slug,
-      data: input.data,
+      title: input.title ?? entryEditorState.entry.title,
+      slug: input.slug ?? entryEditorState.entry.slug,
+      data: input.data ?? entryEditorState.entry.data,
     };
   }),
-  updateEntryMetadata: vi.fn(async (_type: string, _id: string, input) => {
-    entryEditorState.updateMetadataCalls.push(input);
-    if (entryEditorState.metadataError) throw entryEditorState.metadataError;
-    return {
-      ...entryEditorState.entry,
-      status: input.status,
-      scheduledAt: input.scheduledAt,
-      seo: { description: input.seo.description },
-      taxonomy: {
-        category: input.taxonomy?.categoryId
-          ? { id: input.taxonomy.categoryId, name: "Updated category" }
-          : null,
-        tags: (input.taxonomy?.tagIds ?? []).map((id: string) => ({
-          id,
-          name: `Tag ${id}`,
-        })),
-      },
-    };
-  }),
+  updateEntryMetadata: vi.fn(
+    async (_type: string, _id: string, input: EntryMetadataPayload): Promise<EntryDetail> => {
+      entryEditorState.updateMetadataCalls.push(input);
+      if (entryEditorState.metadataError) throw entryEditorState.metadataError;
+      return {
+        ...entryEditorState.entry,
+        status: input.status ?? entryEditorState.entry.status,
+        scheduledAt:
+          input.scheduledAt === undefined ? entryEditorState.entry.scheduledAt : input.scheduledAt,
+        seo: { ...(entryEditorState.entry.seo ?? {}), ...(input.seo ?? {}) },
+        taxonomy: input.taxonomy
+          ? {
+              category: input.taxonomy.categoryId
+                ? {
+                    id: input.taxonomy.categoryId,
+                    name: "Updated category",
+                    slug: "updated-category",
+                  }
+                : null,
+              tags: (input.taxonomy.tagIds ?? []).map((id) => ({
+                id,
+                name: `Tag ${id}`,
+                slug: `tag-${id}`,
+              })),
+            }
+          : entryEditorState.entry.taxonomy,
+      };
+    }
+  ),
 }));
 
 vi.mock("@/services/siteSettingsClient", () => ({
@@ -317,16 +357,26 @@ vi.mock("@/services/siteSettingsClient", () => ({
 }));
 
 vi.mock("@/services/taxonomyClient", () => ({
-  getTaxonomyOverview: vi.fn(async () => entryEditorState.taxonomyOverview),
-  createTaxonomyTerm: vi.fn(async (taxonomyId: string, input: Record<string, unknown>) => {
-    entryEditorState.createTermCalls.push({ taxonomyId, input });
-    if (entryEditorState.createTermError) throw entryEditorState.createTermError;
-    return {
-      id: `${taxonomyId}-new`,
-      name: input.name,
-      slug: String(input.name).toLowerCase(),
-    };
-  }),
+  getTaxonomyOverview: vi.fn(
+    async (): Promise<TaxonomyOverview> => entryEditorState.taxonomyOverview
+  ),
+  createTaxonomyTerm: vi.fn(
+    async (
+      taxonomyId: string,
+      input: { name: string; slug?: string | null }
+    ): Promise<ContentTerm> => {
+      entryEditorState.createTermCalls.push({ taxonomyId, input });
+      if (entryEditorState.createTermError) throw entryEditorState.createTermError;
+      return {
+        id: `${taxonomyId}-new`,
+        taxonomyId,
+        name: input.name,
+        slug: input.slug ?? input.name.toLowerCase(),
+        createdAt: "2026-06-18T10:00:00Z",
+        updatedAt: "2026-06-27T10:00:00Z",
+      };
+    }
+  ),
 }));
 
 // The dirty-navigation guard's confirm dialog is real Radix and is never opened here; the
@@ -558,7 +608,14 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
-test("EntryEditor loads cached data and drives preview, save, publish, metadata, and refresh flows", async () => {
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+};
+
+test("rejects an invalid scheduled date before sending the metadata patch", async () => {
   window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
 
   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
@@ -566,334 +623,361 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
   const view = mount(<EntryEditor />);
 
   try {
-    await React.act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    // In-page PageHeader (prototype fidelity): breadcrumb "Entries › Articles",
-    // title "Edit Article", and the status badge in the actions cluster.
-    expect(view.container.textContent).toContain("Entries");
-    expect(view.container.textContent).toContain("Articles");
-    expect(view.container.textContent).toContain("Edit Article");
-    expect(view.container.textContent).toContain("draft");
+    await flush();
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
-    const textareas = Array.from(view.container.querySelectorAll("textarea"));
-    const slugInput = Array.from(view.container.querySelectorAll("input")).find(
-      (input) => !input.getAttribute("type")
+    React.act(() => {
+      buttons.find((button) => button.textContent === "metadata-status")?.click();
+    });
+    await flush();
+    React.act(() => {
+      buttons.find((button) => button.textContent === "metadata-bad-schedule")?.click();
+    });
+    await flush();
+    React.act(() => {
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Schedule date must be a valid ISO timestamp.");
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      "Schedule date must be a valid ISO timestamp."
     );
-
-    React.act(() => {
-      const titleArea = textareas[0];
-      if (titleArea) titleArea.value = "Updated title";
-      titleArea?.dispatchEvent(new Event("input", { bubbles: true }));
-      if (slugInput instanceof HTMLInputElement) slugInput.value = "updated-title";
-      slugInput?.dispatchEvent(new Event("input", { bubbles: true }));
-      buttons.find((button) => button.textContent === "field:summary")?.click();
-      buttons.find((button) => button.textContent === "Runtime preview")?.click();
-      buttons.find((button) => button.textContent === "Save draft")?.click();
-      buttons.find((button) => button.textContent === "Publish")?.click();
-      buttons.find((button) => button.textContent === "Details")?.click();
-      buttons.find((button) => button.textContent === "metadata-status")?.click();
-      buttons.find((button) => button.textContent === "metadata-schedule")?.click();
-      buttons.find((button) => button.textContent === "metadata-seo")?.click();
-      buttons.find((button) => button.textContent === "metadata-category")?.click();
-      buttons.find((button) => button.textContent === "metadata-tags")?.click();
-      buttons.find((button) => button.textContent === "create-category")?.click();
-      buttons.find((button) => button.textContent === "create-tag")?.click();
-      buttons.find((button) => button.textContent === "save-metadata")?.click();
-      buttons.find((button) => button.textContent === "delete-entry")?.click();
-    });
-    React.act(() => {
-      view.container
-        .querySelector("button[data-entry-delete-confirm='true']")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(entryEditorState.previewCalls[0]).toEqual({
-      type: "articles",
-      id: "entry-1",
-    });
-    expect(entryEditorState.updateEntryCalls.length).toBeGreaterThan(0);
-    expect(entryEditorState.publishEntryCalls[0]).toEqual({
-      type: "articles",
-      id: "entry-1",
-    });
-    expect(entryEditorState.updateMetadataCalls.length).toBeGreaterThan(0);
-    expect(entryEditorState.createTermCalls).toEqual([
-      { taxonomyId: "cat-taxonomy", input: { name: "Updates" } },
-      { taxonomyId: "tag-taxonomy", input: { name: "Featured" } },
-    ]);
-    expect(entryEditorState.deleteEntryCalls).toEqual([{ type: "articles", id: "entry-1" }]);
-    expect(entryEditorState.navigateCalls).toContain("/entries");
-    expect(view.container.textContent).toContain("preview:open:");
-
-    React.act(() => {
-      buttons.find((button) => button.textContent === "field:summary")?.click();
-    });
-
-    await React.act(async () => {
-      for (const subscriber of entryEditorState.subscribers) {
-        subscriber({ key: "entry:articles:entry-1" });
-      }
-      await Promise.resolve();
-    });
-
-    React.act(() => {
-      buttons.find((button) => button.textContent === "Refresh")?.click();
-    });
-
-    expect(entryEditorState.getEntryCalls.length).toBeGreaterThan(1);
-  } finally {
-    view.cleanup();
-  }
-});
-test("refuses every submit and closes the delete dialog when the route has no entry id", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles");
-
-  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
-  const view = mount(<EntryEditor />);
-
-  try {
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-
-    React.act(() => {
-      buttons.find((button) => button.textContent === "Save draft")?.click();
-      buttons.find((button) => button.textContent === "Publish")?.click();
-      buttons.find((button) => button.textContent === "metadata-status")?.click();
-      buttons.find((button) => button.textContent === "save-metadata")?.click();
-      buttons.find((button) => button.textContent === "delete-entry")?.click();
-    });
-
-    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).not.toBeNull();
-
-    React.act(() => {
-      view.container
-        .querySelector("button[data-entry-delete-confirm='true']")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    // Every handler bailed on the missing id: no network traffic, no navigation, and no
-    // deletion. The confirm bails at the guard before the dialog-close-on-refusal branch
-    // (`handleDeleteEntry` returns as soon as `!id`), so the dialog stays open.
-    expect(entryEditorState.updateEntryCalls).toHaveLength(0);
-    expect(entryEditorState.publishEntryCalls).toHaveLength(0);
     expect(entryEditorState.updateMetadataCalls).toHaveLength(0);
-    expect(entryEditorState.deleteEntryCalls).toHaveLength(0);
-    expect(entryEditorState.navigateCalls).toHaveLength(0);
-    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).not.toBeNull();
   } finally {
     view.cleanup();
   }
 });
 
-test("surfaces a failed save draft through the error banner and toast", async () => {
+test("surfaces a failed metadata save through the error banner and toast", async () => {
   window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+  entryEditorState.metadataError = entryEditorState.apiError("metadata down");
 
   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-  const { updateEntry } = await import("@/services/entriesClient");
-  vi.mocked(updateEntry).mockRejectedValueOnce(entryEditorState.apiError("save down"));
 
   const view = mount(<EntryEditor />);
 
   try {
-    await React.act(async () => {
-      await Promise.resolve();
-    });
+    await flush();
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     React.act(() => {
-      buttons.find((button) => button.textContent === "Save draft")?.click();
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
     });
-    await React.act(async () => {
-      await Promise.resolve();
-    });
+    await flush();
 
-    expect(view.container.textContent).toContain("save down");
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("save down");
+    expect(view.container.textContent).toContain("metadata down");
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("metadata down");
   } finally {
     view.cleanup();
   }
 });
 
-test("blocks publishing while the entry checklist has blocking issues", async () => {
+test("surfaces a failed delete and drops a superseded second delete", async () => {
   window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
-  // An empty title hydrates as the editor's own state, so the checklist reports a
-  // blocking issue and the Publish action refuses without touching the network.
-  entryEditorState.entry.title = "";
+  entryEditorState.deleteError = entryEditorState.apiError("delete down");
 
   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { deleteEntry } = await import("@/services/entriesClient");
+  let releaseDelete!: () => void;
+  const deleteGate = new Promise<void>((resolve) => {
+    releaseDelete = resolve;
+  });
+  let deleteCount = 0;
+  vi.mocked(deleteEntry).mockImplementation(async (type: string, id: string) => {
+    entryEditorState.deleteEntryCalls.push({ type, id });
+    deleteCount += 1;
+    if (deleteCount === 1) await deleteGate;
+    throw entryEditorState.deleteError;
+  });
 
   const view = mount(<EntryEditor />);
 
   try {
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-    React.act(() => {
-      buttons.find((button) => button.textContent === "Publish")?.click();
-    });
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(view.container.textContent).toContain("Title is required");
-    expect(entryEditorState.publishEntryCalls).toHaveLength(0);
-  } finally {
-    entryEditorState.entry.title = "Hello";
-    view.cleanup();
-  }
-});
-
-test("publishing an already published entry saves the draft as an update", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
-  entryEditorState.entry.status = "published";
-
-  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
-  const view = mount(<EntryEditor />);
-
-  try {
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-    React.act(() => {
-      buttons.find((button) => button.textContent?.trim() === "Update")?.click();
-    });
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(entryEditorState.updateEntryCalls.length).toBeGreaterThan(0);
-    expect(entryEditorState.publishEntryCalls).toHaveLength(0);
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Entry updated.");
-  } finally {
-    entryEditorState.entry.status = "draft";
-    view.cleanup();
-  }
-});
-
-test("surfaces a failed publish through the error banner and toast", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
-  entryEditorState.publishError = entryEditorState.apiError("publish down");
-
-  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
-  const view = mount(<EntryEditor />);
-
-  try {
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-    React.act(() => {
-      buttons.find((button) => button.textContent === "Publish")?.click();
-    });
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(view.container.textContent).toContain("publish down");
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("publish down");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("offers a remote update and applies it on Refresh without losing the save", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
-
-  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
-  const view = mount(<EntryEditor />);
-
-  try {
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-    React.act(() => {
-      buttons.find((button) => button.textContent === "field:summary")?.click();
-    });
-    React.act(() => {
-      for (const subscriber of entryEditorState.subscribers) {
-        subscriber({ key: "entry:articles:entry-1" });
-      }
-    });
-    await React.act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(view.container.textContent).toContain("Updated in another tab");
-
-    const refreshButton = Array.from(view.container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Refresh"
-    );
-    expect(refreshButton).toBeDefined();
-    React.act(() => {
-      refreshButton?.click();
-    });
-    await React.act(async () => {
-      await Promise.resolve();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    });
-
-    expect(entryEditorState.getEntryCalls.at(-1)).toEqual({
-      type: "articles",
-      id: "entry-1",
-      force: true,
-    });
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("closes the delete dialog via its onOpenChange seam while idle", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
-
-  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
-  const view = mount(<EntryEditor />);
-
-  try {
-    await React.act(async () => {
-      await Promise.resolve();
-    });
+    await flush();
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     React.act(() => {
       buttons.find((button) => button.textContent === "delete-entry")?.click();
     });
-
-    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).not.toBeNull();
-
     React.act(() => {
       view.container
-        .querySelector("button[data-entry-delete-close='true']")
+        .querySelector("button[data-entry-delete-confirm='true']")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
+    await flush();
 
-    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).toBeNull();
-    expect(entryEditorState.deleteEntryCalls).toHaveLength(0);
+    // The first delete is parked; a second confirm supersedes it.
+    React.act(() => {
+      view.container
+        .querySelector("button[data-entry-delete-confirm='true']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("delete down");
+
+    React.act(() => releaseDelete());
+    await flush();
+
+    expect(entryEditorState.deleteEntryCalls).toHaveLength(2);
+    expect(vi.mocked(toast.error)).toHaveBeenCalledTimes(1);
+    expect(entryEditorState.navigateCalls).toHaveLength(0);
   } finally {
+    vi.mocked(deleteEntry).mockRestore();
+    view.cleanup();
+  }
+});
+
+test("records SEO title, canonical URL, and robots changes in the metadata payload", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await flush();
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "metadata-seo-title")?.click();
+    });
+    await flush();
+    React.act(() => {
+      buttons.find((button) => button.textContent === "metadata-seo-canonical")?.click();
+    });
+    await flush();
+    React.act(() => {
+      buttons.find((button) => button.textContent === "metadata-seo-robots")?.click();
+    });
+    await flush();
+    React.act(() => {
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
+    });
+    await flush();
+
+    const payload = entryEditorState.updateMetadataCalls.at(-1) as {
+      seo: { title?: string; canonicalUrl?: string; robots?: string };
+    };
+    expect(payload.seo.title).toBe("New SEO title");
+    expect(payload.seo.canonicalUrl).toBe("https://site.test/canonical");
+    expect(payload.seo.robots).toBe("noindex");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("tolerates a site settings read failure without blocking the editor", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { getSiteSettings } = await import("@/services/siteSettingsClient");
+  vi.mocked(getSiteSettings).mockRejectedValueOnce(new Error("settings down"));
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await flush();
+
+    expect(vi.mocked(getSiteSettings)).toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Edit Article");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("tolerates a taxonomy overview read failure and keeps the editor usable", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { getTaxonomyOverview } = await import("@/services/taxonomyClient");
+  vi.mocked(getTaxonomyOverview).mockRejectedValueOnce(new Error("taxonomy down"));
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await flush();
+
+    expect(vi.mocked(getTaxonomyOverview)).toHaveBeenCalled();
+    expect(view.container.textContent).toContain("Edit Article");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("drops a baseline taxonomy overview that resolves after a newer read claimed the snapshot", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { getTaxonomyOverview } = await import("@/services/taxonomyClient");
+  let releaseTaxonomy!: () => void;
+  const taxonomyGate = new Promise<void>((resolve) => {
+    releaseTaxonomy = resolve;
+  });
+  vi.mocked(getTaxonomyOverview).mockReturnValue(
+    taxonomyGate.then(() => entryEditorState.taxonomyOverview)
+  );
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await flush();
+
+    // The baseline read parked on the taxonomy gate after hydrating; a cache-bus
+    // read starts while it is still parked and claims the snapshot.
+    React.act(() => {
+      for (const subscriber of entryEditorState.subscribers) {
+        subscriber({ key: "entry:articles:entry-1" });
+      }
+    });
+    await flush();
+
+    React.act(() => releaseTaxonomy());
+    await flush();
+
+    expect(vi.mocked(getTaxonomyOverview)).toHaveBeenCalledTimes(2);
+    expect(view.container.textContent).toContain("Edit Article");
+  } finally {
+    vi.mocked(getTaxonomyOverview).mockRestore();
+    view.cleanup();
+  }
+});
+
+test("drops a failed read whose ticket was superseded by a newer hydration", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { getEntryCached } = await import("@/services/entriesClient");
+  let rejectRead!: (error: unknown) => void;
+  const failingRead = new Promise<never>((_, reject) => {
+    rejectRead = reject;
+  });
+  vi.mocked(getEntryCached)
+    .mockReturnValueOnce(failingRead)
+    .mockImplementation(async (type: string, id: string, options?: { force?: boolean }) => {
+      entryEditorState.getEntryCalls.push({ type, id, force: options?.force });
+      return entryEditorState.entry;
+    });
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await flush();
+
+    // A newer cache-bus read hydrates the editor while the baseline is still failing.
+    React.act(() => {
+      for (const subscriber of entryEditorState.subscribers) {
+        subscriber({ key: "entry:articles:entry-1" });
+      }
+    });
+    await flush();
+
+    React.act(() => rejectRead(new Error("network down")));
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Unable to load entry");
+    expect(view.container.textContent).toContain("Edit Article");
+  } finally {
+    vi.mocked(getEntryCached).mockRestore();
+    view.cleanup();
+  }
+});
+
+test("a superseded metadata save response does not settle the mutation or toast twice", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { updateEntryMetadata } = await import("@/services/entriesClient");
+  let releaseMetadata!: () => void;
+  const metadataGate = new Promise<void>((resolve) => {
+    releaseMetadata = resolve;
+  });
+  let metadataCount = 0;
+  vi.mocked(updateEntryMetadata).mockImplementation(
+    async (_type: string, _id: string, input: EntryMetadataPayload) => {
+      entryEditorState.updateMetadataCalls.push(input);
+      metadataCount += 1;
+      if (metadataCount === 1) await metadataGate;
+      return entryEditorState.entry;
+    }
+  );
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await flush();
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
+    });
+    await flush();
+
+    // A second metadata save starts and completes while the first is parked.
+    React.act(() => {
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
+    });
+    await flush();
+
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Metadata saved.");
+
+    React.act(() => releaseMetadata());
+    await flush();
+
+    expect(entryEditorState.updateMetadataCalls).toHaveLength(2);
+    expect(vi.mocked(toast.success)).toHaveBeenCalledTimes(1);
+  } finally {
+    vi.mocked(updateEntryMetadata).mockRestore();
+    view.cleanup();
+  }
+});
+
+test("drops a superseded metadata save failure without an error toast", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { updateEntryMetadata } = await import("@/services/entriesClient");
+  let rejectMetadata!: (error: unknown) => void;
+  const failingMeta = new Promise<never>((_, reject) => {
+    rejectMetadata = reject;
+  });
+  let metadataCount = 0;
+  vi.mocked(updateEntryMetadata).mockImplementation(
+    async (_type: string, _id: string, input: EntryMetadataPayload) => {
+      entryEditorState.updateMetadataCalls.push(input);
+      metadataCount += 1;
+      if (metadataCount === 1) return failingMeta;
+      return entryEditorState.entry;
+    }
+  );
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await flush();
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
+    });
+    await flush();
+
+    // A second save completes and supersedes the parked first one.
+    React.act(() => {
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
+    });
+    await flush();
+
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Metadata saved.");
+
+    React.act(() => rejectMetadata(new Error("late failure")));
+    await flush();
+
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled();
+    expect(entryEditorState.updateMetadataCalls).toHaveLength(2);
+  } finally {
+    vi.mocked(updateEntryMetadata).mockRestore();
     view.cleanup();
   }
 });

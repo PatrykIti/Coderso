@@ -257,8 +257,10 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 
 const titleInputOf = (container: HTMLElement) =>
   container.querySelector('input[placeholder="e.g. Launch announcement"]');
-const slugInputOf = (container: HTMLElement) =>
-  container.querySelector('input[placeholder="launch-announcement"]');
+const slugInputOf = (container: HTMLElement): HTMLInputElement | null => {
+  const input = container.querySelector('input[placeholder="launch-announcement"]');
+  return input instanceof HTMLInputElement ? input : null;
+};
 const createButtonOf = (container: HTMLElement) =>
   Array.from(container.querySelectorAll("button")).find(
     (button) => button.textContent === "Create Draft"
@@ -682,6 +684,102 @@ test("EntryCreateDrawer skips the metadata PATCH when only whitespace tags are t
 
     expect(entriesState.createEntry).toHaveBeenCalledTimes(1);
     expect(entriesState.updateEntryMetadata).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryCreateDrawer keeps a manually edited slug even when the title auto-generates one", async () => {
+  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
+
+  const view = mount(
+    <EntryCreateDrawer
+      open
+      onOpenChange={vi.fn()}
+      types={[{ id: "type-1", slug: "articles", name: "Articles", schema: defaultSchema }]}
+      defaultTypeSlug="articles"
+    />
+  );
+
+  try {
+    const slugInput = slugInputOf(view.container);
+    if (!slugInput) {
+      throw new Error("Expected the quick-create drawer slug input");
+    }
+
+    await React.act(async () => {
+      setInputValue(titleInputOf(view.container), "Field Guide");
+      await Promise.resolve();
+    });
+
+    // The title auto-generates "field-guide"; the slug input is still pre-filled.
+    expect(slugInput.value).toBe("field-guide");
+
+    await React.act(async () => {
+      // A DIFFERENT value than the generated one marks the slug as touched and keeps it.
+      setInputValue(slugInput, "custom-slug");
+      await Promise.resolve();
+    });
+    expect(slugInput.value).toBe("custom-slug");
+
+    await React.act(async () => {
+      createButtonOf(view.container)?.click();
+      await Promise.resolve();
+    });
+
+    const { payload } = createdPayload();
+    expect(payload.slug).toBe("custom-slug");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryCreateDrawer cancel closes the drawer without creating", async () => {
+  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
+
+  const onOpenChange = vi.fn();
+  const view = mount(
+    <EntryCreateDrawer
+      open
+      onOpenChange={onOpenChange}
+      types={[{ id: "type-1", slug: "articles", name: "Articles", schema: defaultSchema }]}
+      defaultTypeSlug="articles"
+    />
+  );
+
+  try {
+    const cancel = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Cancel"
+    );
+    expect(cancel).toBeInstanceOf(HTMLButtonElement);
+    React.act(() => {
+      cancel?.click();
+    });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(entriesState.createEntry).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryCreateDrawer guard returns when no content type is selected", async () => {
+  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
+
+  const view = mount(
+    <EntryCreateDrawer
+      open
+      onOpenChange={vi.fn()}
+      types={[{ id: "type-1", slug: "articles", name: "Articles", schema: defaultSchema }]}
+    />
+  );
+
+  try {
+    // The guard runs even when the button is disabled: a synthetic click still
+    // reaches the handler, and the handler must not start a create request.
+    React.act(() => {
+      createButtonOf(view.container)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(entriesState.createEntry).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

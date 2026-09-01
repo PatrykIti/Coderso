@@ -142,3 +142,74 @@ test("EntryFilters list/grid toggle fires onViewChange in both directions", () =
     gridView.cleanup();
   }
 });
+
+test("EntryFilters advanced panel fires updated-from and updated-to changes", () => {
+  const onUpdatedFromChange = vi.fn();
+  const onUpdatedToChange = vi.fn();
+  const filtersProps = {
+    search: "",
+    typeValue: "all",
+    typeOptions: [{ value: "all", label: "All" }],
+    author: "any",
+    authorOptions: [{ value: "any", label: "Any" }],
+    updatedFrom: "",
+    updatedTo: "",
+    advancedOpen: true,
+    view: "list" as const,
+    onViewChange: vi.fn(),
+    onSearchChange: vi.fn(),
+    onTypeChange: vi.fn(),
+    onAuthorChange: vi.fn(),
+    onUpdatedFromChange,
+    onUpdatedToChange,
+    onAdvancedOpenChange: vi.fn(),
+    onClear: vi.fn(),
+  };
+
+  const view = mount(<EntryFilters {...filtersProps} />);
+  try {
+    const fromInput = view.container.querySelector<HTMLInputElement>(
+      'input[aria-label="Updated from"]'
+    );
+    const toInput = view.container.querySelector<HTMLInputElement>(
+      'input[aria-label="Updated to"]'
+    );
+    expect(fromInput).not.toBeNull();
+    expect(toInput).not.toBeNull();
+
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    act(() => {
+      setter?.call(fromInput, "2026-03-01");
+      fromInput?.dispatchEvent(new Event("input", { bubbles: true }));
+      fromInput?.dispatchEvent(new Event("change", { bubbles: true }));
+      setter?.call(toInput, "2026-03-31");
+      toInput?.dispatchEvent(new Event("input", { bubbles: true }));
+      toInput?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(onUpdatedFromChange).toHaveBeenCalledWith("2026-03-01");
+    expect(onUpdatedToChange).toHaveBeenCalledWith("2026-03-31");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryGrid formatDate falls back to the raw value when toLocaleDateString throws", () => {
+  const spy = vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(() => {
+    throw new Error("boom");
+  });
+  try {
+    const view = mount(
+      <EntryGrid
+        entries={[makeEntry({ updatedAt: "2026-03-06T12:00:00.000Z" })]}
+        onEdit={vi.fn()}
+      />
+    );
+    try {
+      expect(view.container.textContent).toContain("2026-03-06T12:00:00.000Z");
+    } finally {
+      view.cleanup();
+    }
+  } finally {
+    spy.mockRestore();
+  }
+});

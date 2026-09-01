@@ -59,6 +59,13 @@ test("scheduled status with a valid ISO date ships the normalized timestamp", ()
   expect(result.payload.scheduledAt).toBe("2026-09-01T08:30:00.000Z");
 });
 
+test("a non-empty invalid schedule date is rejected even for draft status", () => {
+  const result = buildEntryMetadataUpdate(form({ scheduledAt: "not-a-date" }));
+  expect(result.ok).toBe(false);
+  if (result.ok) return;
+  expect(result.message).toBe("Schedule date must be a valid ISO timestamp.");
+});
+
 test("scheduled status without a schedule date is rejected", () => {
   const result = buildEntryMetadataUpdate(form({ status: "scheduled" }));
   expect(result).toEqual({
