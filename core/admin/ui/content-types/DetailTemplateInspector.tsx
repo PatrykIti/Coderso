@@ -32,6 +32,7 @@ import {
   patchSectionControlForDevice,
 } from "../../../services/pages/pageEditorMutationActions";
 import type {
+  PageListItemV2,
   PageSectionVariant,
   PageSectionV2,
   PageBlockV2,
@@ -82,6 +83,33 @@ const numberValue = (value: unknown, fallback: number): number => {
 };
 
 const booleanValue = (value: unknown): boolean => Boolean(value);
+
+/**
+ * List-items seam (TASK-105-08-08-L03-L01): raw block values reach this
+ * inspector untyped, while `ListItemsControl` owns the stored
+ * `PageListItemV2` union (plain string, or `{ label, href }`). Adapt raw
+ * entries with the owner's non-destructive read semantics
+ * (`pageBlockNormalizerV2.normalizeListItems`): strings stay strings,
+ * `{ label, href }` records keep their string fields, scalar legacy values
+ * keep their text, and anything else defaults to an empty plain-string item.
+ * Values are neither trimmed nor dropped here: trimming stays at the persist
+ * boundary, so live edits round-trip untouched, and a non-array raw value
+ * renders as an empty list instead of crashing.
+ */
+const listItemsValue = (value: unknown): PageListItemV2[] => {
+  if (!Array.isArray(value)) return [];
+  const items: readonly unknown[] = value;
+  return items.map((item): PageListItemV2 => {
+    if (typeof item === "string") return item;
+    if (isRecord(item)) {
+      return {
+        label: typeof item.label === "string" ? item.label : "",
+        href: typeof item.href === "string" ? item.href : "",
+      };
+    }
+    return typeof item === "number" || typeof item === "boolean" ? String(item) : "";
+  });
+};
 
 const comboboxSourceOptions: Record<
   PageEditorControlOptionsSource,
@@ -228,7 +256,7 @@ const DetailTemplateControlField = ({
       return (
         <ListItemsControl
           label={control.label}
-          value={Array.isArray(value) ? value : []}
+          value={listItemsValue(value)}
           onChange={(nextItems) => onCommit(nextItems)}
           tone="light"
         />

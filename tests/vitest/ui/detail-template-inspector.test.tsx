@@ -7,7 +7,11 @@ import {
   createPageBlockV2,
   createPageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
-import type { PageBlockV2, PageSectionV2 } from "../../../core/services/pages/pageDocumentV2";
+import type {
+  PageBlockV2,
+  PageListItemV2,
+  PageSectionV2,
+} from "../../../core/services/pages/pageDocumentV2";
 import { DetailTemplateInspector } from "../../../core/admin/ui/content-types/DetailTemplateInspector";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -115,8 +119,8 @@ vi.mock("@/ui/pages/editorControls", () => ({
     onChange,
   }: {
     label: string;
-    value: unknown;
-    onChange: (items: unknown[]) => void;
+    value: readonly PageListItemV2[];
+    onChange: (items: PageListItemV2[]) => void;
   }) => (
     <div data-control="items" data-value={JSON.stringify(value)}>
       <span>{label}</span>
@@ -279,6 +283,22 @@ const videoBlock = (): PageBlockV2 =>
 
 const listBlock = (): PageBlockV2 =>
   createPageBlockV2("list", { id: "block-list", props: { items: ["Alpha"] } });
+
+/**
+ * Re-injects a raw (un-normalized) `props.items` value into a real list block:
+ * `createPageBlockV2` alone would run the owner stored-read normalizer first,
+ * and the inspector seam is what must adapt the untyped value.
+ */
+const rawListBlock = (items: unknown): PageBlockV2 => {
+  const block = createPageBlockV2("list", { id: "block-list-raw", props: { items: [] } });
+  return { ...block, props: { ...block.props, items } };
+};
+
+const itemsValueOf = () => {
+  const control = container!.querySelector('[data-control="items"]');
+  if (!control) throw new Error("Missing list items control");
+  return control.getAttribute("data-value") ?? "";
+};
 
 const galleryBlock = (): PageBlockV2 => createPageBlockV2("gallery", { id: "block-gallery" });
 
@@ -520,6 +540,40 @@ test("commits list block items and ordered toggle", () => {
     commit('[data-commit="items"]');
     expect(onBlockChange.mock.calls.some(([block]) => Array.isArray(block.props.items))).toBe(true);
     expect(controlsOf("toggle").length).toBeGreaterThanOrEqual(1);
+  } finally {
+    React.act(() => root.unmount());
+  }
+});
+
+test("forwards the stored owner list-item shapes through the inspector seam", () => {
+  const { root } = mountInspector(
+    null,
+    rawListBlock(["Alpha", { label: "Privacy", href: "/privacy" }])
+  );
+  try {
+    expect(itemsValueOf()).toBe('["Alpha",{"label":"Privacy","href":"/privacy"}]');
+  } finally {
+    React.act(() => root.unmount());
+  }
+});
+
+test("adapts raw scalar and malformed list entries with the owner read semantics", () => {
+  const { root } = mountInspector(
+    null,
+    rawListBlock([42, true, null, { label: 3, href: "/privacy" }])
+  );
+  try {
+    expect(itemsValueOf()).toBe('["42","true","",{"label":"","href":"/privacy"}]');
+  } finally {
+    React.act(() => root.unmount());
+  }
+});
+
+test("renders an empty list instead of crashing when the raw list value is not an array", () => {
+  const { root } = mountInspector(null, rawListBlock("not-a-list"));
+  try {
+    expect(itemsValueOf()).toBe("[]");
+    expect(text()).toContain("Items");
   } finally {
     React.act(() => root.unmount());
   }

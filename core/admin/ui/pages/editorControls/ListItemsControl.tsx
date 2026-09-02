@@ -14,8 +14,12 @@ import {
 
 export type ListItemsControlProps = {
   label: string;
-  /** Stored list items (owner shapes: plain strings or `{ label, href }`). */
-  value: readonly unknown[];
+  /**
+   * Stored list items in the owner `PageListItemV2` shapes only (plain
+   * strings or `{ label, href }` records); callers adapt raw values with the
+   * owner read semantics before rendering.
+   */
+  value: readonly PageListItemV2[];
   /** Emits the full next items array in the owner stored shapes. */
   onChange: (items: PageListItemV2[]) => void;
   disabled?: boolean;
@@ -52,14 +56,7 @@ export const ListItemsControl = ({
       : "border border-white/15 bg-white/5 text-slate-200 placeholder:text-slate-500";
   const rows: ListItemRow[] = value.map((item) => {
     if (typeof item === "string") return { label: item, href: "" };
-    if (item && typeof item === "object") {
-      const record = item as { label?: unknown; href?: unknown };
-      return {
-        label: typeof record.label === "string" ? record.label : "",
-        href: typeof record.href === "string" ? record.href : "",
-      };
-    }
-    return { label: "", href: "" };
+    return { label: item.label, href: item.href };
   });
 
   const commitRows = (nextRows: readonly ListItemRow[]) => {
