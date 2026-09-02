@@ -172,6 +172,8 @@ export function CustomScreenListPage() {
     }
   };
 
+  const openCreateDrawer = () => handleDrawerOpenChange(true);
+
   const handleOpenAfterCreateChange = async (next: boolean) => {
     setOpenAfterCreate(next);
     try {
@@ -329,7 +331,7 @@ export function CustomScreenListPage() {
                 />
               ) : null}
               <Badge variant="soft">Beta</Badge>
-              <Button className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <Button className="gap-1.5" onClick={openCreateDrawer}>
                 <Plus className="size-4" />
                 New screen
               </Button>
@@ -384,7 +386,7 @@ export function CustomScreenListPage() {
             onActivate={(id) => handleSetStatus(id, "active")}
             onMoveToDraft={(id) => handleSetStatus(id, "draft")}
             onDelete={setPendingDeleteId}
-            onCreate={() => setCreateOpen(true)}
+            onCreate={openCreateDrawer}
           />
         )}
         <ListPaginationFooter

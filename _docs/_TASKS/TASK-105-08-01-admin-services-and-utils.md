@@ -6,7 +6,9 @@
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-08  
 **Parent Task:** TASK-105-08  
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Implementation Complete:** 2026-08-22 (`78adae09`)
+**Closure Pending:** Family rebaseline and a changelog entry that explicitly includes this leaf.
 
 ---
 
@@ -14,7 +16,67 @@
 
 Close every line gap in `core/admin/services/**` (40 files) and `core/admin/utils/**`
 (7 files). These are thin typed browser clients over the shared `apiRequest` seam plus
-cache/prefetch helpers. This leaf is test-only: no API surface, no production change.
+cache/prefetch helpers. The original broad coverage implementation across these 47 owned
+source files is test-only and changes no API surface. The sole authorized production
+exception is the bounded child `TASK-105-08-01-S01`, defined below. The
+`Implementation Complete` field records only the original coverage body; this parent remains
+in progress, and its existing family-rebaseline and changelog closure semantics are unchanged.
+
+### Bounded Child Exception: TASK-105-08-01-S01
+
+`TASK-105-08-01-S01-Solution-Kit-ID-Parity.md` may change exactly these four
+implementation paths:
+
+1. `core/admin/services/solutionKitsClient.ts`
+2. `core/admin/services/solutionKitSelection.ts`
+3. `tests/vitest/admin/solutionKitsClient.coverage.test.ts`
+4. `tests/vitest/admin/solutionKitSelection.test.ts`
+
+While S01 is active, these four paths are carved out of this parent's broad writer set and are
+exclusively S01-owned. The parent must not edit them concurrently. The remaining 45 source
+paths and all parent-owned admin suites other than the two named S01 suites retain the broad
+parent ownership below; no other path transfers. After S01 returns its validated handoff, the
+four paths become read-only inputs to the parent/family closure rather than concurrent parent
+writers. S01's sole production purpose is to align the browser `SolutionKitId` union and both
+existing local validator allowlists with the authoritative six-ID server tuple by adding
+`local-service-business`. Both validators must remain explicit and strict, accept exactly
+those six IDs, and continue to fail closed for unknown IDs. S01 must not export, relocate,
+deduplicate, or widen the validators, import a server/runtime authority into the browser, or
+add network-response validation outside the existing seams.
+
+S01 changes no route, endpoint, request path, or HTTP option; no cache key, TTL, invalidation,
+cache policy, or storage key; and no auth, session, RBAC, permission, CSRF, persistence, or
+anti-abuse contract. `core/admin/ui/kits/SolutionKitCard.tsx` is outside these four paths and
+is separately owned by `TASK-105-08-05-L03-L01`; S01 must not edit or absorb that card repair.
+
+The child handoff must retain all of the following evidence:
+
+1. Separate direct Vitest passes for the two exact test paths above.
+2. One scoped V8 run over both direct suites and exactly the two production modules, with
+   both source rows present and reporting `100%` lines without a permanent coverage-config
+   change.
+3. Captured `bun --cwd core lint:types` attribution plus zero-exit `bun --cwd core lint`,
+   exact-four-path ESLint, and `bun run check:admin-boundary` results. The intermediate
+   `lint:types` command must not be reported globally green when the expected card diagnostic
+   is present.
+4. Root `tsc -p tsconfig.json --noEmit --incremental false --pretty false` exit status and
+   output, with no diagnostic attributed to any of the four S01 paths and the exact
+   `core/admin/ui/kits/SolutionKitCard.tsx` path, TypeScript code, and message containing
+   `"local-service-business"` recorded as `transitional_cross_owner` and assigned to
+   `TASK-105-08-05-L03-L01`. That separate owner must clear the same signature before L03;
+   S01 must neither repair it early nor fabricate a clean global compiler receipt.
+5. Scoped and global `git diff --check` results plus exact physical line counts proving every
+   changed production or test file is at most 1,000 lines.
+6. A fresh-context, read-only post-implementation audit of the final HEAD and dirty-worktree
+   state covering exact-path scope, six-ID parity, strict fail-closed behavior, boundaries,
+   tests, V8/static/root-TSC evidence, line counts, and cross-owner card coordination, with no
+   unresolved HIGH or MEDIUM finding.
+
+This parent-contract repair changes the audited contract, so every earlier reconcile receipt
+covering the parent, S01, the L03 dependency, or the card-owner boundary is stale. Obtain a
+fresh read-only reconcile against the current contracts before implementation. Any later
+source, test, task, workflow, or validation-contract change likewise requires a fresh
+applicable audit; a stale receipt cannot authorize S01 or unblock L03.
 
 ## Scope
 
@@ -79,8 +141,9 @@ Uncovered-line budget: **931** (869 services + 62 utils).
 
 ## Single-Writer File Ownership
 
-- This leaf is the SOLE writer of the 47 source files above (READ-only for all
-  other leaves) and of its test files under `tests/vitest/admin/*` (the utils
+- Outside the active S01 carve-out, this leaf is the SOLE writer of the 47-source
+  inventory above (READ-only for all other leaves) and of its test files under
+  `tests/vitest/admin/*` (the utils
   suites live under `tests/vitest/admin/`; `tests/vitest/utils/` holds only
   non-test helpers, so no `tests/vitest/utils/*` test claim is made). Ownership is
   by NAMED suite whose subject is one of this leaf's 47 source files; the following
@@ -90,6 +153,13 @@ Uncovered-line budget: **931** (869 services + 62 utils).
   `formCanvas.test.tsx` -> TASK-105-08-08, `mediaUtils.test.ts` -> TASK-105-08-06,
   and the `custom-screen-*.test.ts` family (incl. `custom-screen-schemas.test.ts`
   and `custom-screen-binding-contract.test.ts`) -> TASK-105-08-10.
+- ACTIVE S01 CARVE-OUT: `core/admin/services/solutionKitsClient.ts`,
+  `core/admin/services/solutionKitSelection.ts`,
+  `tests/vitest/admin/solutionKitsClient.coverage.test.ts`, and
+  `tests/vitest/admin/solutionKitSelection.test.ts` are exclusively owned by
+  `TASK-105-08-01-S01` until its validated receipt. The broad parent may not write
+  any of those four paths during that interval, and S01 gains no claim over any
+  other source or test path.
 - CARVE-OUT: `tests/vitest/admin/custom-screen-schemas.test.ts` (930 lines) tests
   `core/services/customScreens/**` normalizers and is owned by TASK-105-08-10,
   NOT this leaf.
@@ -188,7 +258,10 @@ fixture module, keeping every part independently runnable.
 
 ## Security Contract
 
-Test-only, no API surface.
+The broad 47-file coverage body is test-only. S01 is the single browser-side production
+exception described above and creates no API surface. Its two local validators remain strict
+and fail closed; routes, cache contracts, auth, RBAC, permissions, CSRF, persistence, and
+anti-abuse behavior remain unchanged.
 
 ## Acceptance Criteria
 
@@ -196,6 +269,9 @@ Test-only, no API surface.
    residuals listed below.
 2. Cache-hit paths assert `apiRequest` was NOT called (no zero-query regression).
 3. Error/normalizer paths are behavior-asserted, not skipped.
+4. S01's four-path handoff records zero owned-path compiler diagnostics plus the
+   exact `transitional_cross_owner` card diagnostic; the separately owned
+   L03-L01 receipt must clear that signature before L03 may start.
 
 ## Documented Genuinely-Unreachable Residuals
 

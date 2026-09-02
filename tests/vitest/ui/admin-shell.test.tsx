@@ -1,3 +1,6 @@
+// SSR-path smoke (no window): verifies the no-js render path only. Behavior coverage
+// for AdminShell navigation lives in admin-shell-nav.test.tsx. See TASK-105-08-09
+// ownership notes.
 import React from "react";
 import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";

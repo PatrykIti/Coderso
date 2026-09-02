@@ -1,7 +1,8 @@
 # 421. TASK-105 Server Bun Ownership Freeze
 
-**Date:** 2026-03-12  
-**Version:** Unreleased  
+**Date:** 2026-03-12
+**Version:** Unreleased
+**Status:** Draft — family reopened as TASK-105-11-03-05 (To Do); Draft marker per the changelog README reopen-draft policy, index row removed until fresh reclosure validation succeeds.
 **Tasks:** TASK-105, TASK-105-11, TASK-105-11-03, TASK-105-11-03-05
 
 ## Key Changes

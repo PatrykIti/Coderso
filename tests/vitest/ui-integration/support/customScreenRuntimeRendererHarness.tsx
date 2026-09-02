@@ -93,3 +93,52 @@ export const staticImageBlock: ScreenBlockV1 = {
 };
 Object.freeze(staticImageBlock.data);
 Object.freeze(staticImageBlock);
+
+export const recordHeaderBlock: ScreenBlockV1 = {
+  id: "header-1",
+  type: "record-header",
+  data: { label: "Record header", title: "", eyebrow: "", subtitle: "" },
+};
+Object.freeze(recordHeaderBlock.data);
+Object.freeze(recordHeaderBlock);
+
+export const recordHeaderTitleBinding: ScreenFieldBinding = {
+  id: "header-1-title",
+  blockId: "header-1",
+  propPath: "title",
+  source: "entry",
+  field: "headline",
+  mode: "readwrite",
+};
+Object.freeze(recordHeaderTitleBinding);
+
+export const richTextBlock: ScreenBlockV1 = {
+  id: "body-1",
+  type: "rich-text",
+  data: { label: "Body", content: "" },
+};
+Object.freeze(richTextBlock.data);
+Object.freeze(richTextBlock);
+
+export const tabsBlock: ScreenBlockV1 = {
+  id: "tabs-1",
+  type: "tabs",
+  data: {
+    label: "Tabs",
+    tabs: [
+      { id: "tab-1", label: "Overview" },
+      { id: "tab-2", label: "Details" },
+    ],
+  },
+  slots: { "tab-1": [], "tab-2": [] },
+};
+Object.freeze(tabsBlock.data);
+Object.freeze(tabsBlock.slots);
+Object.freeze(tabsBlock);
+
+export const tabsSlotEndTarget = {
+  kind: "slot-end",
+  sectionId: "section-1",
+  parentId: "tabs-1",
+  slotId: "tab-1",
+} as const;

@@ -1,7 +1,8 @@
 # 425. TASK-105 Legacy Migration Cleanup Closure
 
-**Date:** 2026-03-12  
-**Version:** Unreleased  
+**Date:** 2026-03-12
+**Version:** Unreleased
+**Status:** Draft — family reopened as TASK-105-11-04 (To Do); Draft marker per the changelog README reopen-draft policy, index row removed until fresh reclosure validation succeeds.
 **Tasks:** TASK-105, TASK-105-11, TASK-105-11-04
 
 ## Key Changes

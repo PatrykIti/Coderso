@@ -42,6 +42,34 @@ const KITS = [
     recommendedModules: ["catalog"],
     features: ["Product grid"],
   },
+  {
+    id: "medical-clinic",
+    title: "Medical Clinic",
+    shortDescription: "Clinic services",
+    recommendedModules: ["forms"],
+    features: ["Appointments"],
+  },
+  {
+    id: "beauty-salon",
+    title: "Beauty Salon",
+    shortDescription: "Salon bookings",
+    recommendedModules: ["booking"],
+    features: ["Bookings"],
+  },
+  {
+    id: "local-service-business",
+    title: "Local Service Business",
+    shortDescription: "Local services",
+    recommendedModules: ["forms"],
+    features: ["Inquiries"],
+  },
+  {
+    id: "services-directory",
+    title: "Local Services Directory",
+    shortDescription: "Directory listings",
+    recommendedModules: ["listings"],
+    features: ["Listings"],
+  },
 ];
 
 const seedKits = (storage: StorageStub, kits: unknown) =>
@@ -96,9 +124,17 @@ test("grid renders one card per cached kit with title + module badges", () => {
 
   expect(html).toContain("Automotive Workshop");
   expect(html).toContain("Small Ecommerce");
+  expect(html).toContain("Medical Clinic");
+  expect(html).toContain("Beauty Salon");
+  expect(html).toContain("Local Service Business");
+  expect(html).toContain("Local Services Directory");
+  expect(html).toContain("listings");
+  expect(html).toContain("catalog");
   // Module badge text = de-hyphenated token; `capitalize` is CSS-only, so the
   // rendered HTML text stays lowercase "booking".
   expect(html).toContain("booking");
+  expect(html).toContain("forms");
+  expect(html.split("Select kit").length - 1).toBe(5);
   expect(html).not.toContain("Loading solution kits");
 });
 
@@ -107,7 +143,7 @@ test("active kit shows Selected state and the page never offers Apply kit", () =
   seedKits(storage, KITS);
   // Pre-set the active-kit selection key (first cached kit also resolves as the
   // effective selection, so the first card renders as active either way).
-  storage.setItem(ACTIVE_KIT_STORAGE_KEY, "automotive-workshop");
+  storage.setItem(ACTIVE_KIT_STORAGE_KEY, "local-service-business");
 
   const html = renderAdminUi(<SolutionKitsPage />, {
     path: "/admin/advanced/solution-kits",
@@ -115,5 +151,8 @@ test("active kit shows Selected state and the page never offers Apply kit", () =
 
   expect(html).toContain("Selected"); // success badge + button label on active card
   expect(html).toContain("Select kit"); // non-active card keeps the read-only label
+  expect(html).toContain("Local Service Business");
   expect(html).not.toContain("Apply kit"); // reviewed-flow constraint preserved
+  expect(html).not.toContain("Rollback latest");
+  expect(html).not.toContain("Cancel");
 });

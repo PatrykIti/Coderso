@@ -154,3 +154,204 @@ test("binds Navigation Label / URL / Visibility to the form value with no open-i
     container.remove();
   }
 });
+
+test("advanced link type toggle and page picker propagate through onChange", () => {
+  const onChange = vi.fn();
+  const value: MenuItemFormValue = {
+    id: "item-1",
+    label: "Home",
+    linkType: "page",
+    pageId: "",
+    href: "",
+    parentId: null,
+    visibility: "all",
+    badgeLabel: "",
+    badgeTone: "default",
+    description: "",
+    icon: "",
+  };
+  const pages = [
+    {
+      id: "page-about",
+      title: "About",
+      slug: "about",
+      status: "published" as const,
+      updatedAt: "",
+      author: null,
+    },
+  ];
+
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  React.act(() => {
+    root.render(
+      <MenuItemForm value={value} pages={pages} parentOptions={[]} onChange={onChange} />
+    );
+  });
+
+  try {
+    const buttonByExactText = (text: string) =>
+      Array.from(container.querySelectorAll("button")).find(
+        (node) => node.textContent?.trim() === text
+      );
+
+    // Link Type -> Page (already page) keeps the draft shape.
+    React.act(() => {
+      buttonByExactText("Page")?.click();
+    });
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ linkType: "page", href: "" });
+
+    // The mocked select exposes the page option; picking it sets pageId.
+    const pageSelect = Array.from(container.querySelectorAll<HTMLSelectElement>("select")).find(
+      (select) =>
+        Array.from(select.querySelectorAll("option")).some(
+          (option) => option.textContent === "About"
+        )
+    );
+    expect(pageSelect).toBeTruthy();
+    React.act(() => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+      setter?.call(pageSelect, "page-about");
+      pageSelect?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ pageId: "page-about" });
+
+    // Link Type -> Custom URL restores the URL lane.
+    React.act(() => {
+      buttonByExactText("Custom URL")?.click();
+    });
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ linkType: "url", pageId: "" });
+  } finally {
+    React.act(() => {
+      root.unmount();
+    });
+    container.remove();
+  }
+});
+
+test("display-as, badge, description, and icon fields propagate through onChange", () => {
+  const onChange = vi.fn();
+  const value: MenuItemFormValue = {
+    id: "item-1",
+    label: "Home",
+    linkType: "url",
+    pageId: "",
+    href: "/home",
+    parentId: null,
+    visibility: "all",
+    badgeLabel: "",
+    badgeTone: "default",
+    description: "",
+    icon: "",
+  };
+
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  React.act(() => {
+    root.render(<MenuItemForm value={value} pages={[]} parentOptions={[]} onChange={onChange} />);
+  });
+
+  try {
+    const buttonByExactText = (text: string) =>
+      Array.from(container.querySelectorAll("button")).find(
+        (node) => node.textContent?.trim() === text
+      );
+
+    React.act(() => {
+      buttonByExactText("Link")?.click();
+    });
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ variant: "link" });
+
+    React.act(() => {
+      buttonByExactText("Button")?.click();
+    });
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ variant: "button" });
+
+    const setInput = (placeholder: string, next: string) => {
+      const input = container.querySelector(
+        `input[placeholder="${placeholder}"]`
+      ) as HTMLInputElement | null;
+      expect(input).not.toBeNull();
+      React.act(() => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+        setter?.call(input, next);
+        input?.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    };
+
+    setInput("New", "Hot");
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ badgeLabel: "Hot" });
+
+    setInput("Optional helper text", "Featured in the main menu");
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({
+      description: "Featured in the main menu",
+    });
+
+    setInput("e.g. sparkles", "rocket");
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ icon: "rocket" });
+  } finally {
+    React.act(() => {
+      root.unmount();
+    });
+    container.remove();
+  }
+});
+
+test("visibility and badge tone selects propagate their real enum values", () => {
+  const onChange = vi.fn();
+  const value: MenuItemFormValue = {
+    id: "item-1",
+    label: "Home",
+    linkType: "url",
+    pageId: "",
+    href: "/home",
+    parentId: null,
+    visibility: "all",
+    badgeLabel: "",
+    badgeTone: "default",
+    description: "",
+    icon: "",
+  };
+
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  React.act(() => {
+    root.render(<MenuItemForm value={value} pages={[]} parentOptions={[]} onChange={onChange} />);
+  });
+
+  try {
+    const changeSelect = (select: HTMLSelectElement | null | undefined, next: string) => {
+      expect(select).not.toBeNull();
+      React.act(() => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value")?.set;
+        setter?.call(select, next);
+        select?.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    };
+
+    const selects = Array.from(container.querySelectorAll<HTMLSelectElement>("select"));
+    const visibilitySelect = selects.find((select) =>
+      Array.from(select.querySelectorAll("option")).some(
+        (option) => option.textContent === "Show to everyone"
+      )
+    );
+    changeSelect(visibilitySelect, "logged_in");
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ visibility: "logged_in" });
+
+    const badgeToneSelect = selects.find(
+      (select) =>
+        select !== visibilitySelect &&
+        Array.from(select.querySelectorAll("option")).some((option) => option.value === "success")
+    );
+    changeSelect(badgeToneSelect, "success");
+    expect(onChange.mock.calls.at(-1)?.[0]).toMatchObject({ badgeTone: "success" });
+  } finally {
+    React.act(() => {
+      root.unmount();
+    });
+    container.remove();
+  }
+});

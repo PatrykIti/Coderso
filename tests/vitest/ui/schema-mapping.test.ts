@@ -4,6 +4,7 @@ import type { ContentField } from "../../../core/admin/ui/content-types/SchemaBu
 import {
   buildSchemaFromFields,
   fieldsFromSchema,
+  type ContentSchema,
 } from "../../../core/admin/ui/content-types/schemaMapping";
 
 test("schema mapping preserves relation metadata", () => {
@@ -178,4 +179,244 @@ test("schema mapping preserves relation metadata", () => {
     width: "half",
     display: "compact",
   });
+});
+
+test("schema mapping normalizes defaults per field type", () => {
+  const fields = [
+    { id: "f1", name: "count", type: "number", label: "Count", defaultValue: "5" },
+    { id: "f2", name: "bad-number", type: "number", label: "Bad", defaultValue: "abc" },
+    { id: "f6", name: "empty-number", type: "number", label: "Empty", defaultValue: "" },
+    { id: "f3", name: "flagged", type: "boolean", label: "Flag", defaultValue: "true" },
+    { id: "f4", name: "unflagged", type: "boolean", label: "Flag2", defaultValue: "false" },
+    { id: "f5", name: "excerpt", type: "text", label: "Excerpt", defaultValue: "hello" },
+  ] as const;
+
+  const schema = buildSchemaFromFields(fields as unknown as ContentField[]);
+  expect(schema.properties["count"]?.default).toBe(5);
+  expect(schema.properties["bad-number"]?.default).toBeUndefined();
+  expect(schema.properties["flagged"]?.default).toBe(true);
+  expect(schema.properties["unflagged"]?.default).toBe(false);
+  expect(schema.properties["excerpt"]?.default).toBe("hello");
+  expect(schema.properties["empty-number"]?.default).toBeUndefined();
+
+  const parsed = fieldsFromSchema(schema);
+  expect(parsed.find((field) => field.name === "count")?.defaultValue).toBe("5");
+  expect(parsed.find((field) => field.name === "flagged")?.defaultValue).toBe("true");
+  expect(parsed.find((field) => field.name === "unflagged")?.defaultValue).toBe("false");
+  expect(parsed.find((field) => field.name === "excerpt")?.defaultValue).toBe("hello");
+});
+
+test("schema mapping reads relation metadata from config fallbacks", () => {
+  // xFieldType missing but xFieldConfig.relation.target present → relation type.
+  const schema: ContentSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      related: {
+        type: "array",
+        items: { type: "string" },
+        xRelationTarget: "posts",
+        xFieldConfig: { relation: { target: "posts", multiple: true } },
+      },
+      configOnlyRelation: {
+        type: "string",
+        xFieldConfig: { relation: { target: "posts", multiple: true } },
+      },
+      oddRelation: {
+        type: "string",
+        xRelationTarget: "posts",
+        xFieldConfig: { relation: { multiple: "yes" } },
+      },
+      noRelation: {
+        type: "string",
+        xRelationTarget: "posts",
+        xFieldConfig: { relation: "not-an-object" },
+      },
+      unrelated: {
+        type: "string",
+        xFieldConfig: { select: "not-an-object" },
+      },
+    },
+  };
+  const parsed = fieldsFromSchema(schema);
+  const related = parsed.find((field) => field.name === "related");
+  expect(related?.type).toBe("relation");
+  expect(related?.relation?.target).toBe("posts");
+  expect(related?.relation?.multiple).toBe(true);
+  const configOnlyRelation = parsed.find((field) => field.name === "configOnlyRelation");
+  expect(configOnlyRelation?.type).toBe("relation");
+  expect(configOnlyRelation?.relation).toBeUndefined();
+  const oddRelation = parsed.find((field) => field.name === "oddRelation");
+  expect(oddRelation?.type).toBe("relation");
+  expect(oddRelation?.relation?.multiple).toBe(false);
+  const noRelation = parsed.find((field) => field.name === "noRelation");
+  expect(noRelation?.type).toBe("relation");
+  const unrelated = parsed.find((field) => field.name === "unrelated");
+  expect(unrelated?.type).toBe("text");
+});
+
+test("schema mapping reads string and record select options", () => {
+  const schema: ContentSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      tags: {
+        type: "string",
+        xFieldConfig: {
+          select: {
+            options: [
+              "news",
+              "",
+              "Press",
+              { id: "opt-1", label: "Featured", value: "featured" },
+              42,
+            ],
+            multiple: true,
+          },
+        },
+      },
+      notSelect: {
+        type: "string",
+        xFieldConfig: { select: "broken" },
+      },
+    },
+  };
+  const parsed = fieldsFromSchema(schema);
+  const tags = parsed.find((field) => field.name === "tags");
+  expect(tags?.type).toBe("select");
+  expect(tags?.multiple).toBe(true);
+  expect(tags?.options?.map((option) => option.value)).toEqual(["news", "Press", "featured"]);
+
+  const notSelect = parsed.find((field) => field.name === "notSelect");
+  expect(notSelect?.type).toBe("text");
+});
+
+test("schema mapping drops empty number config and reads date/slug configs", () => {
+  const schema: ContentSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      price: {
+        type: "number",
+        xFieldConfig: {
+          number: { format: undefined, min: undefined, max: undefined, step: undefined },
+        },
+      },
+      launch: {
+        type: "string",
+        xFieldConfig: { date: { includeTime: true } },
+      },
+      noTime: {
+        type: "string",
+        xFieldConfig: { date: { includeTime: false } },
+      },
+      slugField: {
+        type: "string",
+        xFieldConfig: { slug: { source: "title", editable: false } },
+      },
+      emptySlug: {
+        type: "string",
+        xFieldConfig: { slug: { source: "   ", editable: true } },
+      },
+      brokenSlug: {
+        type: "string",
+        xFieldConfig: { slug: "nope" },
+      },
+    },
+  };
+  const parsed = fieldsFromSchema(schema);
+  const price = parsed.find((field) => field.name === "price");
+  expect(price?.type).toBe("number");
+  expect(price?.number).toEqual({ format: "decimal" });
+  expect(parsed.find((field) => field.name === "launch")?.date).toEqual({ includeTime: true });
+  expect(parsed.find((field) => field.name === "noTime")?.date).toBeUndefined();
+  const slugField = parsed.find((field) => field.name === "slugField");
+  expect(slugField?.slug).toEqual({ source: "title", editable: false });
+  expect(parsed.find((field) => field.name === "emptySlug")?.slug).toBeUndefined();
+  expect(parsed.find((field) => field.name === "brokenSlug")?.slug).toBeUndefined();
+});
+
+test("schema mapping emits integer, single select, date, slug, and layout configs", () => {
+  const fields = [
+    { id: "f1", name: "age", type: "number", label: "Age", number: { format: "integer" } },
+    {
+      id: "f2",
+      name: "tone",
+      type: "select",
+      label: "Tone",
+      options: [
+        { id: "opt-a", label: "A", value: "a" },
+        { id: "opt-b", label: "B", value: "b" },
+      ],
+    },
+    { id: "f3", name: "publishedAt", type: "date", label: "Date", date: { includeTime: true } },
+    {
+      id: "f4",
+      name: "slug",
+      type: "slug",
+      label: "Slug",
+      slug: { source: "title", editable: false },
+    },
+  ] as const;
+
+  const schema = buildSchemaFromFields(fields as unknown as ContentField[]);
+  expect(schema.properties["age"]?.type).toBe("integer");
+  expect(schema.properties["tone"]?.type).toBe("string");
+  expect(schema.properties["tone"]?.enum).toEqual(["a", "b"]);
+  expect(schema.properties["tone"]?.xFieldConfig).toEqual({
+    select: {
+      options: [
+        { label: "A", value: "a" },
+        { label: "B", value: "b" },
+      ],
+    },
+    order: 1,
+  });
+  expect(
+    (schema.properties["publishedAt"]?.xFieldConfig as { date?: { includeTime?: boolean } })?.date
+  ).toEqual({ includeTime: true });
+  expect(schema.properties["slug"]?.xFieldConfig).toEqual({
+    slug: { source: "title", editable: false },
+    order: 3,
+  });
+});
+
+test("schema mapping round-trips enum arrays and legacy string options", () => {
+  const schema: ContentSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      multiTag: {
+        type: "array",
+        items: { type: "string", enum: ["news", "press"] },
+      },
+      legacySelect: {
+        type: "string",
+        enum: ["featured", "hidden"],
+      },
+      stringOptions: {
+        type: "string",
+        xFieldConfig: {
+          select: {
+            options: ["news", "", "press"],
+          },
+        },
+      },
+    },
+  };
+  const parsed = fieldsFromSchema(schema);
+  const multiTag = parsed.find((field) => field.name === "multiTag");
+  expect(multiTag?.type).toBe("select");
+  expect(multiTag?.multiple).toBe(true);
+  expect(multiTag?.options?.map((option) => option.value)).toEqual(["news", "press"]);
+  const legacySelect = parsed.find((field) => field.name === "legacySelect");
+  expect(legacySelect?.type).toBe("select");
+  expect(
+    legacySelect?.options?.map((option) => ({ label: option.label, value: option.value }))
+  ).toEqual([
+    { label: "Featured", value: "featured" },
+    { label: "Hidden", value: "hidden" },
+  ]);
+  const stringOptions = parsed.find((field) => field.name === "stringOptions");
+  expect(stringOptions?.options?.map((option) => option.value)).toEqual(["news", "press"]);
 });

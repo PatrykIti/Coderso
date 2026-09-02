@@ -2,7 +2,7 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { expect, test } from "vitest";
+import { afterEach, expect, test } from "vitest";
 
 import {
   AdminRouterProvider,
@@ -49,6 +49,35 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+function RouterHarness() {
+  const router = useAdminRouter();
+  return (
+    <div>
+      <span data-testid="path">{router.path}</span>
+      <button
+        type="button"
+        data-action="external"
+        onClick={() => router.navigate("https://example.com/foo")}
+      >
+        External
+      </button>
+      <button
+        type="button"
+        data-action="replace"
+        onClick={() => router.replace("/admin/settings/security")}
+      >
+        Replace
+      </button>
+    </div>
+  );
+}
+
+const originalAssign = window.location.assign;
+
+afterEach(() => {
+  window.location.assign = originalAssign;
+});
+
 test("AdminRouterProvider navigation blockers stop SPA navigate calls", () => {
   window.history.replaceState({}, "", "/admin/settings/general");
   const view = mount(
@@ -93,6 +122,128 @@ test("AdminRouterProvider navigation blockers restore blocked popstate transitio
       "/admin/settings/security"
     );
     expect(window.location.pathname).toBe("/admin/settings/security");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminRouterProvider derives the initial path from window.location without initialPath", () => {
+  window.history.replaceState({}, "", "/admin/settings/general?tab=basic#top");
+  const view = mount(
+    <AdminRouterProvider>
+      <RouterHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    expect(view.container.querySelector('[data-testid="path"]')?.textContent).toBe(
+      "/admin/settings/general?tab=basic#top"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminRouterProvider popstate on the current path keeps the route", () => {
+  window.history.replaceState({}, "", "/admin/settings/general");
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/general">
+      <RouterHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    React.act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(view.container.querySelector('[data-testid="path"]')?.textContent).toBe(
+      "/admin/settings/general"
+    );
+    expect(window.location.pathname).toBe("/admin/settings/general");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminRouterProvider popstate on a new path updates the route when unblocked", () => {
+  window.history.replaceState({}, "", "/admin/settings/general");
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/general">
+      <RouterHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    window.history.pushState({}, "", "/admin/settings/security");
+    React.act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(view.container.querySelector('[data-testid="path"]')?.textContent).toBe(
+      "/admin/settings/security"
+    );
+    expect(window.location.pathname).toBe("/admin/settings/security");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminRouterProvider delegates external hrefs to window.location.assign", () => {
+  window.history.replaceState({}, "", "/admin/settings/general");
+  const assigned: string[] = [];
+  window.location.assign = ((href: string) => {
+    assigned.push(href);
+  }) as unknown as typeof window.location.assign;
+
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/general">
+      <RouterHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    const button = view.container.querySelector('[data-action="external"]');
+    if (!button) throw new Error("Missing external action");
+
+    React.act(() => {
+      (button as HTMLElement).click();
+    });
+
+    expect(assigned).toEqual(["https://example.com/foo"]);
+    // The external branch returns before syncing, so the SPA route is untouched.
+    expect(view.container.querySelector('[data-testid="path"]')?.textContent).toBe(
+      "/admin/settings/general"
+    );
+    expect(window.location.pathname).toBe("/admin/settings/general");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminRouterProvider replace navigation rewrites the current history entry", () => {
+  window.history.replaceState({}, "", "/admin/settings/general");
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/settings/general">
+      <RouterHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    const initialLength = window.history.length;
+    const button = view.container.querySelector('[data-action="replace"]');
+    if (!button) throw new Error("Missing replace action");
+
+    React.act(() => {
+      (button as HTMLElement).click();
+    });
+
+    // replaceState keeps the history length; a pushState would grow it.
+    expect(window.history.length).toBe(initialLength);
+    expect(window.location.pathname).toBe("/admin/settings/security");
+    expect(view.container.querySelector('[data-testid="path"]')?.textContent).toBe(
+      "/admin/settings/security"
+    );
   } finally {
     view.cleanup();
   }

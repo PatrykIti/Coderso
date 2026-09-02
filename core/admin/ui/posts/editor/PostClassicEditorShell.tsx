@@ -687,6 +687,7 @@ export function PostClassicEditorShell() {
   };
 
   const handlePreview = async () => {
+    if (previewLoading) return;
     setPreviewOpen(true);
     const identity = currentRouteIdentity();
     if (!identity) {
@@ -739,7 +740,8 @@ export function PostClassicEditorShell() {
                   size="sm"
                   className="gap-2"
                   onClick={handlePreview}
-                  disabled={isEditorLoading || previewLoading}
+                  disabled={isEditorLoading}
+                  aria-busy={previewLoading || undefined}
                 >
                   <Eye className="h-4 w-4" />
                   Runtime preview

@@ -115,9 +115,9 @@ function instrumentSource(adminBase: string, activation: string): string {
       let active = true; const facts = []; const counts = { consoleErrors: 0, pageErrors: 0 }; const seen = new Set(); const solutionKitIds = new Set(["automotive-workshop", "medical-clinic", "beauty-salon", "local-service-business", "services-directory", "small-ecommerce"]); const requests = new WeakMap(); const xhrListeners = new Set();
       try { scope.localStorage.removeItem("customScreens:list"); scope.localStorage.removeItem("solutionKits:list"); } catch {}
       const forbidden = ["apply", "rollback", "chat", "plan", "dry-run", "execute"];
-      const classify = (url, method) => { const pathname = url.pathname; for (const fragment of forbidden) if (pathname.includes(fragment)) return "forbidden:" + fragment; const isAdmin = url.origin === config.adminOrigin && pathname.startsWith(config.adminPrefix); const isPublicHome = url.origin === config.publicOrigin && pathname === "/api/public/home"; const tail = isAdmin ? pathname.slice(config.adminPrefix.length) : isPublicHome ? "public/home" : null; if (tail === null) return "unknown"; const path = tail.split("?")[0].replace(/\\/$/u, ""); const get = method === "GET";
+      const classify = (url, method) => { const pathname = url.pathname; for (const fragment of forbidden) if (pathname.includes(fragment)) return "forbidden:" + fragment; const isAdmin = url.origin === config.adminOrigin && pathname.startsWith(config.adminPrefix); const isPublicHome = url.origin === config.publicOrigin && pathname === "/api/public/home"; const isPublicPopups = url.origin === config.publicOrigin && pathname === "/api/popups"; const tail = isAdmin ? pathname.slice(config.adminPrefix.length) : isPublicHome ? "public/home" : isPublicPopups ? "public/popups" : null; if (tail === null) return "unknown"; const path = tail.split("?")[0].replace(/\\/$/u, ""); const get = method === "GET";
         if (path === "auth/me") return get ? "auth-me" : "unknown"; if (path === "auth/install/status") return get ? "auth-install-status" : "unknown"; if (path === "auth/csrf") return get ? "auth-csrf" : "unknown"; if (path === "settings") { if (get && !seen.has("settings-list")) { seen.add("settings-list"); return "settings-list"; } return get ? "settings-read" : method === "PATCH" ? "settings-write" : "unknown"; } if (path === "custom-screens") { if (get && !seen.has("custom-screens-list")) { seen.add("custom-screens-list"); return "custom-screens-list"; } return "unknown"; } if (path === "solution-kits") { if (get && !seen.has("solution-kits-list")) { seen.add("solution-kits-list"); return "solution-kits-list"; } return get ? "solution-kits-read" : "unknown"; }
-        if (path.startsWith("solution-kits/")) return get && solutionKitIds.has(path.slice("solution-kits/".length)) ? "solution-kit-detail" : "unknown"; if (path === "menus" || path.startsWith("menus/")) return get ? "menus-read" : method === "POST" || method === "PATCH" || method === "PUT" ? "menus-write" : "unknown"; if (path === "pages" || path.startsWith("pages/")) return get ? "pages-read" : "unknown"; if (path === "page-templates") return get ? "page-templates-read" : "unknown"; if (path === "dashboard/widget-data") return method === "POST" ? "dashboard-layout-write" : "unknown"; if (path === "dashboard" || path === "dashboard/layout" || path.startsWith("dashboard/")) return get ? "dashboard-layout-read" : method === "PUT" ? "dashboard-layout-write" : "unknown"; if (path === "assistant/status") return get ? "assistant-status" : "unknown"; return path === "public/home" && get ? "public-home-data" : "unknown"; };
+        if (path === "solution-kits/runs") return get ? "solution-kits-runs-read" : "unknown"; if (path.startsWith("solution-kits/")) return get && solutionKitIds.has(path.slice("solution-kits/".length)) ? "solution-kit-detail" : "unknown"; if (path === "menus" || path.startsWith("menus/")) return get ? "menus-read" : method === "POST" || method === "PATCH" || method === "PUT" ? "menus-write" : "unknown"; if (path === "pages" || path.startsWith("pages/")) return get ? "pages-read" : "unknown"; if (path === "page-templates") return get ? "page-templates-read" : "unknown"; if (path === "dashboard/widget-data") return method === "POST" ? "dashboard-layout-write" : get ? "dashboard-widget-data-read" : "unknown"; if (path === "content-types") return get ? "content-types-read" : "unknown"; if (path === "dashboard" || path === "dashboard/layout" || path.startsWith("dashboard/")) return get ? "dashboard-layout-read" : method === "PUT" ? "dashboard-layout-write" : "unknown"; if (path === "assistant/status") return get ? "assistant-status" : "unknown"; return path === "public/home" && get ? "public-home-data" : path === "public/popups" && get ? "public-popups-read" : "unknown"; };
       const record = (url, method, status) => { if (active) facts.push({ endpointId: classify(url, method), method, status }); };
       const fetch = replace(scope, "fetch", async function (input, init) { const response = await fetch.original.call(scope, input, init); try { const url = typeof input === "string" ? input : input instanceof URL ? input.href : (input && input.url) || ""; if (url.includes("/api/")) { const resolved = new URL(url, scope.location.origin); record(resolved, String((init && init.method) || (input && input.method) || "GET").toUpperCase(), response.status); } } catch {} return response; });
       const prototype = scope.XMLHttpRequest.prototype; const open = replace(prototype, "open", function (method, url) { requests.set(this, { method: String(method || "GET").toUpperCase(), url: String(url || "") }); return open.original.apply(this, arguments); });
@@ -542,7 +542,7 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
     await this.#run(
       "configure_site_shell_navigation",
       `
-        await page.locator('aside.hidden.md\\:flex').getByRole("link", { name: "Menus", exact: true }).click({ timeout: 15000 });
+        await page.locator('aside.hidden.md\\\\:flex').getByRole("link", { name: "Menus", exact: true }).click({ timeout: 15000 });
         await page.getByRole("button", { name: "Site shell", exact: true }).click({ timeout: 15000 });
         const field = page.locator('[data-site-shell-field="navigation-menu"]');
         await field.getByRole("combobox").click({ timeout: 15000 });
@@ -567,11 +567,19 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
       },
       actionId: "apply_menu_design_font_size_twenty",
       body: `
-        await page.locator('aside.hidden.md\\:flex').getByRole("link", { name: "Menus", exact: true }).click({ timeout: 15000 });
+        await page.locator('aside.hidden.md\\\\:flex').getByRole("link", { name: "Menus", exact: true }).click({ timeout: 15000 });
         await page.getByText(${JSON.stringify(menuLabel(this.#session))}, { exact: true }).click({ timeout: 15000 });
         await page.locator('[data-menu-design-button="true"]').click({ timeout: 15000 });
         const canvas = page.locator('[data-menu-document-canvas="true"]');
-        const navBlock = canvas.locator('[data-menu-block-id]').filter({ has: canvas.locator('nav[data-menu-nav-preview="true"]') }).first();
+        // The design editor hydrates its canvas blocks asynchronously (r30 probe:
+        // zero blocks at body start, present seconds later), so the nav block is
+        // awaited explicitly before clicking. The wrapper must also be matched
+        // with a pure :has() selector — a canvas-rooted filter(has:
+        // canvas.locator(...)) resolves to zero under the pinned playwright-cli
+        // even though the containment holds in the live DOM (r27 outline,
+        // synthetic repro, 2026-09-01).
+        const navBlock = canvas.locator('div[data-menu-block-id]:has(nav[data-menu-nav-preview="true"])').first();
+        await navBlock.waitFor({ state: "visible", timeout: 30000 });
         await navBlock.click({ timeout: 15000 });
         const slider = page.locator('[data-menu-block-panel="nav-items"] input[type="range"][data-page-editor-slider="Font size"]');
         await slider.focus();
@@ -592,16 +600,20 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
       "create_configure_save_quick_actions",
       `
         await page.getByRole("link", { name: "Dashboard", exact: true }).click({ timeout: 15000 });
-        const grid = page.locator('[aria-busy]').filter({ has: page.locator('[data-widget-id]') }).first();
-        await grid.waitFor({ state: "visible", timeout: 15000 });
+        // Pure :has() form — filter({ has: ... }) resolves to zero under the
+        // pinned playwright-cli (see the nav-block note in the design action).
+        await page.locator('[aria-busy]:has([data-widget-id])').first().waitFor({ state: "visible", timeout: 15000 });
         await page.getByRole("button", { name: "Customize", exact: true }).click();
         await page.getByRole("button", { name: /Quick Actions.*Common admin shortcuts/ }).click({ timeout: 15000 });
-        const host = page.locator('[data-widget-type="quick-actions"]').last();
-        await host.getByRole("button", { name: "Configure", exact: true }).click({ timeout: 15000 });
-        await page.getByRole("button", { name: "Add action", exact: true }).click();
+        // Adding a catalog widget also SELECTS it, which auto-opens its config
+        // sheet; the sheet carries a second data-widget-type host (its
+        // editMode=false preview) at the end of the DOM, so the grid host is
+        // scoped through the dashboard grid container instead of .last().
+        const host = page.locator('[aria-busy]').first().locator('[data-widget-type="quick-actions"]');
+        await page.getByRole("button", { name: "Add action", exact: true }).click({ timeout: 15000 });
         await page.getByLabel("Action label").last().fill(${JSON.stringify(label)});
         await page.getByRole("button", { name: "Done", exact: true }).click();
-        await host.getByRole("button", { name: "Wider", exact: true }).click();
+        await host.getByRole("button", { name: "Wider", exact: true }).click({ timeout: 15000 });
         await page.getByRole("button", { name: "Save", exact: true }).click({ timeout: 15000 });
         return null;
       `
@@ -638,7 +650,7 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
       },
       actionId: "assert_persisted_quick_actions",
       body: `
-        const host = page.locator('[data-widget-type="quick-actions"]').last();
+        const host = page.locator('[aria-busy]').first().locator('[data-widget-type="quick-actions"]');
         await host.waitFor({ state: "visible", timeout: 15000 });
         const text = await host.textContent();
         const parentClass = await host.locator("..").getAttribute("class");
@@ -661,15 +673,20 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
       },
       actionId: "open_solution_kit_guide",
       body: `
-        await page.getByRole("link", { name: "Solution Kits", exact: true }).click({ timeout: 15000 });
-        const selectable = page.getByRole("button", { name: "Select kit", exact: true }).first();
-        await selectable.click({ timeout: 15000 });
+        // The sidebar link carries a "Beta" badge INSIDE the anchor, so its
+        // accessible name is "Solution Kits Beta"; anchor on the label (r44).
+        await page.getByRole("link", { name: /^Solution Kits/ }).click({ timeout: 15000 });
+        await page.getByRole("button", { name: "Select kit", exact: true }).first().click({ timeout: 15000 });
         await page.getByText("Selected kit details", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
         await page.getByRole("button", { name: "Open LLM Guide", exact: true }).click({ timeout: 15000 });
         const dialog = page.getByRole("dialog", { name: "Assistant conversation" });
         await dialog.waitFor({ state: "visible", timeout: 15000 });
-        const textarea = dialog.getByPlaceholder("Describe the setup or admin surface you want LLM Guide to create...");
-        const prompt = await textarea.inputValue();
+        // Mode- and placeholder-agnostic prefill proof: without an LLM backend
+        // resolveAssistantCurrentMode degrades the panel to docs-only (r49
+        // probe: placeholder "Ask where something is in docs"), but the
+        // composer textarea is controlled by the same message state the
+        // reviewed handoff prefills, so its VALUE must carry the prompt.
+        const prompt = await dialog.locator("textarea").first().inputValue({ timeout: 15000 });
         const actual = prompt === ${JSON.stringify(REVIEWED_SITE_BUILDER_PROMPT)} ? "true" : "false";
         if (actual !== "true") throw new Error("task105_l05_reviewed_prompt_missing");
       `,
@@ -682,7 +699,10 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
       `
         await page.getByRole("link", { name: "Dashboard", exact: true }).click({ timeout: 15000 });
         await page.getByRole("button", { name: "Customize", exact: true }).click({ timeout: 15000 });
-        const host = page.locator('[data-widget-type="quick-actions"]').last();
+        // Grid-scoped host: the config sheet's editMode=false preview also
+        // carries data-widget-type at the end of the DOM, so .last() would
+        // target a host with no edit toolbar.
+        const host = page.locator('[aria-busy]').first().locator('[data-widget-type="quick-actions"]');
         await host.getByRole("button", { name: "Configure", exact: true }).click({ timeout: 15000 });
         await page.getByLabel("Action label").last().fill(${JSON.stringify(`${label} draft`)});
         await page.getByRole("button", { name: "Done", exact: true }).click();
@@ -696,7 +716,10 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
       "persist_remote_dashboard_mutation",
       `
         await page.getByRole("button", { name: "Customize", exact: true }).click({ timeout: 15000 });
-        const host = page.locator('[data-widget-type="quick-actions"]').last();
+        // Grid-scoped host (see the dirty-draft note): the config sheet's
+        // editMode=false preview also carries data-widget-type at the end of
+        // the DOM, so .last() would target a host with no edit toolbar.
+        const host = page.locator('[aria-busy]').first().locator('[data-widget-type="quick-actions"]');
         await host.getByRole("button", { name: "Configure", exact: true }).click({ timeout: 15000 });
         await page.getByLabel("Action label").last().fill(${JSON.stringify(label)});
         await page.getByRole("button", { name: "Done", exact: true }).click();
@@ -721,7 +744,7 @@ export class Task105L05CliPageDriver implements Task105L05PageDriver {
         await page.getByText("Saved layout changed elsewhere", { exact: true }).waitFor({ state: "visible", timeout: 15000 });
         const save = page.getByRole("button", { name: "Save", exact: true });
         const disabled = await save.isDisabled();
-        const draft = page.locator('[data-widget-type="quick-actions"]').last();
+        const draft = page.locator('[aria-busy]').first().locator('[data-widget-type="quick-actions"]');
         const visible = await draft.textContent();
         const actual = disabled === true && visible?.includes(${JSON.stringify(`${quickActionLabel(this.#session, "A")} draft`)}) === true ? "true" : "false";
         if (actual !== "true") {

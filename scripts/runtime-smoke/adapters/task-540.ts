@@ -3,7 +3,11 @@ import { SmokeError } from "../contracts";
 import type { RuntimeSmokeContext } from "../lifecycle";
 import type { RepositorySnapshot } from "../repository-guard";
 import type { SmokeAdapter, SmokeAdapterResult } from "./types";
-import { task540EvidenceDirectory } from "./task-540/output-manifest";
+import {
+  buildExactTask540ArchiveManifest,
+  projectTask540ArchivedScreenshots,
+  task540EvidenceDirectory,
+} from "./task-540/output-manifest";
 import type { Task540NativeEvidence } from "./task-540/suite/composition/contracts";
 import { runTask540NativeSuite } from "./task-540/suite/composition/suite";
 import { isTask540CleanupLogicalReceiptCount } from "./task-540/cleanup-cardinality";
@@ -95,16 +99,34 @@ export function validateTask540Evidence(value: unknown): Task540NativeEvidence {
   return candidate as Task540NativeEvidence;
 }
 
+export function validateTask540ArchivedEvidence(
+  input: RuntimeSmokeContext["input"],
+  value: unknown
+) {
+  if (!Array.isArray(value)) {
+    throw new SmokeError("smoke_output_invalid", "TASK-540 archived evidence is invalid");
+  }
+  const manifest = buildExactTask540ArchiveManifest(input);
+  return projectTask540ArchivedScreenshots(input, manifest, value);
+}
+
 export async function runTask540Adapter(context: RuntimeSmokeContext): Promise<SmokeAdapterResult> {
   const result = await runTask540NativeSuite(context, randomBytes(6).toString("hex"));
   const evidence = validateTask540Evidence(
     createTask540SafeEvidenceAssertion(process.env)(result.evidence, "TASK-540 native evidence")
   );
+  const archivedScreenshots = validateTask540ArchivedEvidence(
+    context.input,
+    createTask540SafeEvidenceAssertion(process.env)(
+      result.archivedScreenshots,
+      "TASK-540 archived evidence"
+    )
+  );
   return Object.freeze({
     pass: true,
     serverUp: evidence.serverUp,
     scenarios: evidence.scenarios,
-    screenshots: evidence.screenshots,
+    screenshots: archivedScreenshots,
     consoleErrors: evidence.consoleErrors,
     cleanup: Object.freeze({
       canonicalCleanupReceipts: evidence.cleanupReceipts.length,

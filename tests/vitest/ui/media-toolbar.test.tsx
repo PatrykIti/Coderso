@@ -89,3 +89,68 @@ test("MediaToolbar hides the Filters button entirely when onOpenFilters is absen
   );
   expect(filtersButton(container)).toBeUndefined();
 });
+
+test("MediaToolbar fires onSearchChange with the typed value", () => {
+  const onSearchChange = vi.fn();
+  const container = mount(
+    <MediaToolbar
+      search=""
+      view="grid"
+      onSearchChange={onSearchChange}
+      onViewChange={() => undefined}
+    />
+  );
+  const input = container.querySelector(
+    "input[placeholder='Search assets...']"
+  ) as HTMLInputElement;
+  React.act(() => {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    setter?.call(input, "hero");
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  expect(onSearchChange).toHaveBeenCalledWith("hero");
+});
+
+test("MediaToolbar toggles open-after-upload and switches views", () => {
+  const onOpenAfterUploadChange = vi.fn();
+  const onViewChange = vi.fn();
+  const container = mount(
+    <MediaToolbar
+      search=""
+      view="grid"
+      openAfterUpload={false}
+      onOpenAfterUploadChange={onOpenAfterUploadChange}
+      onSearchChange={() => undefined}
+      onViewChange={onViewChange}
+    />
+  );
+  const checkbox = container.querySelector('[data-slot="checkbox"]') as HTMLElement;
+  React.act(() => {
+    checkbox.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(onOpenAfterUploadChange).toHaveBeenCalledWith(true);
+
+  const listButton = container.querySelector('[aria-label="List view"]') as HTMLElement;
+  React.act(() => {
+    listButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(onViewChange).toHaveBeenCalledWith("list");
+
+  const gridButton = container.querySelector('[aria-label="Grid view"]') as HTMLElement;
+  React.act(() => {
+    gridButton.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(onViewChange).toHaveBeenCalledWith("grid");
+});
+
+test("MediaToolbar omits the open-after-upload toggle when the callback is absent", () => {
+  const container = mount(
+    <MediaToolbar
+      search=""
+      view="list"
+      onSearchChange={() => undefined}
+      onViewChange={() => undefined}
+    />
+  );
+  expect(container.querySelector('[data-slot="checkbox"]')).toBeNull();
+});

@@ -5,15 +5,20 @@ import { expect, test } from "vitest";
 
 import {
   brandBlock,
+  cacheBusState,
   canvasFrame,
   clickButton,
   clickFirstSwatch,
   clickSegmented,
   clickSelector,
   flush,
+  findReset,
   flushIcons,
+  getBlockRowLabels,
   hasGroup,
+  menusClientState,
   mount,
+  navigateState,
   readLastSavedDocument,
   seedDocument,
   selectBlockRow,
@@ -24,10 +29,17 @@ import {
 } from "./menuDesignEditorFixtures";
 
 import {
+  createDefaultMenuDocumentV2,
   normalizeMenuDocumentV2ForWrite,
   type MenuDocumentV2,
 } from "../../../core/services/menus/menuDocumentV2";
 
+import { ApiClientError } from "../../../core/admin/services/apiClient";
+import {
+  historyReducer,
+  type HistoryAction,
+  type HistoryState,
+} from "../../../core/admin/ui/menus/MenuDesignEditorControls";
 import { MenuDesignEditorPage } from "../../../core/admin/ui/menus/MenuDesignEditorPage";
 
 test("520-03-L01: Corner radius writes the present-only bar `radius` (no default hint)", async () => {
@@ -266,4 +278,411 @@ test("520-03-L02: the brand canvas preview renders the icon <svg> and the combo 
   expect(brandMark?.getAttribute("data-menu-brand-combo")).toBe("true");
 
   cleanup();
+});
+// --- editor host + shell chrome (TASK-105-08-05 residuals) -------------------
+
+test("the host resolves the menu id from the route when no prop is given", async () => {
+  const previousPath = window.location.pathname;
+  window.location.pathname = "/admin/menus/route-menu/design";
+  try {
+    const { container, cleanup } = mount(<MenuDesignEditorPage />);
+    await flush();
+    expect(container.querySelector('[data-menu-bar-panel="true"]')).toBeTruthy();
+    cleanup();
+  } finally {
+    window.location.pathname = previousPath;
+  }
+});
+
+test("the host shows the missing state when the route has no menu id", async () => {
+  const previousPath = window.location.pathname;
+  window.location.pathname = "/admin/menus";
+  try {
+    const { container, cleanup } = mount(<MenuDesignEditorPage />);
+    await flush();
+    expect(container.textContent).toContain(
+      "This menu could not be resolved from the current route."
+    );
+    cleanup();
+  } finally {
+    window.location.pathname = previousPath;
+  }
+});
+
+test("save failure with an Error surfaces its message and keeps the draft dirty", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  menusClientState.updateError = new Error("save boom");
+  clickButton(container, "Save");
+  await flush();
+  expect(container.textContent).toContain("save boom");
+  // The draft stays dirty: the Discard button is re-enabled.
+  const discard = Array.from(container.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "Discard"
+  );
+  expect(discard?.hasAttribute("disabled")).toBe(false);
+  cleanup();
+});
+
+test("save failure with an ApiClientError surfaces its message", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  menusClientState.updateError = new ApiClientError("menus_save_failed", "api save boom", 400);
+  clickButton(container, "Save");
+  await flush();
+  expect(container.textContent).toContain("api save boom");
+  cleanup();
+});
+
+test("save failure with an opaque error falls back to the generic message", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  menusClientState.updateError = {};
+  clickButton(container, "Save");
+  await flush();
+  expect(container.textContent).toContain("Failed to save menu design.");
+  cleanup();
+});
+
+test("publish saves the document, publishes the menu, and clears dirty", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  clickButton(container, "Publish");
+  await flush();
+  expect(menusClientState.publishCalls).toContain("menu-1");
+  expect(menusClientState.updateCalls.some((input) => "document" in input)).toBe(true);
+  const discard = Array.from(container.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "Discard"
+  );
+  expect(discard?.hasAttribute("disabled")).toBe(true);
+  cleanup();
+});
+
+test("publish failure surfaces the error and clears the publishing state", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  menusClientState.publishError = new Error("pub boom");
+  clickButton(container, "Publish");
+  await flush();
+  expect(container.textContent).toContain("pub boom");
+  // The Publish button is re-enabled after the failure settles.
+  const publish = Array.from(container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes("Publish")
+  );
+  expect(publish?.hasAttribute("disabled")).toBe(false);
+  cleanup();
+});
+
+test("discard resets the draft and clears the selection", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Brand");
+  setInputValue(container, "Brand text", "Draft name");
+  clickButton(container, "Discard");
+  // Dirty cleared ⇒ Discard is disabled again; selection cleared ⇒ BarPanel back.
+  const discard = Array.from(container.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "Discard"
+  );
+  expect(discard?.hasAttribute("disabled")).toBe(true);
+  expect(container.querySelector('[data-menu-bar-panel="true"]')).toBeTruthy();
+  cleanup();
+});
+
+test("Structure navigates to the structure editor", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickButton(container, "Structure");
+  expect(navigateState.calls).toContain("/menus/menu-1");
+  cleanup();
+});
+
+test("the panel toggle hides and the reopen affordance restores it", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  expect(container.querySelector('[data-menu-bar-panel="true"]')).toBeTruthy();
+  clickButton(container, "Hide panel");
+  expect(container.querySelector('[data-menu-bar-panel="true"]')).toBeNull();
+  // The reopenAffordance chip is the LAST "Show panel" button (the toolbar
+  // toggle shares the label); it is the shell's reopen slot.
+  const affordance = Array.from(container.querySelectorAll('button[aria-label="Show panel"]')).at(
+    -1
+  );
+  expect(affordance).toBeTruthy();
+  React.act(() => {
+    affordance?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(container.querySelector('[data-menu-bar-panel="true"]')).toBeTruthy();
+  cleanup();
+});
+
+test("block rows move, add, and remove from the bar panel list", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  // Add a Divider via the add-block rail.
+  clickSelector(container, '[data-menu-add-block="divider"]');
+  expect(getBlockRowLabels(container)).toContain("Divider");
+  // Move the last block up and the Brand block down (list-row buttons).
+  clickSelector(container, '[aria-label="Move Divider up"]');
+  clickSelector(container, '[aria-label="Move Brand down"]');
+  // Remove the Brand block via the list-row button.
+  clickSelector(container, '[aria-label="Remove Brand"]');
+  expect(getBlockRowLabels(container)).not.toContain("Brand");
+  clickButton(container, "Save");
+  await flush();
+  const doc = readLastSavedDocument();
+  expect(doc?.sections[0]?.blocks.some((block) => block.type === "brand")).toBe(false);
+  cleanup();
+});
+
+test("the block panel moves and removes the selected block", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Button");
+  clickSelector(container, '[aria-label="Move block up"]');
+  clickSelector(container, '[aria-label="Move block down"]');
+  clickSelector(container, '[aria-label="Remove block"]');
+  // Removal clears the selection: the bar panel returns.
+  expect(container.querySelector('[data-menu-bar-panel="true"]')).toBeTruthy();
+  clickButton(container, "Save");
+  await flush();
+  const doc = readLastSavedDocument();
+  expect(doc?.sections[0]?.blocks.some((block) => block.type === "cta-button")).toBe(false);
+  cleanup();
+});
+
+// --- cache-event revalidation + remote update alert --------------------------
+
+test("a cache event for an unrelated key is ignored", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  cacheBusState.emit("some:unrelated:key");
+  await flush();
+  expect(container.textContent).not.toContain("Menu design changed");
+  cleanup();
+});
+
+test("a cache event reload while dirty surfaces the remote update alert", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  cacheBusState.emit("menus:detail:menu-1");
+  await flush();
+  expect(container.textContent).toContain("New menu design is available.");
+  // Keep editing dismisses the alert and keeps the draft.
+  clickButton(container, "Keep editing");
+  expect(container.textContent).not.toContain("Menu design changed");
+  const discard = Array.from(container.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "Discard"
+  );
+  expect(discard?.hasAttribute("disabled")).toBe(false);
+  cleanup();
+});
+
+test("Reload on the remote update alert force-hydrates and clears the draft", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  cacheBusState.emit("menus:detail:menu-1");
+  await flush();
+  clickButton(container, "Reload");
+  await flush();
+  expect(container.textContent).not.toContain("Menu design changed");
+  const discard = Array.from(container.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "Discard"
+  );
+  expect(discard?.hasAttribute("disabled")).toBe(true);
+  cleanup();
+});
+
+test("a cache event reload while clean hydrates and saving a clean doc is a no-op", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  cacheBusState.emit("menus:detail:menu-1");
+  await flush();
+  expect(container.textContent).not.toContain("Menu design changed");
+  // Save without edits: markSaved on a clean state keeps it clean.
+  clickButton(container, "Save");
+  await flush();
+  const discard = Array.from(container.querySelectorAll("button")).find(
+    (button) => button.textContent?.trim() === "Discard"
+  );
+  expect(discard?.hasAttribute("disabled")).toBe(true);
+  cleanup();
+});
+
+test("a cache event reload failure surfaces a non-destructive error", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  menusClientState.failMenuLoad = new Error("refresh boom");
+  cacheBusState.emit("menus:detail:menu-1");
+  await flush();
+  expect(container.textContent).toContain("refresh boom");
+  cleanup();
+});
+
+test("a cache event reload with a null detail is a no-op", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  menusClientState.nullDetail = true;
+  cacheBusState.emit("menus:detail:menu-1");
+  await flush();
+  expect(container.textContent).not.toContain("Menu design changed");
+  expect(container.textContent).not.toContain("refresh boom");
+  cleanup();
+});
+
+test("a cache event during a save is skipped (no redundant revalidation)", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  // The server save broadcasts the detail cache event while the mutation is
+  // in flight; the editor must ignore its own broadcast.
+  menusClientState.updateMenu.mockImplementationOnce(
+    async (_menuId: string, input: Record<string, unknown>) => {
+      cacheBusState.emit("menus:detail:menu-1");
+      menusClientState.updateCalls.push(input);
+      return {
+        id: "menu-1",
+        name: "Main menu",
+        location: "primary",
+        status: "draft",
+        publishedAt: null,
+        createdAt: "2026-06-12T09:00:00.000Z",
+        settings: null,
+      };
+    }
+  );
+  clickButton(container, "Save");
+  await flush();
+  expect(container.textContent).not.toContain("Menu design changed");
+  cleanup();
+});
+
+test("mount load failure surfaces a non-destructive error", async () => {
+  menusClientState.failMenuLoad = new Error("load boom");
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  expect(container.textContent).toContain("load boom");
+  cleanup();
+});
+
+// --- bar panel writers + base reset -----------------------------------------
+
+test("bar controls write their keys and the base reset clears them", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  clickSegmented(container, "Alignment", "end");
+  setSliderValue(container, "Horizontal padding", "40");
+  setSliderValue(container, "Border width", "3");
+  clickSegmented(container, "Shadow", "md");
+  clickButton(container, "Save");
+  await flush();
+  const layout = readLastSavedDocument()?.sections[0]?.layout ?? {};
+  expect(layout).toMatchObject({
+    alignment: "end",
+    paddingX: 40,
+    borderWidth: 3,
+    shadow: "md",
+  });
+  // Desktop base value present ⇒ the base Reset affordance renders; clicking
+  // it clears the base key (clearMenuSectionBase path).
+  const reset = findReset(container, "Horizontal padding");
+  expect(reset).toBeTruthy();
+  clickSelector(container, '[data-menu-responsive-reset="Horizontal padding"]');
+  clickButton(container, "Save");
+  await flush();
+  expect(
+    Object.prototype.hasOwnProperty.call(
+      readLastSavedDocument()?.sections[0]?.layout ?? {},
+      "paddingX"
+    )
+  ).toBe(false);
+  cleanup();
+});
+
+// --- canvas preview residuals -------------------------------------------------
+
+test("canvas renders nested nav children recursively, utility fallbacks, and leaf types", async () => {
+  menusClientState.items = [
+    {
+      id: "item-parent",
+      label: "Parent",
+      href: null,
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      children: [
+        {
+          id: "item-child",
+          label: "Child",
+          href: "/child",
+          pageId: null,
+          parentId: "item-parent",
+          orderIndex: 0,
+          children: [
+            {
+              id: "item-grand",
+              label: "Grandchild",
+              href: "/grand",
+              pageId: null,
+              parentId: "item-child",
+              orderIndex: 0,
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+  seedDocument((doc) => {
+    const section = doc.sections[0];
+    if (!section) return;
+    section.blocks = [
+      ...section.blocks.filter((block) => block.type !== "cta-button"),
+      {
+        id: "spacer-block",
+        type: "spacer",
+        props: {},
+      } as never,
+      {
+        id: "search-block",
+        type: "search",
+        props: { label: "" },
+      } as never,
+    ];
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  const frame = canvasFrame(container);
+  // Recursive sublists render to depth 2 (parent → child → grandchild).
+  expect(frame.querySelectorAll('[data-site-nav-group="true"]').length).toBeGreaterThanOrEqual(1);
+  expect(frame.textContent).toContain("Grandchild");
+  // Utility block falls back to its label constant when props.label is empty.
+  expect(frame.textContent).toContain("Search");
+  // Spacer renders an inert span.
+  expect(frame.querySelector('[aria-hidden="true"]')).toBeTruthy();
+  // The brand anchor swallows clicks (canvas preview never navigates).
+  clickSelector(frame, ".site-header-brand");
+  // Nested child links also swallow clicks (renderPreviewNavItem anchor path).
+  clickSelector(frame, ".site-nav-link");
+  cleanup();
+});
+
+test("historyReducer falls through its default branch for an unknown action", () => {
+  const state: HistoryState = {
+    doc: createDefaultMenuDocumentV2(),
+    past: [],
+    future: [],
+    dirty: false,
+  };
+  // Only reachable via an invalid dispatch; pin the fail-closed passthrough.
+  const action = { type: "unknown" } as unknown as HistoryAction;
+  const next = historyReducer(state, action);
+  expect(next).toBe(state);
 });

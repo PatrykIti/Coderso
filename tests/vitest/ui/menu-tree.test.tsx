@@ -285,3 +285,56 @@ test("MenuTree exposes keyboard reorder actions without root drop zones", () => 
     view.cleanup();
   }
 });
+
+test("MenuTree moves the active row before its previous sibling via keyboard", () => {
+  const onMove = vi.fn();
+  const view = mount({ onMove, activeId: "blog" });
+
+  try {
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.getAttribute("aria-label") === "Move up Blog")?.click();
+    });
+
+    expect(onMove).toHaveBeenCalledWith("blog", "root", "before");
+    // The top-most row has no previous sibling, so its move-up is disabled.
+    expect(
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.getAttribute("aria-label") === "Move up Home")
+        ?.getAttribute("disabled")
+    ).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MenuTree clears drag state when the handle drag ends", () => {
+  const onMove = vi.fn();
+  const view = mount({ onMove });
+
+  try {
+    const rootHandle = view.container.querySelector('[data-menu-drag-handle="root"]');
+    expect(rootHandle).not.toBeNull();
+    if (!rootHandle) return;
+
+    React.act(() => {
+      dispatchDragEvent(rootHandle, "dragstart");
+    });
+
+    // After dragend the pending drag is cleared: a later dragover shows no
+    // drop marker because there is no active drag id.
+    React.act(() => {
+      dispatchDragEvent(rootHandle, "dragend");
+    });
+    const blogRow = view.container.querySelector('[data-menu-row-id="blog"]');
+    expect(blogRow).not.toBeNull();
+    if (!blogRow) return;
+    mockRect(blogRow, { left: 0, top: 100, height: 40 });
+    React.act(() => {
+      dispatchDragEvent(blogRow, "dragover", { clientX: 8, clientY: 104 });
+    });
+    expect(view.container.querySelector('[data-menu-drop-line="blog:before"]')).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});

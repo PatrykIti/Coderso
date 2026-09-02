@@ -6,6 +6,7 @@ import {
   describeMenuLocationState,
   validateMenuItemsPayload,
 } from "../../../core/admin/ui/menus/MenuEditorPage";
+import { buildMenuItemsPayload } from "../../../core/admin/ui/menus/menuEditorItemState";
 import { resolveMenuDropIntent } from "../../../core/admin/ui/menus/menuDnD";
 
 const baseItem = (
@@ -86,6 +87,57 @@ test("validateMenuItemsPayload accepts page or url", () => {
   ]);
 
   expect(result.ok).toBe(true);
+});
+
+test("buildMenuItemsPayload emits page and URL item payloads", () => {
+  expect(
+    buildMenuItemsPayload([
+      baseItem({ id: "page", label: " About ", href: null, pageId: "page-1" }),
+      baseItem({ id: "href", label: " Blog ", href: " /blog ", pageId: null, orderIndex: 1 }),
+    ])
+  ).toEqual([
+    {
+      id: "page",
+      label: "About",
+      parentId: null,
+      orderIndex: 0,
+      settings: {},
+      pageId: "page-1",
+    },
+    {
+      id: "href",
+      label: "Blog",
+      parentId: null,
+      orderIndex: 1,
+      settings: {},
+      href: "/blog",
+    },
+  ]);
+});
+
+test("buildMenuItemsPayload keeps page precedence for malformed dual links", () => {
+  expect(buildMenuItemsPayload([baseItem({ href: "/about", pageId: "page-about" })])).toEqual([
+    {
+      id: "item",
+      label: "Home",
+      parentId: null,
+      orderIndex: 0,
+      settings: {},
+      pageId: "page-about",
+    },
+  ]);
+});
+
+test("validateMenuItemsPayload rejects dual page and URL links", () => {
+  const result = validateMenuItemsPayload([
+    baseItem({ id: "item-dual", href: "/about", pageId: "page-about" }),
+  ]);
+
+  expect(result.ok).toBe(false);
+  if (!result.ok) {
+    expect(result.itemId).toBe("item-dual");
+    expect(result.message).toBe("Each menu item must link to a page or a custom URL.");
+  }
 });
 
 test("moveMenuItems reorders siblings", () => {
@@ -196,6 +248,26 @@ test("moveMenuItemToRoot moves item to root start", () => {
     .map((item) => item.id);
 
   expect(rootOrder[0]).toBe("about");
+});
+
+test("moveMenuItemToRoot reindexes the remaining siblings of the old parent", () => {
+  const items = [
+    baseItem({ id: "home", orderIndex: 0 }),
+    baseItem({ id: "about", parentId: "home", orderIndex: 0 }),
+    baseItem({ id: "faq", parentId: "home", orderIndex: 1 }),
+    baseItem({ id: "careers", parentId: "home", orderIndex: 2 }),
+  ];
+
+  const result = moveMenuItemToRoot(items, "faq", "start");
+  const oldChildren = result
+    .filter((item) => item.parentId === "home")
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((item) => item.id);
+  const moved = result.find((item) => item.id === "faq");
+
+  expect(moved?.parentId).toBe(null);
+  expect(moved?.orderIndex).toBe(0);
+  expect(oldChildren).toEqual(["about", "careers"]);
 });
 
 test("resolveMenuDropIntent maps row zones deterministically", () => {

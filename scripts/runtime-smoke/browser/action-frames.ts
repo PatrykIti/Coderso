@@ -70,7 +70,6 @@ export function buildBatchRunCodeSource(input: {
       const slug = message.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 56);
       if (slug.length > 0) return "task554_" + slug;
       return "browser_action_failed";
-      return "browser_action_failed";
     };
     const rows = [];
     for (let index = 0; index < actions.length; index += 1) {

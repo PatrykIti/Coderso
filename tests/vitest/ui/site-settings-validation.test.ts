@@ -123,3 +123,90 @@ test("validateContentRoutes flags detail routes that shadow exact list routes", 
   expect(result.errorsByType.products?.listPath).toContain("/products");
   expect(result.errorsByType.generic?.detailPath).toContain("/:slug");
 });
+
+test("validateContentRoutes ignores disabled routes", () => {
+  const routes: SiteContentRouteForm[] = [
+    {
+      type: "blog",
+      listPath: "",
+      detailPath: "",
+      enabled: false,
+    },
+  ];
+
+  const result = validateContentRoutes(routes);
+
+  expect(result.hasErrors).toBe(false);
+  expect(result.errorsByType.blog).toBeUndefined();
+});
+
+test("validateContentRoutes requires a list path", () => {
+  const routes: SiteContentRouteForm[] = [
+    {
+      type: "blog",
+      listPath: "",
+      detailPath: "/blog/:slug",
+      enabled: true,
+    },
+  ];
+
+  const result = validateContentRoutes(routes);
+
+  expect(result.hasErrors).toBe(true);
+  expect(result.errorsByType.blog?.listPath).toBe("List path is required.");
+});
+
+test("validateContentRoutes: a ':'-containing list path is invalid (never 'static URL')", () => {
+  // normalizeContentRouteListPath (contentRoutePaths.ts:18-24) throws on any ':'
+  // in the path, and normalizeRouteInput catches that throw and returns null, so a
+  // normalized list path can never contain ':' -- the "List path must be a static
+  // URL." branch (siteSettingsValidation.ts:114-115) is unreachable. Because a
+  // valid detail path always ends in ':slug'/':id' (contentRoutePaths.ts:26-51),
+  // the same string can validate as a detail path but never as a list path, so
+  // normalizedList === normalizedDetail (siteSettingsValidation.ts:133-137) is an
+  // impossible state.
+  const routes: SiteContentRouteForm[] = [
+    {
+      type: "blog",
+      listPath: "/blog/:slug",
+      detailPath: "/blog/:slug",
+      enabled: true,
+    },
+  ];
+
+  const result = validateContentRoutes(routes);
+
+  expect(result.hasErrors).toBe(true);
+  // The ':' list path is rejected by the contract and surfaces as the null-path
+  // error, not the dead "List path must be a static URL." branch.
+  expect(result.errorsByType.blog?.listPath).toBe("List path is required.");
+  // Equality with the valid detail path is impossible, so no "different" error.
+  expect(result.errorsByType.blog?.detailPath).toBeUndefined();
+});
+
+test("validateContentRoutes flags duplicate detail paths across content types", () => {
+  const routes: SiteContentRouteForm[] = [
+    {
+      type: "blog",
+      listPath: "/blog",
+      detailPath: "/blog/:slug",
+      enabled: true,
+    },
+    {
+      type: "news",
+      listPath: "/news",
+      detailPath: "/blog/:slug",
+      enabled: true,
+    },
+  ];
+
+  const result = validateContentRoutes(routes);
+
+  expect(result.hasErrors).toBe(true);
+  expect(result.errorsByType.blog?.detailPath).toBe(
+    "Conflict: blog/:slug is used by multiple content types."
+  );
+  expect(result.errorsByType.news?.detailPath).toBe(
+    "Conflict: blog/:slug is used by multiple content types."
+  );
+});

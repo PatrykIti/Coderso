@@ -59,10 +59,7 @@ export function CustomScreenCreateDrawer({
   const [sidebarLabel, setSidebarLabel] = useState("");
 
   const canSubmit = useMemo(
-    () =>
-      name.trim().length > 0 &&
-      contentTypeId.trim().length > 0 &&
-      contentTypes.length > 0,
+    () => name.trim().length > 0 && contentTypeId.trim().length > 0 && contentTypes.length > 0,
     [contentTypeId, contentTypes.length, name]
   );
   const titleHint =
@@ -81,10 +78,7 @@ export function CustomScreenCreateDrawer({
       contentTypeId,
       status,
       showInSidebar,
-      sidebarLabel:
-        showInSidebar && sidebarLabel.trim().length > 0
-          ? sidebarLabel.trim()
-          : null,
+      sidebarLabel: showInSidebar && sidebarLabel.trim().length > 0 ? sidebarLabel.trim() : null,
       openAfterCreate,
     });
   };
@@ -104,11 +98,7 @@ export function CustomScreenCreateDrawer({
             </SheetDescription>
           </div>
           <SheetClose asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Close create custom screen drawer"
-            >
+            <Button variant="ghost" size="icon" aria-label="Close create custom screen drawer">
               <X className="h-4 w-4" />
             </Button>
           </SheetClose>
@@ -143,10 +133,7 @@ export function CustomScreenCreateDrawer({
                 aria-describedby="custom-screen-create-name-hint"
                 onChange={(event) => setName(event.target.value)}
               />
-              <p
-                id="custom-screen-create-name-hint"
-                className="text-xs text-muted-foreground"
-              >
+              <p id="custom-screen-create-name-hint" className="text-xs text-muted-foreground">
                 {name.trim().length === 0
                   ? "Name is required before you can create the custom screen."
                   : "The builder keeps the detailed layout and bindings."}
@@ -157,7 +144,7 @@ export function CustomScreenCreateDrawer({
                 Content type
               </label>
               <Select
-                value={contentTypeId || undefined}
+                value={contentTypeId}
                 onValueChange={setContentTypeId}
                 disabled={contentTypes.length === 0}
               >
@@ -204,9 +191,7 @@ export function CustomScreenCreateDrawer({
                 />
                 <span>
                   Add sidebar shortcut
-                  {status === "draft"
-                    ? " after activation"
-                    : " for active admin navigation"}
+                  {status === "draft" ? " after activation" : " for active admin navigation"}
                 </span>
               </label>
               {showInSidebar ? (
@@ -234,9 +219,7 @@ export function CustomScreenCreateDrawer({
               <Checkbox
                 id="custom-screen-open-after-create"
                 checked={openAfterCreate}
-                onCheckedChange={(checked) =>
-                  onOpenAfterCreateChange(checked === true)
-                }
+                onCheckedChange={(checked) => onOpenAfterCreateChange(checked === true)}
               />
               Open in builder after create
             </label>
@@ -244,17 +227,12 @@ export function CustomScreenCreateDrawer({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-              >
+              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
                 {isSubmitting ? "Creating..." : "Create Custom Screen"}
               </Button>
             </div>
           </div>
-          {!canSubmit ? (
-            <p className="mt-3 text-xs text-muted-foreground">{titleHint}</p>
-          ) : null}
+          {!canSubmit ? <p className="mt-3 text-xs text-muted-foreground">{titleHint}</p> : null}
         </div>
       </SheetContent>
     </Sheet>

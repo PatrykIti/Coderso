@@ -287,9 +287,12 @@ export class ProcessSupervisor implements LifecycleResource {
       const stderr = stderrCapture.bytes;
       if (outcome.exitCode !== 0 || outcome.signal !== null) {
         const snippet = new TextDecoder().decode(stderr.slice(0, 1200));
+        // A silent exit (empty stderr) is only diagnosable from stdout, so the
+        // captured stdout head rides along with the same failure message.
+        const stdoutSnippet = new TextDecoder().decode(stdout.slice(0, 800));
         throw new SmokeError(
           "smoke_process_failed",
-          `process exited unsuccessfully family=${handle.family} code=${outcome.exitCode} signal=${outcome.signal} stderr=${snippet}`
+          `process exited unsuccessfully family=${handle.family} code=${outcome.exitCode} signal=${outcome.signal} stderr=${snippet} stdout=${stdoutSnippet}`
         );
       }
       if (!spec.allowStderr && stderr.byteLength > 0) {

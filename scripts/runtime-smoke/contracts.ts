@@ -16,6 +16,7 @@ export const SUITE_IDS = [
   "task-493",
   "detail-page-v2",
   "task-105-l05",
+  "task-105-l08",
 ] as const;
 export const PROFILE_IDS = ["fast", "certification"] as const;
 

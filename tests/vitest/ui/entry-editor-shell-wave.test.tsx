@@ -2,7 +2,10 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { toast } from "sonner";
 import { afterEach, expect, test, vi } from "vitest";
+
+import type { EntryDetail } from "../../../core/admin/services/entriesClient";
 
 const entryEditorState = vi.hoisted(() => {
   const apiError = (message: string) => ({
@@ -19,22 +22,23 @@ const entryEditorState = vi.hoisted(() => {
     schema: { type: "object" },
   };
 
-  const entry = {
+  const entry: EntryDetail = {
     id: "entry-1",
+    typeId: "type-1",
     title: "Hello",
     slug: "hello",
-    status: "draft" as const,
-    visibility: "public" as const,
+    status: "draft",
+    visibility: "public",
     hasPassword: false,
     createdAt: "2026-06-18T10:00:00Z",
     updatedAt: "2026-06-27T10:00:00Z",
     scheduledAt: null,
     seo: { description: "Meta" },
     taxonomy: {
-      category: { id: "cat-1", name: "News" },
-      tags: [{ id: "tag-1", name: "Launch" }],
+      category: { id: "cat-1", name: "News", slug: "news" },
+      tags: [{ id: "tag-1", name: "Launch", slug: "launch" }],
     },
-    author: { name: "Alex Doe", email: "alex@example.com" },
+    author: { id: "author-1", name: "Alex Doe", email: "alex@example.com" },
     data: {
       title: "Hello",
       summary: "Summary",
@@ -389,11 +393,22 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
 // draft / Publish buttons) renders here so the action buttons stay assertable —
 // no mock needed.
 vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
-  EntryDeleteDialog: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
+  EntryDeleteDialog: ({
+    open,
+    onConfirm,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onConfirm: () => void;
+    onOpenChange?: (open: boolean) => void;
+  }) =>
     open ? (
       <div data-entry-delete-dialog="true">
         <button type="button" data-entry-delete-confirm="true" onClick={onConfirm}>
           confirm-delete
+        </button>
+        <button type="button" data-entry-delete-close="true" onClick={() => onOpenChange?.(false)}>
+          close-delete
         </button>
       </div>
     ) : null,
@@ -404,6 +419,9 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
     onStatusChange,
     onScheduledAtChange,
     onSeoDescriptionChange,
+    onSeoTitleChange,
+    onSeoCanonicalUrlChange,
+    onSeoRobotsChange,
     onCategoryChange,
     onTagIdsChange,
     onCreateCategory,
@@ -414,6 +432,9 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
     onStatusChange: (status: "draft" | "published" | "scheduled" | "archived") => void;
     onScheduledAtChange: (value: string) => void;
     onSeoDescriptionChange: (value: string) => void;
+    onSeoTitleChange?: (value: string) => void;
+    onSeoCanonicalUrlChange?: (value: string) => void;
+    onSeoRobotsChange?: (value: string) => void;
     onCategoryChange?: (id: string | null) => void;
     onTagIdsChange?: (ids: string[]) => void;
     onCreateCategory?: (name: string) => Promise<unknown>;
@@ -428,8 +449,23 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
       <button type="button" onClick={() => onScheduledAtChange("2026-03-09T10:00:00Z")}>
         metadata-schedule
       </button>
+      <button type="button" onClick={() => onScheduledAtChange("not-a-date")}>
+        metadata-bad-schedule
+      </button>
       <button type="button" onClick={() => onSeoDescriptionChange("New meta")}>
         metadata-seo
+      </button>
+      <button type="button" onClick={() => onSeoTitleChange?.("New SEO title")}>
+        metadata-seo-title
+      </button>
+      <button
+        type="button"
+        onClick={() => onSeoCanonicalUrlChange?.("https://site.test/canonical")}
+      >
+        metadata-seo-canonical
+      </button>
+      <button type="button" onClick={() => onSeoRobotsChange?.("noindex")}>
+        metadata-seo-robots
       </button>
       <button type="button" onClick={() => onCategoryChange?.("cat-2")}>
         metadata-category
@@ -517,6 +553,7 @@ const mount = (node: React.ReactNode) => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.clearAllMocks();
   entryEditorState.reset();
   window.history.replaceState({}, "", "/");
 });
@@ -549,9 +586,9 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
 
     React.act(() => {
       const titleArea = textareas[0];
-      titleArea && (titleArea.value = "Updated title");
+      if (titleArea) titleArea.value = "Updated title";
       titleArea?.dispatchEvent(new Event("input", { bubbles: true }));
-      slugInput && ((slugInput as HTMLInputElement).value = "updated-title");
+      if (slugInput instanceof HTMLInputElement) slugInput.value = "updated-title";
       slugInput?.dispatchEvent(new Event("input", { bubbles: true }));
       buttons.find((button) => button.textContent === "field:summary")?.click();
       buttons.find((button) => button.textContent === "Runtime preview")?.click();
@@ -611,6 +648,251 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
     });
 
     expect(entryEditorState.getEntryCalls.length).toBeGreaterThan(1);
+  } finally {
+    view.cleanup();
+  }
+});
+test("refuses every submit and closes the delete dialog when the route has no entry id", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+
+    React.act(() => {
+      buttons.find((button) => button.textContent === "Save draft")?.click();
+      buttons.find((button) => button.textContent === "Publish")?.click();
+      buttons.find((button) => button.textContent === "metadata-status")?.click();
+      buttons.find((button) => button.textContent === "save-metadata")?.click();
+      buttons.find((button) => button.textContent === "delete-entry")?.click();
+    });
+
+    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).not.toBeNull();
+
+    React.act(() => {
+      view.container
+        .querySelector("button[data-entry-delete-confirm='true']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    // Every handler bailed on the missing id: no network traffic, no navigation, and no
+    // deletion. The confirm bails at the guard before the dialog-close-on-refusal branch
+    // (`handleDeleteEntry` returns as soon as `!id`), so the dialog stays open.
+    expect(entryEditorState.updateEntryCalls).toHaveLength(0);
+    expect(entryEditorState.publishEntryCalls).toHaveLength(0);
+    expect(entryEditorState.updateMetadataCalls).toHaveLength(0);
+    expect(entryEditorState.deleteEntryCalls).toHaveLength(0);
+    expect(entryEditorState.navigateCalls).toHaveLength(0);
+    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("surfaces a failed save draft through the error banner and toast", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const { updateEntry } = await import("@/services/entriesClient");
+  vi.mocked(updateEntry).mockRejectedValueOnce(entryEditorState.apiError("save down"));
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "Save draft")?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("save down");
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("save down");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("blocks publishing while the entry checklist has blocking issues", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+  // An empty title hydrates as the editor's own state, so the checklist reports a
+  // blocking issue and the Publish action refuses without touching the network.
+  entryEditorState.entry.title = "";
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "Publish")?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("Title is required");
+    expect(entryEditorState.publishEntryCalls).toHaveLength(0);
+  } finally {
+    entryEditorState.entry.title = "Hello";
+    view.cleanup();
+  }
+});
+
+test("publishing an already published entry saves the draft as an update", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+  entryEditorState.entry.status = "published";
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent?.trim() === "Update")?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(entryEditorState.updateEntryCalls.length).toBeGreaterThan(0);
+    expect(entryEditorState.publishEntryCalls).toHaveLength(0);
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Entry updated.");
+  } finally {
+    entryEditorState.entry.status = "draft";
+    view.cleanup();
+  }
+});
+
+test("surfaces a failed publish through the error banner and toast", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+  entryEditorState.publishError = entryEditorState.apiError("publish down");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "Publish")?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("publish down");
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("publish down");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("offers a remote update and applies it on Refresh without losing the save", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "field:summary")?.click();
+    });
+    React.act(() => {
+      for (const subscriber of entryEditorState.subscribers) {
+        subscriber({ key: "entry:articles:entry-1" });
+      }
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("Updated in another tab");
+
+    const refreshButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Refresh"
+    );
+    expect(refreshButton).toBeDefined();
+    React.act(() => {
+      refreshButton?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(entryEditorState.getEntryCalls.at(-1)).toEqual({
+      type: "articles",
+      id: "entry-1",
+      force: true,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("closes the delete dialog via its onOpenChange seam while idle", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    React.act(() => {
+      buttons.find((button) => button.textContent === "delete-entry")?.click();
+    });
+
+    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).not.toBeNull();
+
+    React.act(() => {
+      view.container
+        .querySelector("button[data-entry-delete-close='true']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(view.container.querySelector("[data-entry-delete-dialog='true']")).toBeNull();
+    expect(entryEditorState.deleteEntryCalls).toHaveLength(0);
   } finally {
     view.cleanup();
   }

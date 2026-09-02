@@ -85,7 +85,7 @@ test("runtime smoke CLI accepts only the exact public shape", () => {
   }
 });
 
-test("static registry reserves exactly fifteen fixed adapters", async () => {
+test("static registry reserves exactly sixteen fixed adapters", async () => {
   expect(staticSmokeRegistry.ids()).toEqual([
     "task-540",
     "task-547",
@@ -102,6 +102,7 @@ test("static registry reserves exactly fifteen fixed adapters", async () => {
     "task-493",
     "detail-page-v2",
     "task-105-l05",
+    "task-105-l08",
   ]);
   expect(staticSmokeRegistry.require("task-540").adapterPath).toBe(
     "scripts/runtime-smoke/adapters/task-540.ts"
@@ -187,4 +188,71 @@ test("static registry reserves exactly fifteen fixed adapters", async () => {
   expect(task105L05.suiteId).toBe("task-105-l05");
   expect(task105L05.supportedProfiles).toEqual(["fast", "certification"]);
   expect(task105L05.evidenceSessionPolicy).toBe("exclusive");
+  // TASK-105-08-08-L07: the pages/posts suite identity is task-105-l08 and,
+  // per the 2026-08-31 contract amendment, it claims no exclusive session.
+  expect(staticSmokeRegistry.ids()).not.toContain("task-105-l07");
+  expect(() =>
+    parseRuntimeSmokeArgs([
+      "run",
+      "--suite",
+      "task-105-l07",
+      "--profile",
+      "fast",
+      "--session",
+      "task105l07-fast",
+    ])
+  ).toThrow(SmokeError);
+  expect(
+    parseRuntimeSmokeArgs([
+      "run",
+      "--suite",
+      "task-105-l08",
+      "--profile",
+      "fast",
+      "--session",
+      "task105l08-fast",
+    ])
+  ).toEqual({
+    command: "run",
+    suite: "task-105-l08",
+    profile: "fast",
+    session: "task105l08-fast",
+  });
+  expect(
+    parseRuntimeSmokeArgs([
+      "run",
+      "--suite",
+      "task-105-l08",
+      "--profile",
+      "certification",
+      "--session",
+      "task105l08-cert",
+    ])
+  ).toEqual({
+    command: "run",
+    suite: "task-105-l08",
+    profile: "certification",
+    session: "task105l08-cert",
+  });
+  expect(staticSmokeRegistry.require("task-105-l08").adapterPath).toBe(
+    "scripts/runtime-smoke/adapters/task-105-l08.ts"
+  );
+  const task105L08 = await staticSmokeRegistry
+    .require("task-105-l08")
+    .loadFixedAdapter(process.cwd());
+  expect(task105L08.suiteId).toBe("task-105-l08");
+  expect(task105L08.supportedProfiles).toEqual(["fast", "certification"]);
+  expect(task105L08.evidenceSessionPolicy).toBeUndefined();
+  expect(
+    task105L08.evidenceDirectory?.(
+      { command: "run", suite: "task-105-l08", profile: "fast", session: "task105l08-fast" },
+      process.cwd()
+    )
+  ).toBe(`${process.cwd()}/_docs/_workflows/_smoke/evidence/task-105/task105l08-fast`);
+  expect(() =>
+    task105L08.evidenceDirectory?.(
+      { command: "run", suite: "task-105-l05", profile: "fast", session: "task105l08-fast" },
+      process.cwd()
+    )
+  ).toThrow(SmokeError);
 });

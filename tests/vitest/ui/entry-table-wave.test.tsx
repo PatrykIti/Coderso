@@ -169,6 +169,29 @@ function mount(node: React.ReactNode) {
   };
 }
 
+test("EntryTable title renders a button without a type slug and fires onEdit on click", () => {
+  const onEdit = vi.fn();
+  const { container, cleanup } = mount(
+    <EntryTable
+      entries={[{ ...baseEntry, contentType: undefined }]}
+      selectedIds={[]}
+      onEdit={onEdit}
+      entryTypeSlug={null}
+    />
+  );
+
+  const titleButton = Array.from(container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes("Hello")
+  );
+  expect(titleButton).toBeInstanceOf(HTMLButtonElement);
+  expect(titleButton?.getAttribute("aria-label")).toBe("Edit entry: Hello");
+  React.act(() => {
+    titleButton?.click();
+  });
+  expect(onEdit).toHaveBeenCalledWith("entry-1");
+  cleanup();
+});
+
 afterEach(() => {
   document.body.innerHTML = "";
 });

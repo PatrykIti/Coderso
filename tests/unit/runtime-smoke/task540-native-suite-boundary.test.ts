@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
-import path from "node:path";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path, { join } from "node:path";
 import {
   executeTask540StandaloneAction,
   type Task540BrowserNativeController,
@@ -31,7 +33,12 @@ import type { PlainJsonValue } from "../../../scripts/runtime-smoke/workers/cont
 import type { WorkerPool } from "../../../scripts/runtime-smoke/workers/pool";
 import { RuntimeLifecycle } from "../../../scripts/runtime-smoke/lifecycle";
 import type { PlaywrightCliNativeCommand } from "../../../scripts/runtime-smoke/browser/playwright-cli-dispatcher";
-import { TASK540_RUN_CODE_TIMEOUT_MS } from "../../../scripts/runtime-smoke/adapters/task-540/suite/composition/suite";
+import { RepositoryGuard } from "../../../scripts/runtime-smoke/repository-guard";
+import { buildExactTask540ArchiveManifest } from "../../../scripts/runtime-smoke/adapters/task-540/output-manifest";
+import {
+  TASK540_RUN_CODE_TIMEOUT_MS,
+  finalizeTask540RoutingLease,
+} from "../../../scripts/runtime-smoke/adapters/task-540/suite/composition/suite";
 
 const root = path.resolve(import.meta.dir, "../../..");
 
@@ -71,6 +78,170 @@ test("TASK-540 dispatcher timeout covers the certification auth-window barrier",
   }
   expect(TASK540_RUN_CODE_TIMEOUT_MS).toBeGreaterThan((maximumWindowSeconds + 1) * 1_000);
   expect(TASK540_RUN_CODE_TIMEOUT_MS).toBeLessThanOrEqual(5 * 60_000);
+});
+
+test("TASK-540 repository guard permits archive-only output changes and rejects flat output changes", async () => {
+  const temporary = await mkdtemp(join(tmpdir(), "task540-repository-guard-"));
+  try {
+    const temporaryRoot = await realpath(temporary);
+    const manifest = buildExactTask540ArchiveManifest({
+      command: "run",
+      suite: "task-540",
+      profile: "fast",
+      session: "task540-guard",
+    });
+    const guardPaths = Object.freeze([...manifest.sourcePaths, ...manifest.archivePaths]);
+    const guard = new RepositoryGuard(temporaryRoot, async () => new Uint8Array());
+    const before = await guard.snapshot(guardPaths);
+    const changedArchivePath = manifest.archivePaths[0]!;
+    await mkdir(path.dirname(join(temporaryRoot, changedArchivePath)), { recursive: true });
+    await writeFile(join(temporaryRoot, changedArchivePath), "changed-archive-output");
+    const archiveOnlyAfter = await guard.snapshot(guardPaths);
+
+    expect(before.files.map(({ path: repositoryPath }) => repositoryPath)).toEqual(
+      [...guardPaths].sort()
+    );
+    expect(() =>
+      guard.assertUnchanged(before, archiveOnlyAfter, manifest.archivePaths)
+    ).not.toThrow();
+
+    const changedFlatPath = manifest.sourcePaths[0]!;
+    await mkdir(path.dirname(join(temporaryRoot, changedFlatPath)), { recursive: true });
+    await writeFile(join(temporaryRoot, changedFlatPath), "changed-flat-output");
+    const after = await guard.snapshot(guardPaths);
+
+    expect(() => guard.assertUnchanged(before, after, manifest.archivePaths)).toThrowError(
+      expect.objectContaining({ code: "smoke_repository_changed" })
+    );
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test("TASK-540 routing lease finalizer restores before one database close on success", async () => {
+  const events: string[] = [];
+  const result = await finalizeTask540RoutingLease({
+    routingLease: {
+      async restore() {
+        events.push("restore");
+      },
+    },
+    routingRestored: false,
+    primary: undefined,
+    async closeDatabase() {
+      events.push("close-database");
+    },
+  });
+
+  expect(events).toEqual(["restore", "close-database"]);
+  expect(result).toEqual({ primary: undefined, routingRestored: true });
+});
+
+test("TASK-540 routing lease finalizer preserves a primary failure while closing once", async () => {
+  const events: string[] = [];
+  const primary = new Error("primary failure");
+  const result = await finalizeTask540RoutingLease({
+    routingLease: {
+      async restore() {
+        events.push("restore");
+      },
+    },
+    routingRestored: false,
+    primary,
+    async closeDatabase() {
+      events.push("close-database");
+    },
+  });
+
+  expect(events).toEqual(["restore", "close-database"]);
+  expect(result.primary).toBe(primary);
+  expect(result.routingRestored).toBe(true);
+});
+
+test("TASK-540 routing lease finalizer still closes after restoration failure and aggregates it", async () => {
+  const events: string[] = [];
+  const primary = new Error("primary failure");
+  const restoreFailure = new Error("restore failure");
+  const result = await finalizeTask540RoutingLease({
+    routingLease: {
+      async restore() {
+        events.push("restore");
+        throw restoreFailure;
+      },
+    },
+    routingRestored: false,
+    primary,
+    async closeDatabase() {
+      events.push("close-database");
+    },
+  });
+
+  expect(events).toEqual(["restore", "close-database"]);
+  expect(result.routingRestored).toBe(false);
+  expect(result.primary).toMatchObject({ code: "smoke_output_invalid" });
+  expect((result.primary as Error).cause).toBeInstanceOf(AggregateError);
+  expect(((result.primary as Error).cause as AggregateError).errors).toEqual([
+    primary,
+    restoreFailure,
+  ]);
+});
+
+test("TASK-540 routing lease finalizer aggregates a database close failure after restore", async () => {
+  const events: string[] = [];
+  const primary = new Error("primary failure");
+  const closeFailure = new Error("close failure");
+  const result = await finalizeTask540RoutingLease({
+    routingLease: {
+      async restore() {
+        events.push("restore");
+      },
+    },
+    routingRestored: false,
+    primary,
+    async closeDatabase() {
+      events.push("close-database");
+      throw closeFailure;
+    },
+  });
+
+  expect(events).toEqual(["restore", "close-database"]);
+  expect(result.routingRestored).toBe(true);
+  expect(result.primary).toMatchObject({ code: "smoke_output_invalid" });
+  expect((result.primary as Error).cause).toBeInstanceOf(AggregateError);
+  expect(((result.primary as Error).cause as AggregateError).errors).toEqual([
+    primary,
+    closeFailure,
+  ]);
+});
+
+test("TASK-540 routing lease finalizer retains restore and close failures together", async () => {
+  const events: string[] = [];
+  const primary = new Error("primary failure");
+  const restoreFailure = new Error("restore failure");
+  const closeFailure = new Error("close failure");
+  const result = await finalizeTask540RoutingLease({
+    routingLease: {
+      async restore() {
+        events.push("restore");
+        throw restoreFailure;
+      },
+    },
+    routingRestored: false,
+    primary,
+    async closeDatabase() {
+      events.push("close-database");
+      throw closeFailure;
+    },
+  });
+
+  expect(events).toEqual(["restore", "close-database"]);
+  expect(result.primary).toMatchObject({ code: "smoke_output_invalid" });
+  const outer = (result.primary as Error).cause as AggregateError;
+  expect(outer).toBeInstanceOf(AggregateError);
+  expect(outer.errors.at(1)).toBe(closeFailure);
+  const inner = outer.errors.at(0) as Error;
+  expect(inner.cause).toBeInstanceOf(AggregateError);
+  expect((inner.cause as AggregateError).errors).toEqual([primary, restoreFailure]);
 });
 
 test("TASK-540 execution memory records runtime palette block captures", () => {

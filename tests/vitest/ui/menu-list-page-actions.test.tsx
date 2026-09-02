@@ -41,6 +41,7 @@ const menuListState = vi.hoisted(() => {
     refreshCalls: [] as Array<{ force?: boolean }>,
     nextPublishError: null as unknown,
     nextDraftError: null as unknown,
+    nextDraftErrorById: new Map<string, unknown>(),
     nextDeleteError: new Map<string, unknown>(),
     toastSuccess: vi.fn(),
     toastError: vi.fn(),
@@ -52,6 +53,7 @@ const menuListState = vi.hoisted(() => {
       this.refreshCalls = [];
       this.nextPublishError = null;
       this.nextDraftError = null;
+      this.nextDraftErrorById = new Map<string, unknown>();
       this.nextDeleteError = new Map<string, unknown>();
       this.toastSuccess.mockClear();
       this.toastError.mockClear();
@@ -248,6 +250,8 @@ vi.mock("@/services/menusClient", () => ({
   }),
   moveMenuToDraft: vi.fn(async (id: string) => {
     menuListState.draftCalls.push(id);
+    const idError = menuListState.nextDraftErrorById.get(id);
+    if (idError) throw idError;
     if (menuListState.nextDraftError) throw menuListState.nextDraftError;
     menuListState.menus = menuListState.menus.map((menu) =>
       menu.id === id ? { ...menu, status: "draft", publishedAt: null } : menu
@@ -642,6 +646,40 @@ test("MenuListPage emits row and bulk failure toasts while preserving inline fee
 
     expect(view.host.textContent).toContain("Deleted 1 menu; failed 1.");
     expect(menuListState.toastError).toHaveBeenCalledWith("Deleted 1 menu; failed 1.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("bulk unpublish with a partial failure emits the singular partial message", async () => {
+  const view = mount();
+  try {
+    await flush();
+
+    const selectAll = view.host.querySelector(
+      'button[aria-label="Select all menus"]'
+    ) as HTMLButtonElement;
+    await React.act(async () => {
+      selectAll.click();
+      await Promise.resolve();
+    });
+
+    menuListState.nextDraftErrorById.set("menu-2", new Error("draft failed"));
+    const bulkSelect = Array.from(view.host.querySelectorAll("select"))[0]!;
+    await React.act(async () => {
+      bulkSelect.value = "unpublish";
+      bulkSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    await React.act(async () => {
+      Array.from(view.host.querySelectorAll("button"))
+        .find((button) => button.textContent === "Apply")
+        ?.click();
+      await Promise.resolve();
+    });
+
+    expect(view.host.textContent).toContain("Moved 1 menu to draft; failed 1.");
+    expect(menuListState.toastError).toHaveBeenCalledWith("Moved 1 menu to draft; failed 1.");
   } finally {
     view.cleanup();
   }

@@ -47,6 +47,8 @@ export function SlashCommandMenu({
                 key={option.type}
                 type="button"
                 className="w-full rounded-md border px-3 py-2 text-left transition hover:border-primary/50 hover:bg-primary/10"
+                // preventDefault keeps focus on the editable: mousedown would blur it and the adapter's onBlur closes this menu before the click lands (PostRichTextAdapter.tsx onBlur) — same pattern as the rich-text toolbar's command buttons (PostRichTextToolbar.tsx).
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => onSelect(option.type)}
               >
                 <p className="text-sm font-semibold">{option.label}</p>

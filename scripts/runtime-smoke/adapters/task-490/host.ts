@@ -55,8 +55,12 @@ async function exactHttpReady(
 // then, the admin page cannot hydrate and the login flow races the optimizer.
 // This probe waits for the real commit: it transforms the entry module, finds
 // the pre-bundled dep URL it points at, and requires that dep to actually
-// serve (mirrors the TASK-488 admin-spa-warm probe).
-const ADMIN_DEP_URL = /\/[^"'\s]+?node_modules\/\.vite\/deps\/[^"'\s]+?\.js\?v=[a-f0-9]+/u;
+// serve (mirrors the TASK-488 admin-spa-warm probe). The dep cache may live at
+// `node_modules/.vite/deps` or — since the TASK-105-08-08-L07 cacheDir split —
+// at `node_modules/.vite/task105-admin/deps` served via `/@fs/`; both forms
+// must match.
+const ADMIN_DEP_URL =
+  /\/[^"'\s]+?node_modules\/\.vite\/(?:[\w.-]+\/)?deps\/[^"'\s]+?\.js\?v=[a-f0-9]+/u;
 
 async function adminSpaWarmReady(
   adminPath: string,

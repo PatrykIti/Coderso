@@ -1,4 +1,3 @@
-import React from "react";
 import { expect, test } from "vitest";
 
 import { resolveSearchDestination } from "../../../core/admin/ui/search/searchNavigation";
@@ -45,4 +44,24 @@ test("resolveSearchDestination builds admin URLs", () => {
       type: "user",
     })
   ).toBe("/admin/users?user=user-1");
+});
+
+test("resolveSearchDestination falls back to the entries index", () => {
+  expect(
+    resolveSearchDestination({
+      id: "entry-3",
+      title: "Draft",
+      type: "entry",
+    })
+  ).toBe("/admin/entries");
+});
+
+test("resolveSearchDestination returns null for unknown types", () => {
+  expect(
+    resolveSearchDestination({
+      id: "x-2",
+      title: "Unknown",
+      type: "unknown",
+    } as never)
+  ).toBe(null);
 });

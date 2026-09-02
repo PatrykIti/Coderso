@@ -26,6 +26,7 @@ const SUPPORTED_PROFILES: Readonly<Record<SmokeSuiteId, readonly SmokeProfileId[
   "task-493": ["fast", "certification"],
   "detail-page-v2": ["fast"],
   "task-105-l05": ["fast", "certification"],
+  "task-105-l08": ["fast", "certification"],
 };
 
 function invalid(message: string): never {

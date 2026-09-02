@@ -9,10 +9,12 @@ import { renderToString } from "react-dom/server";
 const adminShellServiceMocks = vi.hoisted(() => ({
   getCachedCustomScreens: vi.fn(() => []),
   listCustomScreensCached: vi.fn(async () => []),
-  getCachedSolutionKits: vi.fn(() => []),
-  listSolutionKitsCached: vi.fn(async () => []),
-  getActiveSolutionKitId: vi.fn(() => null),
-  subscribeActiveSolutionKitId: vi.fn(() => () => undefined),
+  getCachedSolutionKits: vi.fn<() => SolutionKitSummary[]>(() => []),
+  listSolutionKitsCached: vi.fn<() => Promise<SolutionKitSummary[]>>(async () => []),
+  getActiveSolutionKitId: vi.fn<() => SolutionKitId | null>(() => null),
+  subscribeActiveSolutionKitId: vi.fn<
+    (handler: (kitId: SolutionKitId | null) => void) => () => undefined
+  >(() => () => undefined),
   buildAdvancedFeatureFlagsForSolutionKit: vi.fn(() => ({})),
 }));
 
@@ -48,6 +50,16 @@ import {
   type NavSection,
 } from "../../../core/admin/ui/navigation/sidebarConfig";
 import { SidebarNav } from "../../../core/admin/ui/shared/SidebarNav";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import type {
+  SolutionKitId,
+  SolutionKitSummary,
+} from "../../../core/admin/services/solutionKitsClient";
+import {
+  clearRedactedSettingsCache,
+  primeRedactedSettingsCache,
+} from "../../../core/admin/services/settingsCache";
+import { broadcastCacheEvent } from "../../../core/admin/utils/cacheBus";
 import { mapNavSections } from "../../../core/admin/utils/adminPaths";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -151,6 +163,13 @@ beforeEach(() => {
 
 afterEach(() => {
   window.sessionStorage.clear();
+  window.localStorage.clear();
+  clearRedactedSettingsCache();
+  adminShellServiceMocks.getCachedCustomScreens.mockReturnValue([]);
+  adminShellServiceMocks.listCustomScreensCached.mockResolvedValue([]);
+  adminShellServiceMocks.getCachedSolutionKits.mockReturnValue([]);
+  adminShellServiceMocks.listSolutionKitsCached.mockResolvedValue([]);
+  adminShellServiceMocks.getActiveSolutionKitId.mockReturnValue(null);
   document.body.innerHTML = "";
 });
 
@@ -484,5 +503,281 @@ test("SidebarNav prefers the custom screen records shortcut over the generic Scr
       activeRoot.unmount();
     });
     activeContainer.remove();
+  }
+});
+
+const siteSettingsPayload = (overrides: Record<string, unknown> = {}) => ({
+  "site.name": "Coderso",
+  "site.locale": "en",
+  "site.publicBaseUrl": null,
+  "site.adminBaseUrl": null,
+  "site.adminPath": "/admin",
+  "site.adminRedirectEnabled": false,
+  "site.homepageId": null,
+  "site.notFoundPageId": null,
+  "site.navigationMenuId": "menu-published",
+  "site.footerTemplateId": "template-published",
+  "site.previewEnabled": true,
+  "site.cacheTtlSeconds": 30,
+  "site.contentRoutes": [],
+  ...overrides,
+});
+
+const smallEcommerceKit: SolutionKitSummary = {
+  id: "small-ecommerce",
+  title: "Small Ecommerce",
+  shortDescription: "Storefront kit",
+  recommendedModules: [],
+  features: [],
+};
+
+const primeSolutionKitCatalog = () => {
+  adminShellServiceMocks.getCachedSolutionKits.mockReturnValue([smallEcommerceKit]);
+  adminShellServiceMocks.listSolutionKitsCached.mockResolvedValue([smallEcommerceKit]);
+};
+
+const groupToggle = (container: HTMLElement) =>
+  container.querySelector('button[aria-controls="nav-group-advanced"]') as HTMLButtonElement;
+
+test("AdminShell merges stored nav group state and persists desktop toggles", async () => {
+  window.localStorage.setItem("coderso.admin.navGroupState", JSON.stringify({ advanced: false }));
+  const view = mountShell(["content:read"]);
+
+  try {
+    await flush();
+    expect(groupToggle(view.container).getAttribute("aria-expanded")).toBe("false");
+
+    React.act(() => {
+      groupToggle(view.container).click();
+    });
+    await flush();
+
+    expect(groupToggle(view.container).getAttribute("aria-expanded")).toBe("true");
+    const persisted = JSON.parse(
+      window.localStorage.getItem("coderso.admin.navGroupState") ?? "{}"
+    ) as Record<string, unknown>;
+    expect(persisted.advanced).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell normalizes legacy and corrupt stored nav group states", async () => {
+  window.localStorage.setItem("nextless.admin.navGroupState", JSON.stringify({ coderso: false }));
+  const legacyView = mountShell(["content:read"]);
+  try {
+    await flush();
+    expect(groupToggle(legacyView.container).getAttribute("aria-expanded")).toBe("false");
+  } finally {
+    legacyView.cleanup();
+  }
+
+  window.localStorage.clear();
+  window.localStorage.setItem("coderso.admin.navGroupState", "not-json");
+  const corruptView = mountShell(["content:read"]);
+  try {
+    await flush();
+    expect(groupToggle(corruptView.container).getAttribute("aria-expanded")).toBe("true");
+  } finally {
+    corruptView.cleanup();
+  }
+
+  window.localStorage.clear();
+  window.localStorage.setItem("coderso.admin.navGroupState", JSON.stringify({ advanced: "yes" }));
+  const nonBooleanView = mountShell(["content:read"]);
+  try {
+    await flush();
+    expect(groupToggle(nonBooleanView.container).getAttribute("aria-expanded")).toBe("true");
+  } finally {
+    nonBooleanView.cleanup();
+  }
+
+  window.localStorage.clear();
+  window.localStorage.setItem("coderso.admin.navGroupState", JSON.stringify("42"));
+  const primitiveView = mountShell(["content:read"]);
+  try {
+    await flush();
+    expect(groupToggle(primitiveView.container).getAttribute("aria-expanded")).toBe("true");
+  } finally {
+    primitiveView.cleanup();
+  }
+});
+
+test("AdminShell derives site identity from cached redacted settings", async () => {
+  primeRedactedSettingsCache(
+    siteSettingsPayload({ "site.name": "Acme Studio", "site.publicBaseUrl": "https://acme.test" })
+  );
+  const view = mountShell(["content:read"]);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Acme Studio");
+    expect(view.container.textContent).toContain("acme.test");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell reacts to settingsRedacted cache events with a fresh identity", async () => {
+  primeRedactedSettingsCache(siteSettingsPayload({ "site.name": "Acme Studio" }));
+  const view = mountShell(["content:read"]);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Acme Studio");
+
+    primeRedactedSettingsCache(siteSettingsPayload({ "site.name": "Rebranded Co" }));
+    React.act(() => {
+      broadcastCacheEvent({ key: cacheKeys.settingsRedacted, action: "update" });
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Rebranded Co");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell tolerates an invalid public URL for site identity", async () => {
+  primeRedactedSettingsCache(
+    siteSettingsPayload({ "site.name": "Acme Studio", "site.publicBaseUrl": "not-a-url" })
+  );
+  const view = mountShell(["content:read"]);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Acme Studio");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell loads advanced catalogs and matches the active solution kit", async () => {
+  primeSolutionKitCatalog();
+  adminShellServiceMocks.getActiveSolutionKitId.mockReturnValue("small-ecommerce");
+  const view = mountShell(["content:read", "solution-kits:read"]);
+
+  try {
+    await flush();
+    expect(adminShellServiceMocks.listCustomScreensCached).toHaveBeenCalled();
+    expect(adminShellServiceMocks.listSolutionKitsCached).toHaveBeenCalled();
+    expect(adminShellServiceMocks.buildAdvancedFeatureFlagsForSolutionKit).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "small-ecommerce" })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell refreshes custom screen shortcuts on cache events", async () => {
+  const view = mountShell(["content:read"]);
+
+  try {
+    await flush();
+    expect(adminShellServiceMocks.listCustomScreensCached).toHaveBeenCalled();
+
+    React.act(() => {
+      broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
+    });
+    await flush();
+
+    expect(adminShellServiceMocks.listCustomScreensCached).toHaveBeenCalledWith({
+      force: true,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell follows active solution kit subscription events", async () => {
+  primeSolutionKitCatalog();
+  const view = mountShell(["solution-kits:read"]);
+
+  try {
+    await flush();
+    const handler = adminShellServiceMocks.subscribeActiveSolutionKitId.mock.calls.at(-1)?.[0] as
+      ((kitId: SolutionKitId | null) => void) | undefined;
+    expect(handler).toBeTypeOf("function");
+
+    React.act(() => {
+      handler?.("small-ecommerce");
+    });
+    await flush();
+
+    expect(adminShellServiceMocks.buildAdvancedFeatureFlagsForSolutionKit).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "small-ecommerce" })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell opens the mobile navigation, toggles groups, and navigates closed", async () => {
+  const view = mountShell(["content:read"]);
+
+  try {
+    await flush();
+    const openButton = view.container.querySelector(
+      'button[aria-label="Open navigation"]'
+    ) as HTMLButtonElement;
+    expect(openButton).not.toBeNull();
+    React.act(() => {
+      openButton.click();
+    });
+    await flush();
+
+    const sheetDialog = document.body.querySelector('[role="dialog"]');
+    expect(sheetDialog).not.toBeNull();
+    expect(sheetDialog?.textContent).toContain("Dashboard");
+
+    const mobileToggle = sheetDialog?.querySelector(
+      'button[aria-controls="nav-group-advanced"]'
+    ) as HTMLButtonElement | null | undefined;
+    expect(mobileToggle).not.toBeNull();
+    React.act(() => {
+      mobileToggle?.click();
+    });
+    await flush();
+
+    const persisted = JSON.parse(
+      window.localStorage.getItem("coderso.admin.navGroupState") ?? "{}"
+    ) as Record<string, unknown>;
+    expect(persisted.advanced).toBe(false);
+
+    const mobileLink = Array.from(sheetDialog?.querySelectorAll("a") ?? []).find((item) =>
+      item.textContent?.includes("Dashboard")
+    );
+    React.act(() => {
+      (mobileLink as HTMLAnchorElement | undefined)?.click();
+    });
+    await flush();
+
+    const dialogAfter = document.body.querySelector('[role="dialog"]');
+    expect(dialogAfter?.getAttribute("data-state")).not.toBe("open");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminShell tolerates catalog load failures without breaking navigation", async () => {
+  adminShellServiceMocks.listCustomScreensCached.mockRejectedValue(new Error("catalog offline"));
+  adminShellServiceMocks.listSolutionKitsCached.mockRejectedValue(new Error("catalog offline"));
+  const view = mountShell(["content:read", "solution-kits:read"]);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Dashboard");
+
+    // A forced custom-screens refresh that fails is swallowed too.
+    React.act(() => {
+      broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
+    });
+    await flush();
+    expect(adminShellServiceMocks.listCustomScreensCached).toHaveBeenCalledWith({
+      force: true,
+    });
+    expect(view.container.textContent).toContain("Dashboard");
+  } finally {
+    view.cleanup();
   }
 });

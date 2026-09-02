@@ -845,3 +845,121 @@ test("an uncontested category creation still selects the new category", async ()
   expect(findInputByPlaceholder(container, "Add category...")?.value).toBe("");
   cleanup();
 });
+
+test("adding a category name that already exists selects it without creating", () => {
+  const onCategoryChange = vi.fn();
+  const onCreateCategory = vi.fn();
+  const { container, cleanup } = mount(
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={categoryTaxonomy(null)}
+      onCategoryChange={onCategoryChange}
+      onCreateCategory={onCreateCategory}
+    />
+  );
+
+  startCategoryCreation(container, "Guides");
+  expect(onCreateCategory).not.toHaveBeenCalled();
+  expect(onCategoryChange).toHaveBeenCalledWith("cat-guides");
+  expect(findInputByPlaceholder(container, "Add category...")?.value).toBe("");
+  cleanup();
+});
+
+test("a tag that neither exists nor can be created just clears the input", () => {
+  const onTagIdsChange = vi.fn();
+  const { container, cleanup } = mount(
+    <EntryMetadataPanel {...baseProps} taxonomy={tagTaxonomy([])} onTagIdsChange={onTagIdsChange} />
+  );
+
+  const tagInput = findInputByPlaceholder(container, "Add tag...");
+  typeInto(tagInput, "Launch");
+  pressEnter(tagInput);
+
+  expect(onTagIdsChange).not.toHaveBeenCalled();
+  expect(findInputByPlaceholder(container, "Add tag...")?.value).toBe("");
+  cleanup();
+});
+
+test("blurring the tag input commits an existing tag", () => {
+  const onTagIdsChange = vi.fn();
+  const { container, cleanup } = mount(
+    <EntryMetadataPanel {...baseProps} taxonomy={tagTaxonomy([])} onTagIdsChange={onTagIdsChange} />
+  );
+
+  const tagInput = findInputByPlaceholder(container, "Add tag...");
+  typeInto(tagInput, "Draft");
+  React.act(() => {
+    tagInput?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+  });
+
+  expect(onTagIdsChange).toHaveBeenCalledWith(["tag-draft"]);
+  expect(findInputByPlaceholder(container, "Add tag...")?.value).toBe("");
+  cleanup();
+});
+
+test("the help panel collapses via the What is this? toggle and persists to localStorage", () => {
+  const storageKey = "entries.metadataHelpCollapsed";
+  const previousValue = window.localStorage.getItem(storageKey);
+  window.localStorage.removeItem(storageKey);
+  const localStorageSpy = vi.spyOn(window.localStorage, "setItem");
+  const view = () => (
+    <EntryMetadataPanel {...baseProps} helpItems={["First help row", "Second help row"]} />
+  );
+  try {
+    const firstView = mount(view());
+    try {
+      expect(firstView.container.textContent).toContain("First help row");
+      expect(firstView.container.textContent).toContain("Second help row");
+
+      const toggle = Array.from(firstView.container.querySelectorAll("button")).find((button) =>
+        button.textContent?.includes("What is this?")
+      );
+      if (!(toggle instanceof HTMLButtonElement)) {
+        throw new Error("Expected the What is this? help toggle");
+      }
+      React.act(() => {
+        toggle.click();
+      });
+      expect(localStorageSpy).toHaveBeenCalledWith(storageKey, "true");
+      expect(firstView.container.textContent).not.toContain("First help row");
+      expect(firstView.container.textContent).not.toContain("Second help row");
+    } finally {
+      firstView.cleanup();
+    }
+
+    const secondView = mount(view());
+    try {
+      expect(secondView.container.textContent).not.toContain("First help row");
+      expect(secondView.container.textContent).not.toContain("Second help row");
+    } finally {
+      secondView.cleanup();
+    }
+  } finally {
+    localStorageSpy.mockRestore();
+    if (previousValue === null) window.localStorage.removeItem(storageKey);
+    else window.localStorage.setItem(storageKey, previousValue);
+  }
+});
+
+test("formatMetaDate falls back to the raw value when toLocaleDateString throws", () => {
+  const spy = vi.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(() => {
+    throw new Error("boom");
+  });
+  try {
+    const { container, cleanup } = mount(
+      <EntryMetadataPanel
+        {...baseProps}
+        createdAt="2026-06-18T10:00:00.000Z"
+        updatedAt="2026-06-27T10:00:00.000Z"
+      />
+    );
+    try {
+      expect(container.textContent).toContain("2026-06-18T10:00:00.000Z");
+      expect(container.textContent).toContain("2026-06-27T10:00:00.000Z");
+    } finally {
+      cleanup();
+    }
+  } finally {
+    spy.mockRestore();
+  }
+});

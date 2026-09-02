@@ -144,9 +144,30 @@ async function writeTask105L05WorkerStdout(bytes: Uint8Array): Promise<void> {
   });
 }
 
+/**
+ * The worker protocol fails closed on any stderr byte
+ * (`WorkerClient` rejects the dispatch with "worker wrote unexpected stderr").
+ * The app's outbound integration hub logs one machine-readable, secret-free
+ * line — `integration_event_dispatch_failed { event, code }` — through
+ * `console.warn` when a configured webhook target rejects delivery. The
+ * fixture homepage publish (`page.published`) fires that hub fire-and-forget,
+ * so on a database with configured integrations the warning can land after the
+ * installing operation has already answered and kill the next dispatch. Drop
+ * exactly that line inside the worker context; every other warning still
+ * reaches stderr and fails the run.
+ */
+function silenceIntegrationDispatchWarning(): void {
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown, ...rest: readonly unknown[]): void => {
+    if (message === "integration_event_dispatch_failed") return;
+    originalWarn(message as string, ...rest);
+  };
+}
+
 export async function runTask105L05WorkerEntry(args: readonly string[]): Promise<void> {
   const profileId = parseTask105L05WorkerProfile(args);
   await realpath(resolve(import.meta.dir, "../../../.."));
+  silenceIntegrationDispatchWarning();
   await runWorkerEntry({
     profileId,
     registry: createTask105L05WorkerRegistry(),

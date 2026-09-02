@@ -136,6 +136,30 @@ test("multiple relation rows remain valid single-button controls with a visual s
     });
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenLastCalledWith(["related-1", "related-2"]);
+
+    // Toggle-OFF branch: re-render with the updated value, then clicking an
+    // already-selected row removes it from the value.
+    React.act(() => {
+      root.render(
+        <FieldRenderer
+          field={{
+            id: "field-relation-multiple",
+            name: "linked-posts",
+            type: "relation",
+            label: "Linked posts",
+            relation: { target: "articles", multiple: true },
+          }}
+          value={["related-1", "related-2"]}
+          onChange={onChange}
+          relationTargets={[{ slug: "articles", name: "Articles" }]}
+        />
+      );
+    });
+    React.act(() => {
+      rows[0]?.click();
+    });
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenLastCalledWith(["related-2"]);
   } finally {
     React.act(() => {
       root.unmount();

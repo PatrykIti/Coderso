@@ -1,0 +1,221 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 89,
+    "playwright-state-load": 1,
+    "task-105-l08-dev-host": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 0,
+      "id": "page-deep-section-insert-visible-layer",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l08-fast-20260901-r44-01-page-deep-section-insert-visible-layer.png",
+          "sha256": "35da1032e83854befc88927cae3cad8a5240a3bd9068ef28c0a0138cc14ce778"
+        }
+      ],
+      "title": "Page editor deep section insert and Layers active-state proof",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "active-layer",
+              "target": "page-editor-active-layer"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "bounded-geometry",
+              "target": "page-editor-active-section"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "page-device-override-reset-publish-front-parity",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l08-fast-20260901-r44-02-page-device-override-reset-publish-front-parity.png",
+          "sha256": "acf43fa4059f892821df32b023312f39030d5425246981aca518a35c0d34125a"
+        }
+      ],
+      "title": "Page device override, reset, publish, and front parity proof",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "14px",
+              "expected": "14px",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "font-size",
+              "target": "front-page-section-heading"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "public-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "post-block-inspector-save-publish-front-parity",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l08-fast-20260901-r44-03-post-block-inspector-save-publish-front-parity.png",
+          "sha256": "f5a1bd51baddee3909da17be48930d237859a3ca62658472c49a3df24ddf2c9e"
+        }
+      ],
+      "title": "Block post Inspector edit, publish, and front article parity",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "inspector-text",
+              "target": "front-post-block-text"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "public-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "post-classic-edit-preview-focus-visible",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l08-fast-20260901-r44-04-post-classic-edit-preview-focus-visible.png",
+          "sha256": "afb34e04896b2f9406818d1a94394d81f98b699cbd8ec1b04573806d1378817a"
+        }
+      ],
+      "title": "Classic post edit and preview focus survival proof",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "focus-visible",
+              "target": "classic-preview-focus"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 0,
+      "id": "post-richtext-command-slash-transition-visible",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "screenshots/fast-task105-l08-fast-20260901-r44-05-post-richtext-command-slash-transition-visible.png",
+          "sha256": "60a84639f68c8092a911d09e6b8fe4735dc43809b688bcfced297f17f052d705"
+        }
+      ],
+      "title": "Rich-text command and slash rerender transition proof",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "command-applied",
+              "target": "richtext-rendered-state"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "screenshots/fast-task105-l08-fast-20260901-r44-01-page-deep-section-insert-visible-layer.png",
+      "sha256": "35da1032e83854befc88927cae3cad8a5240a3bd9068ef28c0a0138cc14ce778"
+    },
+    {
+      "path": "screenshots/fast-task105-l08-fast-20260901-r44-02-page-device-override-reset-publish-front-parity.png",
+      "sha256": "acf43fa4059f892821df32b023312f39030d5425246981aca518a35c0d34125a"
+    },
+    {
+      "path": "screenshots/fast-task105-l08-fast-20260901-r44-03-post-block-inspector-save-publish-front-parity.png",
+      "sha256": "f5a1bd51baddee3909da17be48930d237859a3ca62658472c49a3df24ddf2c9e"
+    },
+    {
+      "path": "screenshots/fast-task105-l08-fast-20260901-r44-04-post-classic-edit-preview-focus-visible.png",
+      "sha256": "afb34e04896b2f9406818d1a94394d81f98b699cbd8ec1b04573806d1378817a"
+    },
+    {
+      "path": "screenshots/fast-task105-l08-fast-20260901-r44-05-post-richtext-command-slash-transition-visible.png",
+      "sha256": "60a84639f68c8092a911d09e6b8fe4735dc43809b688bcfced297f17f052d705"
+    }
+  ],
+  "serverUp": true,
+  "session": "task105-l08-fast-20260901-r44",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "browserDispatch": "registered",
+    "cleanupOwner": "shared-lifecycle",
+    "contract": "task-105-l08-runtime-v1",
+    "devHost": "registered",
+    "fixtureCleanup": "registered",
+    "receiptDigest": "8cdfa190217e2ecdaa6cb9a1cb13332087f3cb9800dc4775f4fc1f3fdd51b16c",
+    "settingsRestore": "registered",
+    "workspace": "registered"
+  },
+  "suiteId": "task-105-l08",
+  "timings": [
+    { "count": 1, "elapsedMs": 9730, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 183135, "failed": 0, "kind": "suite", "name": "task-105-l08" }
+  ]
+}

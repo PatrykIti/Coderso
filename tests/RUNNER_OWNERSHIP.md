@@ -1,29 +1,33 @@
 # Runner Ownership Matrix
 
-Snapshot date: `2026-08-21`
+Snapshot date: `2026-08-26`
+Repository snapshot: `HEAD 18a45f0687dc0b23baa49f05eada60a874235b09`
+Manifest snapshot: `tests/bun-lane-manifest.json` generated `2026-08-22T18:13:50.719Z`
 
 This document is the practical ownership companion to `_docs/TESTING_STRATEGY.md`.
-It reflects the post-TASK-580 lane: the widget v1 surfaces (`core/widgets/*` and the
-legacy widget editor suites) were removed, and the Bun-free lane is fully owned by
-Vitest under `tests/vitest/`.
+It records the current post-TASK-580 runner boundary and the TASK-105-08-11 split-family
+handoff. Counts below are derived from the current filesystem and manifest, not from the
+older 2026-03-06 baseline. The migration and split receipts remain subject to their
+own validation gates and are not represented here as broadly validated completion.
 
 ## Current classification snapshot
 
-- Vitest-owned test files under `tests/vitest/`: `958` (`.test.ts` / `.test.tsx`)
-- Bun-owned suites: `463` test files across `tests/unit` (`292`),
-  `tests/integration` (`152`), `tests/perf` (`5`), and `tests/security` (`14`)
-- The 2026-03-06 `move to Vitest` / `keep in Bun` / `refactor first` triage is
-  closed: the refactor-first blockers were either migrated to Vitest or
-  intentionally left in Bun for DB/runtime reasons. Ownership is now decided by
-  runtime requirement (Bun for DB/runtime/plugin/security/perf semantics) vs
-  Bun-free (Vitest).
+- Vitest-owned test files under `tests/vitest/`: `1126` (`.test.ts` / `.test.tsx`).
+- Bun-owned test files currently present: `470`, comprising `tests/unit` (`295`),
+  `tests/integration` (`155`), `tests/perf` (`6`), and `tests/security` (`14`).
+- The current Bun execution manifest contains `437` rows: bucket A (`169`), bucket B
+  (`207`), bucket C (`55`), and perf (`6`). The manifest is a scheduling/ownership
+  input, not a replacement for filesystem classification.
+- The post-TASK-580 boundary remains: widget v1 surfaces and their former editor
+  suites are not an owned product surface. Bun is retained for DB, runtime, plugin,
+  media, public-write, performance, and security semantics; Bun-free contracts belong
+  to Vitest.
 
 ## Strong Vitest ownership clusters
 
-- `tests/vitest/ui/*` (admin UI, including the menus, users/roles, and booking
-  families below)
-- `tests/vitest/ui-integration/*` (migrated from `tests/integration/ui/*`)
-- `tests/vitest/assistant/*` (assistant services, planner, and blueprint families)
+- `tests/vitest/ui/*` (admin UI, including menus, users/roles, and booking)
+- `tests/vitest/ui-integration/*`
+- `tests/vitest/assistant/*`
 - `tests/vitest/pages/*`
 - `tests/vitest/posts/*`
 - `tests/vitest/forms/*`
@@ -32,56 +36,58 @@ Vitest under `tests/vitest/`.
 - `tests/vitest/validation/*`
 - `tests/vitest/sdk/*`
 
-### Split families (TASK-105-08-11, oversized-file line gate)
+### Split families and downstream handoff
 
-The four pre-split monoliths were split by cohesive responsibility so owning
-leaves can extend them without exceeding the 1000-line gate. Each test part keeps
-the original test names and assertions and runs independently; shared builders
-live in the named fixture modules.
+The four TASK-105-08-11 families are represented by the following current files. Each
+TEST part is independently runnable; fixture modules are validated through their
+importing suites. The named downstream leaves own future extensions to these parts,
+not the pre-split monoliths.
 
-- Menus (`tests/vitest/ui/`):
-  - `menu-design-editor-structure.test.tsx` (shell, seeding, composer, undo/redo)
-  - `menu-design-editor-canvas.test.tsx` (per-device overrides, badges, Reset,
-    canvas WYSIWYG, ghost)
-  - `menu-design-editor-brand-nav.test.tsx` (brand text/style/level/image, nav)
-  - `menu-design-editor-block-fields.test.tsx` (F1/F2, B1–B5, R1(b), R3a/R3b)
-  - `menu-design-editor-controls.test.tsx` (scrolled/radius/shadow, brand icon)
-  - `menuDesignEditorFixtures.tsx` (shared state, mocks, harness)
-- Users / roles (`tests/vitest/ui/`):
-  - `users-roles-users-invite.test.tsx` (user lifecycle, invite, reset, 403 refresh)
-  - `users-roles-permissions.test.tsx` (role duplication, read-only, access deny)
-  - `usersRolesFixtures.tsx` (shared mocks, harness, default state)
-- Booking (`tests/vitest/ui/`):
-  - `booking-page-wave.test.tsx`, `booking-page-errors.test.tsx`,
-    `booking-page-schedule-crud.test.tsx`, `booking-page-tabs.test.tsx` (importers)
-  - `bookingFixtures.resources.tsx` (state + booking client + ResourcesTab + harness)
-  - `bookingFixtures.services.tsx` (ServicesTab)
-  - `bookingFixtures.schedules.tsx` (AvailabilityTab)
-  - `bookingFixtures.submissions.tsx` (ReservationsTab + SlotPreviewTab)
-- Assistant blueprints (`tests/vitest/assistant/`):
-  - `blueprint-action-assembler-blocks.test.ts` (content-type / listing / query merges)
-  - `blueprint-action-assembler-bindings.test.ts` (merge key, conflict dedupe)
-  - `blueprint-action-assembler-sections.test.ts` (composed-plan graph flows)
-  - `blueprintActionAssemblerFixtures.ts` (shared plan/fragment/graph builders)
+- **Menus**, owned downstream by `TASK-105-08-05`:
+  - `tests/vitest/ui/menu-design-editor-structure.test.tsx`
+  - `tests/vitest/ui/menu-design-editor-canvas.test.tsx`
+  - `tests/vitest/ui/menu-design-editor-canvas-units.test.tsx`
+  - `tests/vitest/ui/menu-design-editor-revalidation.test.tsx`
+  - `tests/vitest/ui/menu-design-editor-brand-nav.test.tsx`
+  - `tests/vitest/ui/menu-design-editor-block-fields.test.tsx`
+  - `tests/vitest/ui/menu-design-editor-controls.test.tsx`
+  - `tests/vitest/ui/menuDesignEditorFixtures.tsx`
+  - (`revalidation` was a split part of the 08-11 family; `canvas-units` is a
+    later 08-05-stream extension — both are listed here because the runner
+    ownership table records the current on-disk menu family.)
+- **Users / roles**, owned downstream by `TASK-105-08-09`:
+  - `tests/vitest/ui/users-roles-users-invite.test.tsx`
+  - `tests/vitest/ui/users-roles-permissions.test.tsx`
+  - `tests/vitest/ui/usersRolesFixtures.tsx`
+- **Booking**, owned downstream by `TASK-105-08-08`:
+  - `tests/vitest/ui/booking-page-wave.test.tsx`
+  - `tests/vitest/ui/booking-page-errors.test.tsx`
+  - `tests/vitest/ui/booking-page-schedule-crud.test.tsx`
+  - `tests/vitest/ui/booking-page-tabs.test.tsx`
+  - `tests/vitest/ui/bookingFixtures.resources.tsx`
+  - `tests/vitest/ui/bookingFixtures.services.tsx`
+  - `tests/vitest/ui/bookingFixtures.schedules.tsx`
+  - `tests/vitest/ui/bookingFixtures.submissions.tsx`
+- **Assistant blueprints**, owned downstream by `TASK-105-08-07`:
+  - `tests/vitest/assistant/blueprint-action-assembler-blocks.test.ts`
+  - `tests/vitest/assistant/blueprint-action-assembler-bindings.test.ts`
+  - `tests/vitest/assistant/blueprint-action-assembler-sections.test.ts`
+  - `tests/vitest/assistant/blueprintActionAssemblerFixtures.ts`
 
-## Follow-up migration notes (2026-03-12)
+## Child-08 schema-validator handoff
 
-- Legacy Bun-free duplicates were removed from `tests/unit/ui/*`, the Bun-free part of `tests/unit/admin/*`, `tests/unit/sdk/*`, and `tests/unit/customScreens/*` after confirming Vitest-owned replacements.
-- `tests/unit/validation/*` has now been moved into `tests/vitest/validation/*`.
-- The Bun-free assistant helper slice (`assistantMetrics`, `assistantQuota`, `assistantRedaction`, `openRouterProvider`, `siteBuilderPlanner`) has now been moved into `tests/vitest/assistant/*`.
-- The Bun-free posts editor/model helper slice has now been moved into `tests/vitest/posts/*`, while the DB/runtime post cases remain in Bun.
-- The Bun-free forms contract/helper slice has now been moved into `tests/vitest/forms/*`, while DB-backed service/submission cases remain in Bun.
-- The Bun-free forms automation runner core now lives in `core/services/forms/formAutomationRunnerCore.ts`, and its orchestration suite has moved to `tests/vitest/forms/formAutomationRunnerCore.test.ts`; the runtime wrapper in `formAutomationRunner.ts` remains lazy and server-owned.
-- The Bun-free server helper slice (`errorHandler`, `requestBody`, `routeMatcher`, `solutionKitSchemas`, `styleUrl`) has now been moved into `tests/vitest/server/*`.
-- The Bun-free search pure-logic slice (`filterEngine`, `listingRuntimeService`, `searchIndexService`, `searchService`) has now been moved into `tests/vitest/search/*`.
-- `search` remains split:
-  - `searchHistoryService` stays in Bun because it is DB-backed,
-  - the remaining search unit backlog is now the DB-backed history case only.
+`tests/unit/server/schemaValidator.test.ts` is no longer a retained Bun suite. Its eight
+behavior groups are handed to `TASK-105-11-03-08`, with exactly these destination writers:
 
-## Refactor-first closure update (2026-03-12)
+- extend `tests/vitest/validation/postSchemas.test.ts`;
+- create `tests/vitest/validation/contentSchemas.test.ts`;
+- create `tests/vitest/validation/assistantActionSchemas.test.ts`;
+- delete the legacy `tests/unit/server/schemaValidator.test.ts` only after destination
+  coverage is verified.
 
-- The original refactor-first blocker set from the 2026-03-06 snapshot is now either migrated to Vitest or intentionally left in Bun for DB/runtime reasons.
-- `formAutomationRunner` was the last mixed forms blocker in that set and is now closed through the new Vitest-owned core plus lazy runtime wrapper.
+The generic `tests/vitest/validation/schemaValidator.test.ts` remains read-only. This
+runner document records the handoff only. It does not claim that child 08's migration
+has been validated or closed.
 
 ## Strong Bun ownership clusters
 
@@ -94,31 +100,26 @@ live in the named fixture modules.
 - `tests/perf/*`
 - `tests/security/*`
 
-## Historical refactor-first clusters
+### Four retained Bun server suites
 
-- `assistant`
-- `posts`
-- `forms`
-- `search`
-- `server`
-- `validation`
+These are the exact four retained server suites from the post-TASK-580 ownership freeze:
 
-These areas described the 2026-03-06 baseline and have since been addressed by the migration and refactor waves above.
+| Suite | Required lane | Ownership reason |
+|---|---|---|
+| `tests/unit/server/adminAssetsRouting.test.ts` | Bun | Exercises the runtime/admin asset boundary through `core/server/httpServer`; it is not a Bun-free pure helper contract. |
+| `tests/unit/server/publicBookingApi.test.ts` | Bun | Uses the database and public-write security controls, including nonce/API-key behavior, so its contract is DB/security-bound. |
+| `tests/unit/server/publicFormsApi.test.ts` | Bun | Combines injected seams with database-backed public and internal write behavior, so it remains a mixed runtime/DB integration contract. |
+| `tests/unit/server/publicFormsUploadApi.test.ts` | Bun | Exercises database, media, and public/internal write boundaries and therefore remains a runtime-backed contract. |
 
-## Bun coverage hotspots from baseline report
+The schema-validator transfer above is not a fifth retained Bun case. No other server
+suite is silently classified by directory convention in this handoff.
 
-Representative low-coverage files from the historical `coverage/bun/lcov.info`
-baseline (pre-TASK-580):
+## Operational boundary
 
-| File | Line coverage |
-|------|---------------|
-| `core/admin/utils/cacheBus.ts` | `1.33%` |
-| `core/admin/services/cachePolicy.ts` | `1.79%` |
-| `packages/sdk/src/pluginManifest.ts` | `3.50%` |
-| `core/services/search/filterContract.ts` | `3.79%` |
-| `core/services/customScreens/bindingResolver.ts` | `6.15%` |
-
-## Operational rule
-
-- If a suite does not require Bun runtime, it should not stay in Bun just to preserve old structure.
-- If a suite requires DB/runtime/plugin lifecycle behavior, keep it in Bun even if that slows down migration.
+- If a suite does not require Bun runtime, it belongs in Vitest rather than remaining in
+  Bun solely to preserve old structure.
+- If a suite requires DB, runtime, plugin lifecycle, media, or public-write security
+  behavior, keep it in Bun even when a pure helper slice is migrated.
+- Split-family and schema-validator ownership remains conditional on the owning task's
+  exact test, static, manifest, and line-cap receipts. This document makes no unvalidated
+  full-lane or coverage-completion claim.

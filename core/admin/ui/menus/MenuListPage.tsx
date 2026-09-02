@@ -13,7 +13,7 @@ import {
   Upload,
   Workflow,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -57,18 +57,15 @@ import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 
 const formatDate = (value: string) => {
-  try {
-    return new Date(value).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return value;
-  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 // Token-driven Badge variants (not raw emerald/slate) so :root.dark recolors —
@@ -427,30 +424,15 @@ export function MenuListPage() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState<string[]>([]);
-  const hasHydratedRef = useRef(hasInitialCache);
-  const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
-    const force = options?.force ?? false;
-    const background = resolveCacheRefreshBackground({
-      explicitBackground: options?.background,
-      hasHydrated: hasHydratedRef.current,
-    });
-    if (!background) {
-      setIsLoading(true);
-    }
+  const refresh = useCallback(async () => {
     setError(null);
     try {
-      const next = await listMenusCached({ force });
-      setItems(next);
-      hasHydratedRef.current = true;
+      setItems(await listMenusCached({ force: true }));
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
       } else {
         setError("Failed to load menus.");
-      }
-    } finally {
-      if (!background) {
-        setIsLoading(false);
       }
     }
   }, []);
@@ -462,7 +444,6 @@ export function MenuListPage() {
       .then((next) => {
         if (!active) return;
         setItems(next);
-        hasHydratedRef.current = true;
       })
       .catch((err) => {
         if (!active) return;
@@ -483,7 +464,7 @@ export function MenuListPage() {
   useEffect(() => {
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.menusList) return;
-      refresh({ force: true, background: true }).catch(() => undefined);
+      void refresh();
     });
   }, [refresh]);
 
@@ -542,7 +523,7 @@ export function MenuListPage() {
     setError(null);
     try {
       await publishMenu(id);
-      await refresh({ force: true, background: true });
+      await refresh();
       menuListToasts.success("publish");
     } catch (err) {
       setError(menuListToasts.error("publish", err));
@@ -553,7 +534,7 @@ export function MenuListPage() {
     setError(null);
     try {
       await moveMenuToDraft(id);
-      await refresh({ force: true, background: true });
+      await refresh();
       menuListToasts.success("unpublish");
     } catch (err) {
       setError(menuListToasts.error("unpublish", err));
@@ -565,7 +546,7 @@ export function MenuListPage() {
     setError(null);
     try {
       await deleteMenu(id);
-      await refresh({ force: true, background: true });
+      await refresh();
       menuListToasts.success("delete");
       setPendingDeleteId(null);
     } catch (err) {
@@ -606,7 +587,7 @@ export function MenuListPage() {
           return deleteMenu(id);
         })
       );
-      await refresh({ force: true, background: true });
+      await refresh();
       const summary = menuListToasts.summarizeBulkAction(action, ids, results);
       menuListToasts.emitBulk(summary);
       handleClearSelection();

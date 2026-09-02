@@ -90,7 +90,12 @@ export const TASK105_L05_BOOTSTRAP_ENDPOINTS = Object.freeze([
   { endpointId: "solution-kits-list", method: "GET", status: 200 },
 ] as const);
 
-export const TASK105_L05_AUTH_FACT_LIMIT = 8;
+// 3 contracted admin document loads × 2 bootstrap auth facts = 6; the
+// remaining 6 admits the auth/csrf forwards of the contracted write flows
+// (menu save+publish, site shell, dashboard layout save, kit selection)
+// — raised from 8 after r50 measured the real topology (budget was
+// exceeded with all browser work green).
+export const TASK105_L05_AUTH_FACT_LIMIT = 12;
 
 const BOOTSTRAP_IDS = new Set(TASK105_L05_BOOTSTRAP_ENDPOINTS.map(({ endpointId }) => endpointId));
 
@@ -105,10 +110,14 @@ export const TASK105_L05_SEMANTIC_ENDPOINTS = Object.freeze([
   "settings-write",
   "dashboard-layout-read",
   "dashboard-layout-write",
+  "dashboard-widget-data-read",
+  "content-types-read",
   "solution-kits-read",
+  "solution-kits-runs-read",
   "solution-kit-detail",
   "assistant-status",
   "public-home-data",
+  "public-popups-read",
 ] as const);
 
 export type Task105L05SemanticEndpointId = (typeof TASK105_L05_SEMANTIC_ENDPOINTS)[number];
@@ -131,10 +140,14 @@ const SEMANTIC_SUCCESS_RESPONSES: Readonly<
   "settings-write": Object.freeze({ methods: Object.freeze(["PATCH"]), status: 200 }),
   "dashboard-layout-read": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
   "dashboard-layout-write": Object.freeze({ methods: Object.freeze(["POST", "PUT"]), status: 200 }),
+  "dashboard-widget-data-read": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
+  "content-types-read": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
   "solution-kits-read": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
+  "solution-kits-runs-read": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
   "solution-kit-detail": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
   "assistant-status": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
   "public-home-data": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
+  "public-popups-read": Object.freeze({ methods: Object.freeze(["GET"]), status: 200 }),
 });
 
 /** Route classifications that are forbidden in every observer epoch. */

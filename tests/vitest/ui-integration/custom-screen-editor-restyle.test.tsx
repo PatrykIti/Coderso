@@ -115,3 +115,29 @@ test("the entry-view authoring canvas renders without switching a tab", async ()
     view.cleanup();
   }
 });
+
+test("the panel Hide/Show toggle closes and reopens the authoring panel", async () => {
+  const view = mount("/admin/advanced/custom-screens/new");
+  try {
+    await flush();
+    const hide = view.container.querySelector<HTMLButtonElement>('[aria-label="Hide panel"]');
+    expect(hide).not.toBeNull();
+    React.act(() => {
+      hide?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    await flush();
+    const shows = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>('[aria-label="Show panel"]')
+    );
+    expect(shows.length).toBeGreaterThanOrEqual(1);
+    expect(shows[0]?.getAttribute("aria-pressed")).toBe("false");
+    const reopen = shows[shows.length - 1];
+    React.act(() => {
+      reopen.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    await flush();
+    expect(view.container.querySelector('[aria-label="Hide panel"]')).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});

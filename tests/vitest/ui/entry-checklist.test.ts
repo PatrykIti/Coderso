@@ -199,3 +199,32 @@ test("missing required fields without a label fall back to the field name", () =
   });
   expect(checklist.missingRequiredFields).toEqual([{ name: "raw_value", label: "raw_value" }]);
 });
+
+test("non-string primitive values count as filled for boolean fields", () => {
+  const checklist = buildEntryChecklist({
+    title: "Post",
+    slug: "post",
+    status: "draft",
+    scheduledAt: "",
+    fields: [{ id: "field-featured", name: "featured", type: "boolean", required: true }] as never,
+    values: { featured: 1n },
+  });
+  expect(checklist.missingRequiredFields).toEqual([]);
+  const requiredItem = checklist.items.find((item) => item.id === "required");
+  expect(requiredItem?.status).toBe("complete");
+});
+
+test("non-string primitive values fall through as missing for non-boolean fields", () => {
+  const checklist = buildEntryChecklist({
+    title: "Post",
+    slug: "post",
+    status: "draft",
+    scheduledAt: "",
+    fields: [
+      { id: "field-tag", name: "tag", type: "text", required: true },
+      { id: "field-count", name: "count", type: "number", required: true },
+    ] as never,
+    values: { tag: 1n, count: 2n },
+  });
+  expect(checklist.missingRequiredFields.map((item) => item.name)).toEqual(["tag", "count"]);
+});

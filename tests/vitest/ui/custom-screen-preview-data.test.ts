@@ -85,6 +85,72 @@ test("buildSchemaFallbackPreviewData keeps schema-shaped preview defaults", () =
   });
 });
 
+test("buildSchemaFallbackPreviewData covers number, select, media, relation, and richtext branches", () => {
+  const richContentType = {
+    id: "type-2",
+    name: "Catalog",
+    slug: "catalog",
+    status: "published" as const,
+    schema: {
+      type: "object" as const,
+      additionalProperties: false as const,
+      properties: {
+        budget: {
+          type: "number" as const,
+          title: "Budget",
+          xFieldType: "number",
+        },
+        stage: {
+          type: "string" as const,
+          title: "Stage",
+          xFieldType: "select",
+          enum: ["active"],
+        },
+        freeformStage: {
+          type: "string" as const,
+          title: "Freeform stage",
+          xFieldType: "select",
+        },
+        cover: {
+          type: "string" as const,
+          title: "Cover",
+          xFieldType: "media",
+        },
+        author: {
+          type: "string" as const,
+          title: "Author",
+          xFieldType: "relation",
+          xRelationTarget: "people",
+        },
+        tags: {
+          type: "array" as const,
+          title: "Tags",
+          items: { type: "string" as const },
+          xFieldType: "relation",
+          xRelationTarget: "people",
+        },
+        body: {
+          type: "string" as const,
+          title: "Body",
+          xFieldType: "richtext",
+        },
+      },
+    },
+    createdAt: "2026-05-02T00:00:00.000Z",
+    updatedAt: "2026-05-02T00:00:00.000Z",
+  };
+
+  expect(buildSchemaFallbackPreviewData(richContentType)).toMatchObject({
+    budget: 120,
+    stage: "active",
+    freeformStage: "Freeform Stage option",
+    cover: "Hero image",
+    author: "Related item",
+    tags: ["Related item"],
+    body: "Body example content",
+  });
+});
+
 test("buildCustomScreenPreviewRecordState resets to fallback when there is no current record owner", () => {
   expect(
     buildCustomScreenPreviewRecordState({

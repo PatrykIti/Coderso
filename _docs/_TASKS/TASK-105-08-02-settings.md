@@ -6,7 +6,9 @@
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-08  
 **Parent Task:** TASK-105-08  
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Implementation Complete:** 2026-08-22 (`5c6fcec7`)
+**Closure Pending:** Family rebaseline and a changelog entry that explicitly includes this leaf.
 
 ---
 

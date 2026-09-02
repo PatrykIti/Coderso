@@ -376,3 +376,42 @@ test("createOpenRouterProvider handles timeout as provider failure", async () =>
     })
   ).rejects.toThrow("assistant_provider_failed");
 });
+
+test("createOpenRouterProvider omits usage when the response has no token counts", async () => {
+  const fetchMock: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        id: "or-req-empty-usage",
+        choices: [
+          {
+            message: {
+              content: "Done.",
+            },
+          },
+        ],
+        usage: { other: 1 },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+
+  const provider = createOpenRouterProvider({
+    apiKey: "sk-or-v1-test",
+    model: "google/gemma-3n-e2b-it:free",
+    fetchImpl: fetchMock,
+    retryCount: 0,
+  });
+
+  const result = await provider.complete({
+    systemPrompt: "system",
+    userMessage: "message",
+    snippets: [{ path: "p.md", heading: "h", content: "c" }],
+    limits: {
+      maxInputTokens: 8192,
+      maxOutputTokens: 512,
+      timeoutMs: 1000,
+    },
+  });
+
+  expect(result.text).toBe("Done.");
+  expect(result.usage).toBeUndefined();
+});
