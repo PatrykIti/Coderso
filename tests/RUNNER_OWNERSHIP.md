@@ -89,6 +89,16 @@ The generic `tests/vitest/validation/schemaValidator.test.ts` remains read-only.
 runner document records the handoff only. It does not claim that child 08's migration
 has been validated or closed.
 
+### Validated receipt (2026-09-02)
+
+`TASK-105-11-03-08` completed the transfer recorded above: the legacy
+`tests/unit/server/schemaValidator.test.ts` is deleted, the eight behavior groups landed
+in `postSchemas.test.ts`, `contentSchemas.test.ts`, and `assistantActionSchemas.test.ts`,
+and the generic `schemaValidator.test.ts` suite is retained read-only. Validated green:
+4 test files / 14 tests / 0 failures (Vitest `4.1.10`). Recorded by `TASK-105-08-11` as
+consuming owner; `TASK-105-11-04` still owns the README/closure follow-through. The
+snapshot counts above stay dated `2026-08-26` and are unchanged.
+
 ## Strong Bun ownership clusters
 
 - DB-backed service tests

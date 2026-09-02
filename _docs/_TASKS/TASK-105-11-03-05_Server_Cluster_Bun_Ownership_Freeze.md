@@ -6,7 +6,7 @@
 **Category:** QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-105-11-03; TASK-105-08-11 (tests/RUNNER_OWNERSHIP.md and authorized manifest handoff)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 **Reopened:** 2026-08-25
 
 ---
@@ -110,3 +110,50 @@ This leaf records handoffs and does not directly edit downstream documentation:
 3. The contract names `TASK-105-08-11` and `TASK-105-11-04` as downstream owners and does not claim their documentation paths.
 4. The manifest, product/test source, board, and changelog remain outside this leaf's writer scope.
 5. The ownership receipt and all line-cap, ancestry, status, and Markdown checks are complete before closure.
+
+## Execution Receipt (2026-09-02)
+
+Status: **Done (2026-09-02)**. This leaf stays a documentation/ownership handoff only: no
+product or test source, runner document, manifest, board, or changelog file was written
+by it.
+
+### Four-suite classification receipt
+
+All four paths verified present in the working tree; no additional `tests/unit/server/*`
+candidate was classified. Reasons are unchanged from the contract table above.
+
+| Suite (verified size) | Required lane | Ownership reason |
+|---|---|---|
+| `tests/unit/server/adminAssetsRouting.test.ts` (52 lines) | Bun | Runtime/admin asset boundary through `core/server/httpServer`; not a Bun-free pure helper contract. |
+| `tests/unit/server/publicBookingApi.test.ts` (971 lines) | Bun | Database and public-write security controls, including nonce/API-key behavior; DB/security-bound. |
+| `tests/unit/server/publicFormsApi.test.ts` (2,038 lines) | Bun | Injected seams plus database-backed public and internal write behavior; mixed runtime/DB integration contract. |
+| `tests/unit/server/publicFormsUploadApi.test.ts` (555 lines) | Bun | Database, media, and public/internal write boundaries; runtime-backed contract. |
+
+### Schema-validator lane delta
+
+`tests/unit/server/schemaValidator.test.ts` is removed from the Bun cluster and remains
+assigned to `TASK-105-11-03-08` (Done 2026-09-02, four-path migration receipt). Counted
+from the current `tests/bun-lane-manifest.json`: `0` `schemaValidator` rows, exactly `1`
+manifest row for each of the four retained suites above, `451` rows total
+(`generatedAt` `2026-09-01T18:09:45.748Z`; clean in git at closure). The generic
+`tests/vitest/validation/schemaValidator.test.ts` remains present and read-only. This
+leaf neither rewrote nor regenerated the manifest.
+
+### Downstream receipt routing
+
+- `TASK-105-08-11` — consuming owner of `tests/RUNNER_OWNERSHIP.md`; its dated
+  `### Validated receipt (2026-09-02)` addendum in the Child-08 schema-validator handoff
+  section records the validated migration transfer alongside the unchanged four-suite
+  classification table.
+- `TASK-105-11-04` — consuming owner of `tests/README.md`, family closure, and changelog
+  follow-through; it stays open and consumes this receipt at its own closure.
+- The `TASK-105` parent author owns the board row and Statistics synchronization; the
+  board rows for this leaf and child 08 still read "To Do" at closure and are that
+  author's follow-through, outside this leaf's writer scope.
+
+All five acceptance criteria hold: exactly four retained suites with concrete
+runtime/DB/media/security reasons; the schema-validator transfer is explicit and the
+generic suite read-only; both downstream owners are named without claiming their paths;
+the manifest, product/test source, board, and changelog were not written here; and the
+line-cap, fence-parity, status, and `git diff --check` checks for this documentation pass
+are clean.

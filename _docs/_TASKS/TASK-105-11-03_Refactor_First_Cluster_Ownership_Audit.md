@@ -6,7 +6,7 @@
 **Category:** QA + Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-105-11-01, TASK-105-11-02
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Reopened:** 2026-08-25
 
 ---
@@ -113,7 +113,7 @@ Implementation of child 08 owns its exact Vitest validation. Child 05's retained
 7. `TASK-105-11-03-07_Server_Settings_Bound_Helper_Suites_Move_to_Vitest.md`
 8. `TASK-105-11-03-08-Server-Schema-Validator-Vitest-Migration.md`
 
-Child 08 is `⏳ To Do`. Child 05 remains `⏳ To Do` as a documentation handoff. The other historical child states are preserved in their own files; this repair does not rewrite them.
+Child 08 is `✅ Done (2026-09-02)` with its `## Closure Receipt (2026-09-02)` migration receipt. Child 05 is `✅ Done (2026-09-02)` with its `## Execution Receipt (2026-09-02)`. Children 01–04 and 06–07 remain `Done (2026-03-12)` in their own files; this closure does not rewrite them.
 
 ## Acceptance Criteria
 
@@ -123,3 +123,33 @@ Child 08 is `⏳ To Do`. Child 05 remains `⏳ To Do` as a documentation handoff
 4. The schema-validator migration has exactly four test writers, retains the generic Vitest suite, and makes no production change.
 5. Downstream ownership for runner docs, README/closure, and manifest follow-through is explicit and not claimed by this parent or child 05.
 6. All ancestry, status/count, fence, diff, and line-cap checks pass before implementation begins.
+
+## Closure Receipt (2026-09-02)
+
+Status: **Done (2026-09-02)**; the `Reopened: 2026-08-25` line is preserved. Child order
+01–08 in Sub-Tasks is unchanged from the reopened contract: children 01–04 and 06–07 were
+previously `Done (2026-03-12)` and are untouched; child 05 is terminal with its
+`## Execution Receipt (2026-09-02)` four-suite classification; child 08 is terminal with
+its `## Closure Receipt (2026-09-02)` schema-validator migration receipt.
+
+Downstream owners and open follow-through (flagged, not claimed by this parent):
+
+- `TASK-105-08-11` owns `tests/RUNNER_OWNERSHIP.md`; its dated
+  `### Validated receipt (2026-09-02)` addendum under the Child-08 schema-validator
+  handoff section records the validated migration receipt beside the unchanged four-suite
+  classification table.
+- `TASK-105-11-04` owns `tests/README.md`, family closure, and changelog follow-through
+  and remains open under `TASK-105-11`; it consumes this receipt plus the child-05 and
+  child-08 receipts at its own closure.
+- The `TASK-105` parent author owns the board rows and Statistics; at closure the board
+  still lists `TASK-105-11-03-05` and `TASK-105-11-03-08` as "To Do" and this parent as
+  "In Progress" — that synchronization belongs to the board author and is outside this
+  contract's writer scope.
+
+Verification at closure: the four retained Bun server suites and their boundary reasons
+are identical across this parent's Audit Snapshot, child 05's contract table, and
+`tests/RUNNER_OWNERSHIP.md`; child 08's four-writer, no-production-change scope is
+reflected in the live tree (commits `5b5ed371` and `ae1ca47b` touch only the four test
+paths and the manifest); the four-path validation receipt is green (`4` files / `14`
+tests / `0` failures, Vitest `4.1.10`); and every touched file stays at or below 1,000
+physical lines with even Markdown fence parity and a clean `git diff --check`.

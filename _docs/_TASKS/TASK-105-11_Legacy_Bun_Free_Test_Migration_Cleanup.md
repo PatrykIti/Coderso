@@ -5,7 +5,7 @@
 **Category:** QA + Platform
 **Estimated Effort:** Large
 **Dependencies:** TASK-102, TASK-104, TASK-105
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Reopened:** 2026-08-25
 
 ---
@@ -156,3 +156,56 @@ The third direct child contains the physical nested sequence 01 through 08. The 
 4. Exactly four true Bun server suites remain documented with their boundary reasons.
 5. Downstream ownership for runner docs, manifest follow-through, README/closure, and changelog is explicit and not claimed by this repair.
 6. Ancestry, status/count, fence, line-cap, and diff checks pass before implementation proceeds.
+
+## Closure Receipt (2026-09-02)
+
+Status: **Done (2026-09-02)**; the `**Reopened:** 2026-08-25` line above is preserved as
+contract data. This parent closes as coordination only — no product, test, runner-document,
+manifest, board, or changelog file was written by it.
+
+### Children 01–04, all terminal
+
+1. `TASK-105-11-01_UI_Admin_and_SDK_Duplicate_Legacy_Suites_Move_to_Vitest.md` —
+   `Done (2026-03-12)`, untouched by this closure.
+2. `TASK-105-11-02_Custom_Screens_and_Pure_Domain_Legacy_Suites_Move_to_Vitest.md` —
+   `Done (2026-03-12)`, untouched by this closure.
+3. `TASK-105-11-03_Refactor_First_Cluster_Ownership_Audit.md` — `✅ Done (2026-09-02)` with
+   its own `## Closure Receipt (2026-09-02)`; its nested sequence 01–08 is fully terminal:
+   children 01–04 and 06–07 `Done (2026-03-12)`, child 05 `✅ Done (2026-09-02)` with the
+   `## Execution Receipt (2026-09-02)` four-suite classification (adminAssetsRouting /
+   publicBookingApi / publicFormsApi / publicFormsUploadApi remain Bun-owned with concrete
+   runtime, DB, media, and security reasons), and child 08 `✅ Done (2026-09-02)` with the
+   `## Closure Receipt (2026-09-02)` schema-validator migration receipt (four exact test
+   writers, eight behavior groups preserved, generic Vitest suite retained read-only, no
+   production change, validated 4 test files / 14 tests / 0 failures, commits `5b5ed371`
+   and `ae1ca47b`).
+4. `TASK-105-11-04_QA_Docs_Changelog_and_Closure.md` — `✅ Done (2026-09-02)` with its
+   `## Closure Receipt (2026-09-02)`, consuming the child-05 and child-08 receipts, the
+   `TASK-105-08-11` validated-receipt addendum, and the `TASK-105-08-12` rebaseline.
+
+### Downstream owners accepted
+
+- `TASK-105-08-11` (owner of `tests/RUNNER_OWNERSHIP.md` and the authorized manifest
+  follow-through) recorded its consuming acceptance as the dated
+  `### Validated receipt (2026-09-02)` addendum in the Child-08 schema-validator handoff
+  section; the document's 2026-08-26 snapshot counts are unchanged.
+- `TASK-105-11-04` (owner of `tests/README.md`, closure, and changelog follow-through)
+  accepted and closed on the same receipts; it verified `tests/README.md` needed no
+  schema-validator or lane correction and published changelog `1327` as its follow-through.
+- Board and Statistics synchronization for this family is owned by the `TASK-105` parent
+  author and is recorded in the same 2026-09-02 closure package (changelog 1327; this
+  board's rows and Statistics updated in that step).
+
+### Reopen condition resolved
+
+The 2026-08-25 reopen existed because `TASK-105-11-03-05` was open and the audited
+schema-validator Vitest migration had no owner. Both are resolved: child 05 delivered the
+four-suite classification and handed its bounded receipt downstream, and child 08 landed
+the exact four-writer migration with no production change. No open descendant remains
+under this family, so the reopen condition is resolved and the family's remaining
+contract obligations (downstream ownership, receipts before runner docs, line caps,
+secret-safe receipts) are discharged as written.
+
+Verification for this receipt: direct child order 01–04 and nested order 01–08 are
+unchanged; canonical statuses only; every touched file at or below 1,000 physical lines;
+even Markdown fence parity; `git diff --check` clean on the documentation scope.

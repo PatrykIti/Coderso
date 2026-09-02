@@ -6,7 +6,7 @@
 **Category:** QA + Platform
 **Estimated Effort:** Medium
 **Dependencies:** TASK-105-11-03-07
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -120,3 +120,74 @@ The implementation must also run the repository-required static checks for the c
 3. The generic `tests/vitest/validation/schemaValidator.test.ts` remains present and unchanged.
 4. No production, runner-document, manifest, board, changelog, or remaining Bun-suite file is modified.
 5. The exact target suites, static checks, line-cap checks, and diff checks pass before closure.
+
+## Closure Receipt (2026-09-02)
+
+Status: **Done (2026-09-02)**. The migration is a test-only lane change; no production,
+runner-document, board, or changelog file was written by this leaf.
+
+### Exact four test writers (as landed)
+
+- **DELETE** `tests/unit/server/schemaValidator.test.ts` — absent from the working tree
+  and from git `HEAD` (`a3f016a8`).
+- **EXTEND** `tests/vitest/validation/postSchemas.test.ts`.
+- **CREATE** `tests/vitest/validation/contentSchemas.test.ts`.
+- **CREATE** `tests/vitest/validation/assistantActionSchemas.test.ts`.
+
+The generic `tests/vitest/validation/schemaValidator.test.ts` is retained unchanged as the
+read-only consumer (23 lines; untouched by both landing commits).
+
+### Eight behavior groups and destinations
+
+1. Valid post/content date-time metadata → `postSchemas.test.ts` ("post and content
+   metadata schemas accept date-time values") plus `contentSchemas.test.ts` ("content
+   metadata accepts date-time and visibility fields").
+2. Invalid date-time input maps to `ApiError` code `validation_error` with status `400` →
+   `postSchemas.test.ts` ("postMetadataSchema rejects invalid date-time values as
+   ApiError").
+3. Content metadata accepts visibility/access-password fields and rejects the invalid
+   enum, an access password over 200 characters, and unknown fields →
+   `contentSchemas.test.ts` ("content metadata accepts date-time and visibility fields";
+   "content metadata rejects invalid values and unknown fields").
+4. The all-entries query accepts `{}` and rejects an unknown `type` field →
+   `contentSchemas.test.ts` ("all content entries query schema accepts empty query and
+   rejects unknown filters").
+5. Assistant planning rejects a client-supplied resource catalog →
+   `assistantActionSchemas.test.ts` ("assistant action planning rejects client-supplied
+   resource catalogs").
+6. Assistant planning accepts the strict basic and advanced site-builder intake states →
+   `assistantActionSchemas.test.ts` ("assistant planning accepts strict basic and
+   advanced intake states").
+7. Assistant planning rejects tampered basic-intake `rawHtml` →
+   `assistantActionSchemas.test.ts` ("assistant planning rejects tampered basic rawHtml
+   and advanced option IDs").
+8. Assistant planning rejects tampered advanced-intake option IDs → same test as group 7.
+
+### Green run and landing commits
+
+- `bun run test:vitest` over the three destination suites plus the retained generic suite
+  → Vitest `4.1.10`, `4` test files passed, `14` tests passed, `0` failures.
+- `5b5ed371` — "test(task-105): migrate schema validator coverage to Vitest" (exactly the
+  four writer paths: legacy −248, assistant +126, content +47, post +32).
+- `ae1ca47b` — "test(task-105): remove migrated schema validator from Bun lane"
+  (Bun-lane follow-through touching `tests/bun-lane-manifest.json` only; the manifest now
+  carries `0` `schemaValidator` rows while each of the four retained Bun server suites
+  keeps exactly `1` row).
+- Static checks at closure: `bun --cwd core lint` clean; the four validation suites span
+  23–126 lines, far below the 1,000-line cap; `git diff --check` clean on the
+  documentation scope.
+
+### Receipts sent downstream
+
+- `TASK-105-11-03` (parent closure) and `TASK-105-11-03-05` (four-suite classification
+  receipt) — this migration receipt.
+- `TASK-105-08-11` — lane delta recorded as the consuming owner's dated addendum in
+  `tests/RUNNER_OWNERSHIP.md` ("Child-08 schema-validator handoff"); this leaf edits
+  neither that document nor the manifest.
+- `TASK-105-11-04` — final receipt for `tests/README.md`, family closure, and changelog
+  follow-through, which stay open under `TASK-105-11-04`.
+
+All five acceptance criteria hold on the live tree: the eight groups above preserve the
+source validation and rejection semantics; exactly the four writers were used; the
+generic suite is present and unchanged; no production or out-of-scope file was written by
+this leaf; and the target suites plus the static, line-cap, and diff checks above pass.
