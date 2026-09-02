@@ -57,7 +57,11 @@ const hasMeaningfulParagraphAttrs = (attrs: Record<string, unknown>) =>
     if (key === "anchorId" || key === "className") {
       return typeof value === "string" && value.trim().length > 0;
     }
-    return true;
+    // Invariant (TASK-105-08-08-L02-L01): every paragraph block reaching this
+    // check was normalized by normalizeBlockAttrs, whose paragraph case keeps
+    // only normalizeCommonBlockLayoutAttrs' key set — all handled above — so
+    // no unknown attr key can occur and the former unknown-key fallback was
+    // structurally unreachable (deleted; fall-through returns undefined).
   });
 
 const isEmptyParagraphBlock = (block: PostBlock) => {

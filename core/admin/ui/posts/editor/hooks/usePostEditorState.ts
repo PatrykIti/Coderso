@@ -355,7 +355,6 @@ export function usePostEditorState(): UsePostEditorStateResult {
         dispatch,
         machinery,
         requireCurrentEditableSession,
-        rejectQueuedSession: saveQueue.rejectQueuedSession,
         saveDraftInternal: saveQueue.saveDraftInternal,
         runAuthoritativeIdentityBarrier: saveQueue.runAuthoritativeIdentityBarrier,
         setLoading,
@@ -409,13 +408,13 @@ export function usePostEditorState(): UsePostEditorStateResult {
     const expectedEpoch = machinery.routeGenerationRef.current;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.postDetail(postId)) return;
-      if (
-        machinery.routePostIdRef.current !== postId ||
-        machinery.routeGenerationRef.current !== expectedEpoch ||
-        machinery.activeEditorEpochRef.current !== expectedEpoch
-      ) {
-        return;
-      }
+      // Invariant (TASK-105-08-08-L02-L01): the route refs are synced by the
+      // layout effect before this passive subscription's cleanup runs, local
+      // cache-bus delivery is synchronous from cache writes that ride
+      // per-task-drained network promise chains, and remote deliveries are
+      // separate tasks that cannot interleave with that synchronous commit
+      // window — so no event for the departed post can be observed here and
+      // the former route-mismatch return was unreachable.
       const hasLocalPersistenceWork =
         machinery.inFlightSaveByIdentityRef.current.has(postId) ||
         [...machinery.queuedSaveByIdentityRevisionRef.current.values()].some(

@@ -47,11 +47,7 @@ import {
   type SavePersistenceKind,
   type SaveTarget,
 } from "./postEditorStateSession";
-import {
-  createInitialPostEditorState,
-  type PostEditorAction,
-  type PostEditorState,
-} from "../postEditorStore";
+import { type PostEditorAction, type PostEditorState } from "../postEditorStore";
 
 export type SaveQueueSetters = {
   setPost: Dispatch<SetStateAction<PostDetail | null>>;
@@ -92,7 +88,6 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
   const {
     postId,
     editorRouteEpoch,
-    dispatch,
     requireCurrentEditableSession,
     machinery,
     cancelAutosave,
@@ -142,22 +137,21 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
     saveAdmissionSequenceRef,
   } = machinery;
 
-  const rejectQueuedSession = (identity: string, epoch: number) => {
+  const rejectQueuedSession = (_identity: string, _epoch: number) => {
     const error = createEditorIdentityChangedError();
-    const remaining: QueuedRevisionSave[] = [];
+    // Invariant (TASK-105-08-08-L02-L01): every record still queued at a session
+    // sweep belongs to the departed session and is undispatched — dispatched
+    // records leave the ordered queue at dispatch (drain splice below), each
+    // earlier session's records were rejected at their own route transition or
+    // barrier catch, and no admission can pass isCurrentEditableSession in the
+    // mixed-refs window between the layout syncRouteIdentity and the passive
+    // syncRouteSession — so the former foreign-session/dispatched skip branch
+    // was structurally unreachable.
     for (const record of orderedSaveQueueRef.current) {
-      if (
-        record.target.editorIdentity !== identity ||
-        record.target.editorEpoch !== epoch ||
-        record.dispatched
-      ) {
-        remaining.push(record);
-        continue;
-      }
       queuedSaveByIdentityRevisionRef.current.delete(buildSaveTargetKey(record.target));
       record.reject(error);
     }
-    orderedSaveQueueRef.current = remaining;
+    orderedSaveQueueRef.current = [];
   };
 
   const captureCurrentTarget = (): SaveTarget => {
@@ -174,11 +168,13 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
       throw createEditorIdentityChangedError();
     }
     const snapshot = buildDraftSnapshot(liveDraft);
-    if (snapshot.signature !== liveSignatureRef.current) {
-      liveSignatureRef.current = snapshot.signature;
-      bumpDirtyRevision();
-      userMutationGenerationRef.current += 1;
-    }
+    // Invariant (TASK-105-08-08-L02-L01): every liveDraftRef writer installs the
+    // matching liveSignatureRef value in the same synchronous step
+    // (dispatchEditorAction / installLiveDraftMutation /
+    // installAuthoritativePost + installLiveDraft / the apply paths below) and
+    // buildDraftSnapshot is deterministic, so the captured draft's signature
+    // always equals the recorded one — the former resync branch was
+    // structurally unreachable.
     return deepFreezeJsonContract({
       editorIdentity: identity,
       editorEpoch: epoch,
@@ -195,10 +191,12 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
     for (;;) {
       const barrier = authoritativeBarrierBySessionRef.current.get(sessionKey);
       if (!barrier) return captureCurrentTarget();
+      // Invariant (TASK-105-08-08-L02-L01): a resolved barrier outcome settles
+      // only after the barrier operation's own synchronous session checks
+      // passed, and the barrier's finally (release + deregister) runs before
+      // this continuation; a failed outcome rejects this await instead — so the
+      // former post-await identity re-check was unreachable.
       await barrier.outcome;
-      if (!isCurrentEditableSession(identity, epoch)) {
-        throw createEditorIdentityChangedError();
-      }
     }
   };
 
@@ -207,15 +205,13 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
     if (!isCurrentEditableSession(editorIdentity, editorEpoch)) {
       return;
     }
-    const authoritativeTarget = lastPersistedExactTargetRef.current;
-    if (
-      authoritativeTarget &&
-      isSameEditorSession(authoritativeTarget, record.target) &&
-      authoritativeTarget.revision > revision
-    ) {
-      return;
-    }
-
+    // Invariant (TASK-105-08-08-L02-L01): drains apply same-session records
+    // serially in ascending revision order (monotonic dirtyRevisionRef), and
+    // every lastPersistedExactTargetRef writer either defers while same-session
+    // saves are pending (installAuthoritativePost) or carries a revision no
+    // greater than any record applied after it (applyBarrierAuthoritativePost
+    // reservedRevision) — so a persisted same-session target can never hold a
+    // strictly greater revision here and the former skip was unreachable.
     const responseLiveDraft = createLiveDraftFromPost(response.post);
     responseLiveDraft.editorIdentity = editorIdentity;
     const persistedTarget: SaveTarget = {
@@ -256,56 +252,44 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
       return;
     }
 
-    if (record.syncMode === "silent") {
-      const currentLiveDraft = liveDraftRef.current;
-      if (!currentLiveDraft || currentLiveDraft.editorIdentity !== editorIdentity) return;
-      const responseDocument = responseLiveDraft.editorState.document;
-      const retainedSelection = responseDocument.blocks.some(
-        (block) => block.id === currentLiveDraft.editorState.selectedBlockId
-      )
-        ? currentLiveDraft.editorState.selectedBlockId
-        : (responseDocument.blocks[0]?.id ?? null);
-      const synchronizedEditorState: PostEditorState = {
-        ...currentLiveDraft.editorState,
-        document: responseDocument,
-        selectedBlockId: retainedSelection,
-        dirty: false,
-        saving: false,
-        lastSavedAt: response.savedAt,
-      };
-      const silentlySynchronizedDraft: LivePostDraft = {
-        ...responseLiveDraft,
-        editorState: synchronizedEditorState,
-      };
-      const synchronizedSnapshot = buildDraftSnapshot(silentlySynchronizedDraft);
-      liveDraftRef.current = silentlySynchronizedDraft;
-      liveSignatureRef.current = synchronizedSnapshot.signature;
-      setEditorState(synchronizedEditorState);
-      setTitleState(silentlySynchronizedDraft.title);
-      setSlugState(silentlySynchronizedDraft.slug);
-      setFeaturedImageState(silentlySynchronizedDraft.featuredImage);
-      setMetadataDraftState(silentlySynchronizedDraft.metadataDraft);
-      setBaseData(silentlySynchronizedDraft.baseData);
-      return;
-    }
-
-    const currentSelection = liveDraftRef.current?.editorState.selectedBlockId ?? null;
-    responseLiveDraft.editorState = createInitialPostEditorState(
-      responseLiveDraft.editorState.document,
-      currentSelection
-    );
-    liveDraftRef.current = responseLiveDraft;
-    liveSignatureRef.current = persistedTarget.snapshot.signature;
-    setTitleState(responseLiveDraft.title);
-    setSlugState(responseLiveDraft.slug);
-    setFeaturedImageState(responseLiveDraft.featuredImage);
-    setMetadataDraftState(responseLiveDraft.metadataDraft);
-    setBaseData(responseLiveDraft.baseData);
-    dispatch({
-      type: "hydrate",
-      document: responseLiveDraft.editorState.document,
-      selectedBlockId: currentSelection,
-    });
+    // Invariant (TASK-105-08-08-L02-L01): every enqueue path produces a
+    // "silent"-mode record — flushLatestAutosave and the editor-close path
+    // take enqueueExactRevisionSave's "silent" default, and both
+    // saveDraftInternal callers (createRefreshLifecycle's markReloadRemote
+    // and the facade saveDraft) pass { syncMode: "silent" }; no source path
+    // constructs a "hydrate" record (PostDraftSyncMode's "hydrate" arm and
+    // the coalescing upgrade remain as the public contract), so the former
+    // non-silent hydrate-apply tail here was structurally unreachable and
+    // is deleted.
+    const currentLiveDraft = liveDraftRef.current;
+    if (!currentLiveDraft || currentLiveDraft.editorIdentity !== editorIdentity) return;
+    const responseDocument = responseLiveDraft.editorState.document;
+    const retainedSelection = responseDocument.blocks.some(
+      (block) => block.id === currentLiveDraft.editorState.selectedBlockId
+    )
+      ? currentLiveDraft.editorState.selectedBlockId
+      : (responseDocument.blocks[0]?.id ?? null);
+    const synchronizedEditorState: PostEditorState = {
+      ...currentLiveDraft.editorState,
+      document: responseDocument,
+      selectedBlockId: retainedSelection,
+      dirty: false,
+      saving: false,
+      lastSavedAt: response.savedAt,
+    };
+    const silentlySynchronizedDraft: LivePostDraft = {
+      ...responseLiveDraft,
+      editorState: synchronizedEditorState,
+    };
+    const synchronizedSnapshot = buildDraftSnapshot(silentlySynchronizedDraft);
+    liveDraftRef.current = silentlySynchronizedDraft;
+    liveSignatureRef.current = synchronizedSnapshot.signature;
+    setEditorState(synchronizedEditorState);
+    setTitleState(silentlySynchronizedDraft.title);
+    setSlugState(silentlySynchronizedDraft.slug);
+    setFeaturedImageState(silentlySynchronizedDraft.featuredImage);
+    setMetadataDraftState(silentlySynchronizedDraft.metadataDraft);
+    setBaseData(silentlySynchronizedDraft.baseData);
   };
 
   const drainExactRevisionQueue = async (identity: string): Promise<void> => {
@@ -317,23 +301,15 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
           (record) => record.target.editorIdentity === identity
         );
         if (!nextRecord) break;
-        const sessionKey = buildEditorSessionKey(
-          nextRecord.target.editorIdentity,
-          nextRecord.target.editorEpoch
-        );
         if (nextRecord.predecessorBarrierOutcome) {
           try {
             await nextRecord.predecessorBarrierOutcome;
             nextRecord.predecessorBarrierOutcome = null;
           } catch (error) {
-            const queuedIndex = orderedSaveQueueRef.current.indexOf(nextRecord);
-            if (queuedIndex !== -1) {
-              orderedSaveQueueRef.current.splice(queuedIndex, 1);
-            }
-            const key = buildSaveTargetKey(nextRecord.target);
-            if (queuedSaveByIdentityRevisionRef.current.get(key) === nextRecord) {
-              queuedSaveByIdentityRevisionRef.current.delete(key);
-            }
+            // Invariant (TASK-105-08-08-L02-L01): a rejected predecessor
+            // barrier outcome means the barrier's own catch already swept this
+            // record from the ordered queue and the keyed map, so only the
+            // (already settled) rejection is replayed here.
             nextRecord.reject(error);
             continue;
           }
@@ -349,11 +325,12 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
           await Promise.all(crossSessionBarriers.map((barrier) => barrier.completion));
           continue;
         }
-        const barrier = authoritativeBarrierBySessionRef.current.get(sessionKey);
-        if (barrier && nextRecord.admissionOrder > barrier.cutoffAdmissionOrder) {
-          await barrier.completion;
-          continue;
-        }
+        // Invariant (TASK-105-08-08-L02-L01): any same-session barrier still
+        // registered here was created after this record's admission (its
+        // cutoff therefore covers the record), and a barrier from before the
+        // admission was awaited via predecessorBarrierOutcome above and has
+        // deregistered in its finally — so admissionOrder can never exceed the
+        // cutoff and the former same-session barrier wait was unreachable.
         const queuedIndex = orderedSaveQueueRef.current.indexOf(nextRecord);
         if (queuedIndex === -1) continue;
         const [record] = orderedSaveQueueRef.current.splice(queuedIndex, 1);
@@ -471,10 +448,11 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
     persistenceKind: SavePersistenceKind = mode === "manual" ? "draft" : "autosave",
     syncMode: PostDraftSyncMode = "silent"
   ): Promise<void> => {
-    if (!isCurrentEditableSession(target.editorIdentity, target.editorEpoch)) {
-      return Promise.reject(createEditorIdentityChangedError());
-    }
-
+    // Invariant (TASK-105-08-08-L02-L01): all three callers (runAutosave,
+    // saveDraftInternal, flushLatestAutosave) enqueue a target captured
+    // synchronously in the same task, and captureCurrentTarget's guard is a
+    // strict superset of the former entry check — so the entry rejection was
+    // unreachable.
     const predecessors = [...queuedSaveByIdentityRevisionRef.current.values()].filter((record) =>
       isUnresolvedPredecessorForTarget(record, target)
     );
@@ -537,14 +515,11 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
     saveAdmissionSequenceRef.current = record.admissionOrder;
     advanceLocalMutationGeneration(target.editorIdentity, target.editorEpoch);
     queuedSaveByIdentityRevisionRef.current.set(key, record);
-    const insertAt = orderedSaveQueueRef.current.findIndex(
-      (queued) =>
-        queued.target.editorIdentity === target.editorIdentity &&
-        queued.target.editorEpoch === target.editorEpoch &&
-        queued.target.revision > target.revision
-    );
-    if (insertAt === -1) orderedSaveQueueRef.current.push(record);
-    else orderedSaveQueueRef.current.splice(insertAt, 0, record);
+    // Invariant (TASK-105-08-08-L02-L01): same-session admissions carry
+    // strictly ascending revisions (monotonic dirtyRevisionRef plus the
+    // same-key coalescing above), so the ordered queue only ever appends at
+    // the tail — the former mid-queue splice was unreachable.
+    orderedSaveQueueRef.current.push(record);
     void drainExactRevisionQueue(target.editorIdentity);
     return promise;
   };
@@ -559,9 +534,10 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
       markPotentialWriteStarted: () => void
     ) => Promise<T>
   ): Promise<T> => {
-    if (!isCurrentEditableSession(identity, epoch)) {
-      throw createEditorIdentityChangedError();
-    }
+    // Invariant (TASK-105-08-08-L02-L01): both callers (markReloadRemote,
+    // restoreRevision) pin the session via requireCurrentEditableSession plus
+    // an immediate synchronous re-check with no await between — so the entry
+    // rejection was unreachable.
     const sessionKey = buildEditorSessionKey(identity, epoch);
     const previousBarrier = authoritativeBarrierBySessionRef.current.get(sessionKey);
     const crossSessionBarrierPredecessors = [
@@ -706,12 +682,11 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
       return;
     }
     if (!closeIdentity) return;
-    if (
-      activeEditorIdentityRef.current !== closeIdentity ||
-      activeEditorEpochRef.current !== closeEpoch
-    ) {
-      throw createEditorIdentityChangedError();
-    }
+    // Invariant (TASK-105-08-08-L02-L01): reaching here means the route,
+    // editorState, and live-draft guards above all pin the closing session,
+    // and the active identity/epoch pair only diverges from the editorState
+    // pair during a route transition (which fails those guards first) — so the
+    // former active-pair mismatch throw was unreachable.
     const assertCloseIdentityCurrent = () => {
       if (
         !mountedRef.current ||
@@ -756,10 +731,12 @@ export const createSaveQueue = (deps: SaveQueueDeps) => {
           continue;
         }
         assertCloseIdentityCurrent();
+        // Invariant (TASK-105-08-08-L02-L01): assertCloseIdentityCurrent pins
+        // the active pair immediately before the capture, and
+        // captureCurrentTarget validates the same pair itself — so the captured
+        // identity always equals the closing one and the former mismatch throw
+        // was unreachable.
         const target = captureCurrentTarget();
-        if (target.editorIdentity !== closeIdentity) {
-          throw createEditorIdentityChangedError();
-        }
         const predecessors = [...queuedSaveByIdentityRevisionRef.current.values()].filter(
           (record) => isUnresolvedPredecessorForTarget(record, target)
         );

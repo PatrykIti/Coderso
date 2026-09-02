@@ -83,7 +83,6 @@ export type RefreshLifecycleDeps = RefreshLifecycleSetters & {
   /** Shared mutable bookkeeping boxes and guard callbacks (L04-L01). */
   machinery: EditorMachinery;
   requireCurrentEditableSession: () => Readonly<{ identity: string; epoch: number }>;
-  rejectQueuedSession: (identity: string, epoch: number) => void;
   saveDraftInternal: (options?: { syncMode?: PostDraftSyncMode }) => Promise<void>;
   runAuthoritativeIdentityBarrier: <T>(
     identity: string,
@@ -105,7 +104,6 @@ export const createRefreshLifecycle = (deps: RefreshLifecycleDeps) => {
     dispatch,
     machinery,
     requireCurrentEditableSession,
-    rejectQueuedSession,
     saveDraftInternal,
     runAuthoritativeIdentityBarrier,
     setPost,
@@ -166,24 +164,13 @@ export const createRefreshLifecycle = (deps: RefreshLifecycleDeps) => {
     expectedEpoch = routeGenerationRef.current,
     acceptedPotentialWriteGeneration = getPotentialWriteSettlementGeneration(nextPost.id)
   ) => {
-    const previousIdentity = activeEditorIdentityRef.current;
-    const previousEpoch = activeEditorEpochRef.current;
-    if (
-      routePostIdRef.current !== nextPost.id ||
-      routeGenerationRef.current !== expectedEpoch ||
-      activeEditorIdentityRef.current !== nextPost.id ||
-      activeEditorEpochRef.current !== expectedEpoch
-    ) {
-      return false;
-    }
-    if (
-      reason === "identity-transition" &&
-      previousIdentity &&
-      (previousIdentity !== nextPost.id || previousEpoch !== expectedEpoch)
-    ) {
-      rejectQueuedSession(previousIdentity, previousEpoch);
-    }
-
+    // Invariant (TASK-105-08-08-L02-L01): both callers (applyLoadedPost,
+    // applyBarrierAuthoritativePost) pin the route and active pairs to
+    // (nextPost.id, expectedEpoch) in their own synchronous guards, so the
+    // former mismatch return was unreachable — and an identity-transition
+    // install therefore always follows a route transition whose facade effect
+    // already rejected the departed session's queued saves, making the former
+    // departed-session sweep here unreachable too.
     const hasPendingSameIdentitySave = [...queuedSaveByIdentityRevisionRef.current.values()].some(
       (record) =>
         record.target.editorIdentity === nextPost.id && record.target.editorEpoch === expectedEpoch
@@ -285,15 +272,11 @@ export const createRefreshLifecycle = (deps: RefreshLifecycleDeps) => {
     expectedEpoch: number,
     message: string
   ) => {
-    if (
-      !mountedRef.current ||
-      routePostIdRef.current !== expectedIdentity ||
-      routeGenerationRef.current !== expectedEpoch ||
-      activeEditorIdentityRef.current !== expectedIdentity ||
-      activeEditorEpochRef.current !== expectedEpoch
-    ) {
-      return;
-    }
+    // Invariant (TASK-105-08-08-L02-L01): all five call sites run
+    // isCurrentRequest() synchronously before calling (refresh's two,
+    // scheduleInitialHydration's three), and that check is a superset of the
+    // former guard (mounted + route + active pairs) — so its mismatch return
+    // was unreachable.
     if (
       editorStateIdentityRef.current === expectedIdentity &&
       editorStateEpochRef.current === expectedEpoch
@@ -628,10 +611,14 @@ export const createRefreshLifecycle = (deps: RefreshLifecycleDeps) => {
             }
             throw createEditorIdentityChangedError();
           }
-          if (hasRestorationDebt(expectedIdentity, routeGeneration)) {
-            setRemoteUpdatePending(true);
-            return;
-          }
+          // Invariant (TASK-105-08-08-L02-L01): the barrier awaits every
+          // predecessor (queued and in-flight alike — dispatched records stay
+          // in the keyed map until their settling finally) and every
+          // cross-session barrier before this operation, and post-cutoff
+          // admissions wait for this barrier's outcome before dispatching, so
+          // no settlement can move the restoration debt between the check
+          // above and the post-get check below — the former second
+          // setRemoteUpdatePending return was unreachable.
           if (!nextPost) {
             if (isLatestRequest()) setError("Post not found.");
             return;
