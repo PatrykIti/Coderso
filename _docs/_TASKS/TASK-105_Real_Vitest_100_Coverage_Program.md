@@ -5,7 +5,7 @@
 **Category:** QA + Platform + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-102, TASK-104  
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-03-06
 
 ---
@@ -816,3 +816,88 @@ Historical snapshot retained for context (2026-03-15; not current):
   snapshots; `TASK-105-08-12` remains In Progress pending a fresh canonical artifact. Its
   2026-08-29 whole-lane rerun attempt failed only on an unrelated full-load timeout, so no
   final whole-lane rebaseline or closure exists.
+
+## Program Closure (2026-09-02)
+
+Status: **Done (2026-09-02)**. The program closes on the `TASK-105-08-12` rebaseline
+standard, not on a literal `100%`: the title "Real Vitest 100% Coverage Program" is
+historical, and the honest terminal state is the 2026-09-01 canonical artifact — lines
+`99.26%` (`39427/39718`), statements `96.23`, branches `87.05`, functions `98.86`, with the
+exact `291`-line residual ledger in `TASK-105-08-12` (every row attributed per owning leaf
+with a source-backed disposition) and the `17` infra-noise files revalidated zero-executable
+without widening `coverage.exclude`. The earlier per-file `100%` goal closes on that same
+standard: every tracked file is either at `100%` lines, dispositioned in the ledger, or
+revalidated zero-executable.
+
+### Children 01–12, all terminal
+
+1. `TASK-105-01` Vitest Coverage Matrix and Invariants — Done (March 2026).
+2. `TASK-105-02` Admin Services Zero Coverage Wave — Done (March 2026).
+3. `TASK-105-03` Small UI and Support Component Wave — Done (March 2026).
+4. `TASK-105-04` Themes, Booking, Listings, and Forms Wave — Done (changelog 1320).
+5. `TASK-105-05` Entries, Pages, and Posts Editor Wave — Done (changelog 1321).
+6. `TASK-105-06` Widget Editor New Tests Wave — `⏭️ Superseded (2026-08-21)` by the
+   completed `TASK-580` v1 widget removal family.
+7. `TASK-105-07` SDK, Plugin Manifest, and Custom Screens Service Wave — Done.
+8. `TASK-105-08` Final Per-File 100% Gap Closure — `✅ Done (2026-09-02)` on family receipts
+   (all of its leaves and grandchildren terminal, including the 2026-09-02 verify-then-close
+   flips and the four source-repair documents below).
+9. `TASK-105-09` QA, Docs, Changelog, and Closure — Done 2026-09-01 (changelog 1325).
+10. `TASK-105-10` Coverage Gap Rebaseline and Lane Backlog — Done.
+11. `TASK-105-11` Legacy Bun-Free Test Migration Cleanup — `✅ Done (2026-09-02)` with its
+    `**Reopened:** 2026-08-25` line preserved; all physical descendants terminal
+    (`11-01`/`11-02` March 2026; `11-03` plus nested `01`–`08`; `11-04` 2026-09-02).
+12. `TASK-105-12` Mixed Module Product Refactors for Runner Eligibility — Done.
+
+### The 2026-09-02 closure package (changelog 1327)
+
+- **08-family verify-then-close flips (27 leaf/child documents).** The remaining
+  `TASK-105-08` coverage leaves closed on receipts citing their own `TASK-105-08-12` ledger
+  cluster disposition and the 2026-09-01 canonical artifact (`99.26` lines / `39427-39718`,
+  `291` uncovered across `87` files, canonical run `1186` files / `10444` tests / `0`
+  failures); no new coverage total is claimed by any of them. `TASK-105-08-08-L07` stays
+  `✅ Done (2026-09-01)` under changelog 1325, and `TASK-105-08-05-L03-L02` remains
+  `⏭️ Superseded`.
+- **L03 pages/posts dead-path repair + child `L03-L01`.** Seven provably dead shell paths
+  deleted (net `−43` lines, `+97 / −140` across the seven writer files, each site carrying a
+  pre-gating invariant comment), three new happy-dom suites pinning the supported neighbors
+  (`31` tests), and two owner-boundary audits (`RegistryFields` unsupported-control branch
+  retained as supported and covered directly; `ListItemsControl.tsx:62` verified dead and
+  handed to the authored child). The child `L03-L01` removed the scalar fallback at the owner
+  boundary — `DetailTemplateInspector` typed `listItemsValue` seam, `ListItemsControl` value
+  narrowed to `readonly PageListItemV2[]`, fallback and its cast deleted — with the
+  transferred `detail-template-inspector` suite growing by three tests.
+- **L02 residual suites + full-lane posts V8 gate.** The three 2026-09-02 residual-suite
+  extensions added exactly `3` tests over the `3` committed suites (dirty-draft hydration
+  deferral, resolve-collapsed-selection tail), and the contract's full-lane gate then passed
+  as authored: `1189` files / `10481` tests / `0` failures, all `33` amended include paths at
+  `lines.pct === 100` (gate total `3810/3810`; repaired modules saveQueue `307/307`, refresh
+  `255/255`, document `158/158`, `usePostEditorState` `245/245`), node check `{"failures":[]}`
+  exit 0.
+- **L02-L01 post-editor-state dead-path repair.** All `24` inherited uncovered executable
+  lines resolved: `23` deleted as dead with invariant comments, and saveQueue `:292`
+  re-classified dead during implementation and deleted together with the entire non-silent
+  hydrate apply tail (`13` further executable lines) whose prior apparent coverage was V8
+  function-range bleed-through — no `"hydrate"`-mode record producer exists in `core`.
+  Production diff `+134 / −167` across the four modules; static gates and prettier-stability
+  checks clean; the tooling limitation (V8 function-range bleed-through can mask dead
+  straight-line code) is documented in the leaf's amendment for the `TASK-105-08-12`
+  protocol's attention.
+
+### Whole-lane evidence and successor
+
+- The 2026-09-02 package's whole-lane run reports `1189` test files / `10481` tests / `0`
+  failures on the final tree. The canonical `10444`-test artifact of 2026-09-01 predates the
+  package; the `+37` tests are exactly the three new L03 dead-path suites (`31`), the three
+  L02 residual extensions (`3`), and the three `detail-template-inspector` additions (`3`),
+  and the `+3` files are those three new suites. No new canonical whole-lane coverage total
+  is claimed by this closure; any future total requires a fresh `TASK-105-08-12`-protocol
+  run.
+- Successor: none. The residual-coverage follow-up authority is the `TASK-105-08-12` ledger
+  itself (per-line dispositions), and the V8 bleed-through spot-check suggestion is recorded
+  in the `L02-L01` amendment; no successor task is authored by this closure.
+- The delivery branch is already merged into `feat/implementations` (merge `a3f016a8`,
+  2026-09-01); this package, including this receipt, is uncommitted working-tree state on
+  that branch, and pushing it to `main` is the user's separate explicit decision. Changelog
+  1327 records the package; this file's board row and the board Statistics are synchronized
+  in the same step.

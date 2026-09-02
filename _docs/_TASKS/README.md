@@ -83,9 +83,58 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 192 tasks
-- **In Progress:** 14 tasks
-- **Done:** 3612 tasks
+- **To Do:** 189 tasks
+- **In Progress:** 2 tasks
+- **Done:** 3660 tasks
+
+> 2026-09-02: TASK-105 program closure (changelog 1327). Done with bounded receipts: the
+> remaining `TASK-105-08` coverage leaves flipped terminal on verify-then-close receipts
+> (27 leaf/child documents, each citing its own `TASK-105-08-12` ledger cluster disposition
+> and the 2026-09-01 canonical artifact; `TASK-105-08-05-L03-L02` stays `⏭️ Superseded`;
+> `TASK-105-08-08-L07` stays `✅ Done (2026-09-01)` under changelog 1325 and is not relisted),
+> the `08-08` parent and the `TASK-105-08` apex closed last on family receipts, and the four
+> source-repair documents carry implementation receipts — `08-08-L03` (7 page/post shell files,
+> net `−43` lines, `+97 / −140`, three new happy-dom suites pinning the supported neighbors,
+> `31` tests, two owner-boundary audits) with child `L03-L01` (`DetailTemplateInspector` typed
+> `listItemsValue` seam, `ListItemsControl` value narrowed to `readonly PageListItemV2[]`,
+> `:62` scalar fallback and its cast deleted, +3 inspector tests), `08-08-L02` (residual-suite
+> extensions adding exactly `3` tests over the `3` committed suites, then the full-lane posts
+> V8 gate: `1189` files / `10481` tests / `0` failures, `33/33` include paths at `100%` lines,
+> gate total `3810/3810`, node check `{"failures":[]}` exit 0) with child `L02-L01` (all `24`
+> inherited uncovered lines resolved: `23` dead lines deleted with invariant comments, and
+> saveQueue `:292` re-classified dead and deleted with the entire non-silent hydrate apply
+> tail — `13` further executable lines whose prior apparent coverage was V8 function-range
+> bleed-through; no `"hydrate"`-mode record producer exists in `core`; production `+134 / −167`),
+> and the `TASK-105-11` family closed (`11-03-05` four-suite Bun freeze receipt, `11-03-08`
+> schema-validator Vitest migration `4` files / `14` tests / `0` failures with commits
+> `5b5ed371` + `ae1ca47b`, `11-04` QA/closure consuming those receipts plus the `08-11`
+> validated-receipt addendum and the `08-12` rebaseline). Flips in this step: `TASK-105`,
+> `TASK-105-08`, `TASK-105-11`, `TASK-105-11-03`, `TASK-105-11-03-05`, `TASK-105-11-03-08`,
+> and `TASK-105-11-04` rows below; the other `30` flips are the executor streams' own
+> in-file status changes already on this tree.
+> Honest closure statement: the program closes on the `TASK-105-08-12` rebaseline standard —
+> lines `99.26%` (`39427/39718`), `291` uncovered executable lines with the exact per-line
+> ledger in `TASK-105-08-12`, `17` infra-noise files revalidated zero-executable, no
+> `coverage.exclude` widening — not on a literal `100%`; the L02 `33`-file V8 gate reached
+> `100%` lines on its own include set and the L03-owned files were cleared by deletion with
+> pre-gating invariant comments, never by artificial execution. Known limitation, documented
+> in the `L02-L01` amendment: v8 function-range bleed-through can make never-executed
+> straight-line code report covered depending on incidental expression shape; the
+> `TASK-105-08-12` protocol may want a spot-check for this class in other `100%`-claimed files.
+> Statistics recomputed from `git ls-files -- _docs/_TASKS/TASK-*.md` and working-tree
+> `**Status:**` fields on `3,851` tracked files: To Do 192 -> 189, In Progress 14 -> 2,
+> Done-equivalent 3,612 -> 3,660 — deltas vs the published 2026-09-01 census (3,818 files @
+> 192/14/3,612) are files +33, To Do −3, In Progress −12, Done +48, summing to +33. The +33
+> files are the previously untracked `TASK-105-08`-family leaf drafts commit `a154cc46`
+> tracked after that census was computed; all `33` are terminal today (at `a154cc46^` the
+> same rule reproduces the published `3,818` files and Done `3,612`, with an `11`-document
+> To Do/In Progress bucket recount difference: 203/3 by today's rule vs the published 192/14).
+> The `37` status flips land in this package: `21` To Do + `13` In Progress by the executor
+> streams plus `1` To Do (`TASK-105-11-04`) and `2` In Progress (`TASK-105`, `TASK-105-11`) by
+> this closure step, verified against HEAD classifications (HEAD: To Do 211 / In Progress 17 /
+> Done-equivalent 3,623 on the same `3,851` tracked files). The two new untracked
+> source-repair leaf drafts (`08-08-L02-L01`, `08-08-L03-L01`) are terminal but untracked and
+> stay excluded. Untracked task drafts are intentionally excluded.
 
 > 2026-09-01: TASK-105-09 terminal documentation closure (changelog 1325). Done with bounded
 > receipts: the menus/dashboard/kits family — parent `TASK-105-08-05` plus leaves L01,
@@ -297,12 +346,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-406 | Assistant Cross-Industry Reset E2E Handoff | High | Small | No standalone destructive reset or task-local harness. TASK-414-11-L01 owns stronger owner-scoped Guide/Agent/Designer runtime flows and must mark TASK-406 Superseded under changelog 1266 only after they pass. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
-| TASK-105-11-04 | QA, Docs, Changelog, and Closure | Medium | Medium | To Do: consume child migration and runner handoffs before task11 closure |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-105-11-03-05 | Server Cluster Bun Ownership Freeze | Medium | Medium | To Do: documentation/ownership handoff only; depends on TASK-105-08-11 for `tests/RUNNER_OWNERSHIP.md` and authorized manifest handoff; TASK-105-11-04 consumes its receipt later and does not block this leaf |
-| TASK-105-11-03-08 | Server Schema Validator Vitest Migration | High | Medium | To Do: migrate eight Bun-free schema-validator behavior cases into post/content/assistant Vitest suites with exactly four test writers and no production changes |
 ---
 
 ## In Progress
@@ -310,15 +356,18 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-414 | Guide, Agent, and Designer Product Completion | High | Very Large | Contract refreshed 2026-08-09: TASK-548-owned provider-free Guide; provider/model-only bounded Agent with durable sessions, controlled research, private multimodal inputs, transactional Post/resource work, rich trusted media and reviewed external configuration; isolated staged full-site Designer with same-origin navigable preview, generation-consistent approve/reject/recovery/backup, and disabled-by-default Figma import. After the shared route transport lands, rewritten TASK-489 then TASK-555 must close with current Guide/generated bytes and pure capability contributions before TASK-414 resumes; TASK-556 is the first post-terminal extension. One shared cookbook-backed `task-414` smoke suite owns exactly 25 flows. Historical TASK-414-01 Done; 10 new children + 34 executable leaves, including runtime plugin capability activation and the strict action contribution seam; changelog 1266 pinned. |
-| TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: the 2026-03-15 figures and the interim August `Fresh Canonical Baseline (2026-08-21)` are historical, as is the `98.54%`-line prose (the on-disk 2026-08-26 artifact read `98.48%` / `600` uncovered; both are superseded). Fresh canonical artifact (2026-09-01): lines `99.26%` (`39427/39718`, `291` uncovered), statements `96.23`, branches `87.05`, functions `98.86` across `698` tracked files (`594` at `100%` lines, `87` below, `17` zero-executable); canonical run `1186` test files / `10444` tests / `0` failures; per-line residual ledger in TASK-105-08-12. Terminal via changelog 1325: TASK-105-08-12, TASK-105-08-13, TASK-105-09, and the menus/dashboard/kits family (`TASK-105-08-05` plus its leaves and `TASK-105-08-01-S01`). Still open: the remaining TASK-105-08 coverage leaves (`08-01`–`08-10` parents and residual children, `08-14`–`08-16`) and the TASK-105-11 family (`11-03-05`, `11-03-08`, `11-04`); the delivery-branch merge decision belongs to the user. |
-| TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | In Progress: the menus/dashboard/kits family is terminal — `TASK-105-08-05` plus `L01`, `L01-L01`, `L01-L02`, `L02`, `L02-L01`, `L03`, `L03-L01`, `L04` and prerequisite `TASK-105-08-01-S01` are Done with bounded receipts (`L03-L02` preserved `⏭️ Superseded`), the land order `L01-L01 -> L01-L02 -> L01 -> L02-L01 -> L02 -> S01 -> L03-L01 -> L03 -> L04` held, the 2026-09-01 artifact reports zero uncovered lines across all 37 tracked `core/admin/ui/{menus,dashboard,kits}/` files, and the L04 smoke `task105-l05-fast-20260901-official-r2` passed 5/5 scenarios with cleanup PASS and zero console errors. Also terminal: `08-11` (changelog 1326), `08-07` (1324), `08-12`, `08-13`, and the program closure leaf `TASK-105-09` (1325). Remaining: the `08-01`–`08-10` coverage parents and their residual children plus `08-14`–`08-16`, whose residual lines are enumerated file-by-file in the `TASK-105-08-12` ledger; each keeps its own contract and terminal handoff. |
-| TASK-105-11 | Legacy Bun-Free Test Migration Cleanup | High | Large | In Progress: reopened for the audited schema-validator Vitest migration, exact server Bun-boundary freeze, and downstream runner-document handoffs; TASK-105-11-03-08 is nested under TASK-105-11-03. |
-| TASK-105-11-03 | Refactor-First Cluster Ownership Audit | High | Medium | In Progress: reopened to reconcile the server cluster; children 01–07 remain in recorded order and child 08 appends the schema-validator migration. |
 | TASK-9999 | Permanent Deferred Non-User-Facing Low-Severity Backlog | Low | Very Large | Sole four-digit sentinel and intentionally permanent final board item. Accepts only evidence-backed LOW findings that satisfy the strict zero-user-visible and zero-contract-impact policy in `AGENTS.md`; source tasks must link deduplicated execution-ready leaves with exact rationale. Completed children/leaves retain normal changelog + board/stat closure. Intake closed 2026-08-18: TASK-9999-01 from TASK-540 (naming leaf Done changelog 1302, draft-state leaf superseded) and TASK-9999-02 from the TASK-560 audit sweep (4 docs-only leaves Done: L01 closed-family subtask tables 1303, L02 TASK-540 historical workflow fields 1304, L03 stale TASK-559 benchmark relabel 1305, L04 TASK-547 closure notes 1306). Sentinel remains the open final board item for future deferred LOW intake. |
 ## Done
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-105 | Real Vitest 100% Coverage Program | High | Large | ✅ Done (2026-09-02): all twelve direct children terminal — 01/02/03/07/10/12 Done (March 2026), 04 Done (changelog 1320), 06 `⏭️ Superseded (2026-08-21)`, 05 Done (1321), 08/11 `✅ (2026-09-02)`, 09 `✅ (2026-09-01)`. Closes honestly on the `TASK-105-08-12` rebaseline standard (the "100% Coverage" title is historical): lines `99.26%` (`39427/39718`), `291` uncovered executable lines with the exact per-line ledger in TASK-105-08-12, `17` infra-noise files revalidated zero-executable, no `coverage.exclude` widening. The 2026-09-02 package (changelog 1327) landed the 08-family verify-then-close flips, the L03/L03-L01 and L02/L02-L01 source repairs, and the L02 full-lane posts V8 gate (1189 files / 10481 tests / 0 failures; 33/33 include paths at `100%` lines); the 2026-09-01 canonical run (1186 files / 10444 tests) grows by exactly +37 tests / +3 files. No successor task; residual authority is the TASK-105-08-12 ledger. The delivery branch is already merged into `feat/implementations` (merge `a3f016a8`); pushing it to `main` is the user's separate explicit decision. |
+| TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | ✅ Done (2026-09-02): family terminal on its closure receipt — earlier terminal work (menus/dashboard/kits family + `TASK-105-08-01-S01` via changelog 1325, `08-07` 1324, `08-11` 1326, `08-12`, `08-13`, `TASK-105-09`) plus the 2026-09-02 verify-then-close flips of the remaining 27 leaf/child documents (`08-01`, `08-02`, `08-03` + L01/L02/L03, `08-04`, `08-06` + L01/L02, `08-07` + L01, `08-08-L01`, L04 + L04-L01, L05 + L05-L01, L06, L08/L09/L10, `08-09` + L01, `08-10`, `08-14`/`08-15`/`08-16`; `08-08-L07` already `✅ 2026-09-01`), each citing its `TASK-105-08-12` ledger disposition and the 2026-09-01 canonical artifact (lines 99.26, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures). The four source-repair documents (`08-08-L02` + `L02-L01`, `08-08-L03` + `L03-L01`) carry implementation receipts, and the `08-08` parent plus this apex closed last on family receipts. `TASK-105-08-05-L03-L02` stays `⏭️ Superseded`. Changelog 1327. |
+| TASK-105-11 | Legacy Bun-Free Test Migration Cleanup | High | Large | ✅ Done (2026-09-02; `**Reopened:** 2026-08-25` preserved in-file): coordination-only closure with children 01/02 Done (2026-03-12), 03 `✅ (2026-09-02)` with its nested 01–08 terminal, and 04 `✅ (2026-09-02)`; downstream owners accepted (the `TASK-105-08-11` validated-receipt addendum in `tests/RUNNER_OWNERSHIP.md`, and 11-04's `tests/README.md` verification + changelog follow-through); reopen condition resolved (child 05 delivered its classification, child 08 landed the migration). Changelog 1327. |
+| TASK-105-11-03 | Refactor-First Cluster Ownership Audit | High | Medium | ✅ Done (2026-09-02): reopened server cluster reconciled with children 01–04 and 06–07 Done (2026-03-12), 05 `✅ (2026-09-02)` four-suite Bun ownership freeze receipt, and 08 `✅ (2026-09-02)` schema-validator Vitest migration (four exact test writers, eight behavior groups preserved, no production change; 4 files / 14 tests / 0 failures; commits `5b5ed371` + `ae1ca47b`). Changelog 1327. |
+| TASK-105-11-03-05 | Server Cluster Bun Ownership Freeze | Medium | Medium | ✅ Done (2026-09-02): documentation/ownership receipt only — `adminAssetsRouting.test.ts` (runtime/admin asset boundary, 52 lines), `publicBookingApi.test.ts` (DB/public-write security, 971), `publicFormsApi.test.ts` (mixed injected + DB public/internal writes, 2038), and `publicFormsUploadApi.test.ts` (DB/media/public-internal writes, 555) remain Bun-owned, each with exactly `1` manifest row and `0` `schemaValidator` rows in the `451`-row `tests/bun-lane-manifest.json` (`generatedAt` `2026-09-01T18:09:45.748Z`); receipt handed to `TASK-105-08-11` and consumed by `11-04`. Changelog 1327. |
+| TASK-105-11-03-08 | Server Schema Validator Vitest Migration | High | Medium | ✅ Done (2026-09-02): exactly the four contract writers and no production change — deleted `tests/unit/server/schemaValidator.test.ts`, extended `tests/vitest/validation/postSchemas.test.ts`, created `contentSchemas.test.ts` and `assistantActionSchemas.test.ts`; all eight behavior groups preserved, generic `tests/vitest/validation/schemaValidator.test.ts` retained read-only; validated `4` test files / `14` tests / `0` failures (Vitest `4.1.10`); landing commits `5b5ed371` and `ae1ca47b`; downstream acceptance recorded by the `TASK-105-08-11` addendum. Changelog 1327. |
+| TASK-105-11-04 | QA, Docs, Changelog, and Closure | Medium | Medium | ✅ Done (2026-09-02): documentation-only closure receipt consuming the child-05/child-08 receipts, the `TASK-105-08-11` validated-receipt addendum, and the `TASK-105-08-12` rebaseline; verified `tests/README.md` needed no schema-validator or lane correction; physical descendant census of the 11 family found every descendant terminal (blocker list empty); published changelog 1327 and handed board/Statistics synchronization to the `TASK-105` parent author (this row and the 2026-09-02 note). |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | ✅ Done (2026-09-01): terminal documentation closure after changelog 1325 — wrote the L05 family, S01, 08-12, and 08-13 receipts and statuses, preserved the `L03-L02` supersession, published the fresh canonical artifact (lines `99.26%`, `291` uncovered executable lines across `698` tracked files; ledger in TASK-105-08-12), and synced this board. The remaining TASK-105-08 coverage leaves stay non-terminal under their own contracts, and TASK-105 stays In Progress (TASK-105-11 family open; the delivery-branch merge decision is the user's). |
 | TASK-105-08-12 | Final Rebaseline and Infra-Noise Manifest | High | Small | ✅ Done (2026-09-01): fresh canonical artifact from `bun scripts/run-vitest-coverage.ts` attempt 2 (276.98s, exit 0; `1186` test files / `10444` tests / `0` failures) — lines `99.26` (`39427/39718`), statements `96.23`, branches `87.05`, functions `98.86`; `291` uncovered executable lines across `87` files with the exact per-line ledger in `## Closure Evidence — Fresh Canonical Artifact (2026-09-01)`; the `17` infra-noise paths revalidated zero-executable without widening `coverage.exclude`; attempt 1 recorded as a contention timeout in `tests/vitest/pages/legacy-widget-block.test.tsx:150` that passed unchanged on rerun. |
 | TASK-105-08-13 | Assistant Draft Disposition | High | Medium | ✅ Done (2026-09-01): all `17` inherited assistant drafts classified `retain and repair` (`17/17` repaired-keep, no case weakened, no skip/todo/only markers, no owner decision required); orchestrator re-verification ran each owned suite individually green with `--max-warnings=0` ESLint; recorded by changelog 1325 per the changelog-link rule. |
