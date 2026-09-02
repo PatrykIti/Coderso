@@ -6,7 +6,7 @@
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-08  
 **Parent Task:** TASK-105-08  
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Implementation Complete:** 2026-08-22 (`5c6fcec7`)
 **Closure Pending:** Family rebaseline and a changelog entry that explicitly includes this leaf.
 
@@ -168,3 +168,10 @@ These 18 lines are the complete residual set after L02 implementation; every oth
 line in the 27 files is covered by behavior-asserted tests. The residual set was
 cross-checked against the final coverage lane: exactly 18 uncovered lines across the
 6 files above.
+
+## Closure (2026-09-02)
+
+Deliverable complete on tree evidence: commit 5c6fcec7 "TASK-105-08-02: settings UI coverage to 100% reachable lines".
+Owned settings suites are committed and green in the canonical run; root tsc --noEmit exits 0 with zero diagnostics.
+Residual disposition: the 08-02 attribution in TASK-105-08-12 is 6 files / 18 lines.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

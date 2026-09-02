@@ -6,7 +6,7 @@
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-08  
 **Parent Task:** TASK-105-08  
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-22
 
 ---
@@ -301,3 +301,10 @@ that convention: every reachable line is covered, and the final 24 uncovered lin
 8 inventory files are individually source-proven UNREACHABLE (see Residuum above;
 disposition row `08-04-custom-screens | 8 | 24 | 24 UNREACHABLE | 0` in the
 `TASK-105-08-12` reconciliation ledger). No owner decision is outstanding.
+
+## Closure (2026-09-02)
+
+Deliverable complete on tree evidence: commit 1782ef86 "test(task-105): close 08-04 custom screens UI and 08-10 service coverage", including tests/vitest/customScreens/customScreenDefinitionNormalizerResidual.test.ts (212 lines) whose Proxy-recovery case lands at line 174.
+Focused V8 re-verified 2026-09-02 on this tree: the mapped normalizer residual rows report hits >= 1.
+Residual disposition: the 08-04 attribution in TASK-105-08-12 is 8 files / 24 lines.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

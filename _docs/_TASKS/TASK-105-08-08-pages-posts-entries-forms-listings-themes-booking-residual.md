@@ -6,7 +6,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-105-08-11 implementation-complete split receipt; fresh L08 pages/posts contract audit
 **Parent Task:** TASK-105-08
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -208,3 +208,45 @@ inside the existing internal admin UI: existing session authentication, RBAC, CS
 writes, strict server validation, cache invalidation, and rate-limit behavior remain
 authoritative. No public write, persistence, schema, migration, or secret-handling
 behavior may change without a separate approved contract.
+
+## Closure (2026-09-02)
+
+Closed as a coordination contract: every direct child and grandchild is terminal on the
+2026-09-02 working tree — L01 ✅, L02 ✅, L03 ✅, L03-L01 ✅, L04 ✅, L04-L01 ✅, L05 ✅,
+L05-L01 ✅, L06 ✅, L08 ✅, L09 ✅, L10 ✅ (all 2026-09-02), L07 ✅ (2026-09-01, r44
+`task105-l08-fast-20260901-r44` full PASS), and the closing grandchild L02-L01 ✅
+(2026-09-02). The last open item was L02's V8 gate; L02-L01's dead-path repair and the
+three 2026-09-02 residual-suite extensions took it to **33/33 include paths at 100% lines**
+(full lane 1189 files / 10481 tests / 0 failures; the gate's node check exited 0), recorded
+in L02's `## Closure (2026-09-02)` with the per-line residual resolution table.
+
+Family receipt against the Parent Acceptance Criteria:
+
+1. L01–L10 ran in their declared order with disjoint writer paths; every changed
+   production/test file is at most 1,000 physical lines (largest posts writer
+   `postEditorStateSaveQueue.ts` 805 after the L02-L01 dead-path repair; largest test
+   writer `task-105-08-08-post-shell-residual.test.tsx` 797 after the Amendment 2 split).
+2. L01/L02 proved only genuine public behavior — no `as unknown as`, private helper mock,
+   or unsupported registry construction executed a classified dead path; every dead path
+   was instead deleted under a fresh owner contract (L03 + L03-L01 for pages/posts shells,
+   L04/L05/L06 splits, L02-L01 for the post editor state modules) with pre-gating
+   invariant comments at each deletion site.
+3. L01 and L02 satisfy the criterion as written — every pages/posts line is at 100% or
+   resolved by a validated source repair: L02's posts aggregate is 33/33 includes at
+   100% lines (3810/3810 lines, 2026-09-02 full-lane run on the final post-amendment
+   tree, node check exit 0), and L01's
+   fresh instrument re-run (2026-09-02) hits every named reachable page row, with the
+   remaining page lines being exactly the 08-12 ledger's instrument-level residuals for
+   the pages cluster (10 files / 25 lines) — a disposition this criterion explicitly
+   allows and L01's closure records.
+4. L07's five visible editor flows passed through the registered shared smoke platform
+   with screenshots and zero console errors (r44 receipt, 2026-09-01).
+5. L08–L10 repaired only their exact root-TypeScript test diagnostics and their receipts
+   make no coverage-completion claim.
+6. The frozen non-pages/posts rows were never this family's to write: they remain owned by
+   the program-level ledger (TASK-105-08-12 rebaseline: 99.26% lines, 291-line residual
+   ledger, 17 infra-noise zero-executable files), which the 08-family apex closure
+   summarizes. The 2026-09-02 package (L03 deletions → L03-owned files at 100%, L03-L01
+   typed seam, L02 residual suites, L02-L01 dead-path repair → L02 gate 33/33) reduced
+   that ledger's pages/posts cluster rows; the ledger itself keeps the authoritative
+   remaining-line accounting and no new whole-program coverage total is claimed here.

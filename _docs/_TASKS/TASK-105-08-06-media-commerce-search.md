@@ -6,7 +6,7 @@
 **Estimated Effort:** Reconciliation plus two test-only type-repair leaves
 **Dependencies:** TASK-105-08; fresh L12 artifact reconciliation; current root TypeScript diagnostic map
 **Parent Task:** TASK-105-08
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -128,3 +128,9 @@ commits from this parent.
 2. L12 records the five-unreachable/zero-reachable disposition against fresh coverage evidence.
 3. L01/L02 have exclusive, non-overlapping ownership of the named root-TypeScript test
    diagnostics and do not claim an L12 coverage change.
+
+## Closure (2026-09-02)
+
+Both direct children are terminal: TASK-105-08-06-L01 and TASK-105-08-06-L02 flipped Done (2026-09-02) on commit 25921215 with zero root-TypeScript diagnostics and green per-suite runs.
+Residual disposition: the 08-06 cluster attribution in TASK-105-08-12 is 3 files / 5 source-proven unreachable lines; no executable-line claim is made beyond the committed instrument artifact.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

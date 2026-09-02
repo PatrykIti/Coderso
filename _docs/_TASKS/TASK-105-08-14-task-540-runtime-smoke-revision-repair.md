@@ -7,7 +7,7 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-105-08-04 static and targeted-suite receipt; TASK-569 is terminal and
 its server revision contract is authoritative
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-22
 
 ---
@@ -131,3 +131,11 @@ audited launcher-and-evidence repair.
    visible effects, seven scenarios, zero console/page errors, and deterministic cleanup for L04.
 4. No production, route, schema, persistence, security, TASK-569, or completed TASK-552/560
    file changes; all modified production/test files are at most 1,000 physical lines.
+
+## Closure (2026-09-02)
+
+Closed on committed runtime-smoke evidence per the smoke-family closure standard: r4 terminal evidence at _docs/_workflows/_smoke/evidence/task-540/task105-l04-fast-20260822-r4/report.json records pass: true, serverUp: true, 7/7 scenarios, empty failures and consoleErrors, successful cleanup, and 13 screenshots; archive-hash validation is 13/13.
+Revision repair is in the tree: scripts/runtime-smoke/adapters/task-540/suite/runtime/override-actions.ts carries the expectedRevision flow (lines 34-153); the committed fixture JSON (1434 lines) is exempt from the line gate.
+Landing commits: 70d9954b (L04 smoke platform guard and receipts), 699ab3b1 (freeze of the task-540 L14/L16 handoff).
+Note for the record: the earlier failed r3 run directory was never committed to any branch; only the r4 terminal evidence above is citable.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — canonical run 1186 files / 10444 tests / 0 failures, 99.26% lines / 291 uncovered across 87 files.

@@ -6,7 +6,7 @@
 **Category:** QA + Coverage
 **Estimated Effort:** Small
 **Dependencies:** TASK-105-08-03-L01 validated handoff; fresh L02 contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -113,3 +113,9 @@ and line counts to the parent. The closure writer alone updates L12/status/board
 1. All 16 mapped lines receive a public helper or visible UI assertion.
 2. Dirty drafts survive both in-flight remote-load situations.
 3. No test attempts to cover the source-proven unreachable native-select branch.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit 85b4c725 "test(task-105): close 08-03 content types and entries residuals"): tests/vitest/ui/detail-template-canvas-paths.test.ts (42 lines), detail-template-editor-flows.test.tsx, and detail-template-inspector.test.tsx deliver the exported canvas-path, dirty-draft-survival, and unsupported-gallery-control assertions; focused V8 re-run 2026-09-02 shows the 10 mapped canvas/inspector rows with hits >= 1.
+The source-proven unreachable native select at DetailTemplateInspector.tsx:321,322,328 stays excluded per contract and is part of the 08-03 cluster attribution in TASK-105-08-12 (6 files / 14 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

@@ -6,7 +6,7 @@
 **Category:** QA + Coverage
 **Estimated Effort:** Small
 **Dependencies:** Fresh TASK-105-08-09 contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -322,3 +322,10 @@ The closure writer alone updates L12/status/board/changelog.
    effect.
 4. No test targets the five newly reclassified paths or the seven previously source-proven
    unreachable RoleEditor-dependent lines.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit 56c9cd92 "test(task-105): close 08-09 misc admin UI, audit/forms repairs and preview focus fix"): delivered suites tests/vitest/ui/permissions-matrix-page-revocation.test.tsx (285 lines) and users-roles-create-and-revocation.test.tsx (525 lines), both at or under 1,000 lines.
+Focused V8 re-verified 2026-09-02 on this tree: all 36 classified rows behave as mapped — 11 MUST_HIT rows hit, 4 PUBLIC_REPLACEMENT rows hit, 16 MATRIX_REACHABLE rows hit, and 5 UNREACHABLE rows at zero — with no coverage exclusion or ignore directive used.
+Residual disposition: the 08-09 cluster holds 9 files / 41 attributed uncovered lines in TASK-105-08-12; the five UNREACHABLE rows remain dispositioned, not covered.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

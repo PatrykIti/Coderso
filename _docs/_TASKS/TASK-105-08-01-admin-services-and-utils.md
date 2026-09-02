@@ -6,7 +6,7 @@
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-08  
 **Parent Task:** TASK-105-08  
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Implementation Complete:** 2026-08-22 (`78adae09`)
 **Closure Pending:** Family rebaseline and a changelog entry that explicitly includes this leaf.
 
@@ -291,3 +291,10 @@ always `JSON.parse`es).
 
 These four lines are the complete residual set after L01 implementation; every
 other line in the 47 files is covered by behavior-asserted tests.
+
+## Closure (2026-09-02)
+
+Deliverable complete on tree evidence: commit 78adae09 "TASK-105-08-01: admin services+utils coverage to 100% reachable lines" with the S01 ID-parity follow-up closed on ea8f2333.
+Owned suites are committed and green in the canonical run; root tsc --noEmit exits 0 with zero diagnostics.
+Residual disposition: the 08-01 attribution in TASK-105-08-12 is 3 files / 4 lines; 594 of 698 tracked files sit at 100% lines in the canonical artifact.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

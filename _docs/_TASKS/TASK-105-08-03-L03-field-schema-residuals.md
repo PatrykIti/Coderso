@@ -6,7 +6,7 @@
 **Category:** QA + Coverage
 **Estimated Effort:** Small
 **Dependencies:** TASK-105-08-03-L02 validated handoff; fresh L03 contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -121,3 +121,10 @@ to the parent. The closure writer alone updates L12/status/board/changelog.
 1. All ten mapped lines are covered through real UI or persisted-schema behavior.
 2. Duplicate persisted select options fail closed without an update request.
 3. All named validation gates and line-count checks pass.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit 85b4c725 "test(task-105): close 08-03 content types and entries residuals"): tests/vitest/ui/field-editor.test.tsx (622 lines) and schema-builder-page.test.tsx (786 lines) deliver the ten mapped field-editor and schema-builder interactions through public controls.
+Focused V8 re-verified 2026-09-02: all 10 mapped rows report hits >= 1, including the persisted duplicate-select-options case failing closed with no update request.
+Residual disposition: remaining FieldEditor/SchemaBuilderPage lines sit inside the 08-03 cluster attribution in TASK-105-08-12 (6 files / 14 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

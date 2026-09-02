@@ -12,7 +12,7 @@ L05/L06 source-contract audit 2026-08-31
 TASK-105-08-08-L05's `postEditorCanvasBlocks.tsx` breaches the 1,000-line gate as specified
 (`PostCanvasBlockItem` = `:300-1184` (885 lines) + ~150 helper lines + ~28 import lines) and
 invoked this contract's own escape hatch: "author a direct L05 follow-up leaf first".
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -124,3 +124,10 @@ Note: the environment's `.env` sourcing corrupts `IFS` under zsh — build file 
 - [ ] All three files ≤1,000 physical lines; ESLint, core lint/types, root tsc, and
       `git diff --check` clean.
 - [ ] Scoped V8 shows no target at 0 covered lines; receipt returned to the orchestrator.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit ef6e2e7c): postEditorCanvasBlockItem.tsx (961 lines) is extracted at or under the 1,000-line gate and imports only the allowed cross-subsystem symbol { PostRichTextAdapter } — no canvas-to-richtext deep import remains on this branch.
+Owned suites are committed and green in the canonical run; root tsc --noEmit exits 0 with zero diagnostics.
+Residual disposition: the extracted module's remaining uncovered lines are attributed in TASK-105-08-12 under the 08-08 posts cluster (9 files / 42 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

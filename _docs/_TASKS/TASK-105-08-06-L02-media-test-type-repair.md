@@ -6,7 +6,7 @@
 **Category:** Test Integrity
 **Estimated Effort:** Medium
 **Dependencies:** Current root TypeScript diagnostic map; fresh child-contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -166,3 +166,10 @@ contract before adding more cases.
 - [ ] Document/audio/video behavior uses valid file-plus-MIME fixtures.
 - [ ] No source, coverage, or security contract was claimed or changed.
 - [ ] Every named writer remains at or below 1,000 physical lines.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit 25921215 "test(task-105): close 08-06 commerce media and search coverage"): all six owned media suites are committed and pass independently; every writer stays at or under 1,000 lines.
+Attribution gate re-run 2026-09-02: tsc -p tsconfig.json --noEmit exits 0 with zero diagnostics, so all seventeen owned anchors are absent from the log; document/audio/video assertions ride valid file-plus-MIME fixtures.
+No coverage delta is claimed: the L06 five-unreachable media disposition stands in TASK-105-08-12 (08-06 cluster: 3 files / 5 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

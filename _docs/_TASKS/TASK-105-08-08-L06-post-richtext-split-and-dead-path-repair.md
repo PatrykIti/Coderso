@@ -6,7 +6,7 @@
 **Category:** Editor Reliability + Coverage
 **Estimated Effort:** Large
 **Dependencies:** TASK-105-08-11 implementation-complete split receipt; TASK-105-08-08-L05 validation-complete receipt; fresh L06 source-contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -133,3 +133,10 @@ wc -l \
 - [ ] L02's valid `onSlashInsertBlock` removal transition remains available for public coverage.
 - [ ] Scoped V8 regression evidence, lint, types, boundary, diff, and line-cap gates pass
   before L02 begins; L02 owns final whole-module V8 including the extracted files.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit ef6e2e7c): the richtext subsystem is split into editor/richtext/PostRichTextAdapter.tsx (818), postRichTextSelection.ts (444), postRichTextMedia.ts (131), and postRichTextSlashState.ts (20) — every module at or under 1,000 physical lines — with the realm-independent image predicate documented in postRichTextMedia.ts instead of a window-conditional dead branch.
+Owned richtext suites are committed and green in the canonical run; root tsc --noEmit exits 0 with zero diagnostics.
+Residual disposition: remaining richtext lines sit in the 08-08 posts attribution in TASK-105-08-12 (9 files / 42 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

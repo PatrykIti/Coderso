@@ -6,7 +6,7 @@
 **Estimated Effort:** Small follow-up
 **Dependencies:** TASK-105-08-11 split receipt; fresh L01 contract audit
 **Parent Task:** TASK-105-08
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-21
 **Reopened:** 2026-08-29
 
@@ -114,3 +114,10 @@ changelog, staging, and commits remain orchestrator-owned.
 
 1. A public merger test proves the boolean-property rejection with stable error metadata.
 2. L12 retains this line as a reachable gap until the focused V8 receipt is validated.
+
+## Closure (2026-09-02)
+
+The reopened scope is satisfied: the sole physical child TASK-105-08-07-L01 flipped Done (2026-09-02) on landing commit d9de3ed8, with tests/vitest/assistant/blueprint-schema-merger.test.ts hitting blueprintSchemaMerger.ts:231 (DA:231,1, 5/5 tests) and pinning the fail-closed error metadata.
+Root tsc --noEmit and bun --cwd core lint both exit 0 on this tree.
+Residual disposition: the 08-07 cluster attribution in TASK-105-08-12 is 12 files / 35 lines.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

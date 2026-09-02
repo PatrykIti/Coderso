@@ -6,7 +6,7 @@
 **Category:** QA + Coverage
 **Estimated Effort:** Small
 **Dependencies:** Fresh TASK-105-08-07 contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -112,3 +112,10 @@ the parent. The closure writer alone updates L12/status/board/changelog.
 1. The test reaches line 231 through a valid top-level ContentSchema.
 2. It pins error class, code, field name, and user-safe message.
 3. All named validation and line-count gates pass.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit d9de3ed8 "test(task-105): close 08-07 assistant coverage and blueprint boolean recovery"): tests/vitest/assistant/blueprint-schema-merger.test.ts (231 lines) reaches line 231 through a valid top-level ContentSchema and pins BlueprintSchemaMergeError, code schema_merge_conflict, fieldName enabled, and the user-safe message.
+Focused V8 re-verified 2026-09-02: DA:231,1 (line 231 hit) across 5/5 passing tests; bun --cwd core lint exits 0 and root tsc --noEmit exits 0.
+Residual disposition: the 08-07 cluster holds 12 files / 35 attributed lines in TASK-105-08-12; no coverage claim beyond line 231 is made here.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

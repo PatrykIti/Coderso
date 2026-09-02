@@ -6,7 +6,7 @@
 **Category:** QA + Coverage
 **Estimated Effort:** Small
 **Dependencies:** Fresh TASK-105-08-03 contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -244,3 +244,10 @@ changelog, staging, and commits.
 2. The test suite shows a visible state, event result, payload, or no-side-effect assertion
    for every branch; no synthetic callback-only test is added.
 3. All named validation gates and line-count checks pass.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence. Delivered suites (commit 85b4c725 "test(task-105): close 08-03 content types and entries residuals"): tests/vitest/ui/collection-workspace-page.test.tsx (653 lines), content-type-fields-panel.test.tsx, content-type-list-flows.test.tsx, content-type-list-create-error.test.tsx (219), content-type-settings-card.test.tsx — every writer at or under 1,000 lines.
+Focused V8 re-verified 2026-09-02 on this tree: all 22 mapped rows (CollectionWorkspacePage 379/439/459, ContentTypeFieldsPanel 75-76, ContentTypeList 88-629, ContentTypeSettingsCard 130, ContentTypeTable 91-177) report hits >= 1 across 56 passing tests.
+Residual disposition: the 08-03 cluster holds 6 files / 14 attributed uncovered lines in TASK-105-08-12 (Exact residual ledger, 2026-09-01); DetailTemplateInspector 321/322/328 stay documented unreachable, not claimed covered.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines (39427/39718), 291 uncovered across 87 files, canonical run 1186 files / 10444 tests / 0 failures.

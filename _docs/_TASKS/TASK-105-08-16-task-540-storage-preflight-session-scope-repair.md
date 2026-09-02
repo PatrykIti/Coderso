@@ -6,7 +6,7 @@
 **Category:** Testing Infrastructure / Runtime Smoke  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-105-08-04 static and targeted-suite receipt; TASK-105-08-14 focused request-shape repair; TASK-105-08-15 harness implementation receipt and its failed `r3` diagnostic  
-**Status:** 🚧 In Progress  
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-22
 
 ---
@@ -275,3 +275,10 @@ bun scripts/runtime-smoke.ts run --suite task-540 --profile fast --session task1
 L04's delegated runtime acceptance is now satisfied and L05 may begin in the declared order.
 L16 remains `🚧 In Progress` pending family closure; this receipt changes no board, changelog,
 source, or test ownership.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence: scripts/runtime-smoke/adapters/task-540/operations/handlers/platform.ts:316 scopes the storage-preflight session query with inArray over metadata->>'userAgent', and the exact-four-UA guard at platform.ts:226-229 bounds the session scope as contracted.
+Delivered suites: tests/unit/runtime-smoke/task540-storage-preflight-session-scope.test.ts (272 lines) and task540-native-source-inventory.test.ts (414 lines), both committed and green in the canonical run; the 1434-line fixture JSON is exempt from the 1,000-line gate.
+Landing commit: 699ab3b1 "test(task-105): freeze task-540 L14 L16 handoff".
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — canonical run 1186 files / 10444 tests / 0 failures, 99.26% lines / 291 uncovered across 87 files.

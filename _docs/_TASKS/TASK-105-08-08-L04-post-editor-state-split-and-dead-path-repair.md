@@ -6,7 +6,7 @@
 **Category:** State Reliability + Coverage
 **Estimated Effort:** Large
 **Dependencies:** TASK-105-08-11 implementation-complete split receipt; TASK-105-08-08-L03 validation-complete receipt; fresh L04 source-contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -140,3 +140,10 @@ starts.
 - [ ] Public exports/result behavior and cache/concurrency contracts are unchanged.
 - [ ] Each deleted line is structurally impossible and adjacent supported behavior is tested.
 - [ ] Scoped V8 regression evidence, lint, types, boundary, diff, and line-cap gates pass.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit ef6e2e7c): usePostEditorState.ts is split into hooks of 800/537/736/828/436 lines (usePostEditorState, postEditorStateDocument, postEditorStateRefresh, postEditorStateSaveQueue, postEditorStateSession) — all under 1,000 physical lines — and the audited dead paths (former :1098-1100, :1136, :1181, :1705) were removed in that split, with tests/vitest/ui/task-105-08-08-post-editor-state-dead-paths.test.tsx committed as the regression proof.
+Owned regression suites are committed, including tests/vitest/ui/task-105-08-08-post-editor-state-dead-paths.test.tsx.
+Residual disposition: remaining post-editor lines sit in the 08-08 posts attribution in TASK-105-08-12 (9 files / 42 lines); the undeleted dead-path lines owned by L03 remain excluded from this receipt.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

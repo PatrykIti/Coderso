@@ -6,7 +6,7 @@
 **Category:** QA + Coverage
 **Estimated Effort:** Large
 **Dependencies:** TASK-105-01..07; active TASK-105-08 children below
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-21
 
 ---
@@ -144,3 +144,64 @@ remaining disposition.
 3. A final coverage claim uses only a fresh L12 artifact and exact reconciliation.
 4. Every inherited root-TypeScript diagnostic has an exact test/source owner; test-only
    repairs do not claim a coverage delta.
+
+## Closure (2026-09-02)
+
+Closed as the 08-family apex: every physical child under `_docs/_TASKS/TASK-105-08-*` is
+terminal on the 2026-09-02 working tree, verified by a mechanical sweep of every doc's
+Status line — TASK-105-08-01 through 08-16 are all ✅ Done (08-07 and 08-08-L07 carry the
+2026-09-01 r44 runtime receipt; the 2026-09-02 flips carry their own closure sections;
+rows closed earlier are terminal under their own receipts), and every named physical
+grandchild is terminal: 08-03-L01/L02/L03, the 08-05 descendant set (08-05-L03-L02 is
+⏭️ Superseded by 08-05-L03-L01 — superseded, not open), 08-06-L01/L02, 08-07-L01, the
+full 08-08 set (L01–L10, L03-L01, L04-L01, L05-L01, L02-L01), and 08-09-L01.
+
+Program closure state — no new whole-program total is claimed here (Acceptance
+Criterion 3 reserves final claims to a fresh L12 artifact): the authoritative artifact
+remains TASK-105-08-12's canonical rebaseline — **99.26% lines, a 291-line residual
+ledger with per-line source-backed dispositions, and 17 infra-noise zero-executable
+files**. The 2026-09-02 package on `feat/implementations` reduced that ledger's
+pages/posts cluster without touching its protocol:
+
+- **L03 dead-path deletions** across 7 files took every L03-owned file to 100% lines
+  under its own V8 proof, each deletion site carrying a pre-gating invariant comment.
+- **L03-L01** added the detail-template inspector list-value typed seam.
+- **The three L02 residual suites** (state-data/errors, state-concurrency, richtext)
+  covered the supported post editor state and rich-text behaviors through public seams.
+- **L02-L01 dead-path repair** re-verified and deleted the 24 dead lines across the
+  four post editor state modules — the last of them, first inherited as V8 attribution
+  noise, proved on re-verification to sit inside a structurally dead non-silent
+  hydrate apply tail (no `"hydrate"`-mode record producer exists; its apparent coverage
+  was V8 function-range bleed-through) and was deleted with that tail — taking
+  **L02's combined posts V8 gate to 33/33 include paths at 100% lines** (full lane
+  1189 files / 10481 tests / 0 failures, gate total 3810/3810 lines on the final
+  post-amendment tree; the gate's own node check exited 0).
+
+Receipt chain closed on 2026-09-02: L02-L01 ✅ → L02 ✅ (its `## Closure (2026-09-02)`
+holds the per-line residual resolution table and the final gate numbers) → the 08-08
+parent ✅ (family receipt against its six Parent Acceptance Criteria, recording L01's
+pages aggregate as every named reachable row hit plus exactly the 08-12 pages-cluster
+ledger residuals — 10 files / 25 lines — under the criterion's explicit
+"100%-or-resolved-by-validated-source-repair" clause) → this apex.
+
+Verdicts against this doc's Acceptance Criteria:
+
+1. Every active residual line has one current owner and source/test evidence — the
+   remaining program lines are exactly 08-12's 291 ledger rows, each with its
+   source-backed disposition; the 2026-09-02 package deleted or covered its share and
+   introduced no unowned line.
+2. No parent is marked terminal while an active physical child exists — the sweep above
+   ran before this flip; the last open chain (L02 → 08-08 → apex) closes with this
+   section.
+3. A final coverage claim uses only a fresh L12 artifact — no new program total is
+   claimed here; 99.26% / 291 lines / 17 files are 08-12's canonical artifact numbers,
+   and any future total requires a fresh L12 run under its protocol.
+4. Every inherited root-TypeScript diagnostic has an exact test/source owner — the
+   type-repair receipts (08-06-L01/L02, 08-08-L08/L09/L10, 08-13) claim attribution
+   only, never a coverage delta.
+
+The 2026-09-02 package (L03 deletions, L03-L01 seam, L02 residual suites, L02-L01
+repair, and this doc chain) is uncommitted working-tree state on `feat/implementations`;
+the runtime lanes (08-08-L07, 08-14/15/16) carry their own evidence receipts. Board
+statistics, changelog, and program-doc updates remain orchestrator-owned per
+"Documentation Updates Required".

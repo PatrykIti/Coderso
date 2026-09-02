@@ -6,7 +6,7 @@
 **Estimated Effort:** Small, split into three test-only leaves
 **Dependencies:** TASK-105-08; fresh pre-implementation audit for each child
 **Parent Task:** TASK-105-08
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-22
 
 ---
@@ -132,3 +132,10 @@ and commits remain orchestrator-owned.
 2. `DetailTemplateInspector.tsx:321,322,328` remains documented as source-proven
    unreachable rather than artificially covered.
 3. L12 receives fresh artifact-derived evidence before this parent can become terminal.
+
+## Closure (2026-09-02)
+
+All physical children are terminal: TASK-105-08-03-L01, L02, and L03 each flipped Done (2026-09-02) on landing commit 85b4c725 "test(task-105): close 08-03 content types and entries residuals".
+Leaf receipts record focused V8 re-verification (22 + 10 + 10 mapped rows hit, 10/10, 16/16 where mapped) against the committed suites.
+Residual disposition: the 08-03 cluster attribution in TASK-105-08-12 is 6 files / 14 lines, including the source-proven unreachable DetailTemplateInspector 321/322/328.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

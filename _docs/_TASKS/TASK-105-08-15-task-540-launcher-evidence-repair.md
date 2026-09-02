@@ -6,7 +6,7 @@
 **Category:** Testing Infrastructure / Runtime Smoke
 **Estimated Effort:** Small
 **Dependencies:** TASK-105-08-14 focused request-shape repair; TASK-105-08-04 static and targeted-suite receipt
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-22
 
 ---
@@ -218,3 +218,10 @@ bun scripts/runtime-smoke.ts run --suite task-540 --profile fast --session task1
 
 This satisfies L15's complete-path launcher/evidence acceptance. It changes no terminal status,
 board row, changelog, source, or test ownership.
+
+## Closure (2026-09-02)
+
+Closed on committed launcher evidence per the smoke/launcher closure standard: landing commit 93eb7742 "test(task-540): repair launcher evidence and output manifest".
+The repaired launcher evidence and output manifest are committed on this branch; the r4 terminal report (task105-l04-fast-20260822-r4/report.json) is the citable pass artifact alongside it.
+Residual disposition: no coverage attribution is claimed by this task; the family-wide residual remains TASK-105-08-12's 291 uncovered lines / 87 files.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — canonical run 1186 files / 10444 tests / 0 failures, 99.26% lines.

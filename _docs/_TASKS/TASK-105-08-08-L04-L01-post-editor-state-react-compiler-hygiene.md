@@ -8,7 +8,7 @@
 **Dependencies:** TASK-105-08-08-L04 implementation-complete (its receipt documents the
 blocking 48 diagnostics). Disjoint writer set from TASK-105-08-08-L05/L05-L01/L06
 (canvas/richtext files) — may run concurrently.
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -80,3 +80,10 @@ clean static-gate state, not a documented-exception state.
 - [ ] All sixteen regression suites pass unmodified (one invocation per file).
 - [ ] Root tsc, `git diff --check`, and the 1,000-line cap hold for all five files.
 - [ ] No forbidden suppression anywhere in the diff; receipt returned to the orchestrator.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit ef6e2e7c): all five owned hook modules were rewritten as final files at or under 1,000 lines (800/537/736/828/436) with no blocking diagnostics; bun --cwd core lint exits 0 on this tree and root tsc -p tsconfig.json --noEmit exits 0 with zero diagnostics.
+Proof suite tests/vitest/ui/task-105-08-08-post-editor-state-dead-paths.test.tsx is committed and green in the canonical run.
+Residual disposition: the 08-08 posts attribution in TASK-105-08-12 (9 files / 42 lines) covers the remaining uncovered lines; no hygiene-owned line is left unattributed.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

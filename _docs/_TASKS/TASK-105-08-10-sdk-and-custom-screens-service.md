@@ -7,7 +7,7 @@
 **Dependencies:** TASK-105-08-09 (the narrowly scoped recovery test follows the
 reconciled remaining order; source files are read-only and this leaf only writes tests)
 **Parent Task:** TASK-105-08  
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Started:** 2026-08-22  
 **Initial Implementation Complete:** 2026-08-22 (`1a8550b5`)
 **Recovery Pending:** One source-proven reachable fallback seam, then family rebaseline and a
@@ -183,3 +183,10 @@ Test-only, no API surface.
 2. SDK files remain at `100%` lines; the `pluginManifest.ts` branch residual is reported
    honestly (and hardened opportunistically).
 3. Round-trip byte-identity is pinned where a no-override document contract requires it.
+
+## Closure (2026-09-02)
+
+Deliverable complete on tree evidence: commits 1a8550b5 "TASK-105-08-10: custom screens service + SDK coverage" and 1782ef86 "test(task-105): close 08-04 custom screens UI and 08-10 service coverage".
+Owned service/SDK suites are committed and green in the canonical run; root tsc --noEmit exits 0 with zero diagnostics.
+Residual disposition: the 08-10 attribution in TASK-105-08-12 is 4 files / 6 lines.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

@@ -6,7 +6,7 @@
 **Estimated Effort:** Small follow-up
 **Dependencies:** TASK-105-08-11 split handoff; fresh L01 contract audit
 **Parent Task:** TASK-105-08
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-09-02)
 **Reopened:** 2026-08-29
 
 ---
@@ -216,3 +216,9 @@ Evidence: the r44 acceptance run's `post-classic-edit-preview-focus-visible`
 scenario (focus-visible DOM state asserted through the supported editor→preview
 transition) and the dedicated suite above. These files ride TASK-105-08-09's
 closure commit (K7 in the delivery commit plan, handoff section 15).
+
+## Closure (2026-09-02)
+
+All physical children are terminal: TASK-105-08-09-L01 flipped Done (2026-09-02) on landing commit 56c9cd92, with permissions-matrix-page-revocation.test.tsx (285 lines) and users-roles-create-and-revocation.test.tsx (525 lines) committed and all 36 classified V8 rows behaving as mapped (11 MUST_HIT hit, 4 PUBLIC_REPLACEMENT hit, 16 MATRIX_REACHABLE hit, 5 UNREACHABLE zero).
+Residual disposition: the 08-09 cluster attribution in TASK-105-08-12 is 9 files / 41 lines; the five UNREACHABLE rows stay dispositioned, not claimed covered.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

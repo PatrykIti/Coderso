@@ -6,7 +6,7 @@
 **Category:** Test Integrity
 **Estimated Effort:** Medium
 **Dependencies:** Current root TypeScript diagnostic map; fresh child-contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -182,3 +182,10 @@ before adding work.
 - [ ] Existing entries behavior assertions remain meaningful and public-contract based.
 - [ ] No source, coverage, or security contract was claimed or changed.
 - [ ] Every named writer remains at or below 1,000 physical lines.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit 85b4c725 "test(task-105): close 08-03 content types and entries residuals"): all seven owned entry suites are committed (entry-create-drawer-required-fields, entry-editor-residual-wave, entry-editor-shell-wave, entry-list-residual-wave, entry-metadata-panel, entry-value-mapping-wave, use-entry-taxonomy-hooks-wave), each at or under 1,000 lines and green in the canonical run.
+Attribution gate re-run 2026-09-02: root tsc -p tsconfig.json --noEmit exits 0 with zero diagnostics, so this leaf's owned anchors are absent from the log.
+No coverage delta is claimed: remaining entry lines stay in the 08-08 entries/themes/booking attribution in TASK-105-08-12 (3 files / 5 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

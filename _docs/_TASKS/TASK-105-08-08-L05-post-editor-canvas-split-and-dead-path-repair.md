@@ -6,7 +6,7 @@
 **Category:** UI Reliability + Coverage
 **Estimated Effort:** Large
 **Dependencies:** TASK-105-08-11 implementation-complete split receipt; TASK-105-08-08-L05-L01 validation-complete receipt (block-item extraction; 2026-08-31 audit proved `postEditorCanvasBlocks.tsx` breaches the 1,000-line gate as originally specified); TASK-105-08-08-L04 validation-complete receipt; fresh L05 source-contract audit (clean as corrected below)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -135,3 +135,10 @@ wc -l \
 - [ ] Public canvas DOM/ARIA and block-order behavior is regression-tested.
 - [ ] Scoped V8 regression evidence, lint, types, boundary, diff, and line-cap gates pass
   before L06 begins; L02 owns final whole-module V8 including the extracted files.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit ef6e2e7c): the canvas subsystem is split into PostEditorCanvas.tsx (425), postEditorCanvasBlockItem.tsx (961), postEditorCanvasBlockItemModel.ts (159), canvasBlocks.ts (85), Focus (61), and Selection (33) — every module at or under 1,000 physical lines — and the dead `typeof window` guard is gone from PostEditorCanvas.tsx on this branch.
+Owned canvas suites are committed and green in the canonical run; root tsc --noEmit exits 0 with zero diagnostics.
+Residual disposition: remaining canvas lines sit in the 08-08 posts attribution in TASK-105-08-12 (9 files / 42 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

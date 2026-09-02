@@ -6,7 +6,7 @@
 **Category:** UI Coverage
 **Estimated Effort:** Large
 **Dependencies:** TASK-105-08-11 implementation-complete split receipt; TASK-105-08-08-L03 through L06 validation-complete repair receipts; fresh L01 contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -251,3 +251,9 @@ Corrected instrument (invariant unchanged — every reachable line must be cover
 4. Full-lane static gates (lint, types, tsc, boundary, diff) and the per-file suite runs
    are unchanged and remain mandatory. The Phase 4 canonical rebaseline (TASK-105-08-12)
    must account for this lane-scale attribution artifact.
+
+## Closure (2026-09-02)
+
+Closed under this doc's 2026-08-31 amendment (instrument standard plus explicit residual disposition). Delivered suites (commit ef6e2e7c "fix(posts): split editor state canvas and richtext seams for reachable coverage"): tests/vitest/ui/task-105-08-08-page-editor-commands-controller-residual.test.tsx, -page-editor-registry-controls-residual.test.tsx, -page-editor-shell-toolbar-residual.test.tsx, -page-list-create-residual.test.tsx, -page-templates-residual.test.tsx.
+Fresh instrument re-run 2026-09-02 confirms every named reachable page row is hit; remaining page lines are the instrument-level residuals enumerated in TASK-105-08-12 (08-08 pages cluster: 10 files / 25 lines).
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.

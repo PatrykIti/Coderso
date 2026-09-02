@@ -6,7 +6,7 @@
 **Category:** Test Integrity
 **Estimated Effort:** Small
 **Dependencies:** Current root TypeScript diagnostic map; fresh child-contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -105,3 +105,10 @@ test "$line_count" -le 1000
 - [ ] The owned TypeScript anchor is absent from the attribution log.
 - [ ] No source, coverage, or security contract was claimed or changed.
 - [ ] The writer remains at or below 1,000 physical lines.
+
+## Closure (2026-09-02)
+
+Closed on tree evidence (commit 56c9cd92 "test(task-105): close 08-09 misc admin UI, audit/forms repairs and preview focus fix"): tests/vitest/ui/audit-list-residual.test.tsx is committed, passes independently, and stays at or under 1,000 lines.
+Attribution gate re-run 2026-09-02: root tsc -p tsconfig.json --noEmit exits 0 with zero diagnostics, so this leaf's owned anchors are absent from the log; bun --cwd core lint exits 0.
+No coverage delta is claimed: remaining audit lines stay in the TASK-105-08-12 attribution.
+Canonical artifact: TASK-105-08-12 Closure Evidence (2026-09-01) — 99.26% lines, 291 uncovered / 87 files, canonical run 1186 files / 10444 tests / 0 failures.
