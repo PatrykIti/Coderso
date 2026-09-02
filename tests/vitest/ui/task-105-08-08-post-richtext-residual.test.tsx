@@ -14,6 +14,8 @@
 //      primary, layout, and advanced action rows.
 //   5. Unwrapping an empty list keeps its inherited alignment.
 //   6. An inline-code command with the caret outside the editor wraps nothing.
+//   7. An inline-code command with the caret parked on a text-less block
+//      element wraps nothing either: there is no text node to expand to.
 
 import React from "react";
 import { createRoot } from "react-dom/client";
@@ -477,5 +479,43 @@ test("an inline-code command with the caret outside the editor never wraps", () 
     }
   } finally {
     outside.remove();
+  }
+});
+
+test("an inline-code command with the caret on a text-less block never wraps", () => {
+  const execCommand = installExecCommand(() => false);
+  const emitted: string[] = [];
+  const view = mountAdapter("", (next) => {
+    emitted.push(next);
+  });
+
+  try {
+    const editor = getEditor(view.container);
+    React.act(() => {
+      editor.innerHTML = "<p><br></p>";
+    });
+    const emptyParagraph = editor.querySelector("p");
+    if (!emptyParagraph) throw new Error("missing paragraph");
+
+    // The caret sits on the block element itself, so neither the child at the
+    // offset nor the one before it resolves to a text node. The inline wrapper
+    // is a no-op instead of wrapping the block: no command beyond the editor's
+    // own focus-time paragraph-separator seeding reaches the document seam.
+    for (const offset of [0, 1]) {
+      setCollapsedSelection(emptyParagraph, offset);
+      clickLabelled(view.container, "Inline code");
+
+      expect(
+        execCommand.mock.calls.filter(([command]) => command !== "defaultParagraphSeparator")
+      ).toEqual([]);
+      expect(editor.querySelector("code")).toBeNull();
+      expect(emptyParagraph.innerHTML).toBe("<br>");
+    }
+    // Whatever the editor re-serializes after the clicks, nothing was wrapped.
+    for (const next of emitted) {
+      expect(next).not.toContain("<code>");
+    }
+  } finally {
+    view.cleanup();
   }
 });

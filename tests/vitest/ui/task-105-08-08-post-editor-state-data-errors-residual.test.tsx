@@ -22,6 +22,8 @@
 //      after the route moved on is dropped.
 //  10. A draft save that fails with a non-transport error uses the generic
 //      draft copy.
+//  11. An edit typed while the initial hydration is still in flight defers
+//      the load to the local draft.
 
 import React from "react";
 import { afterEach, expect, test, vi } from "vitest";
@@ -415,6 +417,36 @@ test("preview failures use the generic copy and stale previews are dropped", asy
     expect(view.current().postId).toBe("post-2");
     expect(view.current().previewOpen).toBe(false);
     expect(view.current().previewError).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("an edit typed during the initial hydration defers the load to the local draft", async () => {
+  const serverCopy = hookState.createPost("post-1", { title: "Server copy" });
+  hookState.cachedPost = serverCopy;
+  hookState.fetchedPost = serverCopy;
+  const getDeferred = createDeferred<ReturnType<typeof hookState.createPost>>();
+  hookState.getPostHandler = () => getDeferred.promise;
+
+  const view = mountHook();
+  try {
+    await flush();
+
+    // The editor is mounted on the cached copy while the forced hydration is
+    // still on the wire; typing into it must not be clobbered by the response.
+    React.act(() => {
+      view.current().setTitle("Local edit wins");
+    });
+    await flush();
+
+    getDeferred.resolve(hookState.createPost("post-1", { title: "Server copy" }));
+    await flush();
+
+    expect(view.current().remoteUpdatePending).toBe(true);
+    expect(view.current().title).toBe("Local edit wins");
+    expect(view.current().error).toBeNull();
+    expect(hookState.getPostCalls.at(-1)).toMatchObject({ id: "post-1", force: true });
   } finally {
     view.cleanup();
   }

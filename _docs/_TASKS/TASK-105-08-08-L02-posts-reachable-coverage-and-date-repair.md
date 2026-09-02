@@ -6,7 +6,7 @@
 **Category:** UI Reliability + Coverage
 **Estimated Effort:** Large
 **Dependencies:** TASK-105-08-11 implementation-complete split receipt; TASK-105-08-08-L03 through L06 validation-complete receipts; fresh L02 contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -199,10 +199,10 @@ wc -l core/admin/ui/posts/PostsTable.tsx \
 
 ## Closure Checklist
 
-- [ ] `PostsTable` displays malformed persisted dates verbatim while preserving valid output.
-- [ ] All listed reachable branches are tested through public UI/pure-helper contracts.
-- [ ] The full V8 target set is 100% lines only after validated L03–L06 repair receipts.
-- [ ] Every modified writer file is at most 1,000 physical lines.
+- [x] `PostsTable` displays malformed persisted dates verbatim while preserving valid output.
+- [x] All listed reachable branches are tested through public UI/pure-helper contracts.
+- [x] The full V8 target set is 100% lines only after validated L03–L06 repair receipts.
+- [x] Every modified writer file is at most 1,000 physical lines.
 
 ## Contract Amendment — 2026-08-31 (orchestrator)
 
@@ -260,3 +260,126 @@ Required follow-up (same leaf, same writer rules, one additional writer file):
    evidence, and gate exits. Update §2's writer table and §7 Deviation 1 to point at the
    resolution.
 5. Nothing staged/committed; no production-source edit; hooks/* remain read-only.
+
+## Closure Verification — 2026-09-02 (NOT closed: checklist items 2 and 3 fail)
+
+Status intentionally stays ⏳ To Do. Both blockers were re-verified against the 2026-09-02
+working tree rather than assumed. Blocker (a) — dependency on validated L03–L06 receipts — is
+satisfied: L03, L04, L05, L06 are ✅ Done (2026-09-02), and L03's same-day dead-path deletions
+removed exactly the 15 L03-owned lines the TASK-105-08-12 posts cluster still listed
+(`PostClassicEditorShell.tsx` 8, `PostRichTextToolbar.tsx` 5, `PostsListPage.tsx` 1,
+`useFocusReturn.ts` 1). Blocker (b) — this checklist's V8 item — still fails.
+
+Per-item verdict (checklist as authored above):
+
+1. `PostsTable` displays malformed persisted dates verbatim while preserving valid output —
+   PASS. `PostsTable.tsx:19-30` carries the amended `formatDate` (`value?: string | null`,
+   `if (!value) return "—";` guard, `Number.isNaN(date.getTime())` raw-value fallback, valid
+   timestamps unchanged), and `task-105-08-08-post-table-preferences-residual.test.tsx:266-293`
+   renders `updatedAt: "not-a-date"` asserting the raw string in the cell and in `datetime`,
+   never `Invalid Date`.
+2. All listed reachable branches are tested through public UI/pure-helper contracts — FAIL
+   (same root cause as item 3). The seven residual suites plus `post-insert-flow.test.ts`
+   exist, each begins literally with `// @vitest-environment happy-dom`, none uses
+   `.only`/`.skip`, and they pass 8 files / 69 tests — but named target lines of this
+   contract's own Source/Test Map rows (state-data/errors and state-concurrency) are still
+   unexecuted by them; see item 3.
+3. The full V8 target set is 100% lines only after validated L03–L06 repair receipts — FAIL.
+   Contract gate re-run 2026-09-02, full lane (no test-file filter), v8, `--testTimeout=15000`,
+   all 33 amended include paths, temp report dir: 1189 files / 10478 tests / 0 failures (the
+   canonical run's 1186/10444 plus the three new L03 `*-dead-paths` suites and three new
+   `detail-template-inspector` tests, so nothing was skipped). 28 of 33 include files measure
+   100% lines. Five files do not, with 27 uncovered lines:
+   `postEditorStateSaveQueue.ts` 337/354 (17), `postEditorStateRefresh.ts` 259/266 (7),
+   `postEditorStateDocument.ts` 158/159 (1), `usePostEditorState.ts` 246/247 (1),
+   `postRichTextSelection.ts` 277/278 (1). The gate's own check
+   (`failures.length → process.exit(1)`) therefore exits 1.
+4. Every modified writer file is at most 1,000 physical lines — PASS (largest writer
+   `task-105-08-08-post-shell-residual.test.tsx` 797; `PostsTable.tsx` 183).
+
+Cross-checks that localize the remaining gap:
+
+- The 27 lines are exactly the TASK-105-08-12 posts-cluster residual rows for these five files
+  (ledger 17 + 7 + 1 + 1 + 1 = 27), so the 2026-09-01 canonical artifact and this fresh run
+  agree at region level on an unchanged set of files (small ±few-line v8 attribution jitter;
+  e.g. `postEditorStateDocument.ts:60`, `postEditorStateRefresh.ts:177,184`, and
+  `postEditorStateSaveQueue.ts:475,547,563` are exact matches to both the ledger and this
+  contract's Source/Test Map).
+- The uncovered behaviors are the identity-changed/queue-integrity paths this contract mapped:
+  `throw`/`Promise.reject(createEditorIdentityChangedError())` sites, queue reorder, dedup and
+  splice branches, the save `barrier.completion` await, session rejection
+  (`rejectQueuedSession`), and `setRemoteUpdatePending(true)` guards in
+  `postEditorStateRefresh.ts`, plus `postEditorStateDocument.ts:60`, `usePostEditorState.ts:417`,
+  and `postRichTextSelection.ts:218`.
+- Correction to the closure brief: the seven residual suites and the `PostsTable.tsx` date
+  repair landed in commit `ef6e2e7c` ("fix(posts): split editor state canvas and richtext seams
+  for reachable coverage", 2026-09-01), not `85b4c725`/`56c9cd92`; `git log --follow` on each
+  writer file returns `ef6e2e7c` only (those two commits own the 08-03/08-09 lanes).
+
+Gap to close before this leaf can flip: bring all 33 include paths to `lines.pct === 100` by
+covering the 27 residual lines through the public seams this contract already names, or
+removing them through a fresh source-owner contract if a line proves dead; then re-run this
+checklist's V8 block and record the exit. No coverage ignore, private callback, invalid union
+data, or production fallback may be added to close it (Overview rule).
+
+## Closure (2026-09-02)
+
+Closed on the 2026-09-02 working tree. The gap was closed exactly as this contract's own
+rule allows — residual lines that are supported behavior were covered by the three
+2026-09-02 residual-suite extensions already on the tree, and the 24 that proved dead were
+removed through the fresh source-owner child
+`TASK-105-08-08-L02-L01-post-editor-state-dead-path-repair.md` (✅ Done 2026-09-02), which
+re-verified every inherited classification line-by-line against the live tree before
+deleting it. No coverage ignore, private callback, invalid union data, or production
+fallback was added.
+
+### Residual resolution table (all 27 lines from the verification above)
+
+| Former uncovered lines | Resolution |
+|---|---|
+| `postEditorStateSaveQueue.ts:154-155, 178-180, 200, 216, 331, 335, 354-355, 475, 547, 563, 713, 761` | L02-L01 dead-path deletion (each with a pre-gating invariant comment naming its enforcement site) |
+| `postEditorStateSaveQueue.ts:292` | L02-L01 dead-path deletion — re-classified during implementation: the line sat in the non-silent hydrate apply tail, which no supported flow reaches (no `"hydrate"`-mode record producer exists; every enqueue is `"silent"`), and the tail's apparent coverage was V8 function-range bleed-through, not execution; the whole tail is deleted (a first-pass whitespace-only merge fix was prettier-unstable under `format-staged.ts` and is superseded) |
+| `postEditorStateRefresh.ts:177, 184, 295, 632-633` | L02-L01 dead-path deletion (`:184`'s orphaned `rejectQueuedSession` wiring in refresh and the facade removed with it) |
+| `postEditorStateRefresh.ts:562-563` | covered by `task-105-08-08-post-editor-state-data-errors-residual.test.tsx` (dirty-draft hydration deferral through the public hook) |
+| `postEditorStateDocument.ts:60` | L02-L01 dead-path deletion (`normalizeBlockAttrs` strips unknown attr keys before `hasMeaningfulParagraphAttrs` sees them) |
+| `usePostEditorState.ts:417` | L02-L01 dead-path deletion (layout-effect ref sync precedes the passive unsubscribe; the synchronous local bus cannot deliver in that window) |
+| `postRichTextSelection.ts:218` | covered by `task-105-08-08-post-richtext-residual.test.tsx` (resolve-collapsed-selection tail through the public adapter seam) |
+| `postEditorStateSaveQueue.ts:780-784` | covered by `task-105-08-08-post-editor-state-concurrency-residual.test.tsx` (the close flush waits out a queued identical autosave instead of re-sending it) |
+
+### Final gate run (2026-09-02, real numbers)
+
+The checklist's V8 block, re-run exactly as authored on the post-repair tree — full lane
+(no test-file filter), v8 provider, all 33 amended include paths, temp report dir:
+**1189 files / 10481 tests / 0 failures; 33/33 include files at `lines.pct === 100`**
+(gate total 3810/3810 lines, final post-amendment tree; repaired modules:
+`postEditorStateSaveQueue.ts` 307/307, `postEditorStateRefresh.ts` 255/255,
+`postEditorStateDocument.ts` 158/158,
+`usePostEditorState.ts` 245/245). The gate's own node check printed `{"failures":[]}` and
+**exited 0**. Adjacent-behavior regression on the same tree: the seven residual suites
+plus `post-insert-flow.test.ts` plus `task-105-08-08-post-classic-dead-paths.test.tsx`
+(the shell around the queue) — 9 files / 85 tests passed. Static gates: eslint
+`--max-warnings=0` on L02-L01's four production files, `bun --cwd core lint`,
+`bun --cwd core lint:types`, root `tsc -p tsconfig.json --noEmit` — all exit 0;
+`git diff --check` clean; every writer file ≤ 1,000 physical lines.
+
+### Checklist verdicts (final)
+
+1. `PostsTable` displays malformed persisted dates verbatim while preserving valid output —
+   PASS (unchanged from the verification above; `PostsTable.tsx:19-30` carries the amended
+   `formatDate`, pinned by `task-105-08-08-post-table-preferences-residual.test.tsx`).
+2. All listed reachable branches are tested through public UI/pure-helper contracts — PASS.
+   The seven residual suites plus `post-insert-flow.test.ts` exercise every mapped row that
+   is supported behavior; the rows that were not reachable through any supported flow were
+   removed by the L02-L01 owner child with invariant comments, never relabeled untestable.
+3. The full V8 target set is 100% lines only after validated L03–L06 repair receipts — PASS.
+   L03–L06 receipts are ✅ Done (2026-09-02), and the final gate run above is 33/33 at
+   100% lines with the node check exiting 0.
+4. Every modified writer file is at most 1,000 physical lines — PASS (largest writer
+   `task-105-08-08-post-shell-residual.test.tsx` 797; `PostsTable.tsx` 183; L02-L01's
+   largest production writer `postEditorStateSaveQueue.ts` 805 after the L02-L01 dead-path
+   repair).
+
+Attribution correction carried from the verification above and now final: the seven residual
+suites and the `PostsTable.tsx` date repair landed in commit `ef6e2e7c` (2026-09-01); the
+2026-09-02 residual-suite extensions and the L02-L01 dead-path repair are uncommitted
+working-tree state on `feat/implementations` at this closure.

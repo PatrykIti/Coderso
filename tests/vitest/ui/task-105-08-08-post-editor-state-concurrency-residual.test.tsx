@@ -26,6 +26,8 @@
 //  12. A stale save that fails while a reload barrier and the close flush are
 //      waiting on it poisons neither: the reload defers, the flush re-sends.
 //  13. A hydration response that carries another post is refused.
+//  14. A close flush over a draft that already matches the server waits out the
+//      queued identical autosave instead of sending a duplicate.
 
 import React from "react";
 import { afterEach, expect, test, vi } from "vitest";
@@ -393,6 +395,76 @@ test("a stale save that fails under a waiting reload and close flush poisons nei
     const closePayload = hookState.autosaveCalls.at(0)?.payload;
     expect(closePayload?.title).toBe("Renamed before leaving");
     expect(closePayload?.data).toEqual(hookState.updatePostCalls.at(0)?.payload.data);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("the close flush waits out a queued identical autosave instead of re-sending it", async () => {
+  const view = await mountEditor();
+  try {
+    const updateDeferred = createDeferred<DeferredPost>();
+    hookState.updatePostHandler = () => updateDeferred.promise;
+    await editTitle(view, "Transient title");
+    let saving: Promise<void> = Promise.resolve();
+    await React.act(async () => {
+      saving = view.current().saveDraft();
+    });
+    await flush();
+    expect(hookState.updatePostCalls).toHaveLength(1);
+
+    // Reverting the title queues an identical autosave behind the in-flight
+    // save instead of treating the draft as already persisted.
+    const autosaveDeferred = createDeferred<DeferredAutosave>();
+    hookState.autosaveHandler = () => autosaveDeferred.promise;
+    await editTitle(view, "Editor Post");
+    // The revert restored the persisted snapshot, so nothing is outstanding
+    // from the editor's point of view.
+    expect(view.current().hasUnsavedChanges).toBe(false);
+    const autosaveOptions = hookState.autosaveOptions;
+    if (!autosaveOptions) throw new Error("autosave options are unavailable");
+    let queuedAutosave: Promise<void> = Promise.resolve();
+    await React.act(async () => {
+      queuedAutosave = autosaveOptions.onAutosave();
+    });
+    await flush();
+    expect(hookState.autosaveCalls).toEqual([]);
+
+    updateDeferred.resolve(hookState.createPost("post-1"));
+    await React.act(async () => {
+      await saving;
+    });
+    // Settling the superseded save leaves the draft matching the server.
+    expect(view.current().hasUnsavedChanges).toBe(false);
+    // The queue moves on to the identical autosave, which now owns the wire.
+    expect(hookState.autosaveCalls).toHaveLength(1);
+
+    let flushing: Promise<void> = Promise.resolve();
+    await React.act(async () => {
+      flushing = view.current().flushLatestAutosave();
+    });
+    await flush();
+    // The draft already matches the server, so the close flush waits for the
+    // queued identical autosave rather than sending a duplicate.
+    expect(hookState.autosaveCalls).toHaveLength(1);
+
+    autosaveDeferred.resolve({
+      post: hookState.createPost("post-1"),
+      revision: hookState.createRevision("rev-close"),
+      savedAt: "2026-03-12T13:20:00.000Z",
+      reusedRevision: false,
+    });
+    await React.act(async () => {
+      await flushing;
+      await queuedAutosave;
+    });
+
+    expect(hookState.autosaveCalls).toHaveLength(1);
+    expect(hookState.updatePostCalls).toHaveLength(1);
+    expect(hookState.autosaveCalls.at(0)?.payload.title).toBe("Editor Post");
+    expect(view.current().title).toBe("Editor Post");
+    expect(view.current().hasUnsavedChanges).toBe(false);
+    expect(view.current().autosaveError).toBeNull();
   } finally {
     view.cleanup();
   }
