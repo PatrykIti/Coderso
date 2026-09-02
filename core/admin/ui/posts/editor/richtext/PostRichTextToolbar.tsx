@@ -69,11 +69,7 @@ export type PostRichTextCommand =
   | "clear-formatting";
 
 export type PostRichTextToolbarProfile =
-  | "writing-canvas"
-  | "paragraph"
-  | "heading"
-  | "quote"
-  | "callout";
+  "writing-canvas" | "paragraph" | "heading" | "quote" | "callout";
 
 type PostRichTextToolbarProps = {
   onCommand: (command: PostRichTextCommand) => void;
@@ -89,7 +85,8 @@ type ActionButton = {
   id: PostRichTextCommand;
   label: string;
   shortLabel?: string;
-  icon?: ComponentType<{ className?: string }>;
+  /** Every toolbar action carries an icon; the label renders in menus/aria only. */
+  icon: ComponentType<{ className?: string }>;
 };
 
 const createHeadingLevelIcon = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
@@ -102,9 +99,7 @@ const createHeadingLevelIcon = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
       aria-hidden="true"
     >
       <span className="text-[0.65rem] font-medium leading-none">H</span>
-      <span className="absolute -bottom-[1px] right-0 text-[0.45rem] leading-none">
-        {level}
-      </span>
+      <span className="absolute -bottom-[1px] right-0 text-[0.45rem] leading-none">{level}</span>
     </span>
   );
   HeadingLevelIcon.displayName = `HeadingLevelIcon${level}`;
@@ -268,17 +263,13 @@ const toolbarProfileCapabilities: Record<
   ]),
 };
 
-export const getToolbarCommandsForProfile = (
-  profile: PostRichTextToolbarProfile
-) => toolbarProfileCapabilities[profile];
+export const getToolbarCommandsForProfile = (profile: PostRichTextToolbarProfile) =>
+  toolbarProfileCapabilities[profile];
 
 const renderActionLabel = (action: ActionButton) => {
   if (action.shortLabel) return action.shortLabel;
-  if (action.icon) {
-    const Icon = action.icon;
-    return <Icon className="h-3.5 w-3.5" />;
-  }
-  return action.label;
+  const Icon = action.icon;
+  return <Icon className="h-3.5 w-3.5" />;
 };
 
 export function PostRichTextToolbar({
@@ -292,9 +283,7 @@ export function PostRichTextToolbar({
 }: PostRichTextToolbarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const allowedCommands = getToolbarCommandsForProfile(profile);
-  const visiblePrimaryActions = primaryActions.filter((action) =>
-    allowedCommands.has(action.id)
-  );
+  const visiblePrimaryActions = primaryActions.filter((action) => allowedCommands.has(action.id));
   const visibleTypeGroupActions = typeGroupActions.filter((action) =>
     allowedCommands.has(action.id)
   );
@@ -311,14 +300,17 @@ export function PostRichTextToolbar({
     allowedCommands.has(action.id)
   );
   const showLayoutInline =
-    profile === "paragraph" || profile === "heading" || profile === "quote" || profile === "callout";
+    profile === "paragraph" ||
+    profile === "heading" ||
+    profile === "quote" ||
+    profile === "callout";
   const inlineLayoutActions = showLayoutInline ? layoutActions : [];
   const advancedLayoutActions = showLayoutInline ? [] : layoutActions;
   const visibleLayoutActions = inlineLayoutActions.filter((action) =>
     allowedCommands.has(action.id)
   );
-  const visibleAdvancedActions = [...advancedActions, ...advancedLayoutActions].filter(
-    (action) => allowedCommands.has(action.id)
+  const visibleAdvancedActions = [...advancedActions, ...advancedLayoutActions].filter((action) =>
+    allowedCommands.has(action.id)
   );
   const showTextStyleGroup = profile === "writing-canvas";
   const showHeadingLevelGroup = profile === "heading";
@@ -326,33 +318,12 @@ export function PostRichTextToolbar({
   const hasTypographyControls = Boolean(onFontFamilyChange) || Boolean(onBaseTextScaleChange);
   const showTypographyRow = hasTypographyControls || hasAdvancedActions;
 
-  const renderCommandGroup = (
-    label: string,
-    actions: ActionButton[],
-    triggerAriaLabel: string,
-    options?: { forceDropdown?: boolean }
-  ) => {
+  // Command groups always render as their dropdown menu: every group carries
+  // either all or none of its actions per profile (Type/Text/Headings are
+  // multi-action by contract; List and Code are all-or-nothing pairs), so the
+  // former single-button promotion never fired for any profile.
+  const renderCommandGroup = (label: string, actions: ActionButton[], triggerAriaLabel: string) => {
     if (actions.length === 0) return null;
-    if (actions.length === 1 && !options?.forceDropdown) {
-      const action = actions[0]!;
-      return (
-        <Button
-          key={action.id}
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          disabled={disabled}
-          onMouseDown={(event) => {
-            event.preventDefault();
-          }}
-          onClick={() => onCommand(action.id)}
-          aria-label={action.label}
-          title={action.label}
-        >
-          {renderActionLabel(action)}
-        </Button>
-      );
-    }
 
     return (
       <DropdownMenu key={label}>
@@ -418,18 +389,10 @@ export function PostRichTextToolbar({
             {renderActionLabel(action)}
           </Button>
         ))}
-        {renderCommandGroup("Type", visibleTypeGroupActions, "Type", {
-          forceDropdown: true,
-        })}
-        {showTextStyleGroup
-          ? renderCommandGroup("Text", visibleTextStyleActions, "Text", {
-              forceDropdown: true,
-            })
-          : null}
+        {renderCommandGroup("Type", visibleTypeGroupActions, "Type")}
+        {showTextStyleGroup ? renderCommandGroup("Text", visibleTextStyleActions, "Text") : null}
         {showHeadingLevelGroup
-          ? renderCommandGroup("Headings", visibleHeadingLevelActions, "Headings", {
-              forceDropdown: true,
-            })
+          ? renderCommandGroup("Headings", visibleHeadingLevelActions, "Headings")
           : null}
         {visibleLayoutActions.map((action) => (
           <Button
@@ -461,9 +424,7 @@ export function PostRichTextToolbar({
                   value={fontFamily}
                   disabled={disabled}
                   onValueChange={(value) =>
-                    onFontFamilyChange(
-                      value === "serif" || value === "mono" ? value : "sans"
-                    )
+                    onFontFamilyChange(value === "serif" || value === "mono" ? value : "sans")
                   }
                 >
                   <SelectTrigger className="h-8 w-[7.5rem] bg-background text-xs">

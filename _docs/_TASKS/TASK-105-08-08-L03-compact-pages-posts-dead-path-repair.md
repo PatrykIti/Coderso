@@ -6,7 +6,7 @@
 **Category:** UI Reliability + Coverage
 **Estimated Effort:** Medium
 **Dependencies:** TASK-105-08-11 implementation-complete split receipt; fresh L03 source-contract audit
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-09-02)
 
 ---
 
@@ -197,3 +197,89 @@ NODE
 - [ ] No classified dead path is exercised by a cast or private mock.
 - [ ] Supported adjacent behavior is visibly regression-tested; scoped V8 is diagnostic only.
 - [ ] Every production and test writer path is at most 1,000 physical lines.
+
+## Closure (2026-09-02)
+
+Closed on the 2026-09-02 working tree with both residuals RESOLVED — one retained and covered
+as supported behavior, one deleted through an authored owner child — so neither is merely
+labelled untestable and the contract's closing condition is met.
+
+### Source-owner audit verdicts (both resolved)
+
+1. `PageEditorRegistryFields.tsx:892,903-904` — verdict REACHABLE: the `unsupported` branch is
+   a supported fail-closed model path and is retained; no removability assumption remains and
+   `PageEditorRegistryFields.tsx` is byte-identical on this tree (`git diff` empty). Model
+   evidence: `unsupported` is a member of the owner union at
+   `core/services/pages/pageEditorControlUiModel.ts:96`, produced at `:300`
+   (`number-without-valid-clamp`), `:382` (`option-control-without-options`), and `:438`
+   (`unknown-control-input:<input>`); the owner suite pins those producers at
+   `tests/vitest/pages/page-editor-control-ui-model.test.ts:387,391,499-508,575`. The retained
+   branch is covered DIRECTLY in `task-105-08-08-pages-dead-paths.test.tsx` through real
+   `control()` fixtures rendered via the public `RegistryControlField` seam: the option-less
+   select (`:121-148`) and the clamp-less number (`:150-172`) each assert the
+   `data-page-editor-control="unsupported"` notice carrying the model's own `reason`, no
+   commit button, and no `onChange`/`onReset` call.
+2. `ListItemsControl.tsx:62` — verdict dead through owner flows; the scalar fallback and its
+   record cast are DELETED via the authored and implemented direct child
+   `TASK-105-08-08-L03-L01-detail-template-inspector-list-value-seam.md` (✅ Done 2026-09-02),
+   exactly as this leaf's stop-and-author-a-child clause requires:
+   `core/admin/ui/content-types/DetailTemplateInspector.tsx` gained the typed `listItemsValue`
+   seam (`:87-112`, applied at the `listItems` case `:259`; owner read semantics, no casts),
+   and `ListItemsControl.tsx` narrowed `value` to `readonly PageListItemV2[]` (`:22`), losing
+   the `:62` scalar fallback and the `as { label?: unknown; href?: unknown }` cast it
+   required, with the string branch and the `createPageListItem` commit path intact.
+   Regression: `tests/vitest/ui/detail-template-inspector.test.tsx` (16 tests, 599 lines),
+   whose mocked props are retyped to `PageListItemV2[]` — the compile-time seam proof.
+
+### Deletions landed in this leaf's writer set (net −43 lines: +97 added / −140 deleted)
+
+| Writer file | Diff | Dead path removed |
+|---|---|---|
+| `core/admin/ui/pages/PagePreview.tsx` | +3 / −6 | `typeof window === "undefined"` SSR fallback (`:19`); the preview screen is client-only |
+| `core/admin/ui/pages/editor/PageEditorToolbar.tsx` | +31 / −30 | `saveCurrentDraft(target: PageDetail): Promise<PageDetail>`; the impossible falsy-save publish branch (`:483-484`) is gone |
+| `core/admin/ui/pages/editorControls/SegmentedControl.tsx` | +15 / −15 | group-level non-option early return (`:82`) replaced by a per-option `moveFromOption` keyboard seam |
+| `core/admin/ui/posts/PostsListPage.tsx` | +7 / −19 | private `resolvePostsRefreshBackground` fallback (`:77`); `background` is now a required explicit policy |
+| `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` | +18 / −22 | unreachable non-lease loader guards (`:349-354`) and the preview identity re-derivation guard (`:693-696`) |
+| `core/admin/ui/posts/editor/hooks/useFocusReturn.ts` | +11 / −7 | structurally unreachable tail return in `resolveElement` (`:19`), narrowed to `RefObject \| HTMLElement` |
+| `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` | +12 / −41 | iconless-label fallback (`:281`) and the never-firing single-button command-group promotion (`:337-338,346,348`) |
+
+The child's two production writers are additional to the −43 above:
+`DetailTemplateInspector.tsx` +29 / −1 (the typed seam) and `ListItemsControl.tsx` +7 / −10
+(narrowing plus fallback/cast deletion).
+
+### Regression suites and gates (real runs, 2026-09-02)
+
+- `tests/vitest/ui/task-105-08-08-pages-dead-paths.test.tsx` — 402 lines, 11 tests;
+  `task-105-08-08-post-classic-dead-paths.test.tsx` — 696 lines, 13 tests;
+  `task-105-08-08-post-richtext-toolbar-dead-paths.test.tsx` — 378 lines, 7 tests. Each file's
+  first physical line is literally `// @vitest-environment happy-dom`; zero `.only`/`.skip`.
+  The three suites together: 3 files / 31 tests passed; with the child's inspector suite:
+  4 files / 47 tests passed on this tree.
+- Contract's scoped V8 diagnostic block: all eight included sources observed (covered lines
+  greater than zero per file — e.g. `SegmentedControl.tsx` 25/25, `PagePreview.tsx` 6/6,
+  `PostClassicEditorShell.tsx` 248/355 under the three-suite run), check exit 0. Diagnostic
+  only; the whole-module posts proof is L02's and shows the four posts include files at
+  100% lines after these deletions.
+- Root `tsc -p tsconfig.json --noEmit --incremental false --pretty false` — exit 0.
+  `eslint --max-warnings=0` over the nine owned source paths plus the three suites and the
+  child's three files — exit 0. `git diff --check` — clean. `wc -l` — largest writer
+  `PostClassicEditorShell.tsx` 996, `PageEditorToolbar.tsx` 989; every production and test
+  writer path at most 1,000 physical lines. `bun run check:admin-boundary`,
+  `bun --cwd core lint:types`, and `bun --cwd core lint` — exit 0 on this tree.
+
+### No artificial execution
+
+No deleted line is asserted artificially: the seven dead paths above no longer exist in the
+source, so no test can or does assert their execution, and the child deleted the
+`ListItemsControl` fallback rather than covering it. The suites assert only adjacent supported
+behavior through public seams (preview query display and `window.close`, save-then-publish,
+segmented arrow-key focus cycling, explicit posts refresh policy, classic editing/preview,
+focus return, profile toolbar commands, typed list-item rendering). A scan of the three suites
+finds no `as unknown as`, no `any`, and no private hook/helper mock aimed at a classified dead
+path; the retained Registry branch is exercised through real control fixtures, not a mocked
+model. The residual ledger counts for these seven files in TASK-105-08-12 (pages cluster:
+`PagePreview.tsx:19`, `PageEditorToolbar.tsx:483,484`, `ListItemsControl.tsx:62`,
+`SegmentedControl.tsx:82`; posts cluster: `PostClassicEditorShell.tsx` 8 lines,
+`PostRichTextToolbar.tsx` 5, `PostsListPage.tsx` 1, `useFocusReturn.ts` 1) are therefore
+further reduced by these 2026-09-02 deletions relative to the 2026-09-01 canonical artifact —
+tree evidence; no new whole-module coverage total is claimed here.

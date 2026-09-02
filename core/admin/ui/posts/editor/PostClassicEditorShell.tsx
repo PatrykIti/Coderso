@@ -342,17 +342,14 @@ export function PostClassicEditorShell() {
     async (options: PostLoadOptions = {}, exactIdentity?: PostRouteIdentity): Promise<boolean> => {
       const identity = exactIdentity ?? currentRouteIdentity();
       if (!identity || !isCurrentRoute(identity)) return false;
+      // Non-lease loads are pre-gated by their supported callers: the baseline
+      // effect runs before any lease can exist (a lease requires an installed
+      // baseline), the cache subscription returns early while a lease or local
+      // edits exist, and the refresh button discards local edits behind its own
+      // lease check. The post-await lease re-check below still covers leases
+      // acquired while the fetch is in flight.
       if (options.lease) {
         if (!ownsCurrentLease(options.lease)) return false;
-      } else {
-        if (leaseRef.current) {
-          if (hasCurrentBaseline(identity)) setRemoteUpdatePending(true);
-          return false;
-        }
-        if (!options.isBaseline && !options.discardLocalEdits && hasEdits()) {
-          setRemoteUpdatePending(true);
-          return false;
-        }
       }
 
       const hydrationGeneration = externalUpdateAuthorityRef.current.captureHydration();
@@ -400,7 +397,6 @@ export function PostClassicEditorShell() {
       claimSnapshotWrite,
       currentRouteIdentity,
       hasCurrentBaseline,
-      hasEdits,
       isCurrentRoute,
       isSnapshotAuthoritative,
       ownsCurrentLease,
@@ -687,23 +683,23 @@ export function PostClassicEditorShell() {
   };
 
   const handlePreview = async () => {
-    if (previewLoading) return;
+    // The preview button is disabled while the route baseline is unhydrated,
+    // so a click implies this post id is live on the current route. The route
+    // epoch captured here supersedes stale preview completions exactly like
+    // the identity the former guard re-derived after opening the dialog.
+    if (previewLoading || !postId) return;
+    const routeEpochAtRequest = routeEpochRef.current;
+    const isRouteStillCurrent = () =>
+      routePostIdRef.current === postId && routeEpochRef.current === routeEpochAtRequest;
     setPreviewOpen(true);
-    const identity = currentRouteIdentity();
-    if (!identity) {
-      setPreviewLoading(false);
-      setPreviewError(null);
-      setPreviewUrl(null);
-      return;
-    }
     setPreviewLoading(true);
     setPreviewError(null);
     try {
-      const result = await previewPost(identity.postId, 30);
-      if (!isCurrentRoute(identity)) return;
+      const result = await previewPost(postId, 30);
+      if (!isRouteStillCurrent()) return;
       setPreviewUrl(result.previewUrl);
     } catch (err) {
-      if (!isCurrentRoute(identity)) return;
+      if (!isRouteStillCurrent()) return;
       if (isApiClientError(err)) {
         setPreviewError(err.message);
       } else {
@@ -711,7 +707,7 @@ export function PostClassicEditorShell() {
       }
       setPreviewUrl(null);
     } finally {
-      if (isCurrentRoute(identity)) setPreviewLoading(false);
+      if (isRouteStillCurrent()) setPreviewLoading(false);
     }
   };
 

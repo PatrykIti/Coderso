@@ -2,7 +2,9 @@ import { useCallback, useRef } from "react";
 
 export type FocusReturnTarget = "inserter" | "outline" | "details";
 
-type FocusableRef = React.RefObject<HTMLElement | null> | HTMLElement | null;
+type FocusReturnTargetElement = React.RefObject<HTMLElement | null> | HTMLElement;
+
+type FocusableRef = FocusReturnTargetElement | null;
 
 type FocusReturnHandle = {
   capture: (target: FocusReturnTarget, element?: FocusableRef) => void;
@@ -10,17 +12,18 @@ type FocusReturnHandle = {
   clear: (target?: FocusReturnTarget) => void;
 };
 
-const resolveElement = (value?: FocusableRef) => {
+/** `HTMLElement` instance test kept SSR-safe: in a DOM-less environment no
+ * element instances can exist, so every surviving value is a ref object. */
+const isElementInstance = (value: FocusReturnTargetElement): value is HTMLElement =>
+  typeof HTMLElement !== "undefined" && value instanceof HTMLElement;
+
+const resolveElement = (value?: FocusableRef): HTMLElement | null => {
   if (!value) return null;
-  if (typeof HTMLElement !== "undefined" && value instanceof HTMLElement) return value;
-  if (typeof value === "object" && "current" in value) {
-    return value.current ?? null;
-  }
-  return null;
+  if (isElementInstance(value)) return value;
+  return value.current ?? null;
 };
 
-export const shouldReturnFocus = (wasOpen: boolean, isOpen: boolean) =>
-  wasOpen && !isOpen;
+export const shouldReturnFocus = (wasOpen: boolean, isOpen: boolean) => wasOpen && !isOpen;
 
 export function useFocusReturn(): FocusReturnHandle {
   const openersRef = useRef<Record<FocusReturnTarget, HTMLElement | null>>({

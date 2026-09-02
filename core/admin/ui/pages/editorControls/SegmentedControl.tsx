@@ -72,27 +72,27 @@ export const SegmentedControl = ({
     scrollOptionIntoView(groupRef.current?.querySelector('[aria-pressed="true"]'));
   }, [value]);
 
-  const handleGroupKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    const target = event.target;
-    if (
-      !(target instanceof HTMLElement) ||
-      !target.hasAttribute("data-page-editor-segmented-option")
-    ) {
-      return;
-    }
+  // Keyboard movement is bound per option button, so the moving element is a
+  // known option by construction; the former group-level non-option early
+  // return was unreachable (the group container is not a focus target).
+  const moveFromOption = (option: HTMLButtonElement, direction: -1 | 1): boolean => {
     const buttons = Array.from(
       groupRef.current?.querySelectorAll<HTMLButtonElement>(
         "[data-page-editor-segmented-option]"
       ) ?? []
     );
-    const nextIndex =
-      buttons.indexOf(target as HTMLButtonElement) + (event.key === "ArrowRight" ? 1 : -1);
-    const next = buttons[nextIndex];
-    if (!next) return;
-    event.preventDefault();
+    const next = buttons[buttons.indexOf(option) + direction];
+    if (!next) return false;
     next.focus();
     scrollOptionIntoView(next);
+    return true;
+  };
+
+  const handleOptionKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (moveFromOption(event.currentTarget, event.key === "ArrowRight" ? 1 : -1)) {
+      event.preventDefault();
+    }
   };
 
   return (
@@ -105,7 +105,6 @@ export const SegmentedControl = ({
         className={`flex flex-nowrap snap-x gap-0.5 overflow-x-auto rounded-lg p-0.5 ${
           resolvedTone === "light" ? editorPanelSegmentTrackClass : "bg-white/10"
         } ${segmentedScrollbarClass}`}
-        onKeyDown={handleGroupKeyDown}
       >
         {options.map((option) => {
           const active = option === value;
@@ -128,6 +127,7 @@ export const SegmentedControl = ({
                     : "text-slate-300 hover:bg-white/10 hover:text-white"
               }`}
               onFocus={(event) => scrollOptionIntoView(event.currentTarget)}
+              onKeyDown={handleOptionKeyDown}
               onClick={() => {
                 if (!disabled && (!active || commitActiveOption)) onChange(option);
               }}

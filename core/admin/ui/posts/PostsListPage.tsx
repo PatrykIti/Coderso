@@ -66,17 +66,6 @@ export function filterPosts(posts: PostSummary[], query: string, status: string,
   });
 }
 
-const resolvePostsRefreshBackground = (input: {
-  explicitBackground?: boolean;
-  hasHydrated: boolean;
-  hasInitialCache: boolean;
-}) => {
-  if (typeof input.explicitBackground === "boolean") {
-    return input.explicitBackground;
-  }
-  return input.hasHydrated || input.hasInitialCache;
-};
-
 export function PostsListPage() {
   const { navigate } = useAdminRouter();
   const initialCached = useMemo(() => getCachedPosts(), []);
@@ -106,33 +95,29 @@ export function PostsListPage() {
   );
   const hasHydratedRef = useRef(hasInitialCache);
 
-  const refresh = useCallback(
-    async (options?: { force?: boolean; background?: boolean }) => {
-      const force = options?.force ?? false;
-      const background = resolvePostsRefreshBackground({
-        explicitBackground: options?.background,
-        hasHydrated: hasHydratedRef.current,
-        hasInitialCache,
-      });
+  // Every caller passes its known explicit background policy: cache events and
+  // post-mutation refreshes stay background (no loading flash over live data),
+  // while the initial mount effect below owns the foreground cold load.
+  const refresh = useCallback(async (options: { force?: boolean; background: boolean }) => {
+    const force = options.force ?? false;
+    const background = options.background;
 
-      if (!background) setIsLoading(true);
-      setError(null);
-      try {
-        const next = await listPostsCached({ force });
-        setItems(next);
-        hasHydratedRef.current = true;
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load posts.");
-        }
-      } finally {
-        if (!background) setIsLoading(false);
+    if (!background) setIsLoading(true);
+    setError(null);
+    try {
+      const next = await listPostsCached({ force });
+      setItems(next);
+      hasHydratedRef.current = true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load posts.");
       }
-    },
-    [hasInitialCache]
-  );
+    } finally {
+      if (!background) setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;

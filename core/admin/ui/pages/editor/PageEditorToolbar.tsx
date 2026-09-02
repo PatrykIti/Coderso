@@ -108,7 +108,7 @@ export function findRecoverableAutosaveRevision(
 }
 
 export type PageEditorToolbarActions = {
-  saveCurrentDraft: () => Promise<PageDetail | null>;
+  saveCurrentDraft: (target: PageDetail) => Promise<PageDetail>;
   handleSaveDraft: () => Promise<void>;
   handlePublish: () => Promise<void>;
   handleSettingsSave: () => Promise<void>;
@@ -429,35 +429,40 @@ export const usePageEditorToolbarActions = (
     revisionRetention,
   } = controller;
 
-  const saveCurrentDraft = useCallback(async () => {
-    if (!page) return null;
-    const updated = await editorHost.saveDocument(page.id, pageDocument);
-    const document = normalizePageData(updated.currentData);
-    setPage(updated);
-    setPageDocument(document);
-    savedDocumentRef.current = cloneDocument(document);
-    resetEditorHistory();
-    setHasUnsavedChanges(false);
-    setAutosaveError(null);
-    return updated;
-  }, [
-    editorHost,
-    page,
-    pageDocument,
-    resetEditorHistory,
-    savedDocumentRef,
-    setAutosaveError,
-    setHasUnsavedChanges,
-    setPage,
-    setPageDocument,
-  ]);
+  // Saving resolves the saved page or throws; every caller guards `!page`
+  // before calling, so the target is the already-narrowed page detail and the
+  // former nullable return (whose only null source was that same guard) is
+  // gone. `page` stays in the closure only through the passed target.
+  const saveCurrentDraft = useCallback(
+    async (target: PageDetail): Promise<PageDetail> => {
+      const updated = await editorHost.saveDocument(target.id, pageDocument);
+      const document = normalizePageData(updated.currentData);
+      setPage(updated);
+      setPageDocument(document);
+      savedDocumentRef.current = cloneDocument(document);
+      resetEditorHistory();
+      setHasUnsavedChanges(false);
+      setAutosaveError(null);
+      return updated;
+    },
+    [
+      editorHost,
+      pageDocument,
+      resetEditorHistory,
+      savedDocumentRef,
+      setAutosaveError,
+      setHasUnsavedChanges,
+      setPage,
+      setPageDocument,
+    ]
+  );
 
   const handleSaveDraft = async () => {
     if (!page) return;
     setIsSaving(true);
     setError(null);
     try {
-      await saveCurrentDraft();
+      await saveCurrentDraft(page);
       pageEditorActionToasts.success("saveDraft");
     } catch (saveError) {
       setError(resolvePageEditorMutationError("saveDraft", saveError));
@@ -478,11 +483,7 @@ export const usePageEditorToolbarActions = (
     let publishDocument = pageDocument;
     if (hasUnsavedChanges) {
       try {
-        const saved = await saveCurrentDraft();
-        if (!saved) {
-          setIsPublishing(false);
-          return;
-        }
+        const saved = await saveCurrentDraft(page);
         publishTarget = saved;
         publishDocument = normalizePageData(saved.currentData);
       } catch (saveError) {
@@ -737,7 +738,7 @@ export const usePageEditorToolbarActions = (
     setPreviewLoading(true);
     setPreviewError(null);
     try {
-      const previewPageId = hasUnsavedChanges ? (await saveCurrentDraft())?.id : page.id;
+      const previewPageId = hasUnsavedChanges ? (await saveCurrentDraft(page)).id : page.id;
       if (!previewPageId) return;
       const response = await previewHost(previewPageId);
       setPreviewUrl(response.previewUrl);
