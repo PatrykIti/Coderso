@@ -42,7 +42,8 @@ TASK-539 and TASK-542, respectively (superseded by the S3 stream pins 1318 for T
 TASK-545 workflow/evidence/task-graph family.
 Changelog 1261 is reserved for the implementation closure of TASK-548.
 Changelog 1262 is consumed by the completed TASK-550 docs/process task.
-Changelog 1263 is reserved for the implementation closure of TASK-551.
+Changelog 1263 remains reserved for the implementation closure of TASK-551
+(superseded by the S1 stream pin 1310 for TASK-551; 1263 is NOT reusable).
 Changelog 1264 is consumed by the completed TASK-552 runtime-smoke performance
 family. Its earlier fast-only closure remains superseded; final evidence is the
 native TASK-540 migration, shared widget Playwright/process adoption, exact
@@ -62,7 +63,17 @@ may remain only with an explicit `Draft` status that supersedes its closure evid
 index row absent until fresh reclosure validation succeeds.
 Changelog 1271 is consumed by the completed TASK-557 Bun Test Lane Remote Parallel Speedup
 family. Changelog 1272 is consumed by the completed TASK-486 popups public-runtime family.
-Changelog 1308 is consumed by the completed TASK-467 Admin Bundle Heavy Chunk Hardening family (row above). Changelog 1309 is consumed by the completed TASK-493 SEO: Indexing & Search-Performance Pipeline (sitemap + Google Search Console integration). Changelogs 1310-1316 are reserved (pinned) for the S1 delivery stream. Changelogs 1317, 1318, and 1319 are consumed by the completed TASK-481 (row above), TASK-539 (row above), and TASK-542 (row above) families respectively (S3 stream). Changelogs 1320, 1321, and 1322 are reserved (pinned) for the completed TASK-105-04, TASK-105-05, and deferred TASK-105-06 families respectively; 1320 and 1321 receive their entries at TASK-105-04/105-05 closure (2026-08-19), while 1322 stays reserved until the TASK-105-06 S6 coordination gate resolves (widget-removal research outcome determines supersede vs resume). Changelog 1323 is consumed by the completed TASK-580 v1 widget removal family. Use 1324 for the next unreserved changelog entry.
+Changelog 1308 is consumed by the completed TASK-467 Admin Bundle Heavy Chunk Hardening family (row above). Changelog 1309 is consumed by the completed TASK-493 SEO: Indexing & Search-Performance Pipeline (sitemap + Google Search Console integration). Changelogs 1310-1316 are reserved (pinned) for the S1 delivery stream
+(1310 TASK-551, 1311 TASK-548, 1312 reserved but unallocated pending an explicit
+task-contract migration, 1313 TASK-555, 1314 TASK-414, 1315 TASK-556, 1316
+TASK-406). Changelogs 1317, 1318, and 1319 are consumed by the completed TASK-481 (row above), TASK-539 (row above), and TASK-542 (row above) families respectively (S3 stream). Changelogs 1320, 1321, and 1322 are reserved (pinned) for the completed TASK-105-04, TASK-105-05, and deferred TASK-105-06 families respectively; 1320 and 1321 receive their entries at TASK-105-04/105-05 closure (2026-08-19), while 1322 stays reserved until the TASK-105-06 S6 coordination gate resolves (widget-removal research outcome determines supersede vs resume). Changelog 1323 is consumed by the completed TASK-580 v1 widget removal family. Use 1324 for the next unreserved changelog entry.
+
+**TASK-489 reservation reconciliation note (2026-08-22):** Changelog 1268
+remains the authoritative TASK-489 closure reservation. The current TASK-489 parent,
+all active TASK-489 child contracts, its board row, and its required closure filename
+all pin 1268, while no approved task-contract migration assigns 1312. The former S1
+mapping of 1312 to TASK-489 is therefore removed; 1312 remains reserved but
+unallocated rather than being reassigned to another family.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|

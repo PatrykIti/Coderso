@@ -5,6 +5,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -17,6 +18,12 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { users } from "./identity";
+import {
+  normalizeTask551TrigramSql,
+  SEARCH_VECTOR_SQL,
+  TRIGRAM_SOURCE_SQL,
+  tsvector,
+} from "../searchVectorDefinitions";
 
 export const contentTypes = pgTable("content_types", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -53,6 +60,13 @@ export const contentEntries = pgTable(
     scheduledAt: timestamp("scheduled_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    // TASK-551-05-L01: canonical local search vectors. Stored generated, so
+    // the column is maintained by the database and every reader sees the same
+    // tsvector the GIN index holds.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(sql.raw(SEARCH_VECTOR_SQL.entries)),
+    searchTrigramText: text("search_trigram_text").generatedAlwaysAs(
+      normalizeTask551TrigramSql(sql.raw(TRIGRAM_SOURCE_SQL.entries))
+    ),
   },
   (t) => ({
     typeSlugIdx: uniqueIndex("content_entries_type_slug_idx").on(t.typeId, t.slug),
@@ -73,6 +87,33 @@ export const contentEntries = pgTable(
       t.publishedAt
     ),
     dataGinIdx: index("content_entries_data_gin_idx").using("gin", t.data.op("jsonb_path_ops")),
+    contentEntriesSearchVectorIdx: index("content_entries_search_vector_idx").using(
+      "gin",
+      t.searchVector
+    ),
+    contentEntriesSearchTrigramIdx: index("content_entries_search_trigram_idx").using(
+      "gin",
+      t.searchTrigramText.op("gin_trgm_ops")
+    ),
+    // TASK-551-05-L01 evidence-backed list traversal: the admin list sorts by
+    // recency and paginates on the stable (updated_at DESC, id DESC) keyset.
+    contentEntriesListUpdatedIdIdx: index("content_entries_list_updated_id_idx").on(
+      desc(t.updatedAt),
+      desc(t.id)
+    ),
+    contentEntriesTypeListUpdatedIdIdx: index("content_entries_type_list_updated_id_idx").on(
+      t.typeId,
+      desc(t.updatedAt),
+      desc(t.id)
+    ),
+    contentEntriesAuthorListUpdatedIdIdx: index("content_entries_author_list_updated_id_idx").on(
+      t.authorId,
+      desc(t.updatedAt),
+      desc(t.id)
+    ),
+    contentEntriesTypeAuthorListUpdatedIdIdx: index(
+      "content_entries_type_author_list_updated_id_idx"
+    ).on(t.typeId, t.authorId, desc(t.updatedAt), desc(t.id)),
   })
 );
 
@@ -95,6 +136,8 @@ export const contentRevisions = pgTable(
     // `createEntryRevisionTx` so a writer that does NOT hold the entry row
     // `FOR UPDATE` can never allocate a duplicate version.
     entryVersionIdx: uniqueIndex("content_revisions_entry_version_idx").on(t.entryId, t.version),
+    // TASK-551-05-L01 retention scan.
+    contentRevisionsRetentionIdx: index("content_revisions_retention_idx").on(t.createdAt, t.id),
   })
 );
 

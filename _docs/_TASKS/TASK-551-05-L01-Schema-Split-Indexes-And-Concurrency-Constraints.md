@@ -8,7 +8,7 @@
 **Estimated Effort:** Extra Large
 **Dependencies:** TASK-551-02-L02; TASK-551 external dispatch gate
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -49,10 +49,14 @@ added.
 `tests/integration/server/task551SearchVectorMigration.test.ts`,
 `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`,
 `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`,
+`tests/integration/server/task551ConcurrencyConstraints.test.ts`,
 `tests/integration/server/task551OnlineIndexDeployment.test.ts`, and
 `tests/perf/database-index-write-overhead.test.ts`. The Solution Kit authority
 suite (`task551SolutionKitRollbackAuthoritySchema.test.ts`) is owned and run by
 TASK-551-05-L03 after this migration lands.
+`task551ConcurrencyConstraints.test.ts` is the exclusive raw concurrency-fixture
+owner: it supplies L02 only an in-memory redacted
+`coderso.task551.l05-concurrency-receipt@v1`, never a fixture/client/target.
 
 **Migration:** exactly one next-free transactional SQL file with suffix
 `_task551_search_indexes_constraints_outbox.sql`, its exact matching
@@ -245,10 +249,11 @@ run and follows this exact state machine:
    committed and never assumes success from the filesystem mirror.
 5. **Drained revision-integrity group.** Keep admission stopped and workers
    drained. In exact order build
-   `page_revisions_page_version_idx`,
-   `content_revisions_entry_version_idx`, and
+   `page_revisions_page_version_idx` and
    `widget_template_revisions_template_version_idx` using top-level autocommit
-   `CREATE UNIQUE INDEX CONCURRENTLY`. Before/after each member CAS-persist state;
+   `CREATE UNIQUE INDEX CONCURRENTLY`; assert the already-committed
+   `content_revisions_entry_version_idx` byte-identical without building it
+   (content.ts:97, TASK-570). Before/after each member CAS-persist state;
    require byte-identical definition plus `indisready/indisvalid=true`. Sixteen
    writer probes per family remain rejected before SQL. Valid identical members
    skip; task-owned invalid residue drops concurrently then rebuilds; a wrong
@@ -477,7 +482,6 @@ type Task551MigrationReceipt = StrictReadonly<{
   groups: readonly [
     { name: "revision-integrity"; members: readonly [
       "page_revisions_page_version_idx",
-      "content_revisions_entry_version_idx",
       "widget_template_revisions_template_version_idx",
     ]; complete: boolean; completedAt: string | null },
     { name: "read-performance"; members: readonly string[];
@@ -677,10 +681,10 @@ storage benefit, and an exact rollback statement; cumulative or polluted
 `idx_scan=0` alone never authorizes removal.
 
 The exact integrity catalog adds unique
-`page_revisions_page_version_idx(page_id,version)`,
-`content_revisions_entry_version_idx(entry_id,version)`, and
+`page_revisions_page_version_idx(page_id,version)` and
 `widget_template_revisions_template_version_idx(template_id,version)`; preserves
-existing `post_revisions_post_version_idx(post_id,version)` and
+existing `content_revisions_entry_version_idx(entry_id,version)`,
+`post_revisions_post_version_idx(post_id,version)`, and
 `detail_page_revisions_detail_page_version_idx(detail_page_id,version)`; and adds
 `bookings_valid_window_chk CHECK (ends_at > starts_at)` plus
 the byte-exact `BOOKING_RESERVATION_EXCLUSION_SQL.definition` shown above. Its
@@ -853,7 +857,11 @@ mismatch blocks deployment; there is no generic future operations choice.
 - The online manifest has exact one-to-one parity with all new snapshot-owned
   indexes. Its statements are sequential top-level `CREATE [UNIQUE] INDEX
   CONCURRENTLY`; the transactional migration contains none. Its immutable first
-  group/order is the three new revision unique indexes. During that first group,
+  group/order is the two new revision unique indexes
+  (`page_revisions_page_version_idx`,
+  `widget_template_revisions_template_version_idx`); the already-committed
+  `content_revisions_entry_version_idx` is a preserved catalog member asserted
+  byte-identical, never a manifest build. During that first group,
   16 synchronized page/content/widget admission probes are rejected before SQL
   and the old application remains drained. External resume then requires the
   durable barrier and reviewed compatible-binary/revision-writer receipt; the
@@ -901,6 +909,15 @@ mismatch blocks deployment; there is no generic future operations choice.
 - Seed duplicate revision/overlap fixtures before constraint creation and prove
   the migration reports bounded counts and aborts deterministically without any
   deletion or rewrite. Only the operator remediates customer rows before rerun.
+- `task551ConcurrencyConstraints.test.ts` alone starts 50 synchronized,
+  scope-unique raw inserts for each page/entry/post/widget/detail-page revision
+  uniqueness family, 50 overlapping/non-overlapping booking attempts, and the
+  transferred raw authority-race probe. It releases barriers in `finally`,
+  asserts only invariant-compatible commits and exact constraint/error outcomes,
+  performs child-first scope-local cleanup, and emits only strict redacted
+  `Task551L05ConcurrencyReceiptV1` counts/booleans/digest. L05-L02 may consume
+  that receipt only; L05-L03 still owns its separate authority-contract/state-
+  matrix suite and neither leaf writes this fixture.
 - Write benchmark covers inserts/updates at representative scale and fails above
   20% p95 regression or the L01 storage budget. It reports the incremental
   storage/write cost of the page/entry/typed-entry/post-author, role-leading,
@@ -933,7 +950,7 @@ mismatch blocks deployment; there is no generic future operations choice.
 - `bun test tests/unit/db/schemaTableFacade.test.ts tests/unit/db/schemaColumnTypeContracts.test.ts`
 - `bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts`
 - `set -a && source .env && set +a && bun run db:generate`
-- `set -a && source .env && set +a && bun test tests/integration/server/task551SchemaMigrationParity.test.ts tests/integration/server/task551SearchVectorMigration.test.ts tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts tests/integration/server/task551IndexAndConstraintCatalog.test.ts tests/integration/server/task551OnlineIndexDeployment.test.ts tests/perf/database-index-write-overhead.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/task551SchemaMigrationParity.test.ts tests/integration/server/task551SearchVectorMigration.test.ts tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts tests/integration/server/task551IndexAndConstraintCatalog.test.ts tests/integration/server/task551ConcurrencyConstraints.test.ts tests/integration/server/task551OnlineIndexDeployment.test.ts tests/perf/database-index-write-overhead.test.ts`
 - With the disposable validation DB and release compatibility digests configured: `set -a && source .env && set +a && TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single`
 - Repeat the exact `rollout-forward` command (mandatory idempotent zero-DDL/zero-transition final catalog rerun)
 - `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts status --receipt .tmp/task551-migration-receipt.json`
@@ -981,8 +998,9 @@ storage, and write-cost evidence to TASK-551-10-L02.
   ceilings. Crash/resume and reverse rollback receipts are idempotent. External
   admission waits for the revision-integrity barrier plus compatible-binary gate;
   offline-single admission waits for the complete exact catalog gate. The old
-  `max(version)+1` writers remain drained through the revision-integrity group
-  and are never resumed; no crash point admits external traffic before its
+  `max(version)+1` page/widget-template writers remain drained through the
+  revision-integrity group and are never resumed; no crash point admits external
+  traffic before its
   durable barrier plus compatible TASK-551 binary/revision-writer receipt, and
   the first acknowledged new-binary traffic irreversibly selects forward-fix.
 - The installed migrator executes the transactional artifact on exactly one
@@ -992,3 +1010,212 @@ storage, and write-cost evidence to TASK-551-10-L02.
   has the fail-closed outcome specified above and no GUC leaks to pool reuse.
 - Write p95 regression is at most 20%; duplicate versions and overlapping active
   bookings are rejected in 100% of race fixtures.
+
+## Workflow Dispatch Envelope
+
+`artifactPolicy` makes the runtime-allocated migration surface closed without
+inventing a number, path, or glob: before a write, the trusted L05 resolver
+returns the verified per-run migration/snapshot/journal set and required same-ID
+companion. The migration profile supplies the offline-admission acknowledgement
+only through its owner capability; it is deliberately absent from argv and
+overrides. The static closed `allowlist` covers every other owned path.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "artifactPolicy": "task551-drizzle-migration-triple",
+  "taskId": "TASK-551-05-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-05"
+  },
+  "allowlist": [
+    "core/db/schema.ts",
+    "core/db/tables/analytics.ts",
+    "core/db/tables/assistant.ts",
+    "core/db/tables/bookings.ts",
+    "core/db/tables/content.ts",
+    "core/db/tables/forms.ts",
+    "core/db/tables/identity.ts",
+    "core/db/tables/integrations.ts",
+    "core/db/tables/media.ts",
+    "core/db/tables/observability.ts",
+    "core/db/tables/operations.ts",
+    "core/db/tables/pages.ts",
+    "core/db/tables/platform.ts",
+    "core/db/tables/posts.ts",
+    "core/db/tables/widgets.ts",
+    "core/db/tables/cacheInvalidationOutbox.ts",
+    "core/db/tables/solutionKitRollbackAuthority.ts",
+    "core/db/tables/task551MigrationOperations.ts",
+    "core/db/searchVectorDefinitions.ts",
+    "core/db/bookingReservationExclusion.ts",
+    "scripts/task-551-online-indexes.ts",
+    "tests/perf/fixtures/task551OnlineIndexManifest.ts",
+    "tests/unit/db/schemaTableFacade.test.ts",
+    "tests/unit/db/schemaColumnTypeContracts.test.ts",
+    "tests/vitest/db/searchVectorDefinitions.test.ts",
+    "tests/integration/server/task551SchemaMigrationParity.test.ts",
+    "tests/integration/server/task551SearchVectorMigration.test.ts",
+    "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts",
+    "tests/integration/server/task551IndexAndConstraintCatalog.test.ts",
+    "tests/integration/server/task551ConcurrencyConstraints.test.ts",
+    "tests/integration/server/task551OnlineIndexDeployment.test.ts",
+    "tests/perf/database-index-write-overhead.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/db/client.ts",
+    "core/services/cache/serverCacheContracts.ts",
+    "core/services/cache/serverCacheRuntime.ts",
+    "core/services/content/entryService.ts",
+    "core/server/routes/index.ts",
+    "core/server/publicSite.tsx",
+    "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts",
+    "_docs/_TASKS/TASK-551_Scalable_Database_Query_And_Cache_Optimization.md",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-08-L03:initial"],
+  "commands": [
+    {
+      "id": "schema-facade-unit-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "test", "tests/unit/db/schemaTableFacade.test.ts", "tests/unit/db/schemaColumnTypeContracts.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/db/schemaTableFacade.test.ts", "tests/unit/db/schemaColumnTypeContracts.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "search-vector-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/db/searchVectorDefinitions.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/db/searchVectorDefinitions.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "db-generate",
+      "lane": "tooling",
+      "argv": ["bun", "--env-file=/dev/null", "run", "db:generate"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "migration-and-index-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "rollout-forward",
+      "lane": "cli",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "rollout-forward", "--receipt", ".tmp/task551-migration-receipt.json", "--admission-mode", "offline-single"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "rollout-forward-idempotence",
+      "lane": "cli",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "rollout-forward", "--receipt", ".tmp/task551-migration-receipt.json", "--admission-mode", "offline-single"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "rollout-status",
+      "lane": "cli",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "status", "--receipt", ".tmp/task551-migration-receipt.json"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-08-L03:initial"],
+      "commandIds": ["schema-facade-unit-tests", "search-vector-vitest", "db-generate", "migration-and-index-tests", "rollout-forward", "rollout-forward-idempotence", "rollout-status", "core-lint-types", "core-lint", "diff-check"]
+    }
+  ]
+}
+```
+
+## Contract correction (2026-09-04, downstream select-shape ripple)
+
+Reason. The L01 contract mandates the seven `search_vector` columns and five
+`search_trigram_text` columns on `pages`/`content_entries`/`posts`/`media`/`users`/
+`assistant_docs`/`assistant_doc_chunks`, and mandates `core-lint-types` green at
+admission. Those two mandates interact through drizzle-orm's row types in a way
+this contract did not state: with the installed drizzle-orm 0.45.2
+(`node_modules/drizzle-orm`), `InferSelectModel` (i.e. `users.$inferSelect`) maps
+over every declared column key with no generated-column filter
+(`node_modules/drizzle-orm/table.d.ts`, `InferModelFromColumns` `select` branch,
+keyed by `MapColumnName` over `TTable['_']['columns']`), while generated columns
+are excluded from `$inferInsert` only (`operations.d.ts` `OptionalKeyOnly`
+returns `never` for any column whose `_: { generated }` is set). `.generatedAlwaysAs(...)`
+without `.notNull()` therefore changes only the select value type to `| null`;
+the KEY is still required in every select-typed row. Byte-verified against the
+installed 0.45.2 type sources and against the resulting compiler output:
+root `bunx tsc -p tsconfig.json --noEmit` reports exactly 10 errors, and
+`bun --cwd core lint:types` reports exactly 1, all of them the form TS2739/TS2322
+"missing searchVector, searchTrigramText" at select-typed full-row literals.
+
+Resolution. The seven `search_vector` and five `search_trigram_text` columns are
+part of each owning table's select shape. The exact consuming sites below gain
+the missing keys in their select-typed full-row literals with value `null`: the
+columns are DB-computed `GENERATED ALWAYS AS ... STORED`, so they carry no
+backup-artifact or fixture semantics and `null` is the only honest value a
+fixture/restore literal can name. The contract's own `USER_KEYS`/artifact
+allowlist and the generated-column fixture bytes elsewhere are untouched.
+
+Exact edits authorized (10 compiler error sites, collapsing to 5 literals):
+
+- `core/services/backups/backupUsersSection.ts:113` — the `normalizeUserRow`
+  returned users restore-row literal (1 root error; also the single `core`
+  lint:types error). `stagedUserRow` (:320) copies explicit fields only, so the
+  added keys cannot leak into restore inserts.
+- `tests/integration/routes/auth.test.ts:422`, `:427`, `:453`, `:458`, `:483`,
+  `:488` — six errors that all flow from the one `loginUserStub` users
+  select-row literal (:317), which gains the two keys once.
+- `tests/integration/routes/adminUsers.test.ts:60` — the `makeUserRecord`
+  users select-row literal.
+- `tests/unit/commerce/commerceRuntimeResolver.test.ts:48`, `:104` — the two
+  `readMedia` media select-row literals.
+
+Scope note. These minimal literal edits are 05-L01 writer surface for the
+`single` occurrence ONLY. Full ownership of each listed file stays with its
+owning occurrence: no reformatting, no renamed identifiers, no other line of
+those files may change, and no producer of these rows outside the files above is
+authorized by this correction. If a listed site turns out to be insert-typed
+rather than select-typed, it is left untouched and reported.

@@ -41,6 +41,9 @@ export const forms = pgTable(
     slugIdx: uniqueIndex("forms_slug_idx").on(t.slug),
     statusIdx: index("forms_status_idx").on(t.status),
     updatedIdx: index("forms_updated_idx").on(t.updatedAt),
+    // TASK-551-05-L01 evidence-backed list traversal: the admin list sorts by
+    // recency and paginates on the stable (updated_at DESC, id DESC) keyset.
+    formsListUpdatedIdIdx: index("forms_list_updated_id_idx").on(desc(t.updatedAt), desc(t.id)),
   })
 );
 
@@ -117,6 +120,13 @@ export const formSubmissions = pgTable(
       desc(t.createdAt),
       desc(t.id)
     ),
+    // TASK-551-05-L01: the per-form inbox timeline and the retention sweep.
+    formSubmissionsFormListIdx: index("form_submissions_form_list_idx").on(
+      t.formId,
+      desc(t.createdAt),
+      desc(t.id)
+    ),
+    formSubmissionsRetentionIdx: index("form_submissions_retention_idx").on(t.createdAt, t.id),
   })
 );
 
@@ -197,5 +207,12 @@ export const formActionRuns = pgTable(
     actionIdx: index("form_action_runs_action_idx").on(t.actionId),
     statusIdx: index("form_action_runs_status_idx").on(t.status),
     createdIdx: index("form_action_runs_created_idx").on(t.createdAt),
+    // TASK-551-05-L01: per-submission retry ledger order and the retention sweep.
+    formActionRunsSubmissionCreatedIdx: index("form_action_runs_submission_created_idx").on(
+      t.submissionId,
+      t.createdAt,
+      t.id
+    ),
+    formActionRunsRetentionIdx: index("form_action_runs_retention_idx").on(t.createdAt, t.id),
   })
 );

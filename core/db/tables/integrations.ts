@@ -5,6 +5,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -31,6 +32,18 @@ export const webhooks = pgTable(
   (t) => ({
     urlIdx: index("webhooks_url_idx").on(t.url),
     enabledIdx: index("webhooks_enabled_idx").on(t.enabled),
+    // TASK-551-05-L01 event containment: the enabled-subscriber dispatch reads
+    // `enabled = true AND events @> :normalizedOneEventArray::jsonb`, which
+    // resolves through this opclass only.
+    webhooksEventsGinIdx: index("webhooks_events_gin_idx").using(
+      "gin",
+      t.events.op("jsonb_path_ops")
+    ),
+    // TASK-551-05-L01 evidence-backed list traversal.
+    webhooksListCreatedIdIdx: index("webhooks_list_created_id_idx").on(
+      desc(t.createdAt),
+      desc(t.id)
+    ),
   })
 );
 
@@ -52,6 +65,19 @@ export const webhookDeliveries = pgTable(
   (t) => ({
     webhookIdx: index("webhook_deliveries_webhook_idx").on(t.webhookId),
     createdAtIdx: index("webhook_deliveries_created_at_idx").on(t.createdAt),
+    // TASK-551-05-L01 delivery ledger: the per-webhook timeline, the retry scan
+    // over work that can still be attempted, and the terminal-row sweep.
+    webhookDeliveriesWebhookListIdx: index("webhook_deliveries_webhook_list_idx").on(
+      t.webhookId,
+      desc(t.createdAt),
+      desc(t.id)
+    ),
+    webhookDeliveriesRetryIdx: index("webhook_deliveries_retry_idx")
+      .on(t.status, t.createdAt, t.id)
+      .where(sql`status IN ('pending', 'failed')`),
+    webhookDeliveriesTerminalRetentionIdx: index("webhook_deliveries_terminal_retention_idx")
+      .on(t.createdAt, t.id)
+      .where(sql`status IN ('success', 'failed')`),
   })
 );
 
@@ -85,5 +111,10 @@ export const integrationRequests = pgTable(
   },
   (t) => ({
     statusIdx: index("integration_requests_status_idx").on(t.status),
+    // TASK-551-05-L01 retention scan.
+    integrationRequestsRetentionIdx: index("integration_requests_retention_idx").on(
+      t.createdAt,
+      t.id
+    ),
   })
 );

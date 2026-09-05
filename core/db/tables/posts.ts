@@ -5,6 +5,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -19,6 +20,12 @@ import {
 import { contentTerms } from "./content";
 import { users } from "./identity";
 import { media } from "./media";
+import {
+  normalizeTask551TrigramSql,
+  SEARCH_VECTOR_SQL,
+  TRIGRAM_SOURCE_SQL,
+  tsvector,
+} from "../searchVectorDefinitions";
 
 export const posts = pgTable(
   "posts",
@@ -42,6 +49,13 @@ export const posts = pgTable(
     scheduledAt: timestamp("scheduled_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    // TASK-551-05-L01: canonical local search vectors. Stored generated, so
+    // the column is maintained by the database and every reader sees the same
+    // tsvector the GIN index holds.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(sql.raw(SEARCH_VECTOR_SQL.posts)),
+    searchTrigramText: text("search_trigram_text").generatedAlwaysAs(
+      normalizeTask551TrigramSql(sql.raw(TRIGRAM_SOURCE_SQL.posts))
+    ),
   },
   (t) => ({
     slugIdx: uniqueIndex("posts_slug_idx").on(t.slug),
@@ -51,6 +65,22 @@ export const posts = pgTable(
     publishedAtIdx: index("posts_published_at_idx").on(t.publishedAt),
     scheduledAtIdx: index("posts_scheduled_at_idx").on(t.scheduledAt),
     updatedAtIdx: index("posts_updated_at_idx").on(t.updatedAt),
+    postsSearchVectorIdx: index("posts_search_vector_idx").using("gin", t.searchVector),
+    postsSearchTrigramIdx: index("posts_search_trigram_idx").using(
+      "gin",
+      t.searchTrigramText.op("gin_trgm_ops")
+    ),
+    // TASK-551-05-L01 tag containment: `tags @> :normalizedOneTagArray::jsonb`
+    // resolves through this opclass only.
+    postsTagsGinIdx: index("posts_tags_gin_idx").using("gin", t.tags.op("jsonb_path_ops")),
+    // TASK-551-05-L01 evidence-backed list traversal: the admin list sorts by
+    // recency and paginates on the stable (updated_at DESC, id DESC) keyset.
+    postsListUpdatedIdIdx: index("posts_list_updated_id_idx").on(desc(t.updatedAt), desc(t.id)),
+    postsAuthorListUpdatedIdIdx: index("posts_author_list_updated_id_idx").on(
+      t.authorId,
+      desc(t.updatedAt),
+      desc(t.id)
+    ),
   })
 );
 
@@ -71,6 +101,8 @@ export const postRevisions = pgTable(
   (t) => ({
     postIdIdx: index("post_revisions_post_id_idx").on(t.postId),
     postVersionIdx: uniqueIndex("post_revisions_post_version_idx").on(t.postId, t.version),
+    // TASK-551-05-L01 retention scan.
+    postRevisionsRetentionIdx: index("post_revisions_retention_idx").on(t.createdAt, t.id),
   })
 );
 
@@ -89,6 +121,8 @@ export const postPreviewTokens = pgTable(
     tokenHashIdx: uniqueIndex("post_preview_tokens_token_hash_idx").on(t.tokenHash),
     postIdIdx: index("post_preview_tokens_post_id_idx").on(t.postId),
     expiresAtIdx: index("post_preview_tokens_expires_at_idx").on(t.expiresAt),
+    // TASK-551-05-L01 retention scan.
+    postPreviewTokensRetentionIdx: index("post_preview_tokens_retention_idx").on(t.expiresAt, t.id),
   })
 );
 

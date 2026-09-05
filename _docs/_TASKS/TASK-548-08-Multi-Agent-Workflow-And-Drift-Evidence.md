@@ -14,7 +14,7 @@ Terminal TASK-551 Family Gate section below.
 **Pre-Bootstrap Gate:** the landed TASK-548 parent literal
 overlap/serialization table must verify before the bounded workflow-infrastructure bootstrap, and
 the complete terminal TASK-551 family gate (parent `✅ Done`, every physical
-descendant terminal, current board/changelog synchronized, changelog 1263
+descendant terminal, current board/changelog synchronized, changelog 1310
 present and valid, current required exports/contracts, current task files and
 no unresolved drift — all verified by
 `deriveAndVerifyTask551CurrentTerminalStateV1` on the CURRENT HEAD; no
@@ -78,14 +78,14 @@ of the following before passing:
 2. every physical TASK-551 descendant is terminal (`✅ Done`,
    `⏭️ Superseded`, or `❌ Cancelled` — never `⏳ To Do`/`🚧 In Progress`);
 3. the board (`_docs/_TASKS/README.md` rows and statistics) and changelog
-   (`_docs/_CHANGELOG/README.md` plus the TASK-551 changelog 1263 entry) are
+   (`_docs/_CHANGELOG/README.md` plus the TASK-551 changelog 1310 entry) are
    synchronized with those terminal statuses on the CURRENT HEAD;
-4. the changelog 1263 path is present and valid: exactly one current-tree path
+4. the changelog 1310 path is present and valid: exactly one current-tree path
    matches
-   `_docs/_CHANGELOG/1263-YYYY-MM-DD-task-551-scalable-database-query-and-cache-optimization.md`
+   `_docs/_CHANGELOG/1310-YYYY-MM-DD-task-551-scalable-database-query-and-cache-optimization.md`
    (one regular file; zero or >1 matches block), the entry is parseable,
    terminal-bound and consistent with the current terminal statuses. The atomic
-   commit shape that introduced 1263 may be noted operationally, but NO unique
+   commit shape that introduced 1310 may be noted operationally, but NO unique
    historical commit/hash (ADD commit, ancestor relation, or byte identity
    against a closure commit) is a product gate — the authority is the CURRENT
    state on the current HEAD. The complete 38-file TASK-551 graph is
@@ -103,12 +103,12 @@ of the following before passing:
    serialized-handoff receipts TASK-548-01-L03 consumes; and
 6. there is no unresolved drift: current board/changelog semantic re-read
    matches the terminal statuses of the verified 38 files, and no
-   uncommitted/post-terminal mutation of any TASK-551 task file or the 1263
+   uncommitted/post-terminal mutation of any TASK-551 task file or the 1310
    entry exists that would contradict the terminal state.
 
 Any failure — including the current `⏳ To Do` TASK-551 parent, a single
 non-terminal descendant, an out-of-sync board/changelog, a missing or
-duplicate changelog 1263 path, an invalid/untracked/missing 38-file graph
+duplicate changelog 1310 path, an invalid/untracked/missing 38-file graph
 member (an untracked matching file fails the `git ls-files --error-unmatch`
 check), a zero-path or
 unparseable discovery result, a graph or terminal-status mismatch, a
@@ -143,16 +143,16 @@ glob expansion or pathspec that can return empty silently is used:
 async function deriveAndVerifyTask551CurrentTerminalStateV1(): Promise<Readonly<{
   pass: true;
   task551Paths: readonly string[]; // the exact 38 current paths, sorted
-  changelogPath: string; // the single matching 1263 path in the current tree
+  changelogPath: string; // the single matching 1310 path in the current tree
 }>> {
   // 1. Exactly one current-tree path matches the strict changelog shape
-  //    `_docs/_CHANGELOG/1263-YYYY-MM-DD-task-551-scalable-database-query-and-
+  //    `_docs/_CHANGELOG/1310-YYYY-MM-DD-task-551-scalable-database-query-and-
   //    cache-optimization.md` (one regular file; zero or >1 matches block).
   //    The entry must be parseable and terminal-bound. The atomic commit
-  //    shape that introduced 1263 is noted operationally only; NO unique
+  //    shape that introduced 1310 is noted operationally only; NO unique
   //    historical commit/hash is a product gate.
-  const changelogPath = await requireExactlyOneTask551Changelog1263Path();
-  await requireValidTerminalBoundTask551Changelog1263(changelogPath);
+  const changelogPath = await requireExactlyOneTask551Changelog1310Path();
+  await requireValidTerminalBoundTask551Changelog1310(changelogPath);
   // 2. CURRENT-TREE graph discovery is independent and executable:
   //    `readdir` the regular files directly under `_docs/_TASKS` (no
   //    recursion, no shell glob, no pathspec), keep exactly the basenames
@@ -169,12 +169,12 @@ async function deriveAndVerifyTask551CurrentTerminalStateV1(): Promise<Readonly<
   //    descendant terminal (`✅ Done` | `⏭️ Superseded` | `❌ Cancelled`), and
   //    matching board/changelog index semantics on the current HEAD
   //    (`_docs/_TASKS/README.md` row/statistics and
-  //    `_docs/_CHANGELOG/README.md` 1263 row/next-free pointer consistent with
+  //    `_docs/_CHANGELOG/README.md` 1310 row/next-free pointer consistent with
   //    those terminal statuses).
   await requireCurrentTerminalGraphAndIndexSemanticsV1(task551Paths, changelogPath);
   // 4. Re-read the CURRENT board/changelog semantically: the
   //    `_docs/_TASKS/README.md` row/statistics and
-  //    `_docs/_CHANGELOG/README.md` 1263 index row/pointer in the working tree
+  //    `_docs/_CHANGELOG/README.md` 1310 index row/pointer in the working tree
   //    must match the terminal statuses of the 38 verified files, and no
   //    uncommitted/post-terminal mutation contradicts the terminal state
   //    (no unresolved drift).
@@ -185,12 +185,12 @@ async function deriveAndVerifyTask551CurrentTerminalStateV1(): Promise<Readonly<
 
 Both bootstrap modes and the immediate pre-01-L03 dispatch gate call this
 helper (plus the exact export-owner-leaf membership check of item 5) and block
-on any missing/duplicate 1263 path, invalid/untracked 38-file graph member,
+on any missing/duplicate 1310 path, invalid/untracked 38-file graph member,
 zero-path discovery
 result, non-terminal status, graph mismatch, contradictory current
 board/changelog semantics, or unresolved drift. The helper derives
 the current terminal TASK-551 state from the CURRENT HEAD only — there is no
-expected-HEAD receipt, no unique historical changelog-1263 ADD commit, and no
+expected-HEAD receipt, no unique historical changelog-1310 ADD commit, and no
 external receipt/sidecar authority.
 
 ## Exclusive Ownership and Collision Guards
@@ -209,7 +209,7 @@ The pre-authoring authorization order is exactly:
    Terminal TASK-551 Family Gate section): call
    `deriveAndVerifyTask551CurrentTerminalStateV1` — verify the CURRENT HEAD
    state: parent `✅ Done`, every descendant terminal, the
-   board/changelog synchronized, changelog 1263 present and valid, current task
+   board/changelog synchronized, changelog 1310 present and valid, current task
    files and required exports/contracts, and no unresolved drift (no
    expected-HEAD receipt and no unique historical commit/hash authority), and
    the exact TASK-551-02-L02/04-L02/05-L01 export-owner leaves present; the
@@ -381,7 +381,7 @@ fails closed.
 **Round 10 family / final planning pass:** repaired promotion leases, CI recovery, parsers, reindex, DB-only Guide, path-free projections/hydration/client assets, Cloudflare publication, same-handle loaders, workflow recovery, release-tree binding, restartable per-source migration and durable artifact/coverage pairs; the last parallel pass reported `5 HIGH + 14 MEDIUM + 4 LOW`, all were repaired and locally rechecked after subagent quota exhaustion. This record and any ignored helper remain planning evidence only, not a canonical TASK-545 round result.
 **Implementation authorization:** none. TASK-545 is still `⏳ To Do`;
 the complete terminal TASK-551 family gate (parent `✅ Done`, every physical
-descendant terminal, current board/changelog synchronized, changelog 1263
+descendant terminal, current board/changelog synchronized, changelog 1310
 present and valid, current task files and no unresolved drift verified by
 `deriveAndVerifyTask551CurrentTerminalStateV1`, exact
 02-L02/04-L02/05-L01 export-owner leaves),
@@ -1174,7 +1174,7 @@ if (invocation.mode === "task548-bootstrap-build") {
   await requireTask547Terminal();
   // Complete terminal TASK-551 family gate:
   // `deriveAndVerifyTask551CurrentTerminalStateV1` verifies the CURRENT HEAD
-  // state (exactly one changelog-1263 path, parseable and terminal-bound —
+  // state (exactly one changelog-1310 path, parseable and terminal-bound —
   // no unique historical ADD commit/ancestor/byte-identity gate — parent
   // `✅ Done`, every descendant terminal,
   // the 38-file graph + current board/changelog index semantics, and
@@ -1277,7 +1277,7 @@ await requireTask54808Status("⏳ To Do");
 // immediately before the authoring audit that authorizes 01-L03 dispatch — the
 // early defense-in-depth run above can never substitute for it.
 // `deriveAndVerifyTask551CurrentTerminalStateV1` re-verifies the CURRENT HEAD
-// state fresh (exactly one changelog-1263 path, parseable and terminal-bound;
+// state fresh (exactly one changelog-1310 path, parseable and terminal-bound;
 // no unique historical commit/hash authority) and proves the 38-file graph +
 // terminal statuses +
 // current board/changelog semantics plus no unresolved drift from the current
@@ -1308,7 +1308,7 @@ await assertAuthoringGateAllowsImplementationInCurrentRun(authoring);
 // The immediate pre-01-L03 dispatch gate re-runs
 // `deriveAndVerifyTask551CurrentTerminalStateV1` fresh (parent `✅ Done`, every
 // physical descendant terminal, current board/changelog synchronized, changelog
-// 1263 present and valid, current task files and no unresolved drift, exact
+// 1310 present and valid, current task files and no unresolved drift, exact
 // 02-L02/04-L02/05-L01 export-owner
 // leaves present) BEFORE the
 // `01-L03` label is dispatched; the current `⏳ To Do` state blocks dispatch.
@@ -1453,7 +1453,7 @@ Wrong dependency status/order (including a non-terminal TASK-551 family on the
 CURRENT HEAD — the
 parent not exactly `✅ Done`, any physical descendant non-terminal, an
 out-of-sync board/changelog, a missing, duplicate, unparseable or
-non-terminal-bound changelog-1263 path, an untracked or missing 38-file graph
+non-terminal-bound changelog-1310 path, an untracked or missing 38-file graph
 member, a
 zero-path or unparseable discovery result, a 38-file graph or terminal-status
 mismatch, a contradictory current semantic board/changelog re-read (unresolved
@@ -1548,7 +1548,7 @@ list, expected-HEAD receipt, unique historical commit/hash, or external
 sidecar) and block when the parent is
 not exactly `✅ Done` (including the current
 `⏳ To Do` state), when any physical descendant is non-terminal, when the
-board/changelog is out of sync, when the changelog-1263 path is missing,
+board/changelog is out of sync, when the changelog-1310 path is missing,
 duplicated, unparseable or not terminal-bound, when the 38-file graph or its
 current terminal/board/changelog-index semantics mismatch, when
 an untracked matching TASK-551 file fails the per-path
@@ -1564,7 +1564,7 @@ exact TASK-551-02-L02/04-L02/05-L01 export-owner leaves is missing; a change to 
 TASK-551 family file after a PASS invalidates the affected gate result and
 requires a fresh current-state derivation before the next dispatch. No unique
 historical commit/hash is asserted: the atomic commit shape that introduced
-changelog 1263 may be noted operationally, but it is never a product gate.
+changelog 1310 may be noted operationally, but it is never a product gate.
 Mutating any bootstrap artifact, TASK-548 task contract, or imported
 TASK-545 driver after a PASS proves that every stale receipt is rejected and a
 new complete round runs from the new HEAD. Workflow smoke fixtures also prove
@@ -1807,7 +1807,7 @@ Agents default read only; writer dispatch is limited to the explicit owner map.
 
 Both bootstrap modes AND the immediate pre-01-L03 dispatch gate first run the
 complete terminal TASK-551 family gate via `deriveAndVerifyTask551CurrentTerminalStateV1`
-(fresh verification of the CURRENT HEAD state: exactly one changelog-1263
+(fresh verification of the CURRENT HEAD state: exactly one changelog-1310
 path, parseable and terminal-bound — no unique historical commit/hash
 authority — parent `✅ Done`, every
 descendant terminal, current board/

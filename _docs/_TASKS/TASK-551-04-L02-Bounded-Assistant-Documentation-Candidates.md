@@ -8,7 +8,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-551-04-L01, TASK-551-05-L02
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -187,3 +187,110 @@ to TASK-551-10-L02 for assistant/ORM documentation.
 - At 100k chunks, p95 meets the parent budget and the plan uses the canonical
   assistant-doc and assistant-chunk vector indexes without an unbounded
   Bun-side candidate set or a cross-table generated expression.
+
+## Workflow Dispatch Envelope
+
+The baseline/untracked NUL-safe shell gate above is not dispatchable because it
+uses shell control flow and dynamic discovery. The dispatch receipt therefore
+uses the same fixed five owned production/test paths as a literal `wc -l` input;
+the dispatcher applies the documented 1,000-line verdict to those results. The
+DB suite receives only the owner-injected DB profile and cannot inherit `.env`.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-04-L02",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-04"
+  },
+  "allowlist": [
+    "core/services/assistant/assistantDocsCandidateQuery.ts",
+    "core/services/assistant/docsDbRetriever.ts",
+    "tests/vitest/assistant/docsDbRetriever.test.ts",
+    "tests/integration/server/task551AssistantDocsCandidateQuery.test.ts",
+    "tests/perf/database-assistant-docs-search.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/db/searchVectorDefinitions.ts",
+    "core/services/assistant/docsIngestService.ts",
+    "core/services/assistant/docsIndexService.ts",
+    "core/services/search/searchService.ts",
+    "core/services/search/searchIndexService.ts",
+    "core/server/startupAssistantDocs.ts",
+    "tests/integration/server/task551SearchVectorMigration.test.ts",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-04-L01:single"],
+  "commands": [
+    {
+      "id": "assistant-retriever-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/assistant/docsDbRetriever.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/assistant/docsDbRetriever.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "assistant-db-and-plan-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551AssistantDocsCandidateQuery.test.ts", "tests/perf/database-assistant-docs-search.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/task551AssistantDocsCandidateQuery.test.ts", "tests/perf/database-assistant-docs-search.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-performance-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "argv": ["wc", "-l", "core/services/assistant/assistantDocsCandidateQuery.ts", "core/services/assistant/docsDbRetriever.ts", "tests/vitest/assistant/docsDbRetriever.test.ts", "tests/integration/server/task551AssistantDocsCandidateQuery.test.ts", "tests/perf/database-assistant-docs-search.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-04-L01:single"],
+      "commandIds": ["assistant-retriever-vitest", "assistant-db-and-plan-tests", "core-lint-types", "core-lint", "coderso-performance-gate", "diff-check", "line-count"]
+    }
+  ]
+}
+```

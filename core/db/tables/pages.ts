@@ -6,6 +6,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -18,6 +19,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { contentTypes } from "./content";
 import { users } from "./identity";
+import {
+  normalizeTask551TrigramSql,
+  SEARCH_VECTOR_SQL,
+  TRIGRAM_SOURCE_SQL,
+  tsvector,
+} from "../searchVectorDefinitions";
 
 export const pages = pgTable(
   "pages",
@@ -32,9 +39,29 @@ export const pages = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     publishedAt: timestamp("published_at"),
+    // TASK-551-05-L01: canonical local search vectors. Stored generated, so
+    // the column is maintained by the database and every reader sees the same
+    // tsvector the GIN index holds.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(sql.raw(SEARCH_VECTOR_SQL.pages)),
+    searchTrigramText: text("search_trigram_text").generatedAlwaysAs(
+      normalizeTask551TrigramSql(sql.raw(TRIGRAM_SOURCE_SQL.pages))
+    ),
   },
   (t) => ({
     statusIdx: index("pages_status_idx").on(t.status),
+    pagesSearchVectorIdx: index("pages_search_vector_idx").using("gin", t.searchVector),
+    pagesSearchTrigramIdx: index("pages_search_trigram_idx").using(
+      "gin",
+      t.searchTrigramText.op("gin_trgm_ops")
+    ),
+    // TASK-551-05-L01 evidence-backed list traversal: the admin list sorts by
+    // recency and paginates on the stable (updated_at DESC, id DESC) keyset.
+    pagesListUpdatedIdIdx: index("pages_list_updated_id_idx").on(desc(t.updatedAt), desc(t.id)),
+    pagesAuthorListUpdatedIdIdx: index("pages_author_list_updated_id_idx").on(
+      t.authorId,
+      desc(t.updatedAt),
+      desc(t.id)
+    ),
   })
 );
 
@@ -75,6 +102,16 @@ export const pageRevisions = pgTable(
   (t) => ({
     pageIdIdx: index("page_revisions_page_id_idx").on(t.pageId),
     pageKindIdx: index("page_revisions_page_kind_idx").on(t.pageId, t.kind),
+    // TASK-551-05-L01 revision-integrity group: duplicate versions are a data
+    // corruption class, so the uniqueness is a constraint the database owns.
+    pageVersionIdx: uniqueIndex("page_revisions_page_version_idx").on(t.pageId, t.version),
+    pageKindVersionIdIdx: index("page_revisions_page_kind_version_id_idx").on(
+      t.pageId,
+      t.kind,
+      desc(t.version),
+      desc(t.id)
+    ),
+    pageRetentionIdx: index("page_revisions_retention_idx").on(t.createdAt, t.id),
   })
 );
 
@@ -95,6 +132,8 @@ export const previewTokens = pgTable(
   (t) => ({
     tokenHashIdx: uniqueIndex("preview_tokens_token_hash_idx").on(t.tokenHash),
     expiresAtIdx: index("preview_tokens_expires_at_idx").on(t.expiresAt),
+    // TASK-551-05-L01 retention scan.
+    previewTokensRetentionIdx: index("preview_tokens_retention_idx").on(t.expiresAt, t.id),
   })
 );
 
@@ -143,5 +182,6 @@ export const detailPageRevisions = pgTable(
       t.detailPageId,
       t.version
     ),
+    detailPageRetentionIdx: index("detail_page_revisions_retention_idx").on(t.createdAt, t.id),
   })
 );

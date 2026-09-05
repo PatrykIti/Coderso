@@ -5,6 +5,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -70,5 +71,12 @@ export const searchHistory = pgTable(
   (t) => ({
     userIdx: index("search_history_user_idx").on(t.userId),
     createdAtIdx: index("search_history_created_at_idx").on(t.createdAt),
+    // TASK-551-05-L01: the per-user recency timeline and the retention sweep.
+    searchHistoryUserCreatedIdIdx: index("search_history_user_created_id_idx").on(
+      t.userId,
+      desc(t.createdAt),
+      desc(t.id)
+    ),
+    searchHistoryRetentionIdx: index("search_history_retention_idx").on(t.createdAt, t.id),
   })
 );

@@ -762,7 +762,7 @@ history owner. Static routes (`starters`, `runs`, `plan`) register before the le
   curated-retention writer; TASK-555-02-L02 is the serialized package-lock facade
   split/callback writer.
 - Forbidden throughout this family: `_docs/_TASKS/TASK-414*`, `TASK-489*`,
-  `TASK-545*`, `TASK-547*`, `TASK-548*`, `TASK-551*`, `TASK-554*`; changelogs `1260`, `1263`, `1266`,
+  `TASK-545*`, `TASK-547*`, `TASK-548*`, `TASK-551*`, `TASK-554*`; changelogs `1260`, `1310`, `1266`,
   `1267`, and any externally reserved `1268`; every other task's workflow/smoke
   evidence; and all unrelated dirty files.
 - Only TASK-555-07-L03 may edit task/changelog indexes and TASK-555 statuses. It

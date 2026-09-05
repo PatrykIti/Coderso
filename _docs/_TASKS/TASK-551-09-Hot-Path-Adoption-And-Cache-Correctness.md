@@ -9,7 +9,7 @@
 mutation adoption and L04 FINAL after TASK-551-08 complete plus TASK-551-03
 query and TASK-551-06 revision handoffs terminal; parent external dispatch gate
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -209,9 +209,11 @@ clients/hooks that returned receipts.
   `seoService`; 09-L03 is the sole writer for whole `importExportService` and
   `detailPageDocumentService`. Earlier leaves must not edit those paths.
 - L02 likewise owns the complete existing entry/post/SEO test suites and their
-  named cohesive splits. It also owns removal of the oversized
-  `tests/integration/runtime/pages-runtime.test.ts`, one named fixture module and
-  all four exact replacement suites listed in L02. L03 owns the complete existing
+  already-present cohesive splits (entry core CRUD plus metadata-writes/
+  visibility/concurrency/source-audit/facade-fence; page runtime plus blocks/
+  listings/responsive) and the new additive `entryServiceCacheInvalidation.test.ts`
+  and `pages-runtime-cache-invalidation.test.ts` listed in L02. L03 owns the
+  complete existing
   import-export/detail-page suites plus
   `tests/integration/runtime/site-shell-runtime.test.ts` and
   `tests/integration/runtime/detail-page-preview-cache.test.ts`. L04 owns
@@ -341,4 +343,4 @@ clients/hooks that returned receipts.
 
 ## Documentation Updates Required
 
-Full perf/fault/smoke/docs/closure and changelog 1263 remain with TASK-551-10.
+Full perf/fault/smoke/docs/closure and changelog 1310 remain with TASK-551-10.

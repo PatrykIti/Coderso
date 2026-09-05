@@ -6,7 +6,8 @@
 **Category:** Performance / Reliability / Security / Runtime Smoke
 **Estimated Effort:** Large
 **Dependencies:** exact compile-green sequence landed with targeted gates:
-TASK-551-01 → TASK-551-02 → 08-L03 INITIAL → TASK-551-05 →
+TASK-551-01-L01 (initial) → TASK-551-01-L03 → TASK-551-01-L04 → TASK-551-01-L02 →
+TASK-551-02 → 08-L03 INITIAL → TASK-551-05 →
 TASK-551-03-L01 → TASK-551-06-L01/L02/L03 → TASK-551-07-L01 →
 09-L04 INITIAL → TASK-551-03-L02 → TASK-551-07-L02 →
 TASK-551-08-L01/L02/L03 FINAL → TASK-551-03-L03 → TASK-551-04 →
@@ -15,7 +16,7 @@ TASK-551-01-L01 post-09 final re-dispatch emitted a fresh exact-set receipt;
 TASK-551-11 pre-implementation audit PASS; parent external dispatch gate
 reverified for TASK-511, TASK-493, TASK-517, and TASK-518
 **Status:** ⏳ To Do
-**Changelog:** 1263 pinned (closure only)
+**Changelog:** 1310 pinned (closure only)
 
 ---
 
@@ -50,6 +51,9 @@ This leaf may create or edit only:
 - `tests/helpers/task551RedisProcessHarness.ts`;
 - `scripts/task551-redis-smoke.ts`;
 - `scripts/coderso-release-gates.ts` (additive TASK-551 commands only);
+- `.tmp/task-551/aggregate-gates-v1.json` (L10-L01-only generated aggregate-gate
+  output; local and ephemeral, with one strict writer; never workflow-sidecar
+  evidence);
 - `.github/workflows/coderso-pr-gates.yml` (one pinned Redis service and bounded
   TASK-551 gate environment/command wiring only);
 - `_docs/_workflows/_smoke/task-551/runtime/redis-smoke-v1.json` (sanitized final
@@ -60,12 +64,20 @@ This leaf may create or edit only:
   `booking-dirty-refresh-{light,dark}.png`, and
   `extracted-views-{light,dark}.png` in that same directory.
 
-It reads, but never edits, TASK-551-01's budget artifacts, the final query
-inventory/receipt refreshed by TASK-551-01-L01 after 09, and the targeted test
-receipts owned by TASK-551-02..09. It writes only the final UI smoke evidence,
-not any TASK-551-03-L02 product or targeted-test path. Before writing either
-shared gate file, re-read current bytes and confirm no active external task owns
-the same region. A collision blocks dispatch and returns to orchestration.
+It reads, but never edits, exactly three redacted L11 `audit-evidence` objects:
+one L03 fixture-bootstrap check and one L02 database-baseline check for each of
+the `small` and `large` profiles. It also consumes exactly one L11-owned
+`Task551Task489PredecessorPromotionEvidenceV1` record and only the fixed durable
+path nested in that record.
+It reads L02's checked-in reviewed freeze receipts through L02's canonical parser,
+the final query inventory/receipt refreshed by TASK-551-01-L01 after 09, and the
+targeted test receipts owned by TASK-551-02..09. It writes only the final UI smoke
+evidence, not any TASK-551-01 product, fixture, bootstrap, or targeted-test path.
+L10 never reads producer stdout, a producer command receipt, an arbitrary L03/L02
+invocation, or the L05 temporary predecessor path; L11 alone captures and
+validates that transient material. Before writing either shared gate file, re-read
+current bytes and confirm no active external task owns the same region. A
+collision blocks dispatch and returns to orchestration.
 
 Forbidden paths include all `core/**` production modules, `core/db/migrations/**`,
 `core/db/schema*`, TASK-551 task files, `_docs/_CHANGELOG/**`, product/developer
@@ -78,48 +90,112 @@ This leaf must not rebaseline or weaken an owner assertion.
   produced by TASK-551-01; do not copy their constants into this leaf. The
   inventory receipt must be `phase: "final"`, digest-current against the post-09
   production tree, exact-set equal, and contain zero planned deltas. Initial,
-  stale, missing, or non-L01-authored receipts fail before any aggregate work.
-  Initial is exactly 34 planned fingerprints: 32 named Admin plus
-  `cache-outbox-oldest-unprocessed` and `public-html-dependencies-128`. The plan
-  registry is exactly 37 IDs/38 cases/76 small+large receipts: those 32 once plus
-  `webhooks-created-keyset`, `webhook-deliveries-parent-keyset`,
-  `webhooks-event-batch`, `page-latest-autosave`, and the outbox fingerprint.
-- The `small` and `large` profiles use TASK-551-01's exact per-family target and
-  support-table row counts, relationship recipes, pool capacities, warm-up,
-  sample/repetition counts, percentile method, hardware/context metadata, and
-  non-weakened budgets. The aggregate runner seeds one mapped inventory family
-  at a time through that owner and cleans it before the next family; it does not
-  invent a whole-profile fixture, payload-size, or concurrency constant.
-- IDs are UUIDv5 from `(validatedRunScope, profile, family, ordinal)`; integer
-  family/support counts are exact. List timestamps group each ten ordinals while
-  append timestamps are unique by ordinal. Fixed distributions are users
-  `80/10/10` with five roles/every tenth multi-role; content `50/30/10/10`;
-  entry visibility `70/20/10`; forms `60/30/10`; submissions `70/20/10`; media
-  `80/20` with 10% null folder; five booking statuses at 20% each; search
-  common/rare counts use L02's exact per-family integer table (no percentage
-  rounding), with hidden/miss zero; and ten-row equal-sort groups. Pool capacities are
-  small/large `2/10`. Measurement is exactly three repetitions, each five
-  unrecorded warmups plus 30 samples; calibration is 20 warmups plus 100 samples.
-  Repetition-p95 spread is `(max-min)/max(median,0.1)*100`, except three zeroes
-  produce zero, and must be `<=20%`. Normalize by
-  `observedMs*referenceCalibrationMedian/currentCalibrationMedian`, accepting
-  factor `0.80..1.20`; freeze used
-  `ceilToTenth(max(kindFloor, medianRepetitionPercentile*1.25))`. This leaf reads
-  checked-in finite ceilings and never invokes `--freeze`.
-- Summary/facet `asOf` is `2026-01-15T12:00:00.000Z`. Submission ordinals
-  divisible by four are 1..6 days before and all others 8..37 days before,
-  yielding rolling-seven-day `500/25,000`, spam `200/10,000`. Booking timezones
-  cycle UTC/New_York/Tokyo; buckets `0..9/10..19/20..59/60..99` mean same-day
-  past/same-day future/next 1..40/prior 1..40 days, end +60 minutes, yielding
-  today `400/20,000`, upcoming and past/current `1,000/50,000` each.
-- Consume exact author/type-author/role/tag, webhook event/delivery,
-  latest-page-autosave, and public-dependency fixtures. The last has 128 tuples
-  (43 page/43 post/42 entry), 101 roots and at most 16,384 canonical bytes.
-  Retention uses the frozen `2036-01-01` cutoffs/anchors/child-first counts and
-  `499/500/501/2,000/2,001` batch edges for every policy family.
-- DB fixtures use one run UUID in every owned slug/key and record every created
-  row ID. Teardown deletes only those IDs in FK-safe order, including failure
-  paths. Never assert a globally empty table or delete another suite's rows.
+  stale, missing, or non-L01-authored receipts fail before aggregate work. The
+  plan registry remains exactly 37 IDs/38 cases/76 small+large receipts.
+- Before any L02 artifact is accepted, consume L11's one durable,
+  `coderso.task551.fixture-check-evidence@v1` object. Its existing redacted
+  fields must prove the L03 `check` producer, `pass:true`, `noLeak:true`, the
+  `current-database-and-single-marker` target-proof kind, and marker count one.
+  L10 must not read an L03 stdout record, producer receipt, confirmation, or
+  invocation result. Generic `DATABASE_URL`, `DATABASE_DIRECT_URL`, dotenv,
+  ambient defaults, or bootstrap variables are never an L10 fixture-flow input.
+- Only after that L11 fixture object, consume L11's exactly two durable,
+  `coderso.task551.baseline-check-evidence@v1` objects: one whose existing
+  producer profile is `small` and one `large`. Each must prove its L02 `check`
+  producer, `pass:true`, `noLeak:true`, and all three existing rolled-back
+  target-proof booleans. L10 never opens a fixture connection, seeds, cleans,
+  creates, repairs, truncates, or deletes a sentinel; it never reads producer
+  stdout or invokes L03/L02 arbitrarily.
+- For each of the three L11 evidence objects, require L11's captured command
+  pair before accepting it: the owner-focused test command has positive test
+  discovery, while the corresponding `--check` script command has null
+  discovery; both have exit code zero and `skipped:false`. L11 owns, captures,
+  sanitizes, and validates those receipts; L10 consumes only the resulting
+  redacted evidence and its existing compatible fields, never receipt bodies.
+- Before accepting the TASK-489 predecessor, require exactly the L11-owned
+  `Task551Task489PredecessorPromotionEvidenceV1` record. Its exact top-level
+  fields, in order, are `schemaVersion`, `sourceTask`, `sourcePhase`,
+  `sourceProfile`, `sourceScenario`, `sourceHead`, `sourceDigest`, `predecessor`,
+  `promotionState`, `promotionDecision`, `promotionReason`,
+  `validationSummaries`, `createdAt`, `reviewedAt`, `promotedAt`, and
+  `ownerCapabilityReceiptDigest`.
+  It is strict reject-unknown with every top-level and nested member required;
+  `schemaVersion` is
+  `"coderso.task551.task489-predecessor-promotion@v1"`, `sourceTask` is
+  `"TASK-551-05-L02"`, `sourcePhase` is `"05-l02"`, `sourceProfile` is required
+  `null`, `sourceScenario` is `"task489-predecessor"`, `sourceHead` is a
+  required non-null string, and `sourceDigest` is a lowercase 64-hex SHA-256.
+  `predecessor` has exactly `sourcePath`, `durablePath`, `schemaVersion`, and
+  `digest`, with source path `.tmp/task-551/task489-predecessor-v1.json`, durable
+  path `_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`,
+  schema `"coderso.task551.task489-predecessor@v1"`, and a lowercase 64-hex
+  `digest`. `promotionState` is `"promoted"`, `promotionDecision` is
+  `"accept"`, `promotionReason` is `"exact-byte-match-after-owner-review"`,
+  `validationSummaries` has exactly `sourceIdentity`, `predecessorBytes`,
+  `atomicNoReplace`, and `terminalHead`, each equal to `"passed"`, and the three
+  timestamps are required non-null strings. `ownerCapabilityReceiptDigest` is
+  another lowercase 64-hex SHA-256. Reject legacy promotion aliases
+  `canonicalBytes` and `terminalTracking`, projection aliases, or extra fields.
+  Reopen only `predecessor.durablePath` through a fixed-path,
+  stable-identity regular-file, non-symlink read. Hash those exact durable bytes
+  and require equality with `predecessor.digest` before directly calling the sole
+  L02 `parseTask489PredecessorReceiptV1` on those same bytes. Pass that parser
+  result unchanged to the local ephemeral aggregate as `task489Predecessor`; do
+  not read `predecessor.sourcePath`, define a schema/parser/projection, invoke a
+  serializer, reconstruct or reserialize the predecessor value, or create a
+  second predecessor artifact.
+
+### Exact two-path terminal fence
+
+The predecessor and promotion paths form one acyclic terminal handoff. Commit A
+sets `promotion.sourceHead = HEAD A`; Commit B tracks both exact paths below and
+sets `terminalHead = HEAD B`:
+
+```ts
+const TASK551_TERMINAL_HANDOFF_PATHS = [
+  "_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json",
+  "_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-promotion-v1.json",
+] as const;
+type Task551TerminalHandoffFenceV1 = Readonly<{
+  predecessorPath: typeof TASK551_TERMINAL_HANDOFF_PATHS[0];
+  promotionPath: typeof TASK551_TERMINAL_HANDOFF_PATHS[1];
+  predecessorSchema: "coderso.task551.task489-predecessor@v1";
+  promotionSchema: "coderso.task551.task489-predecessor-promotion@v1";
+  predecessorDigest: string;
+  promotionDigest: string;
+  predecessor: Readonly<{ noLeak: true }>;
+  sourceHead: string;
+  terminalHead: string;
+  predecessorTrackedInHeadB: true;
+  promotionTrackedInHeadB: true;
+  currentTreeMatchesHeadB: true;
+  currentBytesMatchHeadB: true;
+}>;
+```
+
+The consumer rereads both paths as tracked regular non-symlinks, verifies both
+schemas and exact SHA-256 digests, and proves both current-tree byte sequences
+equal their HEAD B bytes. It requires `promotion.sourceHead === HEAD A`,
+`terminalHead === HEAD B`, and predecessor `noLeak === true`; absent, false,
+unknown, replaced, dirty, mismatched, or reordered predicates reject the handoff
+before either path is opened, hashed, parsed, or otherwise consumed.
+
+- For each profile, read the checked-in `TASK551_DATABASE_FREEZE_RECEIPT`
+  through L02's canonical parser and require `reviewState:"reviewed"`;
+  candidate, missing, stale, malformed, or non-canonical receipts fail. Validate
+  the L02-owned immutable contract, fixture, schema, runner, reviewable-receipt,
+  context, and calibration lifecycle values read-only, including its immutable
+  candidate-to-reviewed transition. Do not compare provenance to the current
+  HEAD, substitute L10 constants, invoke `--freeze`, or rebaseline.
+- Use the consumed L02 manifest and persisted ceilings directly. For every
+  budget-owned scenario/profile and its pool receipt, independently enforce all
+  eight values: query count, rows read, rows returned, transferred bytes, shared
+  buffers, and normalized p50/p95/p99. A partial latency/row check, a derived
+  ceiling, an omitted scenario/profile, or a pool-only pass is a gate failure.
+- L02 retains every fixture recipe, UUID/key derivation, selectivity, operation
+  clock, measurement/calibration method, pool-capacity rule, and child-first
+  exact-residue cleanup. This leaf requires its proof rather than copying those
+  values or asserting a globally empty table.
 - Redis uses an unpredictable task-run namespace below the configured test-only
   prefix. Store the namespace digest, never its raw value. Cleanup uses the
   harness's recorded exact keys/generation/outbox identities; no `KEYS`, broad
@@ -535,11 +611,23 @@ emits `.tmp/task-551/aggregate-gates-v1.json` using
 duplicates/reordering, non-finite/negative metrics, raw namespace/URLs, unknown
 commands, required skips, and evidence above the bounded size declared by the
 harness.
-Before emitting the aggregate, the runner strictly parses
-`.tmp/task-551/task489-predecessor-v1.json`, requires its current fixture/plan
-identity plus exact 5/14/15/30 pass set, and embeds it unchanged as
-`task489Predecessor`. It never synthesizes counts from a missing receipt or drops the
-per-scale statement evidence.
+Before emitting the aggregate, the runner requires L11's exact
+`Task551Task489PredecessorPromotionEvidenceV1` record: all 16 top-level fields,
+fixed enum/null/path/schema values, required non-null members, and strict
+lowercase SHA-256 validation for every digest field. It first requires the exact
+predecessor+promotion two-path terminal fence, including both paths tracked in
+HEAD B, current-tree bytes equal to HEAD B, `promotion.sourceHead === HEAD A`,
+`terminalHead === HEAD B`, matching schemas/digests, and predecessor `noLeak:true`.
+It reads only `promotion.predecessor.durablePath` after requiring that path to be
+`_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`,
+through a stable-identity regular-file/non-symlink guard, requires the SHA-256 of
+those exact bytes to equal `promotion.predecessor.digest`, and only then calls the
+sole L02 `parseTask489PredecessorReceiptV1` on those same durable bytes. The ephemeral
+aggregate receives that parser result unchanged as `task489Predecessor`, including
+the current fixture/plan identity and exact 5/14/15/30 pass set; it never reads a
+temporary predecessor path, synthesizes counts, drops per-scale statement
+evidence, defines a local receipt shape, reconstructs/reserializes the receipt,
+or creates another predecessor artifact.
 
 The tracked smoke evidence contains only version, digests, bounded aggregates,
 the exact `publicConsistency` SLO/TTL constants, assertion IDs, and pass/failure
@@ -567,51 +655,117 @@ credential, path with user data, or raw log.
 
 ```ts
 async function runTask551AggregateGates(deps: GateDeps): Promise<GateEvidence> {
-  const budgets = await deps.loadAndValidateFrozenTask551Budgets();
+  const l11FixtureCheck = await deps.loadL11FixtureBootstrapCheckEvidence();
+  deps.requireL11CapturedCommandPair(l11FixtureCheck);
   await deps.requireCurrentFinalQueryInventoryReceipt();
+  const l11Task489Promotion =
+    await deps.loadL11Task489PredecessorPromotionEvidence();
+  const task489PredecessorBytes =
+    await deps.readVerifiedL11PromotedTask489PredecessorBytes({
+      promotion: l11Task489Promotion,
+      durablePath:
+        "_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json",
+      // Require exact L11 metadata and a stable regular non-symlink file; verify
+      // SHA-256 equality before this exact byte sequence is returned.
+    });
+  const task489Predecessor =
+    parseTask489PredecessorReceiptV1(task489PredecessorBytes);
   await deps.requireInfrastructureAndOwnerReceipts();
   const profiles: ProfileEvidence[] = [];
   for (const profile of ["small", "large"] as const) {
-    for (const scenario of budgets.mappedInventoryScenarios(profile)) {
-      const fixture = await deps.seedOwnedFamilyFixture(profile, scenario);
-      try {
-        profiles.push(await deps.measureAgainstFrozenBudget(fixture, scenario));
-      } finally {
-        await deps.cleanupExactFamilyFixture(fixture);
-      }
-    }
+    const l11BaselineCheck = await deps.loadL11DatabaseBaselineCheckEvidence({
+      profile, l11FixtureCheck,
+    });
+    deps.requireL11CapturedCommandPair(l11BaselineCheck);
+    const l02Receipt = await deps.loadAndValidateReviewedL02FrozenBudget({
+      profile, l11BaselineCheck,
+    });
+    profiles.push(await deps.enforceL02ReceiptCeilings({
+      l11BaselineCheck,
+      l02Receipt,
+      fields: ["queryCount", "rowsRead", "rowsReturned", "transferredBytes",
+        "sharedBuffers", "normalizedP50", "normalizedP95", "normalizedP99"],
+      includePoolReceipt: true,
+    }));
   }
   const adminListUi = await deps.runAndValidateAdminListUiSmoke({
     session: "wf55103l02", scenarios: 5, themes: ["light", "dark"],
   });
   const matrices = await deps.runFaultSecurityAndTwoProcessRedisFlows();
-  return deps.normalizeAggregateEvidence({ profiles, adminListUi, matrices });
+  return deps.emitEphemeralAggregateEvidence({
+    profiles,
+    // Exact L02 parser return; no consumer-local projection or serialization.
+    task489Predecessor,
+    adminListUi,
+    matrices,
+  });
 }
 ```
 
-**Data flow:** frozen budgets + current post-09 final inventory receipt + exact
-owner receipts/command manifests → reachability/version preflight → one owned
-small/large family fixture at a time → measured Bun/DB/cache matrices → fresh
-Admin UI visible-effect smoke → two fresh processes + real Redis scenarios →
-sanitized strict evidence → release-gate registration and post-audit handoff.
+**Data flow:** L11 durable redacted L03 fixture-bootstrap object → L11 durable
+redacted L02 `small` and `large` baseline objects → read-only reviewed canonical
+L02 per-profile freeze receipts and eight-field checks → current post-09 final
+inventory plus exact owner manifests → L11
+`Task551Task489PredecessorPromotionEvidenceV1` → its fixed nested durable path,
+regular-file/non-symlink identity, and `predecessor.digest` equality → sole L02
+parser return unchanged in the ephemeral aggregate → measured Bun/DB/cache
+matrices → fresh Admin UI visible-effect smoke → two fresh processes + real Redis
+scenarios → sanitized strict evidence → release-gate registration and post-audit
+handoff.
+Each L11 object is accepted only after L11's paired focused-test/`--check`
+receipt validation; L10 receives no producer stdout, producer receipt, or
+arbitrary L03/L02 invocation. Their owners retain target setup, fixture
+lifecycle, and cleanup.
 
-**Error handling:** unavailable infrastructure, required skip, budget regression,
-unexpected plan/query count, malformed evidence, process error, leaked secret,
-or incomplete cleanup returns `{ pass:false }`, preserves diagnostic IDs without
-sensitive bytes, and blocks closure. Source correction is delegated to the
-original owner; this leaf never changes a production assertion to pass.
+**Error handling:** unavailable infrastructure, a missing/invalid/stale L11
+fixture or either L11 profile-baseline object, an invalid L11 command pair, a
+missing/malformed predecessor-promotion record, wrong promotion metadata, a
+non-regular/symlinked/raced/replaced durable predecessor file, SHA-256 mismatch
+before parser invocation, parser rejection, required skip, budget regression,
+unexpected plan/query count, malformed reviewed freeze receipt, process error,
+leaked secret, or incomplete owner cleanup returns `{ pass:false }`, preserves
+diagnostic IDs without sensitive bytes, and blocks closure. Source correction is
+delegated to the original owner; this leaf never changes a production assertion to
+pass.
 
-**Regression-test shape:** test harness self-tests reject fake Redis, one-process
-execution, reordered/missing scenarios, unbounded cleanup, raw namespace/URL,
-non-finite metrics, unknown evidence fields, required skips, missing/non-zero-
-discovery owner command receipts, and evidence writes after failed cleanup. Gate-
-runner tests prove the new performance, security, and reliability commands are
-release-blocking without moving direct-suite ownership from TASK-551-09.
+**Regression-test shape:** test harness self-tests reject a missing/non-passing
+L11 fixture object, a missing `small` or `large` L11 baseline object, generic/
+dotenv fixture inputs, a candidate/stale reviewed freeze receipt,
+digest/context/calibration mismatch, a missing/invalid L11 paired command
+receipt (including non-positive focused-test discovery, non-null `--check`
+discovery, nonzero exit, or skip), and every omitted/elevated eight-field
+scenario or pool assertion. They also reject fake Redis, one-process execution,
+reordered/missing scenarios, unbounded cleanup, raw namespace/URL, non-finite
+metrics, unknown evidence fields, required skips, and evidence writes after
+failed cleanup. Predecessor-handoff tests reject absent/wrong L11 metadata,
+  non-lowercase or mismatched hashes, alternate/non-regular/symlinked/replaced
+  durable files, any missing/false HEAD-B fence predicate, a source-head or
+  terminal-head mismatch, and any parser call before hash equality; they assert
+  the direct L02 parser result reaches
+`task489Predecessor` unchanged and reject a temporary read, consumer-local
+schema/parser/projection, serializer/reconstruction, or a second predecessor
+artifact. Gate-runner tests keep these commands release-blocking without moving
+direct-suite ownership from TASK-551-09.
 
 ## Testing Requirements
 
 - Require TASK-551-01-L01's fresh `phase: "final"` exact-set receipt before any
   gate and fail on an initial/stale digest or nonzero planned-delta count.
+- Require exactly the one L11 fixture-bootstrap object and the ordered L11
+  `small`/`large` baseline objects before loading either profile's reviewed freeze
+  receipt. Require L11's focused-test positive-discovery and `--check`
+  null-discovery receipt pair for each object; reject generic URL/dotenv
+  assumptions, any producer stdout or arbitrary L03/L02 invocation, every
+  non-reviewed/digest-or-context-invalid receipt, and an omitted/elevated
+  eight-field scenario or pool assertion without invoking freeze or cleanup.
+- Require L11's exact `Task551Task489PredecessorPromotionEvidenceV1` record with
+  its 16-field order, fixed enum/null/path/schema values, required non-null
+  members, and strict lowercase digest validation. Reopen only its fixed nested
+  durable path as regular/non-symlink bytes, require exact SHA-256 equality with
+  `predecessor.digest`, then make the direct L02 parser call. Assert that its
+  unchanged result is passed only to the ephemeral aggregate; no temporary-path
+  read, local parser/schema/shape, reconstruction, reserialization, or second
+  predecessor artifact is permitted.
 - Run every performance, fault, security, full-suite, and two-process Redis lane
   below with real required infrastructure and no required skip.
 - Run all five Admin-list Playwright scenarios in both themes; validate ten
@@ -628,7 +782,9 @@ release-blocking without moving direct-suite ownership from TASK-551-09.
 
 Canonicalize these blocks to argv arrays and compare their SHA-256 digests with
 the four ordered owner receipts. Environment values are never included in the
-digest or evidence.
+digest or evidence. Note: the TASK-551-09-L02 block below replaces four formerly
+nonexistent TASK-493 regression paths with the actual suites, so the L02 owner
+receipt SHA-256 digest must be re-derived at closure from this corrected block.
 
 TASK-551-09-L01:
 
@@ -715,28 +871,32 @@ SERVER_CACHE_BACKEND=memory bun test \
   tests/integration/runtime/public-site-cache-query-budget.test.ts \
   tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
   tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
-  tests/integration/runtime/pages-runtime-rendering.test.ts \
-  tests/integration/runtime/pages-runtime-collections.test.ts \
-  tests/integration/runtime/pages-runtime-routing-preview.test.ts \
-  tests/integration/runtime/pages-runtime-responsive-cache.test.ts \
+  tests/integration/runtime/pages-runtime.test.ts \
+  tests/integration/runtime/pages-runtime-blocks.test.ts \
+  tests/integration/runtime/pages-runtime-listings.test.ts \
+  tests/integration/runtime/pages-runtime-responsive.test.ts \
+  tests/integration/runtime/pages-runtime-cache-invalidation.test.ts \
   tests/unit/pages/pageService.test.ts \
   tests/unit/content/entryService.test.ts \
-  tests/unit/content/entryServiceMetadataAndRelations.test.ts \
-  tests/unit/content/entryServiceVisibilityAndRevisions.test.ts \
+  tests/unit/content/entryServiceMetadataWrites.test.ts \
+  tests/unit/content/entryServiceVisibility.test.ts \
+  tests/unit/content/entryServiceConcurrency.test.ts \
+  tests/unit/content/entryServiceSourceAudit.test.ts \
+  tests/unit/content/entryServiceFacadeFence.test.ts \
+  tests/unit/content/entryServiceCacheInvalidation.test.ts \
   tests/unit/content/postsService.test.ts \
   tests/unit/seo/seoService.test.ts \
   tests/unit/seo/seoServicePersistence.test.ts \
   tests/integration/posts/posts-revisions-flow.test.ts \
   tests/integration/integrations/gscClient.test.ts \
   tests/integration/routes/sitemap.test.ts \
-  tests/integration/routes/seo-sitemap.test.ts \
-  tests/integration/routes/seo-sync.test.ts \
+  tests/integration/seo/gscSyncService.test.ts \
   tests/integration/routes/seo-performance.test.ts \
   tests/integration/routes/seo-pipeline.test.ts \
   tests/integration/routes/seo.test.ts \
   tests/security/gsc-credential.test.ts \
-  tests/security/seo-sitemap.test.ts \
-  tests/security/seo-sync.test.ts \
+  tests/security/seo-sitemap-submission.test.ts \
+  tests/security/seo-sync-service.test.ts \
   tests/security/seo-pipeline.test.ts \
   tests/perf/seo-sitemap.test.ts
 SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l02 bun test \
@@ -752,21 +912,22 @@ wc -l core/services/pages/pageService.ts \
   core/services/content/{entryService,entryServiceContract,entryPersistence,entryMutationService,entryRevisionService,postsService,postDocumentContract,postMutationService,postRevisionService}.ts \
   core/services/seo/seoService.ts core/services/cache/contentMutationInvalidation.ts \
   tests/unit/pages/pageService.test.ts \
-  tests/unit/content/{entryService,entryServiceMetadataAndRelations,entryServiceVisibilityAndRevisions}.test.ts \
+  tests/unit/content/{entryService,entryServiceMetadataWrites,entryServiceVisibility,entryServiceConcurrency,entryServiceSourceAudit,entryServiceFacadeFence,entryServiceCacheInvalidation}.test.ts \
   tests/unit/content/postsService.test.ts \
   tests/unit/seo/{seoService,seoServicePersistence}.test.ts \
   tests/integration/posts/posts-revisions-flow.test.ts \
   tests/vitest/cache/content-mutation-invalidation.test.ts \
   tests/integration/runtime/site-cache-{page-entry,post-seo}-invalidation.test.ts \
-  tests/integration/runtime/pages-runtime-fixtures.ts \
-  tests/integration/runtime/pages-runtime-rendering.test.ts \
-  tests/integration/runtime/pages-runtime-collections.test.ts \
-  tests/integration/runtime/pages-runtime-routing-preview.test.ts \
-  tests/integration/runtime/pages-runtime-responsive-cache.test.ts \
+  tests/integration/runtime/pages-runtime.test.ts \
+  tests/integration/runtime/pages-runtime-blocks.test.ts \
+  tests/integration/runtime/pages-runtime-listings.test.ts \
+  tests/integration/runtime/pages-runtime-responsive.test.ts \
+  tests/integration/runtime/pages-runtime-cache-invalidation.test.ts \
   tests/vitest/seo/{seoSearchPerformanceTypes,sitemapBuilder,seoPerformanceAggregation}.test.ts \
   tests/integration/integrations/gscClient.test.ts \
-  tests/integration/routes/{sitemap,seo-sitemap,seo-sync,seo-performance,seo-pipeline,seo}.test.ts \
-  tests/security/{gsc-credential,seo-sitemap,seo-sync,seo-pipeline}.test.ts \
+  tests/integration/seo/gscSyncService.test.ts \
+  tests/integration/routes/{sitemap,seo-performance,seo-pipeline,seo}.test.ts \
+  tests/security/{gsc-credential,seo-sitemap-submission,seo-sync-service,seo-pipeline}.test.ts \
   tests/perf/seo-sitemap.test.ts
 ```
 
@@ -891,10 +1052,10 @@ bunx vitest run tests/vitest/db/databaseConfig.test.ts \
 bun test tests/integration/server/task551DatabaseLifecycle.test.ts \
   tests/integration/server/task551RuntimeEntrypoints.test.ts \
   tests/perf/database-pool-telemetry.test.ts
+bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts
+# Read-only in-memory Drizzle projection versus the committed snapshot; no worktree write:
 bun test tests/unit/db/schemaTableFacade.test.ts \
   tests/unit/db/schemaColumnTypeContracts.test.ts
-bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts
-bun run db:generate
 bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
   tests/integration/server/task551SearchVectorMigration.test.ts \
   tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts \
@@ -960,6 +1121,12 @@ reproofs. TASK-551-09 paths are validated through the four exact owner manifests
 and the broad full gate; their targeted ownership does not move to this leaf.
 The aggregate Vitest harness must assert that every five named cache files exists
 and that discovery/execution counts are non-zero; an empty selection is a failure.
+Its TASK-489 predecessor-handoff assertion runs only in this order: validate the
+exact 16-field `Task551Task489PredecessorPromotionEvidenceV1` → fixed nested
+`predecessor.durablePath` regular-file/non-symlink read → SHA-256 equals
+`predecessor.digest` → direct L02 `parseTask489PredecessorReceiptV1` on those
+bytes → unchanged parser result in the ephemeral aggregate. This consumer lane
+never executes or reads the temporary predecessor artifact.
 
 Before handoff, count every production and test file touched from the verified
 pre-family baseline; any human-authored file over 1,000 physical lines fails.
@@ -968,3 +1135,284 @@ pre-family baseline; any human-authored file over 1,000 physical lines fails.
 
 None in this leaf. TASK-551-10-L02 consumes the gate/smoke receipts and is the
 sole final documentation and metadata writer.
+
+## Workflow Dispatch Envelope
+
+This aggregate leaf consumes the exact predecessor receipts and literal current
+validation lanes below; it does not acquire ownership of any 01..09 product
+path. The DB, DB/Redis, and migration capabilities are owner-injected one-use
+profiles, so no command carries dotenv, endpoint, namespace, or offline-ack
+input. The existing full-suite commands remain literal documented aggregate
+gates, not a wildcard product-dispatch mechanism.
+Migration drift is verified read-only by `schemaTableFacade`'s in-memory
+`generateDrizzleJson` projection against the committed snapshot plus the column
+type contract; `db:generate` remains a TASK-551-05 writer-only command and this
+leaf creates no migration, snapshot, journal, or generator output.
+The PATH-resolved Playwright client has `environmentProfile:"none"` and receives
+no DB/Redis binding. Any required server process is separately started by L11
+through its trusted absolute-Bun, profile-controlled launch, never through the
+Playwright client environment.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-10-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-10"
+  },
+  "artifactPolicy": "none",
+  "allowlist": [
+    "tests/perf/task551DatabaseCachePerformanceGate.test.ts",
+    "tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts",
+    "tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts",
+    "tests/security/task551ServerCacheSecurityGate.test.ts",
+    "tests/helpers/task551RedisProcessHarness.ts",
+    "scripts/task551-redis-smoke.ts",
+    "scripts/coderso-release-gates.ts",
+    ".tmp/task-551/aggregate-gates-v1.json",
+    ".github/workflows/coderso-pr-gates.yml",
+    "_docs/_workflows/_smoke/task-551/runtime/redis-smoke-v1.json",
+    "_docs/_workflows/_smoke/task-551/03-l02/ui-smoke-v1.json",
+    "_docs/_workflows/_smoke/task-551/03-l02/pagination-next-previous-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/pagination-next-previous-dark.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/filter-reset-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/filter-reset-dark.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/equal-sort-boundary-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/equal-sort-boundary-dark.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/booking-dirty-refresh-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/booking-dirty-refresh-dark.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/extracted-views-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/extracted-views-dark.png"
+  ],
+  "forbiddenPaths": [
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/server/publicSite.tsx",
+    "tests/perf/database-query-inventory.test.ts",
+    "tests/integration/server/task551DatabaseLifecycle.test.ts",
+    "docs/develop/runtime-model.md",
+    "_docs/_TASKS/TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md"
+  ],
+  "dependencies": ["TASK-551-01-L01:final"],
+  "commands": [
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "final-query-inventory",
+      "lane": "cli",
+      "argv": ["bun", "scripts/task-551-query-inventory.ts", "--check", "--phase", "final"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "pg-stat-interval-test",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/perf/database-pg-stat-interval.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/perf/database-pg-stat-interval.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "database-contract-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/db/databaseConfig.test.ts", "tests/vitest/db/queryFingerprintRegistry.test.ts", "tests/vitest/db/databaseApplicationIdentity.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/db/databaseConfig.test.ts", "tests/vitest/db/queryFingerprintRegistry.test.ts", "tests/vitest/db/databaseApplicationIdentity.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "database-lifecycle-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551RuntimeEntrypoints.test.ts", "tests/perf/database-pool-telemetry.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551RuntimeEntrypoints.test.ts", "tests/perf/database-pool-telemetry.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "search-vector-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/db/searchVectorDefinitions.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/db/searchVectorDefinitions.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "schema-migration-drift-verification",
+      "lane": "bun-test",
+      "argv": ["bun", "test", "tests/unit/db/schemaTableFacade.test.ts", "tests/unit/db/schemaColumnTypeContracts.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/unit/db/schemaTableFacade.test.ts", "tests/unit/db/schemaColumnTypeContracts.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "migration-and-plan-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "online-indexes-rollout-forward-first",
+      "lane": "migration",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "rollout-forward", "--receipt", ".tmp/task551-migration-receipt.json", "--admission-mode", "offline-single"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "online-indexes-rollout-forward-second",
+      "lane": "migration",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "rollout-forward", "--receipt", ".tmp/task551-migration-receipt.json", "--admission-mode", "offline-single"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "online-indexes-status",
+      "lane": "migration",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "status", "--receipt", ".tmp/task551-migration-receipt.json"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "retention-policy-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/maintenance/retentionPolicy.test.ts", "tests/vitest/search/searchHistoryContract.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/maintenance/retentionPolicy.test.ts", "tests/vitest/search/searchHistoryContract.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "retention-db-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/access/accessLogService.test.ts", "tests/unit/audit/auditService.test.ts", "tests/unit/search/searchHistoryService.test.ts", "tests/integration/server/task551ActionExecutionStore.test.ts", "tests/integration/analytics/trafficRepository.test.ts", "tests/integration/analytics/trafficRetention.test.ts", "tests/integration/server/task551AppendHeavyRetention.test.ts", "tests/perf/database-retention-batches.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/unit/access/accessLogService.test.ts", "tests/unit/audit/auditService.test.ts", "tests/unit/search/searchHistoryService.test.ts", "tests/integration/server/task551ActionExecutionStore.test.ts", "tests/integration/analytics/trafficRepository.test.ts", "tests/integration/analytics/trafficRetention.test.ts", "tests/integration/server/task551AppendHeavyRetention.test.ts", "tests/perf/database-retention-batches.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "revision-contract-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/database/revisionAllocation.test.ts", "tests/vitest/maintenance/partitionReadinessService.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/database/revisionAllocation.test.ts", "tests/vitest/maintenance/partitionReadinessService.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "revision-retention-db-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/pages/revisionService.test.ts", "tests/unit/widgets/widgetTemplateRevisionService.test.ts", "tests/unit/content/detailPageRevisionService.test.ts", "tests/integration/server/task551RevisionConcurrency.test.ts", "tests/integration/server/task551RevisionRetention.test.ts", "tests/perf/database-revision-budgets.test.ts", "tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/unit/pages/revisionService.test.ts", "tests/unit/widgets/widgetTemplateRevisionService.test.ts", "tests/unit/content/detailPageRevisionService.test.ts", "tests/integration/server/task551RevisionConcurrency.test.ts", "tests/integration/server/task551RevisionRetention.test.ts", "tests/perf/database-revision-budgets.test.ts", "tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "partition-readiness-check",
+      "lane": "cli",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-partition-readiness.ts", "--check"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "cache-performance-gate",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "--timeout", "120000", "tests/perf/task551DatabaseCachePerformanceGate.test.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/perf/task551DatabaseCachePerformanceGate.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "cache-fault-matrix",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "--timeout", "120000", "tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "cache-security-gate",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "--timeout", "120000", "tests/security/task551ServerCacheSecurityGate.test.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/security/task551ServerCacheSecurityGate.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "two-process-redis-smoke-test",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "--timeout", "180000", "tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "redis-smoke-script",
+      "lane": "runtime-smoke",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task551-redis-smoke.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "admin-list-ui-smoke",
+      "lane": "runtime-smoke",
+      "argv": ["playwright-cli", "-s=wf55103l02"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "cache-contract-vitest",
+      "lane": "vitest",
+      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "full-bun-test",
+      "lane": "aggregate",
+      "argv": ["bun", "--env-file=/dev/null", "run", "test"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coverage",
+      "lane": "aggregate",
+      "argv": ["bun", "--env-file=/dev/null", "run", "test:coverage"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "precommit-check",
+      "lane": "tooling",
+      "argv": ["bun", "run", "precommit:check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-gates",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "strict-security-scan",
+      "lane": "tooling",
+      "argv": ["bun", "run", "scan:security:strict"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-01-L01:final"],
+      "commandIds": ["core-lint-types", "core-lint", "final-query-inventory", "pg-stat-interval-test", "database-contract-vitest", "database-lifecycle-tests", "search-vector-vitest", "schema-migration-drift-verification", "migration-and-plan-tests", "online-indexes-rollout-forward-first", "online-indexes-rollout-forward-second", "online-indexes-status", "retention-policy-vitest", "retention-db-tests", "revision-contract-vitest", "revision-retention-db-tests", "partition-readiness-check", "cache-performance-gate", "cache-fault-matrix", "cache-security-gate", "two-process-redis-smoke-test", "redis-smoke-script", "admin-list-ui-smoke", "cache-contract-vitest", "full-bun-test", "coverage", "precommit-check", "coderso-gates", "strict-security-scan", "diff-check"]
+    }
+  ]
+}
+```

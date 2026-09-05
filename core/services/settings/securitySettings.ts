@@ -133,7 +133,10 @@ const SECURITY_SETTINGS_KEY = "security.settings";
 let dbPromise: Promise<typeof import("../../db/client").db> | null = null;
 
 const getDb = async () => {
-  dbPromise ??= import("../../db/client").then((module) => module.db);
+  dbPromise ??= (async () => {
+    const { db } = await import("../../db/client");
+    return db;
+  })();
   return dbPromise;
 };
 

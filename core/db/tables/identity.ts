@@ -9,6 +9,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -19,19 +20,46 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import {
+  normalizeTask551TrigramSql,
+  SEARCH_VECTOR_SQL,
+  TRIGRAM_SOURCE_SQL,
+  tsvector,
+} from "../searchVectorDefinitions";
 
-export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique(),
-  emailHash: text("email_hash"),
-  emailEncrypted: jsonb("email_encrypted"),
-  passwordHash: text("password_hash").notNull(),
-  name: text("name"),
-  status: text("status").notNull().default("active"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  lastLoginAt: timestamp("last_login_at"),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull().unique(),
+    emailHash: text("email_hash"),
+    emailEncrypted: jsonb("email_encrypted"),
+    passwordHash: text("password_hash").notNull(),
+    name: text("name"),
+    status: text("status").notNull().default("active"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    lastLoginAt: timestamp("last_login_at"),
+    // TASK-551-05-L01: canonical local search vectors. Stored generated, so the
+    // column is maintained by the database and every reader sees the same
+    // tsvector the GIN index holds. The trigram source is `name` only — neither
+    // email nor email_hash may enter it.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(sql.raw(SEARCH_VECTOR_SQL.users)),
+    searchTrigramText: text("search_trigram_text").generatedAlwaysAs(
+      normalizeTask551TrigramSql(sql.raw(TRIGRAM_SOURCE_SQL.users))
+    ),
+  },
+  (t) => ({
+    usersSearchVectorIdx: index("users_search_vector_idx").using("gin", t.searchVector),
+    usersSearchTrigramIdx: index("users_search_trigram_idx").using(
+      "gin",
+      t.searchTrigramText.op("gin_trgm_ops")
+    ),
+    // TASK-551-05-L01 evidence-backed list traversal: the admin list sorts by
+    // recency and paginates on the stable (created_at DESC, id DESC) keyset.
+    usersListCreatedIdIdx: index("users_list_created_id_idx").on(desc(t.createdAt), desc(t.id)),
+  })
+);
 
 export const roles = pgTable("roles", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -53,6 +81,9 @@ export const userRoles = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.roleId] }),
+    // TASK-551-05-L01: serves the role→members traversal without scanning the
+    // user side of the pivot.
+    roleUserIdx: index("user_roles_role_user_idx").on(t.roleId, t.userId),
   })
 );
 
@@ -75,6 +106,15 @@ export const sessions = pgTable(
     tokenHashIdx: uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
     expiresAtIdx: index("sessions_expires_at_idx").on(t.expiresAt),
     csrfTokenHashIdx: index("sessions_csrf_token_hash_idx").on(t.csrfTokenHash),
+    // TASK-551-05-L01 session lifecycle group: the per-user lookup and the two
+    // retention sweeps (live-expiry and revoked), each predicate-bounded.
+    sessionsUserIdIdx: index("sessions_user_id_idx").on(t.userId),
+    sessionsExpiredRetentionIdx: index("sessions_expired_retention_idx")
+      .on(t.expiresAt, t.id)
+      .where(sql`revoked_at IS NULL`),
+    sessionsRevokedRetentionIdx: index("sessions_revoked_retention_idx")
+      .on(t.revokedAt, t.id)
+      .where(sql`revoked_at IS NOT NULL`),
   })
 );
 
@@ -112,6 +152,8 @@ export const passwordResets = pgTable(
   (t) => ({
     tokenHashIdx: uniqueIndex("password_resets_token_hash_idx").on(t.tokenHash),
     expiresAtIdx: index("password_resets_expires_at_idx").on(t.expiresAt),
+    // TASK-551-05-L01 retention scan.
+    passwordResetsRetentionIdx: index("password_resets_retention_idx").on(t.expiresAt, t.id),
   })
 );
 

@@ -13,10 +13,12 @@ import { enforceIpAllowlist } from "./middleware/ipAllowlist";
 import { enforceHostPolicy } from "./middleware/hostPolicy";
 import {
   createRouter,
+  createRouteResponseHeaderBag,
   matchRoute,
   normalizePath,
   type RouteContext,
   type RouteDefinition,
+  type RouteResponseHeaderBag,
 } from "./router";
 import { registerAllRoutes } from "./routes";
 import { validate } from "./validation/schemaValidator";
@@ -140,6 +142,19 @@ const jsonResponse = (payload: unknown, init?: ResponseInit) => {
     status: init?.status ?? 200,
     headers,
   });
+};
+
+/**
+ * Merge request-local route response-header bag entries set-if-absent. Bag
+ * values can never replace an already-installed header (security headers,
+ * request-ID regardless of its configured name, CORS, Content-Type,
+ * Set-Cookie).
+ */
+const applyRouteResponseHeaderBag = (headers: Headers, bag: RouteResponseHeaderBag | undefined) => {
+  if (!bag) return;
+  for (const [name, value] of bag.entries()) {
+    if (!headers.has(name)) headers.set(name, value);
+  }
 };
 
 const errorResponse = (error: unknown) => {
@@ -331,7 +346,33 @@ const handleAdmin = async (req: Request, adminPath: string, devUrl?: string) => 
   return new Response(indexHtml, { headers });
 };
 
-const handleApi = async (req: Request, apiPrefix: string) => {
+/**
+ * Dispatch one api request through the real pipeline (request-ID/security/CORS
+ * assembly, IP allowlist, form-write lane, body parsing, context creation,
+ * handler loop and centralized error mapping) over the given route table.
+ * Exported so integration tests can drive synthetic handlers through this
+ * exact path — a regression here must fail those tests. Defaults to the module
+ * router so the production fetch call behaves identically.
+ *
+ * Host policy (`enforceHostPolicy`) is applied exclusively in `startHttpServer`'s
+ * fetch wrapper, and an injected route table skips it by construction; injected
+ * tables are therefore test-only and any future non-`startHttpServer` consumer
+ * must re-apply that policy itself. Production callers are refused so coverage
+ * cannot silently regress through this seam.
+ */
+export const dispatchApiRequest = async (
+  req: Request,
+  apiPrefix: string,
+  routes: readonly RouteDefinition[] = router.routes
+): Promise<Response> => {
+  if (routes !== router.routes && process.env.NODE_ENV === "production") {
+    throw new ApiError(
+      "api_route_injection_forbidden_in_production",
+      "Injected route tables are test-only; serve routes through startHttpServer.",
+      500
+    );
+  }
+
   const url = new URL(req.url);
   const pathname = normalizePath(url.pathname).replace(apiPrefix, "") || "/";
   const security = await getSecuritySettings();
@@ -395,9 +436,14 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     return response;
   }
 
+  // Request-local response-header bag. Created after the exact route match and
+  // before body parsing; undefined before then keeps every pre-route outcome
+  // (OPTIONS, IP-allowlist errors, form-write lane, plain-text 404) bag-free.
+  let responseHeaderBag: RouteResponseHeaderBag | undefined;
   const parserErrorResponse = (error: unknown) => {
     const response = errorResponse(normalizeParserError(error));
     responseHeaders.forEach((value, key) => response.headers.append(key, value));
+    applyRouteResponseHeaderBag(response.headers, responseHeaderBag);
     void recordAccessLog({
       method: req.method,
       path: url.pathname,
@@ -411,10 +457,12 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     return response;
   };
 
-  for (const route of router.routes) {
+  for (const route of routes) {
     if (route.method !== req.method) continue;
     const match = matchRoute(route.path, pathname);
     if (!match.matched) continue;
+
+    responseHeaderBag = createRouteResponseHeaderBag();
 
     const headersObj: Record<string, string> = {};
     req.headers.forEach((value, key) => {
@@ -467,6 +515,9 @@ const handleApi = async (req: Request, apiPrefix: string) => {
           })
         );
       },
+      setResponseHeader: (name, value) => {
+        responseHeaderBag?.set(name, value);
+      },
     };
 
     await attachUserFromSession(ctx);
@@ -491,6 +542,7 @@ const handleApi = async (req: Request, apiPrefix: string) => {
         const output = await handler(ctx);
         if (output !== undefined) result = output;
       }
+      applyRouteResponseHeaderBag(responseHeaders, responseHeaderBag);
       const response = jsonResponse(result ?? { ok: true }, { headers: responseHeaders });
       void recordAccessLog({
         method: req.method,
@@ -506,6 +558,7 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     } catch (error) {
       const response = errorResponse(error);
       responseHeaders.forEach((value, key) => response.headers.append(key, value));
+      applyRouteResponseHeaderBag(response.headers, responseHeaderBag);
       void recordAccessLog({
         method: req.method,
         path: url.pathname,
@@ -532,6 +585,9 @@ const handleApi = async (req: Request, apiPrefix: string) => {
   });
   return response;
 };
+
+const handleApi = (req: Request, apiPrefix: string): Promise<Response> =>
+  dispatchApiRequest(req, apiPrefix);
 
 export function startHttpServer(options: HttpServerOptions = {}) {
   const port = options.port ?? Number(process.env.PORT ?? 3000);

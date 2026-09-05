@@ -5,6 +5,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -16,6 +17,7 @@ import {
   primaryKey,
   uniqueIndex,
   index,
+  check,
 } from "drizzle-orm/pg-core";
 import { formSubmissions } from "./forms";
 
@@ -38,6 +40,8 @@ export const bookingResources = pgTable(
     typeIdx: index("booking_resources_type_idx").on(t.type),
     statusIdx: index("booking_resources_status_idx").on(t.status),
     updatedAtIdx: index("booking_resources_updated_at_idx").on(t.updatedAt),
+    // TASK-551-05-L01: the alphabetical picker order, stable on id.
+    bookingResourcesNameIdIdx: index("booking_resources_name_id_idx").on(t.name, t.id),
   })
 );
 
@@ -62,6 +66,8 @@ export const bookingServices = pgTable(
     slugIdx: uniqueIndex("booking_services_slug_idx").on(t.slug),
     statusIdx: index("booking_services_status_idx").on(t.status),
     updatedAtIdx: index("booking_services_updated_at_idx").on(t.updatedAt),
+    // TASK-551-05-L01: the alphabetical picker order, stable on id.
+    bookingServicesNameIdIdx: index("booking_services_name_id_idx").on(t.name, t.id),
   })
 );
 
@@ -106,6 +112,14 @@ export const bookingSchedules = pgTable(
       t.startMinute,
       t.endMinute
     ),
+    // TASK-551-05-L01: the weekly availability grid, ordered exactly as the
+    // schedule builder reads it.
+    bookingSchedulesResourceOrderIdx: index("booking_schedules_resource_order_idx").on(
+      t.resourceId,
+      t.dayOfWeek,
+      t.startMinute,
+      t.id
+    ),
   })
 );
 
@@ -128,6 +142,16 @@ export const bookingBlackouts = pgTable(
       t.endsAt
     ),
     startsIdx: index("booking_blackouts_starts_idx").on(t.startsAt),
+    // TASK-551-05-L01: the blackout window timeline and its per-resource view.
+    bookingBlackoutsStartsIdIdx: index("booking_blackouts_starts_id_idx").on(
+      desc(t.startsAt),
+      desc(t.id)
+    ),
+    bookingBlackoutsResourceStartsIdIdx: index("booking_blackouts_resource_starts_id_idx").on(
+      t.resourceId,
+      desc(t.startsAt),
+      desc(t.id)
+    ),
   })
 );
 
@@ -162,5 +186,29 @@ export const bookings = pgTable(
     statusIdx: index("bookings_status_idx").on(t.status),
     startsIdx: index("bookings_starts_idx").on(t.startsAt),
     resourceWindowIdx: index("bookings_resource_window_idx").on(t.resourceId, t.startsAt, t.endsAt),
+    // TASK-551-05-L01: the calendar timeline and its resource/service/status
+    // views, all paginating on the stable (starts_at DESC, id DESC) keyset.
+    bookingsListStartsIdIdx: index("bookings_list_starts_id_idx").on(desc(t.startsAt), desc(t.id)),
+    bookingsResourceListStartsIdIdx: index("bookings_resource_list_starts_id_idx").on(
+      t.resourceId,
+      desc(t.startsAt),
+      desc(t.id)
+    ),
+    bookingsServiceListStartsIdIdx: index("bookings_service_list_starts_id_idx").on(
+      t.serviceId,
+      desc(t.startsAt),
+      desc(t.id)
+    ),
+    bookingsStatusListStartsIdIdx: index("bookings_status_list_starts_id_idx").on(
+      t.status,
+      desc(t.startsAt),
+      desc(t.id)
+    ),
+    // A booking window can never be empty or reversed. The overlapping-window
+    // exclusion for live bookings (`bookings_active_resource_window_excl`) is
+    // declared in `core/db/bookingReservationExclusion.ts` and appended by the
+    // migration post-processing; the Drizzle pg-core DSL has no GiST exclusion
+    // builder, so it has no representation here.
+    validWindowChk: check("bookings_valid_window_chk", sql`${t.endsAt} > ${t.startsAt}`),
   })
 );

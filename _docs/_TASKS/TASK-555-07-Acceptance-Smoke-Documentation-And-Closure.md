@@ -87,7 +87,7 @@ the terminal TASK-548 and active shared-document handoffs and is the final pre-s
 documentation writer. L02 waits for every active shared smoke owner, preserves all
 suites, and never overlaps another registry writer. L03 alone writes 1269 and closure
 indexes after fresh reads. TASK-414/489/547/551/554 files and changelogs
-1260/1263/1266/1267/1268 are forbidden.
+1260/1310/1266/1267/1268 are forbidden.
 TASK-545/TASK-548 task/source owners are terminal read-only inputs. The only evidence
 root with closure authority is the final
 `_docs/_workflows/_smoke/evidence/task-555/wf555final/` session; old ignored

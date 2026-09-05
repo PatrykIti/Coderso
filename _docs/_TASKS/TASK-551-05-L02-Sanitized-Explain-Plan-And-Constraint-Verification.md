@@ -6,18 +6,21 @@
 **Priority:** Critical
 **Category:** Database / Performance / Test Integrity
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-05-L01
+**Dependencies:** TASK-551-01-L02 (read-only fixture target, canonical static
+registry/digests, and reviewed freeze receipt); TASK-551-05-L01; TASK-551-05-L03
+(parent land order L01 → L03 → L02; this leaf verifies the L03-defined authority
+surfaces after L01 lands them)
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
 ## Overview
 
-Create reproducible small/large EXPLAIN evidence and direct constraint race
-tests for every L01 index/constraint. Evidence is sanitized before persistence,
-uses synthetic fixtures, compares plans and rows rather than brittle total-cost
-strings, and fails when a promised hot query regresses.
+Create reproducible small/large EXPLAIN evidence for every L01 index/constraint.
+It consumes, but never creates or reruns, L01's redacted concurrency receipt;
+evidence is sanitized before persistence, uses synthetic fixtures, compares plans
+and rows rather than brittle total-cost strings, and fails on a hot-query regression.
 
 ## Sub-Tasks
 
@@ -28,8 +31,26 @@ None; this is an executable leaf.
 **Allowlist:** `scripts/task-551-explain-plans.ts`,
 `tests/perf/fixtures/task551QueryPlanContracts.ts`,
 `tests/perf/database-explain-plans.test.ts`, and
-`tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`, and
-`tests/integration/server/task551ConcurrencyConstraints.test.ts` only.
+`tests/perf/task489-solution-kit-run-predecessor-plans.test.ts` only.
+
+**Sole generated output:** `.tmp/task-551/task489-predecessor-v1.json` only.
+It is ephemeral, local generated evidence, not a source file, shared contract,
+or workflow sidecar. `tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`
+is its sole writer: it may create exactly one canonical file at that fixed path,
+rejects a duplicate writer/file, and never writes another output path.
+Only after all four L11-dispatched 05-L02 child results pass its transient
+all-four post-cleanup-target-proof gate may TASK-551-11 read that temporary file:
+it validates the original bytes through the L02 parser, hashes those exact bytes,
+and promotes the unchanged bytes to
+`_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`.
+L05 never writes durable evidence, and L10/TASK-489 never read the temporary
+path; they consume only L11's durable bytes/hash through the same L02 parser.
+
+**Handoff data flow:** L05 writes and verifies the one temporary artifact → four
+05-L02 child results carry their post-cleanup proofs → L11's transient all-four
+gate immediately precedes its temporary read/parser/hash/promotion → L11 writes identical bytes to the one
+durable audit-evidence path → L10/TASK-489 consume only that durable bytes/hash
+handoff through the L02 parser.
 
 **Forbidden:** all production/schema/migration files; L01 tests; TASK-493,
 TASK-511, TASK-517, TASK-518 paths; cache, task/changelog/workflow files.
@@ -63,24 +84,35 @@ type PlanScaleReceipt = StrictReadonly<{
   large: NumericPlanReceipt;
 }>;
 
-type Task489CompanionStatementCase = StrictReadonly<{
-  statement: Task489StaticPlanStatement;
-  p95MsMax: StrictReadonly<{ small: number; large: number }>;
-}>;
+// This is the test-side import from the sole L02 owner. L05 declares no
+// companion receipt/map shape, case tuple, fixture-count literal, serializer,
+// or parser of its own.
+import {
+  TASK489_SOLUTION_KIT_RUN_PREDECESSOR_FIXTURE_COUNTS,
+  TASK489_SOLUTION_KIT_RUN_PREDECESSOR_IDS,
+  TASK489_SOLUTION_KIT_RUN_PREDECESSOR_LOGICAL_CASES,
+  TASK489_SOLUTION_KIT_RUN_PREDECESSOR_RECEIPT_SCHEMA,
+  TASK489_SOLUTION_KIT_RUN_PREDECESSOR_STATEMENT_IDS,
+  createTask489PredecessorReceiptV1,
+  parseTask489PredecessorReceiptV1,
+  serializeTask489PredecessorReceiptV1,
+  type Task489PredecessorFixtureCountsV1,
+  type Task489PredecessorLogicalCaseV1,
+  type Task489PredecessorReceiptV1,
+  type Task489PredecessorStatementReceiptV1,
+} from "./fixtures/task489SolutionKitRunPredecessor";
 
-type Task489CompanionLogicalCase = StrictReadonly<{
-  id: Task489CompanionId;
-  caseId: string;
-  statements: readonly [Task489CompanionStatementCase]
-    | readonly [Task489CompanionStatementCase, Task489CompanionStatementCase];
-  combinedP95MsMax?: StrictReadonly<{ small: number; large: number }>;
-}>;
-
-type Task489CompanionReceipt = StrictReadonly<{
-  ids: readonly Task489CompanionId[];       // exact five
-  cases: readonly Task489CompanionLogicalCase[]; // exact fourteen
-  statementReceipts: Readonly<Record<string, PlanScaleReceipt>>; // exact fifteen
-}>;
+// From tests/perf/*, this is the sole import-safe target guard. L05 imports no
+// runner, wrapper, local target parser/proof, dotenv helper, or generic URL
+// fallback.
+import {
+  assertTask551FixtureTarget,
+  assertTask551FixtureTargetChildKeys,
+  assertTask551FixtureTargetPostCleanup,
+  parseTask551FixtureTarget,
+  type Task551FixtureTarget,
+  type Task551FixtureTargetClient,
+} from "../../scripts/task551DatabaseBaseline/fixtureTarget";
 
 type TrigramSelectionReceipt = StrictReadonly<Record<
   "pages" | "entries" | "posts" | "media" | "users",
@@ -91,6 +123,11 @@ type TrigramSelectionReceipt = StrictReadonly<Record<
 const EXPECTED_TASK551_CATALOG = strictReadonly({
   // Copy the complete literal L01 mandatory index/constraint/check names and
   // definitions; append only the selected (non-null) trigram column/index pairs.
+  // Preserved revision members (content_revisions_entry_version_idx,
+  // post_revisions_post_version_idx,
+  // detail_page_revisions_detail_page_version_idx) are asserted as committed
+  // pre-task objects, never manifest builds; only the two new page/widget
+  // revision unique indexes are built by the revision-integrity group.
   indexes: EXACT_L01_INDEX_ROWS,
   constraints: EXACT_L01_CONSTRAINT_ROWS,
   outboxColumns: EXACT_L01_OUTBOX_COLUMNS,
@@ -143,10 +180,180 @@ async function captureSanitizedPlan(contract: PlanContract, db: Db): Promise<Saf
   return sanitizePlan(raw, { removeSql: true, removeBinds: true, allowCatalogNames: true });
 }
 
-async function raceRevisionInsert(parentId: string, attempts: number): Promise<RaceOutcome> {
-  // Unique synthetic parent, synchronized starts, allSettled, scoped cleanup.
+function requireL01ConcurrencyReceipt(receipt: Task551L05ConcurrencyReceiptV1): void {
+  // Strict redacted receipt only: five revision families, booking, transferred authority
+  // probe, counts/booleans/digest; no fixture/client/target/raw rows or new 05-L02 context.
+}
+
+async function withTask489PredecessorFixture<T>(
+  profile: "small" | "large",
+  fixtureTargetChildSource: Readonly<Record<string, unknown>>,
+  targetProofClient: Task551FixtureTargetClient,
+  run: (fixture: Task489DynamicFixture) => Promise<T>,
+): Promise<T> {
+  // Each exact L11 05-L02 broker context consumes once before source access and
+  // creates only this fresh direct three-key fixtureValues submap. Its logical
+  // argv begins exactly ["bun", "--env-file=/dev/null", …]; a separate exact-own
+  // childEnv adds only closed OS keys and never inherits keys. This function never
+  // receives a whole child/parent environment, reads process.env, or derives keys.
+  const directChildValues = assertTask551FixtureTargetChildKeys(
+    fixtureTargetChildSource,
+  );
+  const target = parseTask551FixtureTarget(directChildValues);
+  // The imported preflight uses only this injected read-only client and rolls
+  // its transaction back before L05 opens a seed, plan, inspection, VACUUM, or
+  // cleanup connection. L05 has no runner or CLI/environment authority.
+  await assertTask551FixtureTarget(target, targetProofClient);
+  // Read the sole L02 static registry, canonical template/digests, and reviewed
+  // freeze receipt. Reject a stale/unreviewed/digest-mismatched input; never
+  // fork its registry, freeze, budgets, or target/sentinel provisioning.
+  const fixture = buildMinimalTask489DynamicFixture(profile, target);
+  let result!: T;
+  let completed = false;
+  let primaryFailure: Task551SafeFixtureFailure | undefined;
+  let teardownFailures: readonly Task551SafeFixtureFailure[] = [];
+  try {
+    try {
+      await seedTask489DynamicClosure(fixture);
+      await assertTask489DynamicClosure(fixture);
+      result = await run(fixture);
+      completed = true;
+    } catch (error) {
+      primaryFailure = toSafeTask551FixtureFailure(error);
+    }
+  } finally {
+    teardownFailures = await cleanupAndReproveTask489FixtureTarget(
+      fixture,
+      target,
+      targetProofClient,
+    );
+  }
+  if (primaryFailure || teardownFailures.length > 0) {
+    throw createRedactedTask551FixtureFailure({ primaryFailure, teardownFailures });
+  }
+  assertStrictEqual(completed, true);
+  return result;
+}
+
+async function cleanupAndReproveTask489FixtureTarget(
+  fixture: Task489DynamicFixture,
+  target: Task551FixtureTarget,
+  targetProofClient: Task551FixtureTargetClient,
+): Promise<readonly Task551SafeFixtureFailure[]> {
+  const failures: Task551SafeFixtureFailure[] = [];
+  try {
+    try {
+      await cleanupTask489DynamicClosureChildFirst(fixture);
+    } catch (error) {
+      failures.push(toSafeTask551FixtureFailure(error));
+    } finally {
+      // This zero-residue assertion runs even if child-first cleanup failed.
+      try {
+        await assertTask489DynamicClosureHasZeroResidue(fixture);
+      } catch (error) {
+        failures.push(toSafeTask551FixtureFailure(error));
+      }
+    }
+  } finally {
+    // This outer nested finally runs after every success, seed/assertion/run
+    // failure, cleanup failure, or zero-residue failure. It performs a new
+    // rolled-back proof against the already bound L02 fixture target—never a generic
+    // URL—of current_database equality, exactly one marker, and exact sentinel
+    // bytes. No target name, marker, sentinel, or raw database error is returned.
+    try {
+      await assertTask551FixtureTargetPostCleanup(target, targetProofClient);
+    } catch (error) {
+      failures.push(toSafeTask551FixtureFailure(error));
+    }
+  }
+  return failures;
+}
+
+async function writeCanonicalTask489PredecessorArtifact(
+  statementReceipts: readonly Task489PredecessorStatementReceiptV1[],
+): Promise<Readonly<{ bytes: Uint8Array; receipt: Task489PredecessorReceiptV1 }>> {
+  // Test setup may remove only this fixed, owned temporary path before dynamic
+  // work begins, rejects a symlink/second matching artifact, and never accepts
+  // a prior file as a receipt input. Both profiles and all cases must finish
+  // first; the success path below is its only write.
+  await prepareOnlyOwnedTask489PredecessorArtifactPath({
+    path: ".tmp/task-551/task489-predecessor-v1.json",
+  });
+  // The imported L02 factory is the only place that constructs the top-level
+  // array-shaped receipt. It rejects unknown fields and requires the exact
+  // five companion IDs, fourteen ordered logical cases, fifteen ordered
+  // statement entries, and [small, large] profile-result tuple per statement.
+  const receipt = createTask489PredecessorReceiptV1(statementReceipts);
+  const fixtureCounts: Task489PredecessorFixtureCountsV1 =
+    TASK489_SOLUTION_KIT_RUN_PREDECESSOR_FIXTURE_COUNTS;
+  const logicalCases: readonly Task489PredecessorLogicalCaseV1[] =
+    TASK489_SOLUTION_KIT_RUN_PREDECESSOR_LOGICAL_CASES;
+  assertStrictEqual(receipt.schema, TASK489_SOLUTION_KIT_RUN_PREDECESSOR_RECEIPT_SCHEMA);
+  assertDeepStrictEqual(receipt.fixtureCounts, fixtureCounts);
+  assertTupleBytesEqual(receipt.companionIds,
+    TASK489_SOLUTION_KIT_RUN_PREDECESSOR_IDS.companionIds);
+  assertTupleBytesEqual(receipt.logicalCases, logicalCases);
+  assertExactStatementReceiptOrder(receipt.statementReceipts,
+    TASK489_SOLUTION_KIT_RUN_PREDECESSOR_STATEMENT_IDS);
+  assertExactTask489ReceiptCardinality(receipt, {
+    companionIds: 5,
+    logicalCases: 14,
+    statementReceipts: 15,
+    profileResults: 30,
+    fixtureCounts,
+  });
+
+  // L02's serializer emits the single RFC 8785 canonical UTF-8 JSON document
+  // followed by one LF. L05 never JSON.stringify's this data, creates a keyed
+  // statement map, or substitutes a local schema/fixture-count representation.
+  const bytes = serializeTask489PredecessorReceiptV1(receipt);
+  const parsed = parseTask489PredecessorReceiptV1(bytes);
+  assertBytesEqual(serializeTask489PredecessorReceiptV1(parsed), bytes);
+  await writeOnlyTask489PredecessorArtifactOnce({
+    path: ".tmp/task-551/task489-predecessor-v1.json",
+    bytes,
+    requireAbsentBeforeWrite: true,
+    requireSingleFileAfterWrite: true,
+  });
+  assertBytesEqual(await readFile(".tmp/task-551/task489-predecessor-v1.json"), bytes);
+  // This in-phase readback completes before L05 success. After the successful
+  // all-four transient post-cleanup-proof gate, only L11 may re-read the
+  // temporary file, parse/hash its original bytes, and promote them unchanged.
+  return { bytes, receipt: parsed };
 }
 ```
+
+The post-cleanup proof is a required success condition, not a best-effort
+teardown diagnostic. It runs in the nested `finally` after both successful and
+failing dynamic work, carries only the already-bound target in private memory,
+and proves in a rolled-back transaction that `current_database()` is the bound
+fixture database, the bound marker count is exactly one, and its marker/sentinel
+bytes exactly equal the bound sentinel. Cleanup/zero-residue/post-proof
+failures are collected as fixed, machine-readable redacted failure codes and
+propagated; none may be swallowed by an earlier seed/assertion/run failure.
+
+Each of the four exact 05-L02 child results is L11's strict redacted
+`Task55105L02ChildOutcomeV1`: expected table context/command, passed
+`Task551CommandReceiptV1` (digest/context/bounded result/discovery only), and
+`postCleanupTargetProof: { rolledBack:true, currentDatabaseMatched:true,
+exactSingleMarkerMatched:true, boundSentinelByteMatched:true }`. Immediately
+before temporary read/parser/hash/promotion, L11 validates all four table-order
+outcomes and rejects a missing, false, unknown, malformed, duplicate, or extra outcome with
+`task551_05_l02_post_cleanup_target_proof_invalid`. It then drops proofs/results:
+they are not durable evidence, an eleven-row descriptor/value, row 10/11 field,
+projection, log, or L10/TASK-489 input; no target/marker/sentinel/hash/URL/env/raw error leaks.
+
+For all L05 fixture operations, the only target seam is the import-safe L02
+module `scripts/task551DatabaseBaseline/fixtureTarget.ts`. Each direct three-key
+map comes only from that operation's current exact L11 `05-l02` broker context,
+not an L03/L02 map, source, environment, or launch. The dynamic test passes it to
+`assertTask551FixtureTargetChildKeys` and `parseTask551FixtureTarget`, then
+passes its own injected `Task551FixtureTargetClient` to
+`assertTask551FixtureTarget` before mutation and
+`assertTask551FixtureTargetPostCleanup` after cleanup. It must not import
+`scripts/task-551-database-baseline.ts`, a runner wrapper, `db/client`, a
+driver/environment/dotenv adapter, or a second target parser/proof/type; it has
+no generic URL, parent-environment, or fallback path.
 
 `StaticPlanStatement` is a closed discriminated union exported by the fixture
 registry; CLI input selects only its stable ID and cannot supply SQL text. The
@@ -167,40 +374,98 @@ means the declared two-column strict cursor predicate. Every page uses
 returns one row; facets omit row filters and cap each arm at 51.
 
 The TASK-489 predecessor handoff is an explicit companion receipt outside those
-closed counts. This leaf imports read-only from TASK-551-01-L02's solely owned
-`tests/perf/fixtures/task489SolutionKitRunPredecessor.ts`: types
+closed counts. TASK-551-01-L02 is the sole owner of the read-only static registry
+at `tests/perf/fixtures/task489SolutionKitRunPredecessor.ts`: types
 `Task489CompanionId` and `Task489StaticPlanStatement`, plus
 `TASK489_SOLUTION_KIT_RUN_PREDECESSOR_IDS` and
-`TASK489_SOLUTION_KIT_RUN_PREDECESSOR_CASES`. It executes the registry's exact five static IDs,
-fourteen logical cases, fifteen statement cases, and thirty numeric small/large
-statement receipts at 10,000 and 1,000,000 runs. A logical case may be a fixed
-two-statement bundle, but every statement gets its own sanitized plan digest and
-finite budget:
+`TASK489_SOLUTION_KIT_RUN_PREDECESSOR_CASES`. It also owns the complete
+array-only receipt model: exact schema constant
+`TASK489_SOLUTION_KIT_RUN_PREDECESSOR_RECEIPT_SCHEMA`, fixture-count/case/ID
+constants, `Task489PredecessorFixtureCountsV1`,
+`Task489PredecessorLogicalCaseV1`, `Task489PredecessorStatementReceiptV1`, and
+`Task489PredecessorReceiptV1`, plus its `create`, `serialize`, and `parse`
+helpers. L05 imports those exports read-only and must not define a parallel
+receipt type, keyed statement-result record/map, companion tuple, local
+fixture-count literal, parser, serializer, or schema string. Before
+TASK-551-05-L01/L03, L02 tests only the arithmetic plus parameterized canonical
+template/digest registry; it neither seeds nor executes normalized owner,
+template-evidence, or rollback-progress rows. This leaf may begin its later
+dynamic phase only after L01's single migration has landed the L03-defined
+authority surfaces and their catalog contract passes.
+
+This leaf consumes the L02 canonical template/digest and reviewed freeze receipt
+read-only; it does not rebaseline, alter, or create a second static registry,
+budget/freeze receipt, target guard, sentinel provisioner, or workflow evidence.
+It executes the registry's exact five IDs, fourteen logical cases, fifteen
+statement cases, and thirty numeric small/large statement receipts. Every
+receipt and assertion records all three distinct run cardinalities: bulk history
+is exactly 10,000 small / 1,000,000 large; bounded support is exactly 109,890
+runs in each profile; the full dynamic scenario is therefore exactly 119,890
+small / 1,109,890 large runs. A logical case may be a fixed two-statement
+bundle, but every statement gets its own sanitized plan digest and finite budget:
 
 | Companion ID | Bound and required large-plan authority |
 |---|---|
 | `task489-runs-all-keyset` | cases `default` and `relation-heavy-101`; `created_at DESC,id DESC LIMIT <=101`; `solution_kit_runs_history_idx`; default visits <=404 base rows; relation-heavy evaluates exactly 101 returned candidates, each with up to 513 newer applies and indexed rollback-relation probes, bounded by 404 base + 51,813 newer-apply + 51,813 point-probe rows; p95 <=75/200 ms default and <=250/750 ms relation-heavy |
 | `task489-runs-package-keyset` | cases `default` and `relation-heavy-101`; exact `kit_id` plus the same keyset/bound; `solution_kit_runs_anchor_idx`; the same default/relation-heavy row and p95 bounds as the all-history ID |
 | `task489-effective-supersession` | eight cases `newer-0`, `newer-1`, `newer-511`, `newer-512`, `newer-513-all-rolled`, and `newer-513-unrolled-first|middle|last`; one source, at most 513 newer successful applies plus 513 indexed relation probes and one `active|clear|overflow` row; both successful relation indexes; p95 <=75/200 ms |
-| `task489-active-starter-owner` | normalized package/actor, `released_at IS NULL`, `LIMIT 2`; active-owner partial index; <=2 rows; p95 <=25 ms at both scales |
+| `task489-active-starter-owner` | normalized package/actor predicate, `released_at IS NULL`, `LIMIT 2`; active-owner partial index; <=2 rows; safe projection is only `package_key,source_run_id,released_at`; p95 <=25 ms at both scales |
 | `task489-safe-detail` | one logical `point-plus-items` case containing statement `run-point` (one safe run row through PK, p95 <=25/50 ms) and statement `items-page` (ordered `LIMIT 513` explicit safe item columns through run-position index, p95 <=75/200 ms); separate receipts plus combined p95 <=100/250 ms |
 
+The minimal normalized dynamic support closure is exact and fixture-scoped: the
+full owned run set above; exactly 100 synthetic actor users needed by those runs;
+513 `solution_kit_install_items` for the safe-detail sentinel; one active
+`solution_kit_starter_apply_owners` row keyed by `source_run_id` (never
+`owner_run_id`); one successful `solution_kit_legacy_template_evidence` row for
+that owned source; and one
+`solution_kit_legacy_rollback_progress` row linked to the owned rollback, source,
+and evidence. It seeds no other user, item, owner, evidence, progress, or
+unrelated family. It deletes, in order, progress, evidence, owner, items,
+rollback runs, remaining apply runs, then the 100 actor users. The `finally`
+proof queries each physical table by its scope-derived run/user/evidence keys and
+requires zero residue before a subsequent scenario. Its enclosing nested
+`finally` then reruns the rolled-back exact bound-L02-fixture-target/one-marker/bound-sentinel
+proof after cleanup. Any cleanup, residue, or post-proof error fails the run
+through redacted machine codes.
+
 The large plans permit no growing-table sequential scan and select/transfer zero
-actor, options, summary payload, snapshots, rollback actions, envelope, or raw
-error bytes. The companion emits sanitized plan digests plus finite numeric small/
-large receipts under `task489Predecessor`, without changing `TASK551_QUERY_PLAN_RECEIPTS`
-or its 37/38/76 cardinality. Exact-set guards reject a sixth ID, missing/extra
-logical or statement case, a safe-detail bundle without both receipts, or a
-history plan without the relation-heavy page. TASK-551 closure must record all
-five IDs/fourteen cases/thirty statement-scale receipts as passed; TASK-489 later
-byte-matches its landed builders and may tighten but not rebaseline them.
-The owning test writes one strict reject-unknown
-`.tmp/task-551/task489-predecessor-v1.json` receipt with schema
-`coderso.task551.task489-predecessor@v1`, exact fixture counts, IDs, logical case IDs,
-statement IDs, thirty finite per-scale plan/budget results, overall pass, and bounded
-safe errors. TASK-551-10-L01 parses and embeds that immutable receipt unchanged in
-its aggregate gate evidence; missing, stale, extra, failed, or digest-mismatched
-receipt data blocks aggregation.
+actor fields, raw user identity, options, summary payload, snapshots, rollback
+actions, envelope, or raw error bytes. An actor ID may be a bound predicate for
+the active-owner lookup, but cannot occur in a projection, returned row, plan
+digest input, receipt, or error. The companion emits sanitized plan digests plus
+finite numeric small/large receipts under `task489Predecessor`, without changing
+`TASK551_QUERY_PLAN_RECEIPTS` or its 37/38/76 cardinality. Exact-set guards
+reject a sixth ID, missing/extra logical or statement case, a safe-detail bundle
+without both receipts, a history plan without the relation-heavy page, an
+`owner_run_id` field, or any prohibited projection. TASK-551 closure must record
+all five IDs/fourteen cases/thirty statement-scale receipts as passed; TASK-489
+later consumes only the L11-promoted durable bytes/hash through the L02 parser,
+then byte-matches its landed builders and may tighten but not rebaseline them.
+Only `tests/perf/task489-solution-kit-run-predecessor-plans.test.ts` writes the
+single strict reject-unknown temporary artifact
+`.tmp/task-551/task489-predecessor-v1.json`, and only after every dynamic case
+passes. It constructs the value through L02's
+`createTask489PredecessorReceiptV1`, writes L02's RFC 8785 canonical
+`serializeTask489PredecessorReceiptV1` bytes once, reads those exact bytes back,
+and accepts them only through L02's parser. The artifact byte-for-byte matches
+the L02 model: schema `coderso.task551.task489-predecessor@v1`; exactly five
+ordered IDs, fourteen ordered logical cases, fifteen ordered array statement
+receipts, and exactly thirty profile results in the fixed `[small, large]`
+order; plus the full imported fixture-count object (bulk history,
+bounded-support, total runs, 100 actors, 513 items, and one each owner/evidence/
+progress), never a partial/count-only projection. A failed, stale, extra, map-
+shaped, unknown-field, noncanonical, or byte-mismatched result fails and leaves
+no valid artifact. This repository-local test artifact is not workflow evidence:
+this leaf never writes `_docs/_workflows/**` or another workflow sidecar. After
+the L05 phase proof succeeds, only L11 may read the temporary file. L11 validates
+the exact original bytes with the L02 parser, computes their hash, and promotes
+those unchanged bytes to
+`_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`.
+TASK-551-10-L01 and TASK-489 must never read `.tmp/task-551/`; each consumes only
+the L11 durable bytes/hash and validates those bytes with the same L02 parser,
+without local reserialization, rebuilding, normalization, projection, or schema
+alteration. Missing, stale, extra, failed, digest-mismatched, or non-byte-identical
+promotion blocks downstream aggregation and handoff.
 
 | ID | Exact SQL projection | Exact predicate, order, and bound |
 |---|---|---|
@@ -343,7 +608,8 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 - Cover every literal L01 catalog member, including all seven generated-vector
   GIN indexes, all three containment GIN indexes, every list/reverse-FK/cutoff
   index including page/entry/post-author, typed-entry-author, webhook, and
-  role-leading traversal, five revision constraints,
+  role-leading traversal, the five revision unique indexes (two new page/widget
+  builds plus the preserved entry/post/detail-page members),
   booking check/exclusion, every outbox column/check/index including
   `cache_outbox_unprocessed_age_idx`, and only selected
   trigram pairs; exact registry/catalog set equality rejects missing and extra
@@ -351,8 +617,8 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 - Verify all new snapshot indexes are exact members of the non-transactional
   manifest, absent from transactional index DDL, and ready/valid in the live
   catalog. Consume L01's crash-after-each-member, resume/rollback, threshold,
-  exact group/order/barrier receipt, drain/activity-visibility receipt, rehearsal
-  50-way revision-race receipt, and 16-controlled-writer read-performance receipt
+  exact group/order/barrier receipt, drain/activity-visibility receipt, strict
+  revision/booking/transferred-authority concurrency receipt, and 16-controlled-writer read-performance receipt
   as mandatory evidence. No external resume may precede the revision barrier and
   compatible-binary authorization; no offline resume authorization may precede
   final catalog. Clean and immediately-prior disposable
@@ -422,30 +688,89 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   changing `created_at,id`, direction, or `processed_at IS NULL` fail. Report
   insert/claim/retry/complete write p95 and storage delta within the 20% ceiling.
 - Execute all five TASK-489 companion IDs, fourteen logical cases, and fifteen
-  statement cases at exact 10,000/1,000,000 fixture sizes. Pin both relation-heavy
-  101-row history pages, all eight 0/1/511/512/513 supersession cases, the active
-  owner, and separate run-point/item-page detail plans plus combined latency.
-  Mutating one predicate to JSON, one relation index, the 513 sentinel, either
-  detail statement or its independent p95 budget, or a prohibited projection fails without altering the closed
-  TASK-551 registry receipt.
-- Race 50 synchronized raw synthetic inserts at the same parent/version for each
-  page/entry/post/widget/detail-page constraint, plus 50 overlapping/non-
-  overlapping booking inserts. This verifies database constraints only—service
-  allocation is owned by TASK-551-06/09. Only invariant-compatible rows commit
-  and cleanup deletes only fixture-owned rows.
+  statement cases after the L01 → L03 schema surfaces are present. Assert and
+  record separately the exact 10,000/1,000,000 bulk-history runs, 109,890
+  bounded-support runs, and 119,890/1,109,890 full dynamic totals; no assertion
+  or receipt may label the bulk number as the scenario total. The normalized
+  closure is exactly 100 synthetic actors, 513 safe-detail items, one active
+  owner keyed by `source_run_id`, one template-evidence row, and one rollback-
+  progress row. Pin both relation-heavy 101-row history pages, all eight
+  0/1/511/512/513 supersession cases, the active owner, and separate run-point/
+  item-page detail plans plus combined latency. Mutating one predicate to JSON,
+  one relation index, the 513 sentinel, either detail statement or its
+  independent p95 budget, a support link, `source_run_id`, or a prohibited
+  projection fails without altering L02's closed static registry or reviewed
+  freeze receipt.
+- The dynamic fixture imports only `assertTask551FixtureTargetChildKeys`,
+  `parseTask551FixtureTarget`, `Task551FixtureTarget`,
+  `Task551FixtureTargetClient`, `assertTask551FixtureTarget`, and
+  `assertTask551FixtureTargetPostCleanup` from L02's import-safe
+  `scripts/task551DatabaseBaseline/fixtureTarget.ts`. Each of the four exact
+  L11 contexts—`05-l02-explain-plans-test`, `05-l02-predecessor-test`,
+  `05-l02-explain-small`, and `05-l02-explain-large`—independently calls
+  `consumeOnce(expected)` before supplier/source access, creates its own exact
+  three-value `fixtureValues` (`URL`, `NAME`, `SENTINEL`), then a fresh exact-own
+  `childEnv` with only `PATH`, `TMPDIR`, `LANG`, `LC_ALL`, and `TZ`, and launches
+  its logical array argv beginning `"bun", "--env-file=/dev/null"`. It never
+  receives/enumerates a parent/whole child environment, reads ambient
+  `process.env`, or imports a runner, wrapper, local parser/proof, generic
+  runtime URL, or dotenv fallback. Tests reject every L03/L02/nonmatching-05-L02
+  source, map, environment, context, or launch before supplier access. Force
+  source-map validation, injected-client/preflight, spawn, seed, plan, assertion,
+  and cleanup failures in turn; each must leave zero scope-owned rows in progress,
+  evidence, owners, items, rollback/apply runs, and actor users. Child-first
+  cleanup is mandatory even when an assertion or EXPLAIN capture fails. After
+  every success and injected failure, prove in nested `finally` that the bound
+  target still has the exact current database, exactly one marker, and bound
+  sentinel bytes; cleanup/post-proof failure is redacted and propagated.
+- Add cross-leaf source-contract tests that resolve every L05 fixture-guard
+  import to `scripts/task551DatabaseBaseline/fixtureTarget.ts`, reject imports
+  of `scripts/task-551-database-baseline.ts`/a runner wrapper, and reject local
+  target type/parser/proof declarations. They must also reject
+  `process.env`/`Bun.env`, `.env`, `DATABASE_URL`, `DATABASE_DIRECT_URL`,
+  `requireFixtureTarget`, or any generic fallback in the L05 fixture paths.
+  Run the imported guard with a fake injected `Task551FixtureTargetClient` to
+  prove strict three-key rejection, preflight rollback, and the post-cleanup
+  proof after a cleanup failure without opening a real connection.
+- Require L11 to collect exactly four table-order `Task55105L02ChildOutcomeV1`
+  values and, immediately before temporary read/parser/hash/promotion, accept only
+  expected context/command, passed redacted receipt, and own-data
+  `postCleanupTargetProof:{ rolledBack:true, currentDatabaseMatched:true,
+  exactSingleMarkerMatched:true, boundSentinelByteMatched:true }`. Mutate/omit
+  one literal, context/command, receipt field, add an unknown/extra outcome, or inject
+  target/URL/marker/sentinel/hash/raw error and require fixed failure before any read,
+  parser/hash call, evidence write, or promotion. Prove outcomes are dropped
+  and never become a descriptor, exact-eleven row, row 10/11 field, projection, log, or L10/TASK-489 input.
+- Verify imported canonical statement/digest equality and reviewed freeze
+  identity before the dynamic run, but do not write/review/rebaseline that input.
+  The dynamic receipt has no local shape: use the L02 factory and strict parser
+  to require its complete imported fixture counts, exact ID/case/statement
+  tuples, and exactly 30 finite ordered array results. Assert that only one
+  `.tmp/task-551/task489-predecessor-v1.json` exists after a successful run; it
+  byte-equals the L02 canonical serializer output and one failed/mutated/no-op
+  path leaves no valid artifact. After the all-four transient L11 proof gate, test
+  the L11-only handoff: L11 alone re-reads the temporary artifact, validates it with
+  the L02 parser, hashes its original bytes, and writes those exact bytes once to
+  `_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`.
+  Assert L10 and TASK-489 never open `.tmp/task-551/`; they receive only the L11
+  durable bytes/hash and validate them through the L02 parser, without local
+  reserialization, object-map conversion, or schema/type duplicate. This leaf
+  never writes workflow evidence or `_docs/_workflows/**`.
+- Consume and reject-malform L01's strict redacted 50-way revision/booking/
+  transferred-authority concurrency receipt; require five revision-family,
+  booking, and authority-probe success/count/digest fields without accepting a
+  fixture/client/target/raw row. L02 does not start races or cleanup, add a test
+  path, command, or broker context; L01 alone owns that raw fixture.
 - Snapshot sanitizer tests inject emails, tokens, SQL, bind values, and plan
   fields; zero forbidden values survive output.
 - Mutation fixtures alter one vector weight/JSON cast, index direction/predicate,
   booking status/custom descriptor byte, outbox nullability/default/state
   branch, function volatility, and add one extra TASK-551-prefixed index; each
   exact-set verifier fails deterministically.
-- Solution Kit catalog/race fixtures reject owner source/package/actor mismatch,
-  unreleased `active:false`, released `active:true`, envelope contract/definition-
-  digest mismatch, typed/envelope phase mismatch,
-  progress linked to another rollback relation or template-evidence row,
-  proof/status mismatch, duplicate template evidence, and deletion of a source
-  that still has a rollback child. They prove `rollback_of_run_id` is
-  `ON DELETE RESTRICT` and no relation can silently become null.
+- Consume only L01's transferred authority-race receipt; L03 separately owns its
+  focused catalog/authority-contract state-matrix suite (owner/source/package/
+  actor, active state, envelope/digest, relation, proof/status, and restrict
+  assertions). L02 owns neither raw authority fixture nor that suite.
 - Re-run each named failing perf file alone before classifying a failure.
 
 ## Security Contract
@@ -454,27 +779,81 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   nonce/HMAC, or CAPTCHA changes.
 - Static allowlisted statements and synthetic fixture IDs only. Never accept
   arbitrary SQL, production binds, unredacted customer data, or credentials.
+- TASK-489 dynamic execution imports L02's exact target seam only from
+  `scripts/task551DatabaseBaseline/fixtureTarget.ts`:
+  `assertTask551FixtureTargetChildKeys`, `parseTask551FixtureTarget`,
+  `Task551FixtureTarget`, `Task551FixtureTargetClient`,
+  `assertTask551FixtureTarget`, and `assertTask551FixtureTargetPostCleanup`.
+  L11 alone consumes one current exact 05-L02 broker context after immutable
+  predecessor attestations, maps only that context to three
+  `TASK551_FIXTURE_DATABASE_*` `fixtureValues`, then builds a separate exact-own
+  `childEnv` with only `PATH`, `TMPDIR`, `LANG`, `LC_ALL`, and `TZ`. L05 receives
+  only its explicit direct three-value map plus injected proof client—not an
+  ambient environment or an L03/L02 source/map. It never imports the baseline
+  runner/wrapper, defines a target parser/proof/type, loads `.env`, falls back to
+  `DATABASE_URL`/`DATABASE_DIRECT_URL`, or provisions, logs, or serializes target
+  identity or sentinel.
+- This leaf authorizes database work only through that exact current 05-L02 L11
+  child boundary: array argv, immediate `--env-file=/dev/null`, and exact-own
+  `childEnv` with no inherited key. It authorizes neither an ambient shell,
+  `.env`, generic database variable, migration/DDL command, nor any other task's
+  controller/source/target authority.
+- The post-cleanup target proof calls imported
+  `assertTask551FixtureTargetPostCleanup` with the same private bound target and
+  injected client after every dynamic attempt.
+  Its four literal-true fields are transient all-four-result gate inputs only:
+  L11 must not persist them in any evidence row, row 10/11, projection, log, or
+  consumer handoff. Target identity, marker/sentinel values or hashes,
+  connection/SQL data, and raw exception text remain private; cleanup or
+  post-proof errors are fixed redacted codes and fail before promotion.
 - Receipt validation accepts only the fixed task path and repository-relative
   artifact paths/digests; it never records database URLs, environment dumps,
   credentials, binds, or customer data.
 - Persist statement family, catalog/index names, counters, timing, and sanitized
   plan shape only; raw EXPLAIN output stays ephemeral.
+- TASK-489 safe projections exclude actor/user identity in every returned field
+  and digest input. The active-owner statement may bind the authenticated
+  synthetic actor to its normalized predicate, but emits only
+  `package_key,source_run_id,released_at`; it never exposes `actor_id` or an
+  `owner_run_id` alias.
 - Interval evidence persists query IDs/fingerprint/source class and numeric
   deltas only. It neither resets shared stats nor stores statement text, binds,
   application/role names, diagnostic patterns, host/database identity, or rows.
+- This leaf never writes a workflow receipt, smoke sidecar, or
+  `_docs/_workflows/**` file. Its fixed `.tmp/task-551/` test artifact remains
+  private to L05 until a successful phase proof. Only L11 may then read it,
+  validate it through the L02 parser, hash the original bytes, and promote those
+  unchanged bytes to its one durable audit-evidence path. L10 and TASK-489 must
+  never read `.tmp/task-551/`; they consume only L11's durable bytes/hash through
+  the L02 parser. No consumer writes a second receipt, keyed map, or locally
+  serialized variant.
 
 ## Validation Commands
 
-- `set -a && source .env && set +a && bun test tests/perf/database-explain-plans.test.ts`
-- `set -a && source .env && set +a && bun test tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`
-- `set -a && source .env && set +a && bun test tests/perf/database-pg-stat-interval.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/server/task551ConcurrencyConstraints.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/server/task551OnlineIndexDeployment.test.ts`
-- `set -a && source .env && set +a && TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single`
-- Repeat the exact `rollout-forward` command (mandatory zero-DDL/zero-transition catalog idempotence rerun)
-- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts status --receipt .tmp/task551-migration-receipt.json`
-- `set -a && source .env && set +a && bun scripts/task-551-explain-plans.ts --scale small --check`
-- `set -a && source .env && set +a && bun scripts/task-551-explain-plans.ts --scale large --check`
+- Through one distinct exact L11 `05-l02` context per command only: immutable
+  predecessor attestations, `consumeOnce(expected)` before source access, a new
+  three-key `TASK551_FIXTURE_DATABASE_*` `fixtureValues` map, a separate
+  exact-own `childEnv` with fixed `PATH`/`TMPDIR`/`LANG`/`LC_ALL`/`TZ`, and logical
+  array argv with immediate `--env-file=/dev/null`. These commands never source
+  `.env`, read `DATABASE_URL`/`DATABASE_DIRECT_URL`, or receive an ambient target:
+  `bun --env-file=/dev/null test tests/perf/database-explain-plans.test.ts`
+- Through that same exact L11 child boundary:
+  `bun --env-file=/dev/null test tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`
+- `tests/perf/database-pg-stat-interval.test.ts` is owned by TASK-551-02-L02,
+  not this leaf. This leaf supplies no command, source, child environment, or
+  database authority for it.
+- `tests/integration/server/task551OnlineIndexDeployment.test.ts` and
+  `scripts/task-551-online-indexes.ts` rollout/status are TASK-551-05-L01
+  schema/migration-owner operations, not L05-L02 validation commands. They are
+  unauthorized here, including `rollout-forward`, its idempotence rerun, and
+  `status`; no L11 05-L02 fixture map or authority may substitute for them.
+- `tests/integration/server/task551ConcurrencyConstraints.test.ts` is exclusively
+  TASK-551-05-L01: L05-L02 neither commands nor imports it and accepts only its
+  strict redacted receipt, without a fifth 05-L02 broker context.
+- Through that same exact L11 child boundary:
+  `bun --env-file=/dev/null scripts/task-551-explain-plans.ts --scale small --check`
+- Through that same exact L11 child boundary:
+  `bun --env-file=/dev/null scripts/task-551-explain-plans.ts --scale large --check`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso:perf`
@@ -508,9 +887,21 @@ TASK-551-10-L02.
   fixtures keep `matchingTotal:null`, bounded items/`hasMore`, byte-identical
   global summary/facets, and zero filtered count.
 - The separate TASK-489 predecessor receipt has exactly five IDs, fourteen
-  logical cases, fifteen statement cases, and thirty numeric scale receipts; all
-  pass their named index/projection/row/p95 contracts at 10,000/1,000,000 runs
-  and are not counted in or written into the 37-ID registry.
+  logical cases, fifteen statement cases, and thirty numeric scale receipts; it
+  separately proves 10,000/1,000,000 bulk-history, 109,890 bounded-support, and
+  119,890/1,109,890 total-run cardinalities, then passes its named
+  index/projection/row/p95 contracts. Its dynamic normalized closure has only
+  the declared actors/items/owner/evidence/progress rows, deletes child-first
+  with zero residue, and is not counted in or written into the 37-ID registry.
+  After L11's transient all-four post-cleanup-proof gate, the L11 facade alone validates, hashes, and promotes
+  the exact temporary bytes to its durable audit-evidence path; L10/TASK-489 use
+  only that durable bytes/hash handoff through the L02 parser.
+- Every completed or failing TASK-489 dynamic attempt performs the post-cleanup
+  rolled-back bound-fixture-target proof. Immediately before temporary
+  read/parser/hash/promotion, L11 requires all four results' literal-true
+  `postCleanupTargetProof` objects; an omitted/false/unknown/malformed proof
+  blocks before any evidence write or promotion. The transient proof/result is
+  never durable evidence or an L10/TASK-489 input; only promoted predecessor bytes/hash hand off.
 - Page/entry/typed-entry/post-author, reverse-role, post-tag, media-AND-tag, and
   webhook list/event large cases use their exact L01 indexes and matching
   production predicate bytes with bounded rows/buffers and measured write/
@@ -520,11 +911,133 @@ TASK-551-10-L02.
   rows.
 - Trigram selection receipt and live schema/catalog/fallback contract have 100%
   set and byte/expression identity for all five selected-or-null sources.
-- Fifty-way races preserve all five revision uniqueness families and booking
-  exclusion with zero duplicate/partial state; fixture cleanup is scope-local.
+- The required L01 receipt proves fifty-way revision/booking and transferred
+  authority-race invariants; L02 rejects its absence or malformed/redacted-field
+  drift and performs no fixture cleanup.
 - Clean/prior/rollback/forward custom-exclusion paths pass, and the documented
   snapshot limitation has exact descriptor/migration/live-catalog parity with
   zero generated duplicate-add or drop operations.
 - Pre-decision/before/after stats receipts use unchanged identities and no reset;
   only application traffic is eligible, while external-diagnostic/unknown rows
   (including the polluted five-family sample) remain separate and excluded.
+
+## Workflow Dispatch Envelope
+
+The temporary predecessor receipt is the one exceptional allowlisted output:
+it remains ephemeral, has one test-owned writer, and may be consumed only by
+the L11 parser/promotion flow already specified above. Each database command has
+one independent exact L11 `05-l02` context and no other source authority:
+
+| Command | Required logical context | Action/profile |
+|---|---|---|
+| `database-explain-plans-test` | `05-l02-explain-plans-test` | `database-explain-plans-test` / `null` |
+| `task489-predecessor-plans-test` | `05-l02-predecessor-test` | `task489-predecessor-plans-test` / `null` |
+| `explain-plan-small-check` | `05-l02-explain-small` | `explain-plan-check` / `small` |
+| `explain-plan-large-check` | `05-l02-explain-large` | `explain-plan-check` / `large` |
+
+For each row L11 consumes only that broker once before source access, derives a
+new three-value map then exact-own childEnv, and launches/captures/disposes once.
+The envelope has no dotenv, ambient database alias, caller-selected target, or
+L03/L02 source/map/environment/launch reuse.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-05-L02",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-05"
+  },
+  "allowlist": [
+    "scripts/task-551-explain-plans.ts",
+    "tests/perf/fixtures/task551QueryPlanContracts.ts",
+    "tests/perf/database-explain-plans.test.ts",
+    "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts",
+    ".tmp/task-551/task489-predecessor-v1.json"
+  ],
+  "forbiddenPaths": [
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "scripts/task-551-online-indexes.ts",
+    "tests/integration/server/task551IndexAndConstraintCatalog.test.ts",
+    "tests/integration/server/task551ConcurrencyConstraints.test.ts",
+    "tests/integration/server/task551OnlineIndexDeployment.test.ts",
+    "tests/perf/database-pg-stat-interval.test.ts"
+  ],
+  "dependencies": ["TASK-551-05-L03:single"],
+  "commands": [
+    {
+      "id": "database-explain-plans-test",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/perf/database-explain-plans.test.ts"],
+      "environmentProfile": "task551-phase-05-l02",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/perf/database-explain-plans.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "task489-predecessor-plans-test",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts"],
+      "environmentProfile": "task551-phase-05-l02",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/perf/task489-solution-kit-run-predecessor-plans.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "explain-plan-small-check",
+      "lane": "cli",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-explain-plans.ts", "--scale", "small", "--check"],
+      "environmentProfile": "task551-phase-05-l02",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "explain-plan-large-check",
+      "lane": "cli",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-explain-plans.ts", "--scale", "large", "--check"],
+      "environmentProfile": "task551-phase-05-l02",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "performance-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-05-L03:single"],
+      "commandIds": [
+        "database-explain-plans-test",
+        "task489-predecessor-plans-test",
+        "explain-plan-small-check",
+        "explain-plan-large-check",
+        "core-lint-types",
+        "core-lint",
+        "performance-gate"
+      ]
+    }
+  ]
+}
+```

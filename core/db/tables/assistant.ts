@@ -16,7 +16,9 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { desc, sql } from "drizzle-orm";
 import { users } from "./identity";
+import { SEARCH_VECTOR_SQL, tsvector } from "../searchVectorDefinitions";
 
 export const assistantDocs = pgTable(
   "assistant_docs",
@@ -33,12 +35,22 @@ export const assistantDocs = pgTable(
     sourceUpdatedAt: timestamp("source_updated_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    // TASK-551-05-L01: canonical local search vectors. Stored generated, so
+    // the column is maintained by the database and every reader sees the same
+    // tsvector the GIN index holds.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      sql.raw(SEARCH_VECTOR_SQL.assistantDocs)
+    ),
   },
   (t) => ({
     sourcePathIdx: uniqueIndex("assistant_docs_source_path_idx").on(t.sourcePath),
     slugIdx: index("assistant_docs_slug_idx").on(t.slug),
     areaIdx: index("assistant_docs_product_area_idx").on(t.productArea),
     languageIdx: index("assistant_docs_language_idx").on(t.language),
+    assistantDocsSearchVectorIdx: index("assistant_docs_search_vector_idx").using(
+      "gin",
+      t.searchVector
+    ),
   })
 );
 
@@ -59,12 +71,20 @@ export const assistantDocChunks = pgTable(
     tokenCount: integer("token_count").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    // TASK-551-05-L01: canonical local search vector (see assistant_docs).
+    searchVector: tsvector("search_vector").generatedAlwaysAs(
+      sql.raw(SEARCH_VECTOR_SQL.assistantDocChunks)
+    ),
   },
   (t) => ({
     docIdx: index("assistant_doc_chunks_doc_id_idx").on(t.docId),
     headingIdx: index("assistant_doc_chunks_heading_idx").on(t.heading),
     lineIdx: index("assistant_doc_chunks_line_idx").on(t.lineStart, t.lineEnd),
     chunkUniqueIdx: uniqueIndex("assistant_doc_chunks_doc_chunk_idx").on(t.docId, t.chunkIndex),
+    assistantDocChunksSearchVectorIdx: index("assistant_doc_chunks_search_vector_idx").using(
+      "gin",
+      t.searchVector
+    ),
   })
 );
 
@@ -89,6 +109,12 @@ export const assistantDocIngestRuns = pgTable(
     startedIdx: index("assistant_doc_ingest_runs_started_at_idx").on(t.startedAt),
     statusIdx: index("assistant_doc_ingest_runs_status_idx").on(t.status),
     actorIdx: index("assistant_doc_ingest_runs_actor_idx").on(t.triggeredByUserId),
+    // TASK-551-05-L01 retention scan, plus the per-source recency read that
+    // only successful runs answer.
+    assistantIngestRetentionIdx: index("assistant_ingest_retention_idx").on(t.startedAt, t.id),
+    assistantIngestSourceSuccessIdx: index("assistant_ingest_source_success_idx")
+      .on(t.sourceRoot, desc(t.startedAt), desc(t.id))
+      .where(sql`status = 'success'`),
   })
 );
 
@@ -111,6 +137,11 @@ export const assistantActionExecutions = pgTable(
     actorIdx: index("assistant_action_executions_actor_idx").on(t.actorId),
     planIdx: index("assistant_action_executions_plan_idx").on(t.planId),
     createdIdx: index("assistant_action_executions_created_idx").on(t.createdAt),
+    // TASK-551-05-L01 retention scan.
+    assistantActionExecutionsRetentionIdx: index("assistant_action_executions_retention_idx").on(
+      t.createdAt,
+      t.id
+    ),
   })
 );
 
@@ -147,5 +178,11 @@ export const assistantActionUndoItems = pgTable(
     executionActionResourceIdx: uniqueIndex(
       "assistant_action_undo_items_execution_action_resource_idx"
     ).on(t.executionId, t.actionId, t.resourceType, t.resourceKey),
+    // TASK-551-05-L01 undo-ledger traversal per execution.
+    assistantActionUndoExecutionCreatedIdx: index("assistant_action_undo_execution_created_idx").on(
+      t.executionId,
+      t.createdAt,
+      t.id
+    ),
   })
 );

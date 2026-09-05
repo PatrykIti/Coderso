@@ -32,6 +32,8 @@ export const analyticsSessions = pgTable(
   (t) => ({
     startedAtIdx: index("analytics_sessions_started_at_idx").on(t.startedAt),
     visitorIdx: index("analytics_sessions_visitor_idx").on(t.visitorHash),
+    // TASK-551-05-L01 retention scan over the session-recency column.
+    analyticsSessionsRetentionIdx: index("analytics_sessions_retention_idx").on(t.lastSeenAt, t.id),
   })
 );
 
@@ -52,5 +54,15 @@ export const analyticsPageviews = pgTable(
     createdAtIdx: index("analytics_pageviews_created_at_idx").on(t.createdAt),
     pathIdx: index("analytics_pageviews_path_idx").on(t.path),
     sessionIdx: index("analytics_pageviews_session_idx").on(t.sessionId),
+    // TASK-551-05-L01: the per-session pageview stream and the retention sweep.
+    analyticsPageviewsSessionCreatedIdx: index("analytics_pageviews_session_created_idx").on(
+      t.sessionId,
+      t.createdAt,
+      t.id
+    ),
+    analyticsPageviewsRetentionIdx: index("analytics_pageviews_retention_idx").on(
+      t.createdAt,
+      t.id
+    ),
   })
 );

@@ -121,6 +121,8 @@ export function normalizeUserRow(raw: unknown): UserRow {
     createdAt: reviveDate(raw.createdAt) ?? new Date(),
     updatedAt: reviveDate(raw.updatedAt) ?? new Date(),
     lastLoginAt: reviveDate(raw.lastLoginAt),
+    searchVector: null,
+    searchTrigramText: null,
   };
 }
 

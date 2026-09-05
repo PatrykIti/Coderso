@@ -6,9 +6,9 @@
 **Priority:** High
 **Category:** Cache / Performance / Reliability
 **Estimated Effort:** Medium
-**Dependencies:** TASK-551-07-L01
+**Dependencies:** TASK-551-07-L01; TASK-551-03-L02 lands first (board land order step 8 precedes step 9; sequencing constraint is parent-owned)
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -595,4 +595,102 @@ wc -l core/services/cache/{serverCache,memoryServerCacheStore,serverCacheTelemet
 ## Documentation Updates Required
 
 Documentation and broader load gates belong to TASK-551-10; this leaf records
-only targeted evidence and does not edit changelog 1263.
+only targeted evidence and does not edit changelog 1310.
+
+## Workflow Dispatch Envelope
+
+The L01 contract suites below are execution-only receipts: their test paths are
+literal command inputs but remain foreign write targets. The brace-expanded
+line-count gate is represented by the same finite owned path set.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-07-L02",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-07"
+  },
+  "allowlist": [
+    "core/services/cache/serverCache.ts",
+    "core/services/cache/memoryServerCacheStore.ts",
+    "core/services/cache/serverCacheTelemetry.ts",
+    "tests/vitest/cache/memory-server-cache-store.test.ts",
+    "tests/vitest/cache/server-cache-coordinator.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/site/cache/siteCache.ts",
+    "core/services/cache/redisServerCacheStore.ts",
+    "core/services/cache/cacheInvalidationOutbox.ts",
+    "core/services/cache/redisCacheLease.ts",
+    "core/db/schema.ts",
+    "core/server/httpServer.ts",
+    "tests/vitest/cache/server-cache-contracts.test.ts",
+    "tests/vitest/cache/server-cache-codec-keys.test.ts",
+    "tests/vitest/cache/server-cache-eligibility.test.ts",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-03-L02:single"],
+  "commands": [
+    {
+      "id": "memory-cache-vitest",
+      "lane": "vitest",
+      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "l01-contract-vitest",
+      "lane": "vitest",
+      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "argv": ["wc", "-l", "core/services/cache/serverCache.ts", "core/services/cache/memoryServerCacheStore.ts", "core/services/cache/serverCacheTelemetry.ts", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-03-L02:single"],
+      "commandIds": ["memory-cache-vitest", "l01-contract-vitest", "core-lint-types", "core-lint", "diff-check", "line-count"]
+    }
+  ]
+}
+```

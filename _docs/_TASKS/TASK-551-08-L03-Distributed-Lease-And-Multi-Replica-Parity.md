@@ -6,11 +6,11 @@
 **Priority:** Critical
 **Category:** Cache / Redis / Concurrency / Runtime
 **Estimated Effort:** Large
-**Dependencies:** INITIAL phase after TASK-551-02-L02; FINAL phase after
+**Dependencies:** INITIAL phase after TASK-551-02-L03; FINAL phase after
 TASK-551-08-L02 plus the TASK-551-03-L02 response-header consumption receipt;
 parent external dispatch gate
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -31,7 +31,7 @@ same HTTP owner after L02 returns its consumption receipt.
 None. This executable leaf has two mandatory serialized phases and remains
 `🚧 In Progress`/non-releasable between them:
 
-1. **INITIAL response-header seam:** after TASK-551-02-L02, add only the strict
+1. **INITIAL response-header seam:** after TASK-551-02-L03, add only the strict
    route-local response-header API and HTTP propagation tests. Return a
    compile-green receipt before TASK-551-03-L02 edits `formsRoutes.ts`.
 2. **FINAL cache/runtime composition:** after TASK-551-08-L02 and the 03-L02
@@ -372,7 +372,7 @@ controller `report(...)` is the sole epoch mutator and no double/second
 `advance*Epoch` path exists.
 Assert public/auth behavior is not changed yet.
 
-INITIAL's direct HTTP integration suite registers synthetic handlers and proves
+Only after terminal TASK-551-02-L03, INITIAL's direct HTTP integration suite registers synthetic handlers and proves
 all three exact headers survive JSON success plus mapped 400/403/404/409 errors;
 it also proves request isolation, same-value idempotence, case canonicalization,
 and rejection of unknown names, alternate/control/newline/max+1 values and
@@ -407,3 +407,199 @@ wc -l core/services/cache/{redisCacheLease,serverCacheRuntime,serverCachePolicyC
 
 Redis is mandatory for this leaf's acceptance. Full five-scenario runtime smoke
 and operational documentation remain owned by TASK-551-10.
+
+## INITIAL implementation rulings (2026-08-26, orchestrator)
+
+Grounded by the fresh pre-implementation audit against HEAD
+`7029fb7ee615b256e20f3ed191f54b1ac13b5c0e`; these rulings bind the INITIAL
+phase and its later consumers (the TASK-551-03-L02 consumption receipt and the
+FINAL composition reopenings):
+
+- **R1 — Synthetic-handler dispatch seam.** `core/server/httpServer.ts` adds
+  exactly one narrow internal export for tests: an api-request dispatcher that
+  accepts injected `RouteDefinition[]` (default argument: the module router, so
+  the production call path stays byte-for-byte identical). It must reuse the
+  REAL pipeline — request-ID/security/CORS/response-header assembly, IP
+  allowlist, body parsing, context creation, handler loop, centralized error
+  mapping — never a parallel copy. No production caller besides the unchanged
+  `fetch` path may use injected routes. The INITIAL suite installs Bun
+  `mock.module` stubs for `core/services/settings/securitySettings` and
+  `core/services/security/ipAllowlistService` BEFORE dynamically importing
+  `core/server/httpServer.ts`, proving JSON success plus mapped
+  400/403/404/409 through real dispatch with zero DB connectivity. Import-time
+  prerequisite: `core/db/client.ts` requires `DATABASE_URL` to be SET (module
+  evaluation constructs the pool lazily; no reachable database is needed). Bun
+  auto-loads `.env`; if absent, the suite sets a placeholder value before
+  import and documents that requirement in a comment.
+- **R2 — Bag creation timing and parse-stage errors.** The write-only header
+  bag is created immediately after exact route match, BEFORE body parsing, and
+  that same bag backs `RouteContext.setResponseHeader`.
+  `parserErrorResponse` merges accepted bag entries too (set-if-absent, see
+  R4). At parse-stage failure no handler has run yet, so such responses carry
+  no bag headers today; the seam remains structurally correct for every
+  post-match outcome.
+- **R3 — Lane scope.** Header propagation applies ONLY to the router-lane
+  dispatch above. The prepared public form-write boundary
+  (`executePreparedFormWrite`, its private `RouteContext` and error mapping in
+  `publicFormsApi.ts`), the standalone `errorResponse` definitions in
+  `publicFormsApi.ts`/`publicEntryUnlockApi.ts`/`publicBookingApi.ts`,
+  OPTIONS 204, the IP-allowlist pre-route errors in `handleAdmin`/`handleApi`,
+  and the unmatched-route plain-text 404 remain bag-free by construction.
+  TASK-551-03-L02's submission-detail point read is a router-chain GET in
+  `formsRoutes.ts`; its no-store handler runs as the FIRST handler, so every
+  outcome that reaches the handler chain carries the three exact headers.
+- **R4 — Merge precedence.** Bag entries apply set-if-absent against every
+  already-present response header (security headers, request-ID regardless of
+  its configured name, CORS, `Content-Type`, `Set-Cookie`), identically on the
+  success-init path and on every post-errorResponse append path.
+- **R5 — Mapped 404 source.** The INITIAL matrix's "mapped 404" comes from a
+  matched handler throwing `ApiError(..., 404)` (for example
+  `media_not_found`-style), never from the unmatched-route plain-text 404.
+
+## Workflow Dispatch Envelope
+
+The INITIAL router test is independently database-free: it installs its own
+placeholder before importing the lazy client and stubs every DB-touching route
+dependency. It can therefore run with no environment profile. The FINAL Redis
+group now uses the one-use owner-injected `task551-redis-test` profile; its only
+declared overrides are the grounded nonsecret backend and bounded namespace.
+The Redis endpoint remains private to TASK-551-11 and never appears in this
+envelope, argv, evidence, or logs.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-08-L03",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-08"
+  },
+  "allowlist": [
+    "core/server/router.ts",
+    "core/services/cache/redisCacheLease.ts",
+    "core/services/cache/serverCacheRuntime.ts",
+    "core/services/cache/serverCachePolicyCapacityCatalog.ts",
+    "core/server/httpServer.ts",
+    "tests/integration/server/route-response-headers.test.ts",
+    "tests/integration/server/redis-distributed-lease.test.ts",
+    "tests/integration/server/server-cache-runtime-lifecycle.test.ts",
+    "tests/integration/server/redis-multi-replica-parity.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/server/runtimeEntrypoint.ts",
+    "core/server/dev.ts",
+    "core/server/prod.ts",
+    "core/services/backups/backupScheduler.ts",
+    "core/server/routes/formsRoutes.ts",
+    "core/server/paginationCursorLifecycle.ts"
+  ],
+  "dependencies": [
+    "TASK-551-02-L03:single",
+    "TASK-551-08-L02:single"
+  ],
+  "commands": [
+    {
+      "id": "initial-route-response-headers-test",
+      "lane": "bun-test",
+      "argv": ["bun", "test", "tests/integration/server/route-response-headers.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/route-response-headers.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "initial-core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "initial-core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "final-redis-distributed-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/redis-distributed-lease.test.ts", "tests/integration/server/server-cache-runtime-lifecycle.test.ts", "tests/integration/server/redis-multi-replica-parity.test.ts"],
+      "environmentProfile": "task551-redis-test",
+      "environmentOverrides": {
+        "SERVER_CACHE_BACKEND": "redis",
+        "SERVER_CACHE_NAMESPACE": "task551-l03"
+      },
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/redis-distributed-lease.test.ts", "tests/integration/server/server-cache-runtime-lifecycle.test.ts", "tests/integration/server/redis-multi-replica-parity.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "final-core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "final-core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "final-diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "final-line-count",
+      "lane": "tooling",
+      "argv": [
+        "wc",
+        "-l",
+        "core/services/cache/redisCacheLease.ts",
+        "core/services/cache/serverCacheRuntime.ts",
+        "core/services/cache/serverCachePolicyCapacityCatalog.ts",
+        "core/server/router.ts",
+        "core/server/httpServer.ts",
+        "tests/integration/server/route-response-headers.test.ts",
+        "tests/integration/server/redis-distributed-lease.test.ts",
+        "tests/integration/server/server-cache-runtime-lifecycle.test.ts",
+        "tests/integration/server/redis-multi-replica-parity.test.ts"
+      ],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "initial",
+      "dependsOn": ["TASK-551-02-L03:single"],
+      "commandIds": [
+        "initial-route-response-headers-test",
+        "initial-core-lint-types",
+        "initial-core-lint"
+      ]
+    },
+    {
+      "id": "final",
+      "dependsOn": ["TASK-551-08-L02:single"],
+      "commandIds": [
+        "final-redis-distributed-tests",
+        "final-core-lint-types",
+        "final-core-lint",
+        "final-diff-check",
+        "final-line-count"
+      ]
+    }
+  ]
+}
+```

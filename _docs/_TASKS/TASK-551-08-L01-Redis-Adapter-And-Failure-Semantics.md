@@ -6,9 +6,9 @@
 **Priority:** Critical
 **Category:** Cache / Redis / Reliability / Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-07-L02
+**Dependencies:** TASK-551-07-L02; TASK-551-08-L03 INITIAL response-header seam; TASK-551-03-L02 response-header consumption receipt (parent phased land order: 08-L03 INITIAL → 03-L02 header receipt → this leaf)
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -189,3 +189,97 @@ wc -l core/services/cache/redisServerCache*.ts \
 
 Redis is a required gate for completion; an unavailable Redis service is a
 reported blocker, not a skipped passing test. Docs are handed to 10-L02.
+
+## Workflow Dispatch Envelope
+
+The Redis test command receives only the closed owner-injected Redis profile.
+Its two literal non-secret overrides select the Redis backend and this leaf's
+bounded namespace; no endpoint, credential, ambient environment, or `.env`
+input is admitted. The brace-expanded line-count gate is represented by the
+same finite owned path set.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-08-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-08"
+  },
+  "allowlist": [
+    "core/services/cache/redisServerCacheClient.ts",
+    "core/services/cache/redisServerCacheStore.ts",
+    "core/services/cache/redisServerCacheHealth.ts",
+    "tests/integration/server/redis-server-cache-store.test.ts",
+    "tests/integration/server/redis-server-cache-outage.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/services/cache/serverCache.ts",
+    "core/services/cache/memoryServerCacheStore.ts",
+    "core/services/cache/cacheInvalidationOutbox.ts",
+    "core/services/cache/cacheInvalidationWorker.ts",
+    "core/services/cache/cacheInvalidationPubSub.ts",
+    "core/services/cache/redisCacheLease.ts",
+    "core/db/schema.ts",
+    "core/server/httpServer.ts",
+    "tests/vitest/cache/memory-server-cache-store.test.ts",
+    "tests/integration/server/cache-invalidation-outbox.test.ts",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-07-L02:single"],
+  "commands": [
+    {
+      "id": "redis-store-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/redis-server-cache-store.test.ts", "tests/integration/server/redis-server-cache-outage.test.ts"],
+      "environmentProfile": "task551-redis-test",
+      "environmentOverrides": {
+        "SERVER_CACHE_BACKEND": "redis",
+        "SERVER_CACHE_NAMESPACE": "task551-l01"
+      },
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/redis-server-cache-store.test.ts", "tests/integration/server/redis-server-cache-outage.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "argv": ["wc", "-l", "core/services/cache/redisServerCacheClient.ts", "core/services/cache/redisServerCacheStore.ts", "core/services/cache/redisServerCacheHealth.ts", "tests/integration/server/redis-server-cache-store.test.ts", "tests/integration/server/redis-server-cache-outage.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-07-L02:single"],
+      "commandIds": ["redis-store-tests", "core-lint-types", "core-lint", "diff-check", "line-count"]
+    }
+  ]
+}
+```

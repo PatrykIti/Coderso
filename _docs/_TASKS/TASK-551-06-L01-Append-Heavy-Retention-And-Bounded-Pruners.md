@@ -8,7 +8,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-551-03-L01 and TASK-551-05-L02
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -774,3 +774,195 @@ TASK-551-10-L02.
 - Assistant execution and undo rows are atomic under 50 concurrent replay/
   conflict attempts, with zero orphan/partial manifests.
 - Every touched production/test file is at most 1,000 physical lines.
+
+## Workflow Dispatch Envelope
+
+The three pure Vitest suites run without an environment profile. The remaining
+database lanes use only L11's one-use `task551-db-test` binding and the fixed
+OS keys; they cannot source `.env`, select another database, or pass arbitrary
+retention configuration through the command line.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-06-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-06"
+  },
+  "allowlist": [
+    "core/services/maintenance/retentionPolicy.ts",
+    "core/services/maintenance/appendHeavyRetentionRegistry.ts",
+    "core/services/access/accessLogService.ts",
+    "core/services/audit/auditService.ts",
+    "core/services/email/emailDeliveryRetentionService.ts",
+    "core/services/search/searchHistoryContract.ts",
+    "core/services/search/searchHistoryService.ts",
+    "core/services/search/searchHistoryRetentionService.ts",
+    "core/services/integrations/integrationRequestRetentionService.ts",
+    "core/services/auth/expiredAuthArtifactRetentionService.ts",
+    "core/services/pages/previewTokenRetentionService.ts",
+    "core/services/assistant/actionExecutionStore.ts",
+    "core/services/assistant/assistantRetentionService.ts",
+    "core/services/analytics/trafficRepository.ts",
+    "core/services/analytics/trafficRetentionService.ts",
+    "core/services/forms/submissionRetentionService.ts",
+    "core/services/webhooks/webhookRetentionService.ts",
+    "core/services/auth/sessionRetentionService.ts",
+    "core/services/kits/legacyRollbackProgressDigest.ts",
+    "core/services/kits/solutionKitRetentionService.ts",
+    "tests/vitest/maintenance/retentionPolicy.test.ts",
+    "tests/unit/access/accessLogService.test.ts",
+    "tests/unit/audit/auditService.test.ts",
+    "tests/vitest/search/searchHistoryContract.test.ts",
+    "tests/unit/search/searchHistoryService.test.ts",
+    "tests/integration/server/task551ActionExecutionStore.test.ts",
+    "tests/integration/analytics/trafficRepository.test.ts",
+    "tests/integration/analytics/trafficRetention.test.ts",
+    "tests/integration/server/task551AppendHeavyRetention.test.ts",
+    "tests/perf/database-retention-batches.test.ts",
+    "tests/vitest/kits/legacyRollbackProgressDigest.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/services/maintenance/retentionScheduler.ts",
+    "core/services/forms/submissionService.ts",
+    "core/services/webhooks/webhooksService.ts",
+    "core/services/auth/sessionService.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/services/cache/serverCacheRuntime.ts"
+  ],
+  "dependencies": ["TASK-551-03-L01:single"],
+  "commands": [
+    {
+      "id": "retention-policy-test",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/maintenance/retentionPolicy.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/maintenance/retentionPolicy.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "search-history-contract-test",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/search/searchHistoryContract.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/search/searchHistoryContract.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "legacy-rollback-progress-digest-test",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/kits/legacyRollbackProgressDigest.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/kits/legacyRollbackProgressDigest.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "access-and-audit-unit-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/access/accessLogService.test.ts", "tests/unit/audit/auditService.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": [
+          "tests/unit/access/accessLogService.test.ts",
+          "tests/unit/audit/auditService.test.ts"
+        ],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "search-history-unit-test",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/search/searchHistoryService.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/search/searchHistoryService.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "append-heavy-integration-and-budget-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551ActionExecutionStore.test.ts", "tests/integration/analytics/trafficRepository.test.ts", "tests/integration/analytics/trafficRetention.test.ts", "tests/integration/server/task551AppendHeavyRetention.test.ts", "tests/perf/database-retention-batches.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": [
+          "tests/integration/server/task551ActionExecutionStore.test.ts",
+          "tests/integration/analytics/trafficRepository.test.ts",
+          "tests/integration/analytics/trafficRetention.test.ts",
+          "tests/integration/server/task551AppendHeavyRetention.test.ts",
+          "tests/perf/database-retention-batches.test.ts"
+        ],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "performance-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "security-scan",
+      "lane": "tooling",
+      "argv": ["bun", "run", "scan:security"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-03-L01:single"],
+      "commandIds": [
+        "retention-policy-test",
+        "search-history-contract-test",
+        "legacy-rollback-progress-digest-test",
+        "access-and-audit-unit-tests",
+        "search-history-unit-test",
+        "append-heavy-integration-and-budget-tests",
+        "core-lint-types",
+        "core-lint",
+        "coderso-gate",
+        "performance-gate",
+        "security-scan"
+      ]
+    }
+  ]
+}
+```

@@ -8,7 +8,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-551-06-L02; parent external dispatch gate
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -301,3 +301,117 @@ recovery steps, metrics, and partition decision report.
 - Readiness inspection executes only allowlisted catalog/aggregate reads and
   exactly zero partition/destructive statements; every `plan` result includes a
   separate-task/online-migration/rollback recommendation.
+
+## Workflow Dispatch Envelope
+
+The finite `forbiddenPaths` list captures named current ownership conflicts.
+The closed `allowlist` rejects every omitted path, including the broad foreign
+categories described in the file-ownership contract.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-06-L03",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-06"
+  },
+  "allowlist": [
+    "core/services/maintenance/retentionJobService.ts",
+    "core/services/maintenance/partitionReadinessService.ts",
+    "core/server/jobs/retentionScheduler.ts",
+    "scripts/task-551-partition-readiness.ts",
+    "tests/vitest/maintenance/partitionReadinessService.test.ts",
+    "tests/integration/runtime/retentionScheduler.test.ts",
+    "tests/integration/server/task551RetentionJobService.test.ts",
+    "tests/perf/database-retention-jobs.test.ts",
+    "tests/perf/database-partition-readiness.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/db/client.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/server/jobs/backupScheduler.ts",
+    "core/server/httpServer.ts",
+    "core/server/dockerStart.ts",
+    "core/server/prod.ts",
+    "core/server/dev.ts",
+    "core/services/backups/backupScheduler.ts",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-06-L02:single"],
+  "commands": [
+    {
+      "id": "partition-readiness-vitest",
+      "lane": "vitest",
+      "environmentProfile": "none",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/maintenance/partitionReadinessService.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/maintenance/partitionReadinessService.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "scheduler-and-database-tests",
+      "lane": "bun-test",
+      "environmentProfile": "task551-db-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "partition-readiness-check",
+      "lane": "cli",
+      "environmentProfile": "task551-db-test",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-partition-readiness.ts", "--check"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-gate",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "gates:coderso"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "performance-gate",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "security-scan",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "scan:security"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-06-L02:single"],
+      "commandIds": ["partition-readiness-vitest", "scheduler-and-database-tests", "partition-readiness-check", "core-lint-types", "core-lint", "coderso-gate", "performance-gate", "security-scan"]
+    }
+  ]
+}
+```

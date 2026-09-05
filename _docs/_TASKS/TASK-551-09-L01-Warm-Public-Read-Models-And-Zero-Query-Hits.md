@@ -6,9 +6,11 @@
 **Priority:** Critical
 **Category:** Public Runtime / Cache / Performance / Security
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-08-L03; parent external dispatch gate
+**Dependencies:** TASK-551-08-L03; parent external dispatch gate; parent-owned
+phased land order places the TASK-551-04-L01 adoption receipt terminal before
+this leaf without a direct behavioral edge (L01 adopts no search-related output)
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -34,8 +36,9 @@ Sole writer of:
 - existing `core/server/publicSite.tsx`;
 - existing `core/site/cache/siteCache.ts` as a temporary compatibility facade
   over the new runtime (no independent value `Map` remains);
-- new `core/server/publicSiteRenderer.tsx` for the cohesive split required to
-  leave `publicSite.tsx` and the extracted module each below 1,000 lines;
+- new `core/server/publicSiteRenderer.tsx` for a cohesive post-adoption split that
+  keeps `publicSite.tsx` (which grows as adoption lands) and the extracted module
+  each below the 1,000-line gate;
 - new `core/server/publicSiteCacheReadModels.ts`;
 - new `core/server/publicSiteRenderDependencies.ts`;
 - new `core/services/content/publicContentVisibilityGateRead.ts` for the sole
@@ -63,6 +66,11 @@ Sole writer of:
   `tests/integration/routes/publicAnalytics.test.ts`, and
   `tests/security/analyticsBeacon.test.ts`, only for preserving the complete
   pre-cache API-surface dispatch and each handler-owned security flow.
+
+  TASK-551-03-L02 may extend these two files only for bounded list/pagination
+  behavior per the dual-writer handoff in TASK-551-03-L02; this leaf preserves
+  every dispatcher regression and coordinates any wider change through the
+  TASK-551-09 contract.
 - delete legacy 2,038-line `tests/unit/server/publicFormsApi.test.ts` after
   moving shared builders/mocks only to
   `tests/unit/server/publicFormsApiTestFixtures.ts` and assertions exactly to
@@ -77,6 +85,13 @@ Sole writer of:
   to `formsWriteMounts-routing.test.ts`,
   `formsWriteMounts-upload-errors.test.ts`, and
   `formsWriteMounts-auth-media.test.ts` in that directory.
+
+Read-only renderer dependencies: `core/site/renderPublicPage.tsx`,
+`core/site/renderPublicEntry.tsx`, `core/server/publicEntryRender.tsx`, and
+`core/server/publicEntryGateUi.tsx` are imported by `publicSite.tsx` and are not
+edited by any 09 leaf. Their dynamic-dependency tagging happens inside the new
+`core/server/publicSiteRenderer.tsx` / adoption modules owned above; 09 re-reads
+their bytes but assigns them no 09 writer.
 
 Re-read post-TASK-493/TASK-517 bytes immediately before editing. Preserve the
 sitemap/indexing additions plus all private/password prompt/body and
@@ -761,3 +776,153 @@ wc -l core/server/publicSite.tsx core/server/publicSiteRenderer.tsx \
 
 Both split production modules and all tests must be below 1,000 lines. Docs go
 to 10-L02.
+
+## Workflow Dispatch Envelope
+
+Memory is the documented default server-cache backend, so its DB command carries
+no backend assignment. The Redis command receives its private DB/Redis bindings,
+fixed Redis backend, and derived namespace solely from
+`task551-db-redis-test`; no endpoint, namespace, dotenv, or environment
+assignment is present in argv.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-09-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-09"
+  },
+  "artifactPolicy": "none",
+  "allowlist": [
+    "core/server/publicSite.tsx",
+    "core/site/cache/siteCache.ts",
+    "core/server/publicSiteRenderer.tsx",
+    "core/server/publicSiteCacheReadModels.ts",
+    "core/server/publicSiteRenderDependencies.ts",
+    "core/services/content/publicContentVisibilityGateRead.ts",
+    "tests/vitest/site/public-site-cache-read-models.test.ts",
+    "tests/unit/site/cache.test.ts",
+    "tests/integration/runtime/public-site-cache-query-budget.test.ts",
+    "tests/integration/runtime/public-site-cache-eligibility.test.ts",
+    "tests/integration/runtime/public-content-visibility-cache-gate.test.ts",
+    "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts",
+    "tests/integration/runtime/public-nested-content-cache-gate.test.ts",
+    "tests/vitest/content/entry-visibility-gate.test.ts",
+    "tests/vitest/content/entry-unlock-token.test.ts",
+    "tests/integration/server/entry-access-password-hash.test.ts",
+    "tests/integration/runtime/entry-visibility-gate.test.ts",
+    "tests/integration/runtime/entry-password-gate.test.ts",
+    "tests/integration/runtime/entry-visibility-cache.test.ts",
+    "tests/unit/server/publicBookingApi.test.ts",
+    "tests/integration/routes/bookingRoutes.test.ts",
+    "tests/integration/routes/forms.test.ts",
+    "tests/integration/routes/publicAnalytics.test.ts",
+    "tests/security/analyticsBeacon.test.ts",
+    "tests/unit/server/publicFormsApi.test.ts",
+    "tests/unit/server/publicFormsApiTestFixtures.ts",
+    "tests/unit/server/publicFormsApi-routing-errors.test.ts",
+    "tests/unit/server/publicFormsApi-public-access-rate.test.ts",
+    "tests/unit/server/publicFormsApi-internal-auth.test.ts",
+    "tests/unit/server/publicFormsApi-payload-descriptors.test.ts",
+    "tests/unit/server/publicFormsApi-database.test.ts",
+    "tests/integration/server/formsWriteMounts.test.ts",
+    "tests/integration/server/formsWriteMountsTestFixtures.ts",
+    "tests/integration/server/formsWriteMounts-routing.test.ts",
+    "tests/integration/server/formsWriteMounts-upload-errors.test.ts",
+    "tests/integration/server/formsWriteMounts-auth-media.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/services/pages/pageService.ts",
+    "core/services/content/entryService.ts",
+    "core/services/content/postsService.ts",
+    "core/services/seo/seoService.ts",
+    "core/services/settings/settingsService.ts",
+    "core/services/cache/serverCacheRuntime.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json"
+  ],
+  "dependencies": ["TASK-551-04-L02:single"],
+  "commands": [
+    {
+      "id": "public-read-model-vitest",
+      "lane": "vitest",
+      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/site/public-site-cache-read-models.test.ts", "tests/vitest/content/entry-visibility-gate.test.ts", "tests/vitest/content/entry-unlock-token.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/site/public-site-cache-read-models.test.ts", "tests/vitest/content/entry-visibility-gate.test.ts", "tests/vitest/content/entry-unlock-token.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "public-memory-cache-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/site/cache.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/public-nested-content-cache-gate.test.ts", "tests/integration/server/entry-access-password-hash.test.ts", "tests/integration/runtime/entry-visibility-cache.test.ts", "tests/integration/runtime/entry-visibility-gate.test.ts", "tests/integration/runtime/entry-password-gate.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/site/cache.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/public-nested-content-cache-gate.test.ts", "tests/integration/server/entry-access-password-hash.test.ts", "tests/integration/runtime/entry-visibility-cache.test.ts", "tests/integration/runtime/entry-visibility-gate.test.ts", "tests/integration/runtime/entry-password-gate.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "public-redis-cache-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/public-nested-content-cache-gate.test.ts", "tests/integration/runtime/entry-visibility-cache.test.ts", "tests/integration/runtime/entry-visibility-gate.test.ts", "tests/integration/runtime/entry-password-gate.test.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/public-nested-content-cache-gate.test.ts", "tests/integration/runtime/entry-visibility-cache.test.ts", "tests/integration/runtime/entry-visibility-gate.test.ts", "tests/integration/runtime/entry-password-gate.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "public-dispatcher-regression-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/server/publicBookingApi.test.ts", "tests/unit/server/publicFormsApi-routing-errors.test.ts", "tests/unit/server/publicFormsApi-public-access-rate.test.ts", "tests/unit/server/publicFormsApi-internal-auth.test.ts", "tests/unit/server/publicFormsApi-payload-descriptors.test.ts", "tests/unit/server/publicFormsApi-database.test.ts", "tests/integration/routes/bookingRoutes.test.ts", "tests/integration/routes/forms.test.ts", "tests/integration/server/formsWriteMounts-routing.test.ts", "tests/integration/server/formsWriteMounts-upload-errors.test.ts", "tests/integration/server/formsWriteMounts-auth-media.test.ts", "tests/integration/routes/publicAnalytics.test.ts", "tests/security/analyticsBeacon.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/server/publicBookingApi.test.ts", "tests/unit/server/publicFormsApi-routing-errors.test.ts", "tests/unit/server/publicFormsApi-public-access-rate.test.ts", "tests/unit/server/publicFormsApi-internal-auth.test.ts", "tests/unit/server/publicFormsApi-payload-descriptors.test.ts", "tests/unit/server/publicFormsApi-database.test.ts", "tests/integration/routes/bookingRoutes.test.ts", "tests/integration/routes/forms.test.ts", "tests/integration/server/formsWriteMounts-routing.test.ts", "tests/integration/server/formsWriteMounts-upload-errors.test.ts", "tests/integration/server/formsWriteMounts-auth-media.test.ts", "tests/integration/routes/publicAnalytics.test.ts", "tests/security/analyticsBeacon.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "argv": ["wc", "-l", "core/server/publicSite.tsx", "core/server/publicSiteRenderer.tsx", "core/server/publicSiteCacheReadModels.ts", "core/server/publicSiteRenderDependencies.ts", "core/services/content/publicContentVisibilityGateRead.ts", "core/site/cache/siteCache.ts", "tests/unit/site/cache.test.ts", "tests/vitest/site/public-site-cache-read-models.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/public-nested-content-cache-gate.test.ts", "tests/vitest/content/entry-visibility-gate.test.ts", "tests/vitest/content/entry-unlock-token.test.ts", "tests/integration/server/entry-access-password-hash.test.ts", "tests/integration/runtime/entry-visibility-cache.test.ts", "tests/integration/runtime/entry-visibility-gate.test.ts", "tests/integration/runtime/entry-password-gate.test.ts", "tests/unit/server/publicBookingApi.test.ts", "tests/unit/server/publicFormsApiTestFixtures.ts", "tests/unit/server/publicFormsApi-routing-errors.test.ts", "tests/unit/server/publicFormsApi-public-access-rate.test.ts", "tests/unit/server/publicFormsApi-internal-auth.test.ts", "tests/unit/server/publicFormsApi-payload-descriptors.test.ts", "tests/unit/server/publicFormsApi-database.test.ts", "tests/integration/routes/bookingRoutes.test.ts", "tests/integration/routes/forms.test.ts", "tests/integration/server/formsWriteMountsTestFixtures.ts", "tests/integration/server/formsWriteMounts-routing.test.ts", "tests/integration/server/formsWriteMounts-upload-errors.test.ts", "tests/integration/server/formsWriteMounts-auth-media.test.ts", "tests/integration/routes/publicAnalytics.test.ts", "tests/security/analyticsBeacon.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-04-L02:single"],
+      "commandIds": ["public-read-model-vitest", "public-memory-cache-tests", "public-redis-cache-tests", "public-dispatcher-regression-tests", "core-lint-types", "core-lint", "diff-check", "line-count"]
+    }
+  ]
+}
+```

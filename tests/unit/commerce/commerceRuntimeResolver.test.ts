@@ -67,6 +67,8 @@ test("compare/wishlist payload builders normalize runtime payloads", async () =>
       createdBy: null,
       createdAt: new Date("2026-02-01T10:00:00.000Z"),
       updatedAt: new Date("2026-02-01T10:00:00.000Z"),
+      searchVector: null,
+      searchTrigramText: null,
     }),
     now: () => "2026-05-19T12:00:00.000Z",
   });
@@ -123,6 +125,8 @@ test("compare payload omits product links when no enabled products detail route 
       createdBy: null,
       createdAt: new Date("2026-02-01T10:00:00.000Z"),
       updatedAt: new Date("2026-02-01T10:00:00.000Z"),
+      searchVector: null,
+      searchTrigramText: null,
     }),
     now: () => "2026-05-19T12:00:00.000Z",
   });

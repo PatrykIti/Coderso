@@ -31,6 +31,8 @@ export const auditLogs = pgTable(
     actionIdx: index("audit_logs_action_idx").on(t.action),
     targetIdx: index("audit_logs_target_idx").on(t.targetType, t.targetId),
     createdAtIdx: index("audit_logs_created_at_idx").on(t.createdAt),
+    // TASK-551-05-L01 retention scan.
+    auditLogsRetentionIdx: index("audit_logs_retention_idx").on(t.createdAt, t.id),
   })
 );
 
@@ -73,6 +75,8 @@ export const accessLogs = pgTable(
     // an intentional owner-approved test-infrastructure optimization; do not remove
     // it as diagnostic-only without an equivalently measured bounded lookup.
     userAgentIdx: index("access_logs_user_agent_idx").using("hash", t.userAgent),
+    // TASK-551-05-L01 retention scan.
+    accessLogsRetentionIdx: index("access_logs_retention_idx").on(t.createdAt, t.id),
   })
 );
 
@@ -91,5 +95,7 @@ export const emailDeliveryLogs = pgTable(
   (t) => ({
     statusIdx: index("email_delivery_logs_status_idx").on(t.status),
     createdAtIdx: index("email_delivery_logs_created_at_idx").on(t.createdAt),
+    // TASK-551-05-L01 retention scan.
+    emailDeliveryLogsRetentionIdx: index("email_delivery_logs_retention_idx").on(t.createdAt, t.id),
   })
 );

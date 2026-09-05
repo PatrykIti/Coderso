@@ -6,10 +6,12 @@
 **Priority:** Critical
 **Category:** Database / Search / Performance
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-03-L03, TASK-551-06-L03, and the
-TASK-551-09-L04 INITIAL Admin-authority receipt
+**Dependencies:** TASK-551-03-L03, TASK-551-06-L03, TASK-551-05-L02 (the
+landed CMS generated-vector/trigram schema, indexes, and evidence receipts
+this leaf consumes read-only; family edge also declared by the TASK-551-04
+parent), and the TASK-551-09-L04 INITIAL Admin-authority receipt
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -148,7 +150,7 @@ async function searchAll(request: StrictSearchRequest, deps: SearchDeps): Promis
   // lookahead only; return the first request.limit items and add no cursor.
 }
 
-// Imported read-only from L06's Bun-free searchHistoryContract.ts:
+// Imported read-only from TASK-551-06-L01's Bun-free searchHistoryContract.ts:
 // SearchHistoryWriteRequest, SearchHistoryWriteCommand, and the strict
 // parseSearchHistoryWriteRequest(input) normalizer. Do not duplicate its keys,
 // enums, bounds, UUID rule, or command mapping in route/browser code.
@@ -159,10 +161,14 @@ router.get("/search", requirePermission("content:read"), async (ctx) => {
 });
 
 router.post("/search/history", requirePermission("content:read"), async (ctx) => {
-  const actorId = requireSessionActorId(ctx);
+  // Session middleware already guarantees a user; read the existing
+  // ctx.user.id shape used by core/server/routes/searchRoutes.ts and fail
+  // closed when it is absent. No new actor-accessor helper is created.
+  const actorId = ctx.user?.id;
+  if (!actorId) throw mapSearchHistoryError(new Error("search_history_invalid"));
   const command = parseSearchHistoryWriteRequest(ctx.body);
   try {
-    return await recordSearch(actorId, command); // exact L06 command shape
+    return await recordSearch(actorId, command); // exact TASK-551-06-L01 command shape
   } catch (error) {
     throw mapSearchHistoryError(error); // idempotency conflict -> 409
   }
@@ -186,7 +192,8 @@ export async function recordSearchHistory(
 // result. Cleanup aborts search/history; non-UI/prefetch callers pass no history.
 ```
 
-`searchHistoryContract.ts` and its direct contract test remain solely L06-owned;
+`searchHistoryContract.ts` and its direct contract test remain solely
+TASK-551-06-L01-owned;
 the route and browser client import its strict request/command types and parser
 read-only rather than adding validation state to the already single-writer
 route index. The internal `/admin/api` HTTP
@@ -201,8 +208,9 @@ per fetch retry. Cache hydration plus forced background revalidation, CSRF token
 refresh, concurrent hook settlement, and an exact client retry reuse the same
 key; changing query/limit/date range after debounce creates a new key. The
 client's in-flight map is removed on settlement and stores no result long-term.
-History-write failure never erases or relabels a valid search response. L06's
-actor/key-derived primary-key contract makes the server authoritative for
+History-write failure never erases or relabels a valid search response.
+TASK-551-06-L01's actor/key-derived primary-key contract makes the server
+authoritative for
 replay/conflict behavior; the raw key never appears in logs/telemetry/recent
 response data.
 
@@ -352,8 +360,8 @@ no search cursor field or cursor-specific error in this v1 contract.
   They prove session auth, `content:read`, global CSRF enforcement, the
   `admin_write` rate bucket, actor binding, first `{recorded:true}`, exact replay
   `{recorded:false}`, mismatched replay 409, and no raw key/query/filters in
-  errors/logs. The route passes L06's exact command object and never accepts an
-  actor ID from the body.
+  errors/logs. The route passes TASK-551-06-L01's exact command object and
+  never accepts an actor ID from the body.
 - `searchClient.test.ts` asserts `POST /search/history`, JSON body,
   `withCsrf:true` (including CSRF refresh reuse), and one in-flight call per key.
   `use-search-results.test.tsx` pins one UUID across cache hydrate + background
@@ -431,10 +439,141 @@ TASK-551-10-L02. Its closure update must replace `_docs/SEARCH_SPEC.md`'s stale
 - Every search GET is observably read-only. History persistence occurs only on
   the strict internal POST with CSRF/admin-write throttling and actor-scoped
   UUID idempotency; 50 exact replays add one row and mismatched reuse adds none.
-- TASK-551-04 writes zero search-history production/test files, preserves L06's
-  validated `pruneHistory` removal/idempotency behavior, and leaves zero
-  production callers of its transitional string-input branch.
+- TASK-551-04 writes zero search-history production/test files, preserves
+  TASK-551-06-L01's validated `pruneHistory` removal/idempotency behavior, and
+  leaves zero production callers of its transitional string-input branch.
 - Both owned Admin search modules return a complete L04 INITIAL authority/reset
   adoption receipt; no pre-transition result/history completion installs into a
   later audience and L04 FINAL does not reopen these files.
 - Every touched production/test file is at most 1,000 physical lines.
+
+## Workflow Dispatch Envelope
+
+The two vector-migration receipts below are foreign L05 tests: they are literal
+read-only command inputs and remain forbidden write targets. The DB suite uses
+only the owner-injected DB test profile; it cannot inherit `.env` or a
+caller-provided endpoint.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-04-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-04"
+  },
+  "allowlist": [
+    "core/services/search/searchContract.ts",
+    "core/services/search/searchService.ts",
+    "core/services/search/searchIndexService.ts",
+    "core/server/routes/searchRoutes.ts",
+    "core/admin/services/searchClient.ts",
+    "core/admin/ui/search/useSearchResults.ts",
+    "tests/vitest/search/searchService.test.ts",
+    "tests/vitest/search/searchIndexService.test.ts",
+    "tests/vitest/admin/searchClient.test.ts",
+    "tests/vitest/ui/use-search-results.test.tsx",
+    "tests/unit/search/searchServiceDateRange.test.ts",
+    "tests/integration/routes/search.test.ts",
+    "tests/integration/server/task551SearchRankedQueries.test.ts",
+    "tests/perf/database-search-plans.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/db/searchVectorDefinitions.ts",
+    "tests/vitest/db/searchVectorDefinitions.test.ts",
+    "tests/integration/server/task551SearchVectorMigration.test.ts",
+    "core/services/assistant/assistantDocsCandidateQuery.ts",
+    "core/services/assistant/docsDbRetriever.ts",
+    "core/services/content/contentHistoryService.ts",
+    "core/site/cache/siteCache.ts",
+    "core/services/cache/serverCache.ts",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-03-L03:single"],
+  "commands": [
+    {
+      "id": "search-service-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/search/searchService.test.ts", "tests/vitest/search/searchIndexService.test.ts", "tests/vitest/db/searchVectorDefinitions.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/search/searchService.test.ts", "tests/vitest/search/searchIndexService.test.ts", "tests/vitest/db/searchVectorDefinitions.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "admin-search-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/admin/searchClient.test.ts", "tests/vitest/ui/use-search-results.test.tsx"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/admin/searchClient.test.ts", "tests/vitest/ui/use-search-results.test.tsx"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "search-date-range-unit",
+      "lane": "bun-test",
+      "argv": ["bun", "test", "tests/unit/search/searchServiceDateRange.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/search/searchServiceDateRange.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "search-db-and-plan-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/routes/search.test.ts", "tests/integration/server/task551SearchRankedQueries.test.ts", "tests/perf/database-search-plans.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/routes/search.test.ts", "tests/integration/server/task551SearchRankedQueries.test.ts", "tests/perf/database-search-plans.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-performance-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-03-L03:single"],
+      "commandIds": ["search-service-vitest", "admin-search-vitest", "search-date-range-unit", "search-db-and-plan-tests", "core-lint-types", "core-lint", "coderso-gate", "coderso-performance-gate"]
+    }
+  ]
+}
+```

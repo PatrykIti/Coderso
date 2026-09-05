@@ -8,7 +8,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-551-02-L01
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -34,12 +34,14 @@ None; this is an executable leaf.
 `tests/vitest/db/databaseApplicationIdentity.test.ts`,
 `tests/integration/server/task551DatabaseLifecycle.test.ts`,
 `tests/integration/server/task551RuntimeEntrypoints.test.ts`,
-`tests/perf/database-pool-telemetry.test.ts`, and
 `tests/perf/database-pg-stat-interval.test.ts` only.
 
-**Forbidden:** schema/migrations; service/route behavior; TASK-511 backup and
-scheduler source; TASK-517 entry/public source; TASK-493 SEO source; cache/Redis
-07/08 paths; task/changelog/workflow files.
+**Forbidden:** `tests/perf/database-pool-telemetry.test.ts` (the sole L03 test
+owner); schema/migrations; service/route behavior; TASK-511 backup and scheduler
+source; TASK-517 entry/public source; TASK-493 SEO source; cache/Redis 07/08
+paths; task/changelog/workflow files. L02 must not add telemetry wrappers to
+caller sources: each reviewed caller remains owned by its domain leaf. L03 may
+read L02's public APIs but may not edit any file in this L02 allowlist.
 
 ## Implementation Pseudocode
 
@@ -243,7 +245,10 @@ export const POOL_WAIT_BUCKET_MAX_MS = strictReadonly([
 export const POOL_OUTCOMES = strictReadonly([
   "available", "saturated", "timeout", "driver_error",
 ] as const);
-export const MAX_QUERY_FINGERPRINTS = 512;
+// Ceiling must cover the full reviewed 1,065-key TASK-551-01 receipt with
+// headroom; 512 was a pre-review estimate superseded by contract correction
+// of 2026-08-26.
+export const MAX_QUERY_FINGERPRINTS = 2048;
 export const MAX_COUNTER_VALUE = Number.MAX_SAFE_INTEGER;
 
 // Pure production module: no DB/runtime/env/test-fixture import.
@@ -327,8 +332,25 @@ L05 uses these same two parsed fleet counts for adapter-array cardinality
 and these names for fail-closed `pg_stat_activity` drain proof.
 
 These are closed registries, not examples. `queryFingerprintRegistry.ts` fails
-module validation if the reviewed map exceeds `MAX_QUERY_FINGERPRINTS`, contains
-duplicate values, or contains a member outside the initial TASK-551-01 receipt.
+module validation if the reviewed map exceeds `MAX_QUERY_FINGERPRINTS` (2048
+after the 2026-08-26 correction below; it must cover the full reviewed receipt
+with headroom), contains duplicate values, or contains a member outside the
+initial TASK-551-01 receipt.
+
+### Contract correction (2026-08-26)
+
+- The reviewed TASK-551-01 inventory fixture contains exactly **1,065**
+  distinct fingerprint rows (independently verified against
+  `tests/perf/fixtures/task551QueryInventory.ts`). The original
+  `MAX_QUERY_FINGERPRINTS = 512` was a pre-review estimate and is stale. This
+  contract now pins `MAX_QUERY_FINGERPRINTS = 2048`, and the registry enforces
+  exact-set closure against the reviewed 1,065-key receipt: no key may be
+  added, removed, or duplicated without a new reviewed receipt.
+- The prior L02 pass exported `normalizedQuerySha256` digests that were
+  deterministically derived from the reviewed fixture (not independently
+  human-reviewed). Final TASK-551-01-L01 exact-set verification must confirm
+  or replace those digests before the TASK-551-01 receipt is promoted.
+
 Every observation validates family, fingerprint, outcome, and bucket before it
 touches storage; an unknown member is rejected and allocates no label or counter.
 The sink preallocates one fixed array per registered fingerprint with exactly
@@ -488,11 +510,13 @@ label may become a fingerprint.
 
 This leaf also owns an executable, read-only interval collector. It never calls
 `pg_stat_statements_reset()` and never treats cumulative counters as a named
-interval. Its exact commands are:
+interval. The DB-profile operations run only through TASK-551-11's
+`task551-db-test` capability, which supplies the private non-inherited binding;
+their exact commands are:
 
 ```text
-bun scripts/task-551-pg-stat-interval.ts start --name task551-predecision-clean --purpose pre-decision --snapshot .tmp/task551-pg-stat-task551-predecision-clean-start.json --operator-evidence .tmp/task551-pg-stat-operator-evidence.json
-bun scripts/task-551-pg-stat-interval.ts end --name task551-predecision-clean --purpose pre-decision --start .tmp/task551-pg-stat-task551-predecision-clean-start.json --receipt .tmp/task551-pg-stat-task551-predecision-clean.json --operator-evidence .tmp/task551-pg-stat-operator-evidence.json
+bun --env-file=/dev/null scripts/task-551-pg-stat-interval.ts start --name task551-predecision-clean --purpose pre-decision --snapshot .tmp/task551-pg-stat-task551-predecision-clean-start.json --operator-evidence .tmp/task551-pg-stat-operator-evidence.json
+bun --env-file=/dev/null scripts/task-551-pg-stat-interval.ts end --name task551-predecision-clean --purpose pre-decision --start .tmp/task551-pg-stat-task551-predecision-clean-start.json --receipt .tmp/task551-pg-stat-task551-predecision-clean.json --operator-evidence .tmp/task551-pg-stat-operator-evidence.json
 ```
 
 L05 runs the same pair with names `task551-index-before`/`before` and
@@ -618,19 +642,20 @@ enter the receipt or task evidence.
   Also cover a signal during startup (zero listens), SIGINT/SIGTERM coalescing,
   graceful and forced HTTP branches, startup failure rollback, listener
   disposal, and zero direct signal handlers/`process.exit` calls in prod/dev.
-- `measureDatabaseQuery` tests success/error/timeout and returned-row buckets for
-  opted-in current and planned operations; the inventory/fingerprint set has
-  exact coverage, cardinality remains fixed, and a secret sentinel cannot appear
-  in metrics/log output. A throwing row counter or sink cannot replace the
-  operation's value/error.
+- L02's Vitest registry suite tests `measureDatabaseQuery` success/error/timeout
+  and returned-row buckets through the closed API; the inventory/fingerprint set
+  has exact coverage, cardinality remains fixed, and a secret sentinel cannot
+  appear in metrics/log output. A throwing row counter or sink cannot replace
+  the operation's value/error. L03 alone owns the real-pool Bun test and must
+  not add or change a production caller.
 - Registry tests pin closed key/value uniqueness, stable ordering, each
   lowercase normalized-query SHA-256 and closed source class, side-effect-free
   import, and zero production imports from `tests/**`; final 01-L01 owns
   independent exact-set verification. No statement text is exported.
-- `probeDatabasePoolHealth` saturates only the test pool, records a bounded
-  reservation-wait/saturation sample, releases every reserved session in
-  `finally`, and returns to zero after drain. Tests do not claim this is
-  driver-wide per-query wait telemetry.
+- L03's sole real-pool test proves `probeDatabasePoolHealth` saturates only its
+  test pool, records a bounded reservation-wait/saturation sample, releases
+  every reserved session in `finally`, and returns to zero after drain. Neither
+  leaf claims this is driver-wide per-query wait telemetry.
 - Snapshot/reset tests pin the complete fixed bucket registry, frozen snapshots,
   the exact 3,240-cells-per-fingerprint and 44-cell pool bounds, saturating
   `Number.MAX_SAFE_INTEGER` counters, deterministic zeroed state after reset,
@@ -686,12 +711,14 @@ enter the receipt or task evidence.
 
 ## Validation Commands
 
-- `set -a && source .env && set +a && bun test tests/integration/server/task551DatabaseLifecycle.test.ts`
+- `task551-db-test` commands run only through TASK-551-11's owner-injected
+  private map, which provides the one DB binding plus fixed OS keys with no
+  inherited environment. This leaf never loads, maps, or inspects a source.
+- `bun --env-file=/dev/null test tests/integration/server/task551DatabaseLifecycle.test.ts`
 - `bun test tests/integration/server/task551RuntimeEntrypoints.test.ts`
 - `bunx vitest run tests/vitest/db/queryFingerprintRegistry.test.ts`
 - `bunx vitest run tests/vitest/db/databaseApplicationIdentity.test.ts`
-- `set -a && source .env && set +a && bun test tests/perf/database-pool-telemetry.test.ts`
-- `set -a && source .env && set +a && bun test tests/perf/database-pg-stat-interval.test.ts`
+- `bun --env-file=/dev/null test tests/perf/database-pg-stat-interval.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso`
@@ -702,7 +729,7 @@ enter the receipt or task evidence.
 
 Do not edit `.env.example`. Hand L01's exact env table and the lifecycle contract
 to TASK-551-10-L02, which solely owns environment, ORM, performance, deployment,
-health prose, and changelog 1263.
+health prose, and changelog 1310.
 
 ## Quantified Acceptance
 
@@ -731,7 +758,8 @@ health prose, and changelog 1263.
   outcome/returned-row buckets. The separate pool probe records bounded reserve
   wait/saturation. Snapshot/reset is deterministic and bounded, metric failures
   never alter authoritative results, and no surface emits raw SQL binds, secrets,
-  URLs, driver errors, free-form labels, or PII.
+  URLs, driver errors, free-form labels, or PII. L03's sole real-pool test is the
+  live proof for this public API; it does not authorize a production caller edit.
 - `queryFingerprintRegistry.ts` is the only production fingerprint value source;
   telemetry imports it and final inventory verifies exact key/value/set parity.
 - Session-affine work is impossible through a declared transaction-pooled main
@@ -750,3 +778,246 @@ health prose, and changelog 1263.
   over unchanged statistics identity without resetting shared state. Only
   registry/role-proven application traffic is prioritizable; polluted external
   diagnostics and unknowns are separately reported and excluded.
+
+## Workflow Dispatch Envelope
+
+The finite `forbiddenPaths` list captures named current ownership conflicts.
+The closed `allowlist` rejects every omitted path, including the broad foreign
+categories described in the file-ownership contract.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-02-L02",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-02"
+  },
+  "allowlist": [
+    "core/db/client.ts",
+    "core/db/databaseLifecycle.ts",
+    "core/db/databaseApplicationIdentity.ts",
+    "core/db/queryFingerprintRegistry.ts",
+    "core/db/queryTelemetry.ts",
+    "core/server/runtimeLifecycle.ts",
+    "core/server/runtimeEntrypoint.ts",
+    "core/server/prod.ts",
+    "core/server/dev.ts",
+    "scripts/task-551-pg-stat-interval.ts",
+    "tests/vitest/db/queryFingerprintRegistry.test.ts",
+    "tests/vitest/db/databaseApplicationIdentity.test.ts",
+    "tests/integration/server/task551DatabaseLifecycle.test.ts",
+    "tests/integration/server/task551RuntimeEntrypoints.test.ts",
+    "tests/perf/database-pg-stat-interval.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/db/databaseConfig.ts",
+    "tests/vitest/db/databaseConfig.test.ts",
+    "tests/perf/database-pool-telemetry.test.ts",
+    "core/services/analytics/analyticsService.ts",
+    "core/services/analytics/trafficAggregationService.ts",
+    "core/services/dashboard/dashboardService.ts",
+    "core/services/webhooks/webhooksService.ts",
+    "core/services/webhooks/deliveryService.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json"
+  ],
+  "dependencies": ["TASK-551-02-L01:single"],
+  "commands": [
+    {
+      "id": "database-lifecycle-test",
+      "lane": "bun-test",
+      "environmentProfile": "task551-db-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "runtime-entrypoints-test",
+      "lane": "bun-test",
+      "environmentProfile": "none",
+      "argv": ["bun", "test", "tests/integration/server/task551RuntimeEntrypoints.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/task551RuntimeEntrypoints.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "fingerprint-registry-test",
+      "lane": "vitest",
+      "environmentProfile": "none",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/db/queryFingerprintRegistry.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/db/queryFingerprintRegistry.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "application-identity-test",
+      "lane": "vitest",
+      "environmentProfile": "none",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/db/databaseApplicationIdentity.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/db/databaseApplicationIdentity.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "pg-stat-interval-test",
+      "lane": "bun-test",
+      "environmentProfile": "task551-db-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/perf/database-pg-stat-interval.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/perf/database-pg-stat-interval.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "pg-stat-interval-start",
+      "lane": "cli",
+      "environmentProfile": "task551-db-test",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-pg-stat-interval.ts", "start", "--name", "task551-predecision-clean", "--purpose", "pre-decision", "--snapshot", ".tmp/task551-pg-stat-task551-predecision-clean-start.json", "--operator-evidence", ".tmp/task551-pg-stat-operator-evidence.json"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "pg-stat-interval-end",
+      "lane": "cli",
+      "environmentProfile": "task551-db-test",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-pg-stat-interval.ts", "end", "--name", "task551-predecision-clean", "--purpose", "pre-decision", "--start", ".tmp/task551-pg-stat-task551-predecision-clean-start.json", "--receipt", ".tmp/task551-pg-stat-task551-predecision-clean.json", "--operator-evidence", ".tmp/task551-pg-stat-operator-evidence.json"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-gate",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "gates:coderso"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "performance-gate",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "security-scan",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "scan:security"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-02-L01:single"],
+      "commandIds": [
+        "database-lifecycle-test",
+        "runtime-entrypoints-test",
+        "fingerprint-registry-test",
+        "application-identity-test",
+        "pg-stat-interval-test",
+        "pg-stat-interval-start",
+        "pg-stat-interval-end",
+        "core-lint-types",
+        "core-lint",
+        "coderso-gate",
+        "performance-gate",
+        "security-scan"
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Contract correction (2026-09-03, pg_stat_interval failure-code set)
+
+Discovered while executing this leaf's fix round 2: the interval section above
+states a single failure code for every drift trigger — "a reset, restart,
+counter decrease, query-ID reuse with incompatible metadata, or more than
+10,000 rows fails `pg_stat_interval_invalid`" — while the implemented collector
+(`scripts/task-551-pg-stat-interval.ts`) throws a bounded, granular set, all of
+them fail-closed and all inside the `pg_stat_interval_*` namespace. The
+implemented set, straight from the bytes:
+
+- `pg_stat_interval_flag_unknown` — unknown command word, unknown flag, or
+  missing flag value (`parseIntervalArgs`).
+- `pg_stat_interval_name_purpose_mismatch` — a name outside the closed
+  name/purpose matrix, or a purpose that is not that name's matrix value
+  (`validateCliSpec`).
+- `pg_stat_interval_output_path_invalid` — a `--snapshot`/`--receipt` path off
+  the canonical `.tmp/task551-pg-stat-<name>…` form, or a non-canonical
+  `--operator-evidence` path (`validateCliSpec`).
+- `pg_stat_interval_reused` — an existing start-snapshot or receipt file for
+  the same interval name at CLI invocation (`main`).
+- `pg_stat_interval_invalid` — the generic shape/consistency code: non-canonical
+  or malformed snapshot bytes, boundary/name/purpose mismatch, closed-enum or
+  per-counter drift, more than 10,000 counters, missing identity row, missing
+  `DATABASE_URL`, a start not strictly after `diagnosticsEndedAt`, and (added in
+  this correction, see below) query-ID reuse with incompatible metadata
+  (`decodeSnapshot`, `buildIntervalReceipt`, `collectIdentityAndCounters`,
+  `main`).
+- `pg_stat_interval_identity_changed` — the reset/restart trigger: any of
+  server identity, database identity, PostgreSQL major, extension version, or
+  `stats_reset` differing between the start and end boundaries (identity check
+  in `buildIntervalReceipt`, line 389 when this correction was written).
+- `pg_stat_interval_counter_regression` — the counter-decrease trigger: a
+  negative calls/rows/plan/exec delta in the delta loop of
+  `buildIntervalReceipt` (line 430 when this correction was written).
+- `pg_stat_interval_bounds_exceeded` — snapshot or operator-evidence bytes over
+  4 MiB at decode, or a write payload whose canonical form exceeds 4 MiB
+  (`decodeSnapshot`, `decodeOperatorEvidence`, `writeBounded0600`).
+- `pg_stat_interval_evidence_invalid` — malformed operator evidence
+  (`decodeOperatorEvidence`, `main`).
+
+The granular set is kept as implemented, and the single-code sentence above is
+corrected rather than the code collapsed:
+
+- Every trigger still throws and aborts the receipt — fail-closed behavior is
+  exactly as contracted; only the diagnostic name differs.
+- All codes stay inside the closed `pg_stat_interval_*` namespace, so the
+  failure surface remains bounded and greppable.
+- Identity/reset and counter-regression drift are strictly better reported by
+  their own codes than by the generic one: an operator reading a failed run can
+  tell a `stats_reset` flip from a negative delta without re-deriving it.
+- Precedent: the contract correction of 2026-08-26 above, where the reviewed
+  receipt superseded the stale authored `MAX_QUERY_FINGERPRINTS = 512` estimate
+  with `2048` instead of weakening the bound. This is the same direction of
+  travel: the bytes and the reviewed behavior refine the authored wording, and
+  nothing becomes permitted that was forbidden.
+- The original single-code wording is preserved where it is exact: query-ID
+  reuse with incompatible metadata — the trigger implemented in this same round
+  by comparing `normalizedQuerySha256` for a query ID present at both
+  boundaries — fails `pg_stat_interval_invalid`, exactly as the original line
+  demands. The 10,000-row cap also lands on `pg_stat_interval_invalid` (shape
+  bound in `decodeSnapshot`); the separate 4-MiB cap is
+  `pg_stat_interval_bounds_exceeded`.
+
+Everything else in this contract is unchanged, including the receipt shape, the
+read-only/no-reset guarantee, the closed name/purpose matrix, and the exact
+CLI commands. `tests/perf/database-pg-stat-interval.test.ts` pins the corrected
+set and the code map above.

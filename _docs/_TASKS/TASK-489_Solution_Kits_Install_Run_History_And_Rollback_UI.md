@@ -21,6 +21,12 @@ delegate to the existing fenced `rollbackFullSiteInstall` lifecycle. There is no
 "latest" fallback and this family does not restore apply, dry-run, rerun, or
 package-upload UI.
 
+The dynamic predecessor fixture is a cross-family start gate, not a TASK-489
+fixture producer: this family begins only after terminal TASK-551 has supplied
+its current-tree durable handoff and that handoff is revalidated as specified
+below. A temporary, cached, or locally reconstructed predecessor receipt is
+never an input to a TASK-489 leaf.
+
 ## Parent-Level Start Gates
 
 These gates apply to every one of the six leaves, including L01; they are not a
@@ -56,6 +62,60 @@ route-only dependency:
   supersession decision. This includes all-noop applies and byte-equal snapshots;
   pruning either side of an apply/rollback relation while it can affect an active
   owner or restored predecessor is forbidden.
+- **Terminal TASK-551 predecessor handoff (all leaves):** TASK-489 remains blocked
+  until TASK-551 is `✅ Done` and its terminal HEAD/current-tree identity contains
+  the one tracked, regular, non-symlink durable receipt at
+  `_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`.
+  That literal path must be tracked in terminal TASK-551 `HEAD` and byte-identical
+  at the same path in the current tree before any read; unrelated concurrent tree
+  changes do not substitute for or relax this per-path identity check. Re-read that
+  exact terminal tree rather than an earlier TASK-551 revision, cached copy,
+  generated substitute, or local working-tree artifact. The receipt must be paired
+  with the exact L11-owned `Task551Task489PredecessorPromotionEvidenceV1`
+  record. Its top-level fields, in order, are exactly
+  `schemaVersion`, `sourceTask`, `sourcePhase`, `sourceProfile`,
+  `sourceScenario`, `sourceHead`, `sourceDigest`, `predecessor`,
+  `promotionState`, `promotionDecision`, `promotionReason`,
+  `validationSummaries`, `createdAt`, `reviewedAt`, `promotedAt`, and
+  `ownerCapabilityReceiptDigest`. `schemaVersion` is
+  `"coderso.task551.task489-predecessor-promotion@v1"`, `sourceTask` is
+  `"TASK-551-05-L02"`, `sourcePhase` is `"05-l02"`, `sourceProfile` is the
+  required `null`, `sourceScenario` is `"task489-predecessor"`, and
+  `sourceHead` is a required non-null string. `sourceDigest`,
+  `predecessor.digest`, and `ownerCapabilityReceiptDigest` are required
+  lowercase 64-hex SHA-256 values. `predecessor` has exactly `sourcePath`,
+  `durablePath`, `schemaVersion`, and `digest`, with source path
+  `.tmp/task-551/task489-predecessor-v1.json`, durable path
+  `_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`,
+  nested schema `"coderso.task551.task489-predecessor@v1"`, and a required
+  lowercase 64-hex `digest`. `promotionState` is `"promoted"`,
+  `promotionDecision` is `"accept"`, and `promotionReason` is
+  `"exact-byte-match-after-owner-review"`. `validationSummaries` has exactly
+  `sourceIdentity`, `predecessorBytes`, `atomicNoReplace`, and `terminalHead`,
+  each equal to `"passed"`; `createdAt`, `reviewedAt`, and `promotedAt` are
+  required non-null strings. Terminal identity proof is represented by those
+  required validation summaries, `promotedAt`, and the owner capability digest,
+  not by a second tracking shape. Every top-level and nested member is required,
+  unknown fields, aliases, reduced records, or reconstructed values fail closed.
+  A nonterminal or stale TASK-551 identity, untracked/ignored/staged-only file,
+  symlink, duplicate/alternate/relative path, replaced bytes, incompatible
+  metadata shape, or metadata/path/digest/current-tree mismatch also fails
+  closed.
+- At the TASK-489 consumer boundary, first accept only that exact L11 metadata,
+  then make one stable no-follow regular/non-symlink read of the fixed durable path
+  and require its SHA-256 to equal the recorded lowercase hash **before** use.
+  Only after that match may the sole TASK-551-01-L02
+  `parseTask489PredecessorReceiptV1` parser run, and it runs only on those same
+  durable bytes. TASK-489 rejects `.tmp/task-551/task489-predecessor-v1.json`,
+  every other temporary or duplicate path, a local schema/parser/receipt shape,
+  map/projection/reconstruction, clone/mutation, serializer/reserialization, or a
+  second predecessor artifact—even when its bytes appear valid.
+- Ownership does not move: TASK-551-05-L02 (L05) remains the sole temporary-path
+  writer; TASK-551-11 (L11) alone validates the temporary bytes, records the hash,
+  and atomically promotes the original bytes to the durable path; TASK-551-10-L01
+  remains the sole L10 durable-byte/hash/parser aggregate consumer. TASK-489 only
+  revalidates the terminal durable handoff as its start gate and never manufactures
+  a replacement receipt or promotion record.
 - The same receipt must prove normalized relational authority, not a JSON
   predicate: `solution_kit_starter_apply_owners` owns package/actor/source/phase/
   envelope-digest/release state, `solution_kit_legacy_template_evidence` owns each
@@ -85,12 +145,16 @@ route-only dependency:
   WHERE mode='apply' AND status='success' AND finished_at IS NOT NULL` and
   `solution_kit_runs_successful_rollback_relation_idx(kit_id,rollback_of_run_id,id)
   WHERE mode='rollback' AND status='success' AND finished_at IS NOT NULL`. It must
-  also prove the indexed, bounded 512-relation-plus-sentinel classifier on the
-  10,000- and 1,000,000-run fixtures without a sequential scan, including one
-  101-row history page where every candidate exercises up to the full relation
-  bound. Its safe-detail receipt covers the run point read and item `LIMIT 513`
-  statement separately. A broad kit/date index or the legacy rollback foreign-key
-  index alone is not that receipt.
+  distinguish the dynamic TASK-489 predecessor fixture: its bulk-history component
+  is exactly 10,000 small / 1,000,000 large runs, its fixed bounded-support
+  component is exactly 109,890 runs in either profile, and its complete scenario
+  total is exactly 119,890 small / 1,109,890 large runs. It must prove the indexed,
+  bounded 512-relation-plus-sentinel classifier on those complete scenarios without
+  a sequential scan, including one 101-row history page where every candidate
+  exercises up to the full relation bound. Bulk-only, pre-schema, or generic
+  solution-kit fixture evidence is rejected. Its safe-detail receipt covers the run
+  point read and item `LIMIT 513` statement separately. A broad kit/date index or
+  the legacy rollback foreign-key index alone is not that receipt.
 - TASK-551 must additionally provide and measure the package/actor-scoped unique
   partial `solution_kit_starter_apply_owners_active_idx` on normalized owner rows,
   plus the one-running-rollback-per-source constraint consumed below, and
@@ -269,12 +333,26 @@ each source file has one writer leaf.
 
 ## Shared Budgets
 
+Unless a bullet expressly names the bulk-history component, every small/large
+fixture claim below means the complete dynamic TASK-489 predecessor fixture:
+10,000/1,000,000 bulk-history runs plus exactly 109,890 fixed bounded-support
+runs, for totals of 119,890/1,109,890 runs. A bulk-only, pre-schema, or generic
+solution-kit fixture cannot satisfy a p95, query-shape, or EXPLAIN receipt.
+
+Every dynamic predecessor budget claim is bound to the one terminal L11-promoted
+durable receipt above. No TASK-489 leaf may satisfy a small/large count, p95,
+query-shape, or EXPLAIN budget from L05's `.tmp` output, a copied/stale receipt,
+or a locally generated/reconstructed equivalent; the exact terminal path,
+metadata, current-tree identity, and hash-to-bytes check are prerequisites to the
+sole L02 parser result used for that claim.
+
 - History: one SQL statement, `LIMIT + 1`, at most 101 decoded rows. The default
-  page p95 is <=75 ms on the 10,000-run fixture and <=200 ms on the 1,000,000-run
-  fixture; the mandatory relation-heavy 101-candidate page p95 is <=250/750 ms on
-  those same fixtures. Base traversal visits <= 4 * (`limit + 1`) index rows for both
-  unfiltered created/id and exact package-key paths, in addition to the separately
-  bounded relation probes below, using terminal TASK-551 indexes.
+  page p95 is <=75 ms on the 119,890-run small scenario and <=200 ms on the
+  1,109,890-run large scenario; the mandatory relation-heavy 101-candidate page p95
+  is <=250/750 ms on those same complete scenarios. Base traversal visits <= 4 *
+  (`limit + 1`) index rows for both unfiltered created/id and exact package-key
+  paths, in addition to the separately bounded relation probes below, using terminal
+  TASK-551 indexes.
 - Detail: at most two SQL statements, one run row and at most 513 item-summary
   rows (512 contract limit plus sentinel); p95 <= 100 ms on the small fixture and
   <= 250 ms on the large fixture; no ledger JSON column is selected or transferred.
@@ -317,6 +395,36 @@ each source file has one writer leaf.
 - Every executable leaf passes its targeted Vitest or Bun lane plus
   `bun --cwd core lint:types`, `bun --cwd core lint`, touched-file line counts,
   and `git diff --check` before the next leaf lands.
+- Parent-gate regression tests must prove TASK-489 refuses a nonterminal/stale
+  TASK-551 HEAD/current-tree identity, including a durable path not tracked at
+  terminal HEAD or not byte-identical at that exact current-tree path; absent,
+  ignored, symlinked, duplicate, alternate, or replaced durable paths; malformed
+  or compatible-but-not-exact L11 promotion metadata. They pin exact equality to
+  the ordered 16-field list
+  `["schemaVersion", "sourceTask", "sourcePhase", "sourceProfile",
+  "sourceScenario", "sourceHead", "sourceDigest", "predecessor",
+  "promotionState", "promotionDecision", "promotionReason",
+  "validationSummaries", "createdAt", "reviewedAt", "promotedAt",
+  "ownerCapabilityReceiptDigest"]`, the nested predecessor key list
+  `["sourcePath", "durablePath", "schemaVersion", "digest"]`, and the
+  validation-summary key list
+  `["sourceIdentity", "predecessorBytes", "atomicNoReplace", "terminalHead"]`.
+  They assert the fixed enum, nullability, path, schema, timestamp, and exact
+  `"passed"` values above, require strict lowercase 64-hex validation for all
+  three digest fields, and reject any unknown, missing, renamed, aliased,
+  reduced, or reconstructed field. They must assert the fixed durable path is
+  read through the stable regular/non-symlink no-follow boundary and its exact
+  bytes are digest-checked before the one L02 parser call. The parser pseudocode
+  is:
+  `promotion = requireStrictTask551Task489PredecessorPromotionEvidenceV1(input);`
+  `requireTerminalTask551HeadAndCurrentTreeIdentity();`
+  `bytes = readStableNoFollowRegularNonSymlink(promotion.predecessor.durablePath);`
+  `requireEqual(requireStrictLowercaseSha256(sha256Hex(bytes)), promotion.predecessor.digest);`
+  `return parseTask489PredecessorReceiptV1(bytes);`
+  It rejects any `.tmp` read, local schema/parser/shape, copy/map/projection,
+  reconstruction, mutation, serialization, or second receipt artifact. The
+  tests preserve L05's sole temporary writer, L11's sole promotion writer, and
+  TASK-551-10-L01's sole L10 aggregate consumption.
 - TASK-489-03-L02 owns the combined route, security, DB race, performance,
   client/cache, UI, full mandatory gate, and shared fast/certification runtime
   smoke validation. Fast is operational non-checkpoint evidence. Every

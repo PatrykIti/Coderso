@@ -5,6 +5,8 @@ import { expect, test } from "bun:test";
 import type { InferSelectModel } from "drizzle-orm";
 
 import { contentEntries, media, posts, previewTokens } from "../../../core/db/schema";
+import { cacheInvalidationOutbox, task551MigrationOperations } from "../../../core/db/schema";
+import type { Task551MigrationReceipt } from "../../../core/db/tables/task551MigrationOperations";
 
 /**
  * `.$type<...>()` is the only thing that gives a `jsonb` column a TypeScript
@@ -82,6 +84,14 @@ type ColumnContract = {
  * the tree to itself. Each entry has a matching `pinExact` call below.
  */
 const PINNED_CONTRACTS: readonly ColumnContract[] = [
+  // TASK-551-05-L01 additions: the outbox payload is a bounded tag array and the
+  // receipt row stores the exact version-2 rollout receipt, never bare `unknown`.
+  { path: "core/db/tables/cacheInvalidationOutbox.ts", property: "tags", annotation: "string[]" },
+  {
+    path: "core/db/tables/task551MigrationOperations.ts",
+    property: "receipt",
+    annotation: "Task551MigrationReceipt",
+  },
   { path: "core/db/tables/content.ts", property: "tags", annotation: "string[]" },
   { path: "core/db/tables/media.ts", property: "tags", annotation: "string[]" },
   {
@@ -177,6 +187,17 @@ test("each pinned jsonb column still infers exactly the type its annotation prom
   expect(pinExact<InferSelectModel<typeof contentEntries>["tags"], string[]>(true)).toBe(true);
   expect(pinExact<InferSelectModel<typeof media>["tags"], string[]>(true)).toBe(true);
   expect(pinExact<InferSelectModel<typeof posts>["tags"], string[]>(true)).toBe(true);
+
+  // TASK-551-05-L01: the outbox tag array and the migration receipt row.
+  expect(pinExact<InferSelectModel<typeof cacheInvalidationOutbox>["tags"], string[]>(true)).toBe(
+    true
+  );
+  expect(
+    pinExact<
+      InferSelectModel<typeof task551MigrationOperations>["receipt"],
+      Task551MigrationReceipt
+    >(true)
+  ).toBe(true);
 
   // `context` is nullable in the DDL and its annotation already admits `null`, so
   // the select type is the object or `null` -- pinned as declared, so widening the

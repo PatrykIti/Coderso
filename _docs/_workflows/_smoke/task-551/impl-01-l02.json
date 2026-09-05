@@ -1,0 +1,201 @@
+{
+  "pass": false,
+  "task": "TASK-551-01-L02",
+  "summary": "Implementation and static gates are complete and green, but the freeze/check closure cannot be truthfully completed: the Render PostgreSQL (Frankfurt) RTT is still degraded (p50 60-68ms vs ~27ms healthy baseline, recovery threshold p50<35ms not met). Per the completion-agent contract, inflated budgets must NOT be frozen on a degraded network, so no --freeze was executed and task551DatabaseBudgets.ts was left byte-identical to the previous agent's state (small=inflated-from-degradation, large=5/10/20ms placeholders). Concrete failures were captured instead: small --check fails (p95 76.75 > 71.1 on admin-pages-page) and the baseline test file is 11/12 (p95 spread 43.1% > 20%).",
+  "scenarios": [
+    {
+      "name": "fresh RTT measurement (60x select 1 through postgres.js pool, max=1)",
+      "result": "degraded",
+      "evidence": "run1 p50=64.6 p95=105.8 max=130.4; run2 p50=65.6 p95=82.7 max=101.7; run3 p50=67.7 p95=103.6 max=180.5; run4 p50=67.8 p95=93.8 max=102.5; run5 p50=67.7 p95=98.5 max=112.1; final(after) p50=60.0 p95=64.2 max=72.2"
+    },
+    {
+      "name": "leftover-row scan of shared DB for task551 markers",
+      "result": "clean",
+      "evidence": "TOTAL task551-prefixed leftovers: 0 across all seed families before and after runs"
+    },
+    {
+      "name": "bun scripts/task-551-database-baseline.ts --profile small --check",
+      "result": "failed",
+      "evidence": "database_baseline_invalid: p95 latency over budget:admin-pages-page:76.75>71.1 (exit 2). Budget file sha256 unchanged (e012911ea673aecd559a07577d549ea6c69c68bb3749346895876b4c89105443) - check mode wrote nothing."
+    },
+    {
+      "name": "bun test tests/perf/database-query-baseline.test.ts (with DATABASE_URL)",
+      "result": "11 pass / 1 fail in 150.99s (not the previously claimed 12/12)",
+      "evidence": "FAIL: DB-backed > measurement p95 spread stays within the frozen variance budget: p95SpreadPercent([reps])=43.0958% > maxP95VariancePercent=20% on admin-pages-page. 8 static contract tests pass; 3 DB-backed seed/cleanup/scope/bound tests pass."
+    },
+    {
+      "name": "bun --cwd core lint:types",
+      "result": "pass",
+      "evidence": "tsc -p tsconfig.json --noEmit exit 0"
+    },
+    {
+      "name": "bun --cwd core lint",
+      "result": "pass",
+      "evidence": "eslint --max-warnings=0 exit 0"
+    },
+    {
+      "name": "git diff --check",
+      "result": "pass",
+      "evidence": "clean"
+    },
+    {
+      "name": "scripts/task-551-dev-cleanup.ts deletion",
+      "result": "done",
+      "evidence": "off-allowlist one-off probe cleanup removed; only scripts/task-551-database-baseline.ts and scripts/task-551-query-inventory.ts remain in scripts/"
+    },
+    {
+      "name": "bun run gates:coderso:perf",
+      "result": "not run",
+      "evidence": "App-level synthetic p95 gate (tests/perf/codersoPerformanceGate.test.ts) outside the touched contract; orchestrator instructed not to run broad suites unrelated to the touched contract. Freeze is blocked regardless."
+    }
+  ],
+  "measurements": {
+    "rttBeforeMs": [
+      { "p50": 64.6, "p95": 105.8, "max": 130.4 },
+      { "p50": 65.6, "p95": 82.7, "max": 101.7 },
+      { "p50": 67.7, "p95": 103.6, "max": 180.5 },
+      { "p50": 67.8, "p95": 93.8, "max": 102.5 },
+      { "p50": 67.7, "p95": 98.5, "max": 112.1 }
+    ],
+    "rttAfterMs": { "p50": 60.0, "p95": 64.2, "max": 72.2 },
+    "recoveryThreshold": "p50 < 35ms for 3 consecutive checks (rttloop criteria); not met",
+    "healthyBaselineMs": "p50 ~27ms per orchestrator context",
+    "freezeRuns": [],
+    "freezeRunNote": "No --freeze executed by design: RTT still degraded, and the contract forbids freezing inflated numbers; a freeze would have written ~60-130ms ceilings while healthy-baseline measurements imply ~76ms p95 ceilings.",
+    "checkRuns": [
+      {
+        "profile": "small",
+        "mode": "check",
+        "result": "FAIL",
+        "evidence": "p95 latency over budget:admin-pages-page:76.75>71.1",
+        "exitCode": 2,
+        "budgetsFileHashAfter": "e012911ea673aecd559a07577d549ea6c69c68bb3749346895876b4c89105443 (unchanged)"
+      }
+    ],
+    "largeCheckRunNote": "--profile large --check not run: all 32 large budgets are still 5/10/20ms placeholders, arithmetically unreachable while RTT floor is ~60ms (every shape p95 > 20ms). Running it would seed ~3-4M rows for a guaranteed fail, so it was documented instead.",
+    "testResults": {
+      "command": "bun test tests/perf/database-query-baseline.test.ts",
+      "pass": 11,
+      "fail": 1,
+      "total": 12,
+      "durationSec": 150.99,
+      "failure": "measurement p95 spread stays within the frozen variance budget: spread 43.0958% > 20%",
+      "previousClaimed": "12/12 (previous agent, not reproducible on current network)"
+    },
+    "frozenCeilings": {
+      "smallProfileMs": {
+        "recordCount": 32,
+        "p50MsMaxRange": [63.4, 131.1],
+        "p95MsMaxRange": [68.4, 165.9],
+        "p99MsMaxRange": [76.8, 181.5],
+        "note": "Frozen INFLATED during the degradation window (healthy ~27ms RTT implies ~76ms p95 ceilings). Must be re-frozen on a healthy network.",
+        "adminPagesPage": { "p50MsMax": 64.7, "p95MsMax": 71.1, "p99MsMax": 77.8 },
+        "adminFormsFixedSummary": { "p50MsMax": 126.2, "p95MsMax": 139.2, "p99MsMax": 158.8 }
+      },
+      "largeProfileMs": {
+        "placeholders": "all 32 records still 5/10/20ms (p50/p95/p99); freeze blocked",
+        "note": "Placeholders clearly noted; no inflated numbers were written."
+      },
+      "poolWaitMs": {
+        "small": { "p50MsMax": 97.2, "p95MsMax": 121.9, "p99MsMax": 130.2 },
+        "large": { "p50MsMax": 5, "p95MsMax": 10, "p99MsMax": 20 },
+        "note": "small frozen inflated from degradation; large still placeholder"
+      }
+    }
+  },
+  "failures": [
+    {
+      "severity": "HIGH",
+      "area": "network/db",
+      "finding": "Render PostgreSQL (Frankfurt) RTT still degraded: p50 60-68ms across 6 fresh samples vs ~27ms healthy baseline; recovery threshold (p50 < 35ms x3) not met.",
+      "evidence": "rttBeforeMs p50 64.6/65.6/67.7/67.8/67.7, rttAfterMs p50 60.0; prior rttloop log showed hours of p50 60-105ms.",
+      "recommendation": "Do not freeze on this network. Retry the freeze/check cycle only when the RTT monitor prints RECOVERED (p50 < 35ms x3)."
+    },
+    {
+      "severity": "HIGH",
+      "area": "small-profile budgets",
+      "finding": "Small-profile --check fails even against the inflated frozen ceilings: normalized p95 for admin-pages-page is 76.75ms > stored 71.1ms.",
+      "evidence": "check run output: database_baseline_invalid: p95 latency over budget:admin-pages-page:76.75>71.1 (exit 2).",
+      "recommendation": "Re-freeze the small profile on a healthy network; current stored values are inflated-from-degradation and already non-passing."
+    },
+    {
+      "severity": "HIGH",
+      "area": "test suite",
+      "finding": "The baseline perf file is 11/12, not the previously claimed 12/12: DB-backed p95 spread test fails at 43.1% > 20% budget on admin-pages-page.",
+      "evidence": "bun test output: Expected <= 20, Received 43.095851823956885; 11 pass / 1 fail in 150.99s.",
+      "recommendation": "Re-run after network recovery; a passing spread test on healthy RTT is a precondition for closure evidence."
+    },
+    {
+      "severity": "MEDIUM",
+      "area": "large-profile budgets",
+      "finding": "All 32 large budgets remain 5/10/20ms placeholders (and pool large 5/10/20ms) because the freeze is blocked; they are unreachable while RTT floor is ~60ms.",
+      "evidence": "task551DatabaseBudgets.ts large latency triples all 5/10/20; RTT p50 ~60-68ms.",
+      "recommendation": "Freeze the large profile with real measurements once RTT is healthy."
+    },
+    {
+      "severity": "LOW",
+      "area": "process/evidence",
+      "finding": "Previous agent's 12/12 and 'budgets inflated' state are confirmed, but the session closed before the freeze/check cycle; budgets file was not modified by this agent (byte-identical snapshot).",
+      "evidence": "sha256 e012911ea673aecd559a07577d549ea6c69c68bb3749346895876b4c89105443 before and after check; git status shows no task/changelog/workflow files edited by this agent.",
+      "recommendation": "Keep the budgets file as-is with placeholders clearly noted until a healthy-network freeze can be reviewed."
+    }
+  ],
+  "files": [
+    { "path": "scripts/task-551-database-baseline.ts", "lines": 882, "allowlisted": true },
+    { "path": "tests/perf/database-query-baseline.test.ts", "lines": 353, "allowlisted": true },
+    {
+      "path": "tests/perf/fixtures/task551AdminReadStatementShapes.ts",
+      "lines": 210,
+      "allowlisted": true
+    },
+    {
+      "path": "tests/perf/fixtures/task551DatabaseBudgets.ts",
+      "lines": 174,
+      "allowlisted": true,
+      "note": "left untouched: small inflated, large 5/10/20ms placeholders"
+    },
+    { "path": "tests/perf/fixtures/task551DatabaseScale.ts", "lines": 561, "allowlisted": true },
+    {
+      "path": "tests/perf/fixtures/task489SolutionKitRunPredecessor.ts",
+      "lines": 428,
+      "allowlisted": true
+    },
+    {
+      "path": "scripts/task-551-dev-cleanup.ts",
+      "lines": 0,
+      "allowlisted": false,
+      "note": "DELETED (off-allowlist one-off probe cleanup)"
+    },
+    {
+      "path": "scripts/task-551-query-inventory.ts",
+      "lines": "n/a",
+      "allowlisted": false,
+      "note": "TASK-551-01-L01 owned; not touched"
+    },
+    {
+      "path": "tests/perf/database-query-inventory.test.ts",
+      "lines": "n/a",
+      "allowlisted": false,
+      "note": "TASK-551-01-L01 owned; not touched"
+    },
+    {
+      "path": "tests/integration/server/task551BunLaneMembership.test.ts",
+      "lines": "n/a",
+      "allowlisted": false,
+      "note": "TASK-551-01-L01 owned; not touched"
+    },
+    {
+      "path": "tests/perf/fixtures/task551QueryInventory.ts",
+      "lines": "n/a",
+      "allowlisted": false,
+      "note": "TASK-551-01-L01 owned; not touched"
+    }
+  ],
+  "validation": {
+    "lintTypes": "pass",
+    "lint": "pass",
+    "gitDiffCheck": "clean",
+    "allAllowlistedFilesUnder1000Lines": true,
+    "databaseLeftClean": true
+  }
+}

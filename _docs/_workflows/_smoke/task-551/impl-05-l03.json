@@ -1,0 +1,106 @@
+{
+  "task": "TASK-551-05-L03",
+  "occurrence": "single",
+  "phase": "ADMISSION",
+  "capturedAt": "2026-09-05T02:57:33Z",
+  "worktree": "/home/coder/project/Coderso-551",
+  "branch": "feat/task-551-db-cache",
+  "headAtAdmission": "7bc41f75b9de972ce3ee4d794cf5fce14e08c5cb",
+  "commitsMadeByFlow": 0,
+  "stagedByFlow": false,
+  "dbConnections": 0,
+  "manualExecutionNote": "Owner-authorized manual AGENTS.md flow: fresh recon (wf_839c57b8-034, READY_WITH_CONTRACT_GAPS) -> write loop (wf_456d61fd-367 round 1: contract correction + authoring; wf_63261ddd-dc7 round 2: live-half honesty; wf_d7e94f55-9b8 round 3: final six residuals, read-only verify CLEAN) -> orchestrator's OWN independent admission battery below (true exit codes). All execution DB-free per the airtight form: cd /home/coder/project/Coderso-551 && env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <files> (post-incident hard rule; 'bun --cwd <dir> test' and package.json scripts banned in every mandate). L11 automatic route remains fail-closed; nothing fabricated.",
+  "predecessorAccepted": "impl-05-l01.json (SINGLE_ADMITTED_GATES_GREEN 2026-09-04) - the schema bytes this leaf consumes (tables/solutionKitRollbackAuthority.ts, operations.ts rollback-authority section, 0081 transactional SQL :134-183, companion :18-23/:76-81, 0081 snapshot, task551OnlineIndexManifest) were all admitted there; this leaf wrote ZERO production bytes. PINS byte-identical at recon, every round, and receipt time: freezeReceipts.ts 17da0343d65322e51b76dd8f0d71f2a2471f7ef776bdcbaa03559f34e0355c4f; tests/bun-lane-manifest.json 0da925552ef993475871456f6889646765f2f2612a8bacaad79a5b92ddcac88b.",
+  "artifactHashesAtAdmission": {
+    "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts": "8424bb442d7d258f0dc92830f478871e8b1a04cfd62e0530b65f4aa1d3f64dc7 (exactly 1000 lines, 20 tests: 14 static pass + 6 testIfDb-gated live, 538 expect())",
+    "_docs/_TASKS/TASK-551-05-L03-Normalized-Solution-Kit-Rollback-Authority.md": "915 lines (dated APPEND-ONLY correction at :861, pure insertion)"
+  },
+  "scope": {
+    "deliverable": "The single allowlisted test file (contract :801-803); all L01 schema bytes consumed read-only. Exports EXACT_L01_SOLUTION_KIT_ROLLBACK_AUTHORITY (4 tables / 49 columns / 10 FKs with target+action / 6 checks with FULL SQL / 14 index rows / 9 named checks / 4 asserted uniques / 1 FK action change) - the exact contract L02's doc (:135, :157-162) consumes on import.",
+    "staticHalf": "Four-surface byte parity (table modules vs 0081 snapshot vs transactional SQL vs companion+manifest projection); sole SET NULL->RESTRICT FK action change; fail-closed FK allowlist incl. plan_fk; source guards walking core/db + core/services + core/server + scripts (1012 files); 0081 no UPDATE/DELETE rewrite of install_runs; in-file pure models: decision table, constraint->code map, caps 100/6/512/6 with BOTH independent one-over tests (persist path real: 512/480/12 measured), cursor cycle/exhaustion/no-write-on-limit, retries 25/50/100ms with 409/503 modeled in-file per ADDENDUM correction 2.",
+    "liveHalf": "6 testIfDb-gated tests, each fixture commenting the exact landed check/FK predicate it satisfies or violates; impossible matrix arms (update/failed, noop/skipped) pinned as refusal tests naming evidence_state_chk/23514; positive arms traced to pass on clean PostgreSQL 15+ with 0081 (desk-checked against landed bytes; real-DB execution is the owner barrier); scope-unique fixtures, child-first cleanup with assertZeroResidue in every finally, run-scoped RUN prefixes, redacted in-memory receipt with measured bounded flags (tuple-depth counting, not VALUES-clause counting).",
+    "docCorrection": "'## Contract correction (2026-09-04, L03 preflight-count surface)' :861-915: the six bounded ID-only preflight counts (:148-158) have no production implementation (L01's admitted runner covers revision groups + booking windows; L03 is test-only); resolution = suite pins the no-rewrite half + existing preflight surface; the count-reporting surface is owner-routed residual flagged for 10-L01. Pure insertion, 0 deletions."
+  },
+  "admissionStory": {
+    "rounds": [
+      {
+        "round": 1,
+        "workflows": ["wf_456d61fd-367"],
+        "outcome": "contract correction + 994-line suite authored; re-audit 8 findings (4 HIGH): live-half fixtures violated the very checks they pin (unsatisfiable arms, inadmissible helper row, uuid sentinel bind, composite FK violation), maxQueries one-over absent, 7 stray tsc-emit .js artifacts, wrong 23503 shape. DISCIPLINE NOTE: the round-1 auditor self-repaired (130 Edits) - its 'touch ONLY' context was read as a repair permit; lesson recorded in persistent memory (auditors-must-be-read-only); its edits treated as unreviewed bytes and re-audited."
+      },
+      {
+        "round": 2,
+        "workflows": ["wf_63261ddd-dc7"],
+        "outcome": "STRICT READ-ONLY re-audit discipline from here: 998 lines; findings 6 (1 HIGH/2 MEDIUM/3 LOW): owner-slot release-parity violated landed owner state check, classifier model had no real persist path (tautological no-write fences), 8th stray artifact outside core, VALUES-clause counting not tuples, source-guard scan too narrow, missing size pins for three surfaces"
+      },
+      {
+        "round": 3,
+        "workflows": ["wf_d7e94f55-9b8"],
+        "outcome": "all six fixed (releaseOwner sets phase='complete'+released_at+envelope together, satisfying solution_kit_starter_apply_owners_state_chk :100-101; model persists every accepted row in order; tuple-depth bound; 1012-file guard walk; exact checks/indexes/uniques pins on all four surfaces; pluginManifest.js residue deleted); read-only verify CLEAN, findings: []"
+      }
+    ],
+    "convergence": "8 -> 6 -> 0 findings; every fixture now derives from the landed constraint bytes with the predicate quoted in-source; 1000/1000 line ceiling held by merging redundant needles, never by dropping behavioral assertions"
+  },
+  "gates": [
+    {
+      "command": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <the new suite>, twice",
+      "pass": true,
+      "detail": "ORCHESTRATOR ADMISSION RERUN: exit 0 both; 14 pass / 6 skip / 0 fail / 538 expect(), identical counts"
+    },
+    {
+      "command": "same + the 7 canonical L01 battery files (8 files)",
+      "pass": true,
+      "detail": "exit 0; 93 pass / 22 skip / 0 fail / 3911 expect() - arithmetic exactly L01's 79+14 / 16+6 / 3373+538"
+    },
+    {
+      "command": "env ... test tests/unit/db/schemaTableFacade.test.ts tests/unit/db/schemaColumnTypeContracts.test.ts",
+      "pass": true,
+      "detail": "exit 0; 102 pass / 0 fail"
+    },
+    {
+      "command": "env ... test tests/unit/toolchain/bunLaneManifest.test.ts",
+      "pass": true,
+      "detail": "exit 1 with 14 pass / 2 fail - the CONTRACTED red until 01-L01:final regenerates the manifest (463-vs-454 now); never regenerated here (pinned)"
+    },
+    {
+      "command": "bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts",
+      "pass": true,
+      "detail": "exit 0; 14/14"
+    },
+    {
+      "command": "bunx tsc -p tsconfig.json --noEmit; cd core && bunx tsc -p tsconfig.json --noEmit",
+      "pass": true,
+      "detail": "exit 0 both (core run STRICTLY with --noEmit after the stray-emit incidents)"
+    },
+    {
+      "command": "cd core && bun run lint; bunx eslint <the suite> --max-warnings=0",
+      "pass": true,
+      "detail": "exit 0 both"
+    },
+    {
+      "command": "env -i HOME=$HOME PATH=$PATH DATABASE_DIRECT_URL='postgresql://127.0.0.1:1/none' bunx drizzle-kit generate --config core/db/drizzle.config.ts",
+      "pass": true,
+      "detail": "exit 0, 'No schema changes'; no NEW file under core/db/migrations (still the 3 pre-L01 untracked artifacts)"
+    },
+    {
+      "command": "pins + wc + diff --check + journal + residue sweep",
+      "pass": true,
+      "detail": "pins exact; suite 1000/1000, doc 915, runner 964, deployment 1000; diff --check clean; journal 80 entries tail idx 81 tag 0081; find core packages -name '*.js' -newermt '2026-09-04 21:00' = 0; git status shows no forbidden-path modification"
+    }
+  ],
+  "ownerBarriersRecorded": [
+    "The live half (6 gated tests) is authored and desk-checked against the landed 0081 bytes but NEVER executed: real-DB execution is the owner step (contract :580-582 commands source .env against the reachable shared DB - the 2026-09-04 incident class).",
+    "The six-count preflight reporting surface (:148-158) remains unimplemented production behavior: owner-routed residual per the dated correction (:861-915), flagged for 10-L01.",
+    "No --initialize/--freeze/--check, no reviewed-pair promotion, no gates:coderso* (owner-routed to 10-L01); changelog 1310 pinned for 10-L02; push = owner decision; owner commits only.",
+    "Stale impl-01-l02.json untouched (L11 recovery-protocol property)."
+  ],
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "honestyNotes": [
+    "The live half would be exercised only by the owner on a real DB; its honesty rests on desk-checking every fixture against the landed check/FK bytes (rounds 2-3), quoted in-source - not on execution.",
+    "Round-1's auditor violated read-only discipline (130 self-repair Edits) before the rule existed; those bytes were treated as unreviewed and fully re-audited under the strict rule; the rule is now in persistent memory and every audit mandate.",
+    "The 8th stray artifact (packages/sdk/src/pluginManifest.js) was flow-created tsc-emit residue and was deleted; both deletion and untracked status verified before removal.",
+    "bunLaneManifest.test.ts 14/2 is the documented contracted red (new test file joins the lane by classification; golden count 463 vs pinned 454); regeneration belongs to 01-L01:final only.",
+    "Round-3 fixer's 'L01 battery 104/14/3451' used a wider file list; the canonical numbers of record are the orchestrator's reruns above (93/22/3911 over exactly 8 files)."
+  ],
+  "nextInSpine": "TASK-551-05-L02 (Sanitized Explain Plan And Constraint Verification - consumes the redacted l05-concurrency-receipt@v1 produced by task551ConcurrencyConstraints and the EXACT_L01_SOLUTION_KIT_ROLLBACK_AUTHORITY export), which closes family 05; then 03-L01 per the spine order in _TMP-S1-spina.md."
+}

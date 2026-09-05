@@ -68,6 +68,8 @@ const makeUserRecord = (overrides: Partial<UserRecord> = {}): UserRecord => ({
   createdAt: new Date("2026-06-01T10:00:00.000Z"),
   updatedAt: new Date("2026-06-01T10:00:00.000Z"),
   lastLoginAt: null,
+  searchVector: null,
+  searchTrigramText: null,
   ...overrides,
 });
 

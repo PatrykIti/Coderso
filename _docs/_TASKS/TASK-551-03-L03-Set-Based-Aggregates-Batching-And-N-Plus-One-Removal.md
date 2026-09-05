@@ -9,7 +9,7 @@
 **Dependencies:** TASK-551-03-L02; TASK-551-07-L01 and terminal
 TASK-551-08-L03 FINAL cache/invalidation runtime receipt
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -103,6 +103,94 @@ more than the declared row cap, and invalid numeric/date values with
 produce zero totals and dense zero day buckets in application memory; density is
 bounded by `rangeDays`, not table cardinality.
 
+### Closed database telemetry adoption
+
+This leaf adopts the L02 public `measureDatabaseQuery` API only at the following
+already-owned DB operations. The production-owned closed table is a literal
+transcription of the `(sourcePath, operation, fingerprint)` rows in
+`tests/perf/fixtures/task551QueryInventory.ts`; it imports branded values from
+the L02 production registry, never the fixture. It must not be generated from
+source scanning, SQL, a call stack, a route value, or user input.
+
+`telemetryFamily` is a literal L02 public-family value. Current inventory
+`point`, `list`, and `aggregate` kinds retain that value; its current `append`
+and `mutation` kinds use the sole write-family value, `append`. An absent or
+unknown table tuple fails closed before the query runs.
+
+| sourcePath | operation | fingerprint | telemetryFamily |
+|---|---|---|---|
+| `core/services/analytics/analyticsService.ts` | `countRows` | `task551_current_106` | `aggregate` |
+| `core/services/analytics/analyticsService.ts` | `dailyCounts` | `task551_current_107` | `aggregate` |
+| `core/services/analytics/analyticsService.ts` | `getTopContent` | `task551_current_108` | `point` |
+| `core/services/analytics/analyticsService.ts` | `getTopContent` | `task551_current_109` | `point` |
+| `core/services/analytics/trafficAggregationService.ts` | `breakdown` | `task551_current_110` | `list` |
+| `core/services/analytics/trafficAggregationService.ts` | `computeTotals` | `task551_current_111` | `aggregate` |
+| `core/services/analytics/trafficAggregationService.ts` | `computeTotals` | `task551_current_112` | `aggregate` |
+| `core/services/analytics/trafficAggregationService.ts` | `computeTotals` | `task551_current_113` | `aggregate` |
+| `core/services/analytics/trafficAggregationService.ts` | `dailyPageviews` | `task551_current_114` | `list` |
+| `core/services/analytics/trafficAggregationService.ts` | `getTopPages` | `task551_current_115` | `point` |
+| `core/services/analytics/trafficAggregationService.ts` | `topReferrers` | `task551_current_116` | `list` |
+| `core/services/dashboard/dashboardService.ts` | `countRows` | `task551_current_533` | `aggregate` |
+| `core/services/dashboard/dashboardService.ts` | `getContentOverTime` | `task551_current_534` | `point` |
+| `core/services/dashboard/dashboardService.ts` | `getContentTypeCounts` | `task551_current_535` | `aggregate` |
+| `core/services/dashboard/dashboardService.ts` | `getRecentEntries` | `task551_current_536` | `point` |
+| `core/services/dashboard/dashboardService.ts` | `getRecentMedia` | `task551_current_537` | `point` |
+| `core/services/dashboard/dashboardService.ts` | `getRecentPages` | `task551_current_538` | `point` |
+| `core/services/dashboard/dashboardService.ts` | `getStorageSummary` | `task551_current_539` | `aggregate` |
+| `core/services/dashboard/dashboardService.ts` | `resolveContentQueryWidget` | `task551_current_540` | `point` |
+| `core/services/webhooks/webhooksService.ts` | `createDeliveryLog` | `task551_current_1128` | `append` |
+| `core/services/webhooks/webhooksService.ts` | `createWebhook` | `task551_current_1129` | `append` |
+| `core/services/webhooks/webhooksService.ts` | `deleteWebhook` | `task551_current_1130` | `append` |
+| `core/services/webhooks/webhooksService.ts` | `getWebhookById` | `task551_current_1131` | `point` |
+| `core/services/webhooks/webhooksService.ts` | `listDeliveries` | `task551_current_1132` | `list` |
+| `core/services/webhooks/webhooksService.ts` | `listWebhooks` | `task551_current_1133` | `list` |
+| `core/services/webhooks/webhooksService.ts` | `listWebhooks` | `task551_current_1134` | `list` |
+| `core/services/webhooks/webhooksService.ts` | `listWebhooksByEvent` | `task551_current_1135` | `list` |
+| `core/services/webhooks/webhooksService.ts` | `updateDeliveryLog` | `task551_current_1136` | `append` |
+| `core/services/webhooks/webhooksService.ts` | `updateWebhook` | `task551_current_1137` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `appendInstallItem` | `task551_current_751` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `applySolutionKitInstall` | `task551_current_752` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `claimRollbackRun` | `task551_current_753` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `claimRollbackRun` | `task551_current_754` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `claimRollbackRun` | `task551_current_755` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `claimRollbackRun` | `task551_current_756` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `claimRollbackRun` | `task551_current_757` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `claimRollbackRun` | `task551_current_758` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `createInstallRun` | `task551_current_759` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `findAutomaticCompensationRun` | `task551_current_760` | `point` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `findLatestSuccessfulApplyRun` | `task551_current_761` | `point` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `getSolutionKitInstallRun` | `task551_current_762` | `point` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `hasSuccessfulRollback` | `task551_current_763` | `list` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `listSolutionKitInstallRuns` | `task551_current_764` | `list` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `patchRunMetadata` | `task551_current_765` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `recordItem` | `task551_current_766` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `recordItem` | `task551_current_767` | `append` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `resolveRollbackSourceRun` | `task551_current_768` | `point` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `resolveRollbackSourceRun` | `task551_current_769` | `point` |
+| `core/services/kits/legacyInstallRunPersistence.ts` | `rollbackSolutionKitInstall` | `task551_current_770` | `append` |
+
+Each listed call wraps the pre-existing one query/transaction promise with
+`measureDatabaseQuery({ family, fingerprint, run, rowsReturned })`. `run` is the
+unchanged original operation, `rowsReturned` derives only the already-returned
+bounded result shape, and the wrapper returns the exact original value. It does
+not catch, map, replace, or log an error: the L02 API's best-effort sink failure
+and original-error-identity guarantees remain intact. The static production
+table must be checked for exact tuple equality against the fixture in the
+already-owned `tests/perf/database-set-based-batch-budgets.test.ts`; production
+modules and runtime tests never import `tests/**`.
+
+`core/services/webhooks/deliveryService.ts` has no current inventory row, so it
+must not receive an invented telemetry call or fingerprint. Any later direct DB
+operation requires a reviewed registry tuple before this API may be adopted.
+Likewise, the listed legacy source path is the immutable reviewed registry
+identity for the 751–770 operations while their code moves into this leaf's
+owned split modules. Move each matching literal entry with its operation, but
+do not create a new source path, operation, or fingerprint for a facade, split
+module, route, client, UI component, or future caller. The existing named
+analytics, dashboard, webhook, delivery, solution-kit, route, and budget tests
+above exercise only this table; no TASK-551-02 source or test path is owned or
+changed here.
+
 ### Webhooks
 
 `listWebhooks` becomes
@@ -167,8 +255,9 @@ no source edit. Move responsibilities without cyclic imports:
   finalization, and re-exports only; at most 1,000 lines.
 
 The live tree has already completed that facade extraction, but the remaining
-`legacyInstallRunPersistence.ts` barrel is 1,075 lines and is the actual mandatory
-pre-TASK-489 split. This leaf moves cohesive responsibilities exactly as follows:
+`legacyInstallRunPersistence.ts` barrel is 646 lines and remains the actual
+mandatory pre-TASK-489 split. This leaf moves cohesive responsibilities exactly
+as follows:
 
 - `runCrudPersistence.ts`: create/append plus bounded run point/list persistence;
 - `legacyOperations.ts`: catalog definition resolution and retained legacy apply/
@@ -346,3 +435,139 @@ split contracts to TASK-551-10-L02.
 - SEO and import/export source/tests remain byte-untouched and are handed to
   TASK-551-09 as whole-module owners; there is no split-writer overlap.
 - Every touched/split production and test file is at most 1,000 physical lines.
+
+## Workflow Dispatch Envelope
+
+Both Bun test groups receive only the owner-injected DB profile; the static
+argv contains no dotenv loader, endpoint, credential, or caller-selected
+environment. The three UI receipts are execution-only Vitest inputs and remain
+owned allowlist paths. All profile selection is sidecar-owned, and no command
+uses a shell or dynamic discovery.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-03-L03",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-03"
+  },
+  "allowlist": [
+    "core/services/analytics/analyticsService.ts",
+    "core/services/analytics/trafficAggregationService.ts",
+    "core/services/dashboard/dashboardService.ts",
+    "core/services/webhooks/webhooksService.ts",
+    "core/services/webhooks/deliveryService.ts",
+    "core/server/routes/webhooksRoutes.ts",
+    "core/server/validation/webhookSchemas.ts",
+    "core/admin/services/webhooksClient.ts",
+    "core/admin/ui/settings/WebhooksPage.tsx",
+    "core/admin/ui/settings/WebhooksTable.tsx",
+    "core/services/kits/solutionKitsInstallService.ts",
+    "core/services/kits/solutionKitInstallTypes.ts",
+    "core/services/kits/solutionKitInstallSnapshots.ts",
+    "core/services/kits/solutionKitInstallOperations.ts",
+    "core/services/kits/solutionKitInstallRunRepository.ts",
+    "core/services/kits/legacyInstallRunPersistence.ts",
+    "core/services/kits/legacyInstallRunPersistence/runCrudPersistence.ts",
+    "core/services/kits/legacyInstallRunPersistence/legacyOperations.ts",
+    "core/services/kits/legacyInstallRunPersistence/lockLifecycle.ts",
+    "core/services/kits/legacyInstallRunPersistence/ledgerAdapter.ts",
+    "tests/unit/analytics/analyticsService.test.ts",
+    "tests/unit/analytics/trafficAggregationQuery.test.ts",
+    "tests/integration/analytics/trafficAggregation.test.ts",
+    "tests/unit/dashboard/dashboardService.test.ts",
+    "tests/unit/webhooks/webhooksService.test.ts",
+    "tests/unit/webhooks/deliveryService.test.ts",
+    "tests/integration/routes/webhooks.test.ts",
+    "tests/vitest/admin/webhooksClient.test.ts",
+    "tests/vitest/ui-integration/webhooks.test.tsx",
+    "tests/vitest/ui/webhooks.test.tsx",
+    "tests/unit/kits/solutionKitsService.test.ts",
+    "tests/unit/kits/installService.test.ts",
+    "tests/unit/kits/legacyInstallRunPersistenceSplit.test.ts",
+    "tests/integration/routes/solutionKitsRoutes.test.ts",
+    "tests/perf/database-set-based-batch-budgets.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/services/cache/serverCache.ts",
+    "core/services/cache/cacheInvalidationOutbox.ts",
+    "core/services/cache/redisCacheLease.ts",
+    "core/services/seo/seoService.ts",
+    "core/services/tools/importExportService.ts",
+    "core/services/kits/solutionKitsService.ts",
+    "core/server/routes/index.ts",
+    "tests/perf/fixtures/task551QueryInventory.ts",
+    "tests/vitest/db/queryFingerprintRegistry.test.ts",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-08-L03:final"],
+  "commands": [
+    {
+      "id": "database-unit-and-integration-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/analytics/analyticsService.test.ts", "tests/unit/analytics/trafficAggregationQuery.test.ts", "tests/integration/analytics/trafficAggregation.test.ts", "tests/unit/dashboard/dashboardService.test.ts", "tests/unit/webhooks/webhooksService.test.ts", "tests/unit/webhooks/deliveryService.test.ts", "tests/unit/kits/solutionKitsService.test.ts", "tests/unit/kits/installService.test.ts", "tests/unit/kits/legacyInstallRunPersistenceSplit.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/analytics/analyticsService.test.ts", "tests/unit/analytics/trafficAggregationQuery.test.ts", "tests/integration/analytics/trafficAggregation.test.ts", "tests/unit/dashboard/dashboardService.test.ts", "tests/unit/webhooks/webhooksService.test.ts", "tests/unit/webhooks/deliveryService.test.ts", "tests/unit/kits/solutionKitsService.test.ts", "tests/unit/kits/installService.test.ts", "tests/unit/kits/legacyInstallRunPersistenceSplit.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "database-route-and-budget-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/routes/webhooks.test.ts", "tests/integration/routes/solutionKitsRoutes.test.ts", "tests/perf/database-set-based-batch-budgets.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/routes/webhooks.test.ts", "tests/integration/routes/solutionKitsRoutes.test.ts", "tests/perf/database-set-based-batch-budgets.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "webhooks-ui-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/admin/webhooksClient.test.ts", "tests/vitest/ui-integration/webhooks.test.tsx", "tests/vitest/ui/webhooks.test.tsx"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/admin/webhooksClient.test.ts", "tests/vitest/ui-integration/webhooks.test.tsx", "tests/vitest/ui/webhooks.test.tsx"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-performance-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-08-L03:final"],
+      "commandIds": ["database-unit-and-integration-tests", "database-route-and-budget-tests", "webhooks-ui-vitest", "core-lint-types", "core-lint", "coderso-performance-gate"]
+    }
+  ]
+}
+```

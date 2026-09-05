@@ -1,0 +1,162 @@
+{
+  "task": "TASK-551-02-L02",
+  "occurrence": "single",
+  "phase": "ADMISSION",
+  "capturedAt": "2026-09-03T22:07:50Z",
+  "worktree": "/home/coder/project/Coderso-551",
+  "branch": "feat/task-551-db-cache",
+  "headAtAdmission": "7bc41f75b9de972ce3ee4d794cf5fce14e08c5cb",
+  "commitsMadeByFlow": 0,
+  "stagedByFlow": false,
+  "dbConnections": 0,
+  "manualExecutionNote": "Owner-authorized manual AGENTS.md flow (full-flow workflow wf_32103940-de1 + supplementary verification workflow wf_76df9ed8-597 + orchestrator-run fix round 2 + fresh re-audit + micro fix round; 2026-09-03). The L11 automatic in-process route remains fail-closed; this receipt records manual owner-led execution only and fabricates no automatic permit/snapshot/receipt.",
+  "predecessorAccepted": "Seven receipts in _docs/_workflows/_smoke/task-551/ through impl-02-l01.json (SINGLE_ADMITTED_GATES_GREEN). PINS exact at recon, between rounds, and at receipt time: freezeReceipts.ts 17da0343d65322e51b76dd8f0d71f2a2471f7ef776bdcbaa03559f34e0355c4f; tests/bun-lane-manifest.json 0da925552ef993475871456f6889646765f2f2612a8bacaad79a5b92ddcac88b. 02-L01-owned core/db/databaseConfig.ts untouched throughout.",
+  "scope": {
+    "allowlistAdherence": true,
+    "writerAllowlistPaths": 15,
+    "dbFreeAndEnvFree": true,
+    "filesWrittenByThisOccurrence": [
+      {
+        "path": "core/db/client.ts",
+        "finalLines": 736,
+        "role": "test-only globalThis-keyed runtime override seam (setDatabaseClientRuntimeForTests) so the DB-free lifecycle suite can inject fakes; TDZ fix reading the carrier key by literal; execute() cancels and throws dedicated_database_session_lost on an already-aborted signal; DedicatedAdvisoryLockInput signal/conflictCode now REQUIRED per contract :199-204 (dead internal fallback removed)"
+      },
+      {
+        "path": "core/server/runtimeLifecycle.ts",
+        "finalLines": 301,
+        "role": "participantCloseBudgetMs (database-only min(10s, remaining) exemption), late-registration/duplicate-id rejection, close-context signal aborted before first close, exported createShutdownAbsoluteDeadline (round 1 fix) with seedable absolute deadline"
+      },
+      {
+        "path": "core/server/runtimeEntrypoint.ts",
+        "finalLines": 324,
+        "role": "sole signal/drain owner; mode factories for prod/dev; sanitizeRuntimeEntrypointError (scheme-URL redaction, 300-char bound, non-Error collapse); shutdown deadline created pre-drain and passed into closeRuntimeLifecycle (round 1 fix)"
+      },
+      {
+        "path": "core/server/prod.ts",
+        "finalLines": 19,
+        "role": "thin production adapter, no handlers/stop/process.exit (pinned by source-scan test)"
+      },
+      {
+        "path": "core/server/dev.ts",
+        "finalLines": 53,
+        "role": "thin development adapter with Bun.spawn vite children as awaited worker participants"
+      },
+      {
+        "path": "core/db/databaseLifecycle.ts",
+        "finalLines": 104,
+        "role": "ceiling constants: DATABASE_CLOSE_TIMEOUT_SECONDS=10, HTTP_DRAIN_DEADLINE_MS=10000, RETENTION_CANCEL_DRAIN_DEADLINE_MS=4500, RETENTION_STATEMENT_TIMEOUT_MS=4000"
+      },
+      {
+        "path": "core/db/queryTelemetry.ts",
+        "finalLines": 347,
+        "role": "QUERY_CELLS_PER_FINGERPRINT=3240, POOL_CELLS=44, SaturatingCounterArray, classifyQueryOutcomeError (timeout/cancelled/driver_error), measureDatabaseQuery default process sink"
+      },
+      {
+        "path": "scripts/task-551-pg-stat-interval.ts",
+        "finalLines": 646,
+        "role": "pg_stat collector CLI: in-memory statement text normalized + SHA-256 only, fingerprint resolution by exact digest, bounded nine-code pg_stat_interval_* error surface, query-ID-reuse digest check failing pg_stat_interval_invalid (round 2), wrapped JSON.parse in decodeOperatorEvidence failing evidence_invalid without echoing payload (micro round), truthful declared receipt types incl. cleanAfterDiagnostics, never calls pg_stat_statements_reset, never persists SQL"
+      },
+      {
+        "path": "tests/vitest/db/queryFingerprintRegistry.test.ts",
+        "finalLines": 418,
+        "role": "registry pins incl. digest recomputed independently via node:crypto against the real recipe, no-tests/-imports-under-core source walk, saturation/reset/frozen-snapshot pins"
+      },
+      {
+        "path": "tests/vitest/db/databaseApplicationIdentity.test.ts",
+        "finalLines": 197,
+        "role": "fleet boundary matrix, worker grammar, unknown-key rejection, name rendering, 63-byte ceiling"
+      },
+      {
+        "path": "tests/integration/server/task551DatabaseLifecycle.test.ts",
+        "finalLines": 815,
+        "role": "DB-free via client seam injection: ceiling pins (2000/5000/10000/15000 + POOL_ACQUISITION_DEADLINE_MS=2000), phase order, min(10s,remaining) close budget, shutdown-race release-exactly-once, lost-session paths, two advisory-lock termination tests making the unlockedExactly===false branch deletion-detectable"
+      },
+      {
+        "path": "tests/integration/server/task551RuntimeEntrypoints.test.ts",
+        "finalLines": 579,
+        "role": "start-before-listen order, rollback on failure, forced stop, behavioral clocked test consuming the full 10s HTTP drain with pre-drain shared absolute deadline and awaited database overstep (no outer 5s race), mode-adapter purity pins"
+      },
+      {
+        "path": "tests/perf/database-pg-stat-interval.test.ts",
+        "finalLines": 693,
+        "role": "pure-function coverage: name/purpose matrix, fail-closed identity/regression/reuse/stale, strict decode incl. byte-malformed evidence without payload echo, five polluted diagnostic families, canonical 0600 write in tmpdir, >4-MiB and >10,000-row rejections, comment-stripped zero-reset source scan with positive control"
+      }
+    ],
+    "contractMdChange": "_docs/_TASKS/TASK-551-02-L02-...Telemetry.md gained ONE append-only dated section: '## Contract correction (2026-09-03, pg_stat_interval failure-code set)' (:955-1023 of 1023) — original single-code wording :572-574 corrected to the implemented bounded nine-code pg_stat_interval_* set (byte-verified, all 20 throw sites individually attributed); reuse trigger keeps pg_stat_interval_invalid as originally demanded; citations match bytes (:389/:430). Re-audit confirmed structural append-only; byte-level pre-image not provable (files untracked).",
+    "coreIsReadOnlyInputNote": "core files in the 02-L02 allowlist are contract-owned; wider core/** and all other families' files untouched; git status entry count 131 before == 131 after each write window.",
+    "attributionProof": "Workflow agents wrote the full-flow delta and round-1 fix; a named orchestrator agent wrote round 2 (9 items) and the micro round (2 items); re-auditor confirmed exactly 7 paths have post-21:00Z mtimes, all allowlisted."
+  },
+  "admissionStory": {
+    "fullFlow": {
+      "runId": "wf_32103940-de1",
+      "baselineState": "PARTIAL",
+      "round1Fix": "3 confirmed MEDIUM: POOL_ACQUIStion deadline 2000ms pin; behavioral clocked 10s HTTP-drain test + createShutdownAbsoluteDeadline pre-drain; five sanitized diagnostic families test. 1 LOW residual (advisory-lock input widening, fixed in round 2).",
+      "verifierLoss": "2 of 6 verify slots lost to StructuredOutput retry-cap (provider rate-limiting) and the script's slice(0,6) cap left 9 findings unverified — 11 total. NOT accepted silently: a supplementary verification workflow ran."
+    },
+    "supplementaryVerification": {
+      "runId": "wf_76df9ed8-597",
+      "results": "9/11 returned (2 slots failed again on retry cap; those two were verified inline by the orchestrator): 7 findings rejected NOT_A_DEFECT with byte-level reasoning — #7 mid-flight-abort mandate belongs to the Real-DB clause and exactly-once race is covered; #8 entrypoint redaction mechanics real but statement text/binds cannot print with postgres.js debug off and the contract prescribes message pass-through; #9 registry 1065-vs-1069 delta is pending 03-L02 records with exact-set verification owned by final 01-L01; #10 statementTimeoutMs presence-only in the contract; #11 test seam is load-bearing for the DB-free gate; #14 clocked proofs already resolved by round 1. Confirmed: #2 MEDIUM (query-ID reuse digest check missing — blocking), #4 LOW (code divergence), #6 LOW (0600/bounds/zero-reset unpinned), #12 LOW (advisory-lock termination path unexercised). Inline: #13 LOW real (digest recomputation asserted only length>0)."
+    },
+    "round2": "Single writer, 9 items: the three RED gates the orchestrator's independent battery caught on final bytes (2 unused imports after round-1 rewrites — the round-1 re-audit had wrongly reported gates green; buildIntervalReceipt declared return type missing cleanAfterDiagnostics -> TS2339); item #2 implemented + tested; dated contract correction; #6 pins; #12 two termination tests; #13 true digest assertion; #5 input tightening with call sites.",
+    "reAudit": "Fresh adversarial re-audit: CLEAN, 2 LOW (bare JSON.parse escaping raw SyntaxError; two stale line citations in the correction section) + 1 informational (advisoryLockConflict export now throw-free, kept as pinned surface).",
+    "microRound": "Both LOWs fixed: wrapped parse failing pg_stat_interval_evidence_invalid with message exactly the code (payload echo asserted away); citations corrected to :389/:430 and verified equal to the real throw sites."
+  },
+  "gates": [
+    {
+      "command": "bun --env-file=/dev/null test <lifecycle + entrypoints + pg-stat>",
+      "pass": true,
+      "detail": "56 pass / 0 fail / 2404 expects (orchestrator rerun); pg-stat suite separately 15/0/2250 after micro round"
+    },
+    {
+      "command": "bunx vitest run <registry + identity + databaseConfig canary>",
+      "pass": true,
+      "detail": "77/77 across 3 files, exit 0 (orchestrator rerun)"
+    },
+    {
+      "command": "bun test tests/perf/task551DatabaseBaseline/freezeCandidateGenerationBootstrap.test.ts (canary)",
+      "pass": true,
+      "detail": "8/0/285 unchanged (orchestrator rerun)"
+    },
+    {
+      "command": "bun test tests/integration/server/task551BunLaneMembership.test.ts (lane guard)",
+      "pass": true,
+      "detail": "10/0/154 (re-audit run)"
+    },
+    {
+      "command": "bunx eslint --max-warnings=0 <all 15 allowlist paths>",
+      "pass": true,
+      "detail": "exit 0 after round 2 and micro round (orchestrator rerun with true exit code; pre-fix it was exit 1 with 2 errors — caught by the orchestrator, not the round-1 re-audit)"
+    },
+    {
+      "command": "bun run lint:repo:types",
+      "pass": true,
+      "detail": "exit 0 (orchestrator rerun after round 2 and micro round; was exit 2 pre-fix with TS2339)"
+    },
+    {
+      "command": "bun --cwd core lint:types ; bun --cwd core lint",
+      "pass": true,
+      "detail": "both exit 0 (orchestrator rerun)"
+    },
+    {
+      "command": "wc -l <15 allowlist paths>",
+      "pass": true,
+      "detail": "all <= 1000; max lifecycle test 815"
+    },
+    {
+      "command": "git diff --check",
+      "pass": true,
+      "detail": "clean (orchestrator rerun after every round)"
+    }
+  ],
+  "ownerBarriersRecorded": [
+    "database-lifecycle-test real-pool profile (>=2 simultaneous connections, replacement, bounded timeout cancel); pg-stat synthetic views + disposable real extension; CLI start/end receipts on real pg_stat_statements; live session-affinity probe + maintenance matrix on real PgBouncer pools; real-session application_name proofs; runtime wiring against a running server; reviewed-pair promotion / exact-set digest verification owned by owner + final 01-L01.",
+    "Registry key set: exactly 1065 keys pinned; task551_current_1147..1150 belong to pending 03-L02 records; any change requires a new reviewed receipt; final 01-L01 owns independent exact-set verification."
+  ],
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "honestyNotes": [
+    "Round-1 re-audit inside the full flow reported green gates while the final bytes were red (2 eslint errors + 1 TS error); caught only by the orchestrator's independent battery. Recorded as a process lesson: gate claims are re-executed, never trusted.",
+    "Eleven post-audit findings went unverified inside the flow (2 lost verifiers + orchestrator slice cap slice(0,6) — an avoidable silent cap); all 11 were subsequently verified (9 via supplementary workflow, 2 inline). Future occurrence scripts should verify all findings, not a capped slice.",
+    "Contract correction's append-only property is verified-in-structure (terminal position, verbatim quote, no contradictions) but not byte-proven: all touched files are untracked, so no git pre-image exists."
+  ],
+  "nextInSpine": "TASK-551-02-L03 (measure wiring and pool telemetry gates; last occurrence of family 02), then 08-L03:final block of the spine; owner barriers carried unchanged; changelog 1310 pinned for 10-L02."
+}

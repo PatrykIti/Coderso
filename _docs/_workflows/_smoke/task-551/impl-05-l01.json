@@ -1,0 +1,147 @@
+{
+  "task": "TASK-551-05-L01",
+  "occurrence": "single",
+  "phase": "ADMISSION",
+  "capturedAt": "2026-09-04T20:57:52Z",
+  "worktree": "/home/coder/project/Coderso-551",
+  "branch": "feat/task-551-db-cache",
+  "headAtAdmission": "7bc41f75b9de972ce3ee4d794cf5fce14e08c5cb",
+  "commitsMadeByFlow": 0,
+  "stagedByFlow": false,
+  "dbConnections": 0,
+  "manualExecutionNote": "Owner-authorized manual AGENTS.md flow: orchestrator-driven fix loop over 9 rounds (workflows wf_7674d018-d6c authoring; wf_f7594852-52c + wf_bb0c1187-a61 round 2; wf_6fcfa490-d42 + wf_da9f34cf-1f9 round 3; wf_3325c92f-55d + wf_914f9f8a-262 round 4; wf_dffb889c-824 round 5; wf_fdab42fc-971 round 6; wf_99c2f4e8-450 round 7; wf_cae71688-b5f round 8; wf_cf9f50ae-c16 round 9), every round fresh recon -> scoped single-writer fix -> fresh adversarial re-audit on real bytes, then the orchestrator's OWN independent admission battery (recorded below, true exit codes). All execution DB-free and env-free per the post-incident airtight form: cd /home/coder/project/Coderso-551 && env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <files>; 'bun --cwd <dir> test' and package.json script resolution are banned in every mandate (they source .env against the reachable shared DB). The L11 automatic in-process route remains fail-closed; no automatic permit/snapshot/receipt fabricated.",
+  "predecessorAccepted": "Receipts through impl-02-l03.json (SINGLE_ADMITTED_GATES_GREEN; family 02 closed). PINS byte-identical at every round's recon and at receipt time: tests/perf/task551DatabaseBaseline/freezeReceipts.ts 17da0343d65322e51b76dd8f0d71f2a2471f7ef776bdcbaa03559f34e0355c4f; tests/bun-lane-manifest.json 0da925552ef993475871456f6889646765f2f2612a8bacaad79a5b92ddcac88b (454 rows). Stale impl-01-l02.json untouched (L11 recovery-protocol property).",
+  "artifactHashesAtAdmission": {
+    "scripts/task-551-online-indexes.ts": "882ea4e5809490ee900169e79048493836247722999a1b4f86b9659a2a292870 (964/1000 lines)",
+    "tests/integration/server/task551OnlineIndexDeployment.test.ts": "d6410f82172f5b23d40385092234d6ea8bbd880f8e8f5f20600c3942c79620bb (exactly 1000 lines, 49 tests, 2299 expect())"
+  },
+  "scope": {
+    "schemaSplit": "3 new pure table modules + catalog edits in the 14 existing table owners; core/db/schema.ts, core/db/client.ts and consumers typed against drizzle-orm 0.45.2 ($inferSelect requires EVERY declared column key; generated columns excluded from $inferInsert only)",
+    "migrationTriple": "0081_task551_search_indexes_constraints_outbox.sql (transactional: 0 CONCURRENTLY / 0 CREATE INDEX / exactly 1 EXCLUDE seam) + 0081 snapshot + meta/_journal.json tail (80 entries, tail idx 81) + companion 0081_task551_online_indexes.sql (the online/CONCURRENTLY DDL the runner executes, 99 lines)",
+    "runner": "scripts/task-551-online-indexes.ts (964 lines): guarded phased rollout (prepare -> apply -> verify -> cutover) with advisory-lock lease + PID reset-proof on parsed runtime shapes, reverse drop-loop with per-member CAS, poisoned-lease never-release semantics, predecision interval consumption from 01-L02, health ceilings (lag<=5s, oldest<=30s, invalid booking windows) bound into the canonical preflight digest, phase-7 write-cost gate (TASK551_WRITE_COST_EVIDENCE) + TASK551_AUTOSCALING_ENABLED, injectable freeDiskBytes seam (null default = live statfsSync read; finite/positive guard applies to BOTH branches), phase-6 resume re-derives + compares adapterSha256 before executing, all catalog probes nspname='public'-scoped, closed 20-code refusal set, exported seams createTask551ReservedDrizzleClient / casReceipt / transactionalReverseTargets shape-compatible",
+    "tests": "9 test files total; deployment suite task551OnlineIndexDeployment.test.ts at exactly 1000 lines (49 tests / 2299 expect()); 5 leaf suites + gated write-overhead benchmark with honest fail-closed-at-import header",
+    "consumers": "4 downstream select-shape sites +2 null keys each (core/services/backups/backupUsersSection.ts, tests/integration/routes/auth.test.ts, tests/integration/routes/adminUsers.test.ts, tests/unit/commerce/commerceRuntimeResolver.test.ts)",
+    "contract": "_docs/_TASKS/TASK-551-05-L01-Schema-Split-Indexes-And-Concurrency-Constraints.md 1221 lines, APPEND-ONLY dated correction 'Contract correction (2026-09-04, downstream select-shape ripple)'"
+  },
+  "admissionStory": {
+    "incidentTopPlacement": "2026-09-04 ~07:57, round-3-close FinalFix agent ran 'bun --cwd /home/coder/project/Coderso-551 test <file>': bun resolved 'test' to package.json's script, whose definition does '. ./.env' under set -a and launches scripts/run-bun-parallel.ts --lane all against the REACHABLE shared remote DB. Output showed bun_worker_0 schema dropped ('drop cascades to 86 other objects') and migration/extension recreation in progress when the 3-min timeout SIGTERM'd it (exit 143). The agent disclosed honestly; the orchestrator did NOT remediate remotely (would breach further); the shared DB was left mid-recreation for the owner. Since then every mandate prescribes the airtight builtin form verbatim and bans 'bun --cwd ... test' / bare 'bun test'; lesson recorded in persistent memory (bun-cwd-test-hits-package-script).",
+    "fixLoopRounds": [
+      {
+        "round": 1,
+        "workflows": ["wf_7674d018-d6c"],
+        "outcome": "IMPLEMENTED_GATES_GREEN: pre-audit 6 findings (3 HIGH/3 MEDIUM) shaped the authoring; definitions + catalog edits + migration triple + companion + runner + 9 test files landed"
+      },
+      {
+        "round": 2,
+        "workflows": ["wf_f7594852-52c", "wf_bb0c1187-a61"],
+        "outcome": "APPEND-ONLY dated contract correction (drizzle 0.45.2 select-shape ripple) + 4 consumer files + 4 suite repairs; post-audit clean, 3 LOW observations adjudicated (auth.test.ts:90 pre-existing, 2 later addressed in-round)"
+      },
+      {
+        "round": 3,
+        "workflows": ["wf_6fcfa490-d42", "wf_da9f34cf-1f9"],
+        "outcome": "fix GREEN; re-audit 7 findings (2 HIGH/3 MEDIUM/2 LOW): phase-4 unreachable, phase-6 evidence fail-open, reverse incomplete, needle-only suite pinning; INCIDENT in close phase (see top)"
+      },
+      {
+        "round": 4,
+        "workflows": ["wf_3325c92f-55d", "wf_914f9f8a-262"],
+        "outcome": "orchestrator flow guard initially too strict (honest FIXED_GATES_RED on exactly the 2 predicted suite pins) - guard fixed, FIXED_READY_FOR_SUITE status codified; suite GREEN; re-audit 10 findings (5 HIGH/5 MEDIUM): dead journal-insert recognizer, unreachable reverse, handlerless building states, DDL_RECHECK_STATES refusal, buildMember over-refusal, dead operator_resume_authorized, role-scope, classification x4, write-cost gate, autoscaling condition"
+      },
+      {
+        "round": 5,
+        "workflows": ["wf_dffb889c-824"],
+        "outcome": "fix GREEN; re-audit 10 findings (3 HIGH/4 MEDIUM/3 LOW): advisory-lock boolean runtime shape, relkind 'i' vs 'I', reverse_indexes_building handlerless, 2 suite enshrinements, dead preflight ceilings, L02 predecision interval unconsumed, poisoned-reset release violation, reverse budgets, per-member CAS"
+      },
+      {
+        "round": 6,
+        "workflows": ["wf_fdab42fc-971"],
+        "outcome": "fix GREEN with in-agent self-trace + parser-verified types; re-audit 6 findings (2 HIGH/2 MEDIUM/2 LOW): PID number-vs-String always-fail, statfs drift flake, dead standby gate ('t' vs \"true\"), suite enshrining the impossible shape, resume digest overwrite, unscoped pg_constraint probes"
+      },
+      {
+        "round": 7,
+        "workflows": ["wf_99c2f4e8-450"],
+        "outcome": "fixes + FULL live-value comparison inventory (every comparison x installed postgres 3.4.9 parser type; sweep verdict: no mismatches beyond the four fixed); re-audit agent died at StructuredOutput emission (retry cap) - full verdict salvaged from transcript: 3 findings (1 MEDIUM/2 LOW)"
+      },
+      {
+        "round": 8,
+        "workflows": ["wf_cae71688-b5f"],
+        "outcome": "single-writer both files: statfs race closed BY CONSTRUCTION (injectFreeDiskBytes seam, one reading shared), phase-6 adapter digest compare, public-qualified conflict probes; re-audit 1 LOW (injected branch skipped the finite/positive guard)"
+      },
+      {
+        "round": 9,
+        "workflows": ["wf_cf9f50ae-c16"],
+        "outcome": "guard restructured so injected ?? live passes ONE finite/positive validation (NaN/<=(0) injection refuses with the same preflightFailed semantics); delta verify CLEAN, findings: []"
+      }
+    ],
+    "convergence": "admitted findings per re-audit: 7 -> 10 -> 10 -> 6 -> 3 -> 1 -> 0; every finding verified against contract bytes before fixing; no assertion weakened anywhere; suite pins re-anchored whenever fixed bytes invalidated them (un-enshrine lists in every suite mandate)",
+    "structuredOutputDeaths": "5 agents across rounds 3-7 died at StructuredOutput emission (retry cap) AFTER completing their work; every one salvaged from its transcript (tool_use inputs carry the full report); no work lost, mitigated by keeping report schemas small in rounds 8-9"
+  },
+  "gates": [
+    {
+      "command": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <5 leaf suites + tests/perf/database-index-write-overhead.test.ts + tests/integration/server/task551OnlineIndexDeployment.test.ts>",
+      "pass": true,
+      "detail": "ORCHESTRATOR ADMISSION RERUN: true exit 0; 79 pass / 16 skip / 0 fail / 3373 expect() across 7 files; the 16 skips are exactly the testIfDb real-DB gates (owner-executed by contract)"
+    },
+    {
+      "command": "same suite file alone, twice",
+      "pass": true,
+      "detail": "exit 0 both; 49 pass / 0 fail / 2299 expect(), identical counts (determinism proof; statfs race closed by construction)"
+    },
+    {
+      "command": "bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts",
+      "pass": true,
+      "detail": "exit 0; 14/14 (mandated count)"
+    },
+    {
+      "command": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/unit/db/schemaTableFacade.test.ts tests/unit/db/schemaColumnTypeContracts.test.ts",
+      "pass": true,
+      "detail": "exit 0; 102 pass / 0 fail"
+    },
+    { "command": "bunx tsc -p tsconfig.json --noEmit", "pass": true, "detail": "exit 0 (root)" },
+    {
+      "command": "cd core && bunx tsc -p tsconfig.json --noEmit",
+      "pass": true,
+      "detail": "exit 0 (core types)"
+    },
+    { "command": "cd core && bun run lint", "pass": true, "detail": "exit 0, --max-warnings=0" },
+    {
+      "command": "bunx eslint scripts/task-551-online-indexes.ts tests/integration/server/task551OnlineIndexDeployment.test.ts --max-warnings=0",
+      "pass": true,
+      "detail": "exit 0, zero findings (only ESLint's own .eslintignore deprecation notice on stderr)"
+    },
+    {
+      "command": "env -i HOME=$HOME PATH=$PATH DATABASE_DIRECT_URL='postgresql://127.0.0.1:1/none' bunx drizzle-kit generate --config core/db/drizzle.config.ts",
+      "pass": true,
+      "detail": "exit 0, 'No schema changes, nothing to migrate' - ZERO-DRIFT proof on final bytes; no new files in core/db/migrations afterwards"
+    },
+    {
+      "command": "sha256sum pins + artifact hashes + journal + 0081 invariants + git diff --check + wc -l",
+      "pass": true,
+      "detail": "pins identical (see predecessorAccepted); journal 80 entries tail idx 81 tag 0081_task551_search_indexes_constraints_outbox; transactional 0081 SQL: 0 CONCURRENTLY / 0 CREATE INDEX / exactly 1 EXCLUDE seam; diff --check clean; runner 964/1000, suite 1000/1000"
+    }
+  ],
+  "ownerBarriersRecorded": [
+    "Runner execution against a real database (rollout-forward/reverse on live Postgres, real admission adapter execution, CONCURRENTLY builds) is the OWNER step; everything here is DB-free static/behavioral verification with a non-routable URL.",
+    "Real-pool telemetry and gates:coderso* lanes remain DB-dependent and are owner-routed to 10-L01; excluded from every battery here.",
+    "No --initialize, no --freeze, no --check, no reviewed-pair promotion was executed; stale impl-01-l02.json untouched (L11 recovery-protocol property).",
+    "Changelog 1310 stays pinned for closure at 10-L02; push remains a separate owner decision; owner commits only (zero git add/commit by the flow).",
+    "The shared-DB incident (top of admissionStory) was disclosed, not remediated: bun_worker_0 schema was left mid-recreation for the owner to inspect on 2026-09-04."
+  ],
+  "codersoGateExecutionNote": "gates:coderso* not executed anywhere in this occurrence: DB-dependent, owner-routed to 10-L01 per the spine; recorded in every mandate.",
+  "adjudications": [
+    "preflight.digest intentionally does NOT equal aggregateSha256 of the file: the canonical digest binds pre-DDL states (including injected/live free-disk reading) so reproduction is meaningful before any DDL exists (round-6 adjudication, re-verified rounds 7-9).",
+    "The reverse path performs NO post-reverse health recheck by design (contract :303-314): reverse restores the pre-0081 state, so forward health ceilings do not apply.",
+    "H-4 (receipt conflict) reuses the closed set's receiptConflict code rather than adding a 21st code: the 20-code set stays closed.",
+    "TASK551_WRITE_COST_EVIDENCE and TASK551_AUTOSCALING_ENABLED are contract-unnamed env signals introduced to keep phase-7 evidence owner-supplied and DB-free; flagged here so 05-L02/L03 reviewers see them as deliberate, not drift.",
+    "Round-2's dated contract correction is the sanctioned drift-resolution precedent chain (MAX_QUERY_FINGERPRINTS 2048, pg_stat_interval nine codes, L01 slice rule): drizzle 0.45.2 $inferSelect requires every declared column key, so the 12 generated search/trigram columns ripple +2 null keys into 4 select-typed consumer literals."
+  ],
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "honestyNotes": [
+    "The shared-DB incident is real, disclosed, and unresolved by design: the flow does not touch the shared DB, so the owner must inspect/recreate bun_worker_0 (see admissionStory.incidentTopPlacement).",
+    "The deployment suite pins some refusal paths byte-exactly against the runner source because those internals are deliberately un-exported (lease poisoning, resume digest refusal); where the state IS reachable the pins are behavioral. This mixed strategy is disclosed, not hidden.",
+    "The write-overhead suite fail-closes at import without a database URL (database_url_missing) because core/db/client.ts:80 is an EAGER postgres(...) at module scope - repo-wide convention, not a defect; the file's header states the true semantics ('with a URL set but unreachable the gated measurements skip').",
+    "Authoring 05-L01 flips bunLaneManifest.test.ts to 14/2 until 01-L01:final regenerates the manifest - contracted sequencing, not a regression.",
+    "Residual pre-existing defects OUTSIDE this occurrence's surface: auth.test.ts:90 eslint unused-var (route-lane owner's line, byte-identical at HEAD); 02-L01's two LOW receipts stand as recorded.",
+    "Round-9's fixer/verifier reported a smaller 'battery' (56/14/1289) because their 7-file list differed from the canonical one; the orchestrator's admission battery above is the canonical 7-file airtight list and is the number of record (79/16/0/3373)."
+  ],
+  "nextInSpine": "TASK-551-05-L03 (owns task551SolutionKitRollbackAuthoritySchema.test.ts), then 05-L02 (consumes redacted l05-concurrency-receipt@v1 from task551ConcurrencyConstraints), per the spine order in _TMP-S1-spina.md."
+}

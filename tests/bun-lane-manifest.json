@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-21T11:31:14.981Z",
+  "generatedAt": "2026-09-02T22:16:08.940Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -582,6 +582,12 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/integration/runtime/paginationCursorLifecycle.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/integration/runtime/post-rendering-parity.test.tsx",
       "bucket": "A",
       "conflictKeys": [],
@@ -684,6 +690,30 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/integration/server/route-response-headers.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/server/task551BunLaneMembership.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/server/task551DatabaseLifecycle.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/server/task551RuntimeEntrypoints.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/integration/store/install.test.ts",
       "bucket": "B",
       "conflictKeys": [],
@@ -768,6 +798,30 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/perf/database-pg-stat-interval.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/database-query-baseline.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/database-query-inventory-capability-routes.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/database-query-inventory.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/perf/post-editor-load.test.tsx",
       "bucket": "perf",
       "conflictKeys": [],
@@ -775,6 +829,42 @@
     },
     {
       "file": "tests/perf/seo-sitemap.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/task551DatabaseBaseline/digestContract.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/task551DatabaseBaseline/fixtureTarget.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/task551DatabaseBaseline/freezeCandidateGenerationBootstrap.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/task551DatabaseBaseline/reviewedPairPersistence.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/task551DatabaseBaseline/runnerLifecycle.test.ts",
+      "bucket": "perf",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/perf/task551FixtureTargetBootstrap.test.ts",
       "bucket": "perf",
       "conflictKeys": [],
       "cWriteGlobal": false
@@ -2588,6 +2678,24 @@
     },
     {
       "file": "tests/unit/workflows/task543WorkflowModules.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/workflows/task551AuthorAudit.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/workflows/task551EvidenceContract.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/workflows/task551WorkflowContracts.test.ts",
       "bucket": "A",
       "conflictKeys": [],
       "cWriteGlobal": false

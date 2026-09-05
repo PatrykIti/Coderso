@@ -7,7 +7,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-551-01 initial exact-set receipt and TASK-551-01-L02 complete
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -26,22 +26,28 @@ pool-owning process, never an unpriced reserve.
 | Leaf | Exact allowlist |
 |---|---|
 | TASK-551-02-L01 | `core/db/databaseConfig.ts`; `tests/vitest/db/databaseConfig.test.ts` |
-| TASK-551-02-L02 | `core/db/client.ts`; `core/db/databaseLifecycle.ts`; `core/db/databaseApplicationIdentity.ts`; `core/db/queryFingerprintRegistry.ts`; `core/db/queryTelemetry.ts`; `core/server/runtimeLifecycle.ts`; `core/server/runtimeEntrypoint.ts`; `core/server/prod.ts`; `core/server/dev.ts`; `scripts/task-551-pg-stat-interval.ts`; `tests/vitest/db/databaseApplicationIdentity.test.ts`; `tests/vitest/db/queryFingerprintRegistry.test.ts`; `tests/integration/server/task551DatabaseLifecycle.test.ts`; `tests/integration/server/task551RuntimeEntrypoints.test.ts`; `tests/perf/database-pool-telemetry.test.ts`; `tests/perf/database-pg-stat-interval.test.ts` |
+| TASK-551-02-L02 | `core/db/client.ts`; `core/db/databaseLifecycle.ts`; `core/db/databaseApplicationIdentity.ts`; `core/db/queryFingerprintRegistry.ts`; `core/db/queryTelemetry.ts`; `core/server/runtimeLifecycle.ts`; `core/server/runtimeEntrypoint.ts`; `core/server/prod.ts`; `core/server/dev.ts`; `scripts/task-551-pg-stat-interval.ts`; `tests/vitest/db/databaseApplicationIdentity.test.ts`; `tests/vitest/db/queryFingerprintRegistry.test.ts`; `tests/integration/server/task551DatabaseLifecycle.test.ts`; `tests/integration/server/task551RuntimeEntrypoints.test.ts`; `tests/perf/database-pg-stat-interval.test.ts` |
+| TASK-551-02-L03 | `tests/perf/database-pool-telemetry.test.ts` |
 
 L02 is the sole TASK-551 writer of `core/db/client.ts`. Forbidden paths include
 all schema/migration files, cache/Redis source reserved for 07/08, TASK-511
 backup paths, TASK-517 public/entry paths, TASK-493 SEO paths, and all
 task/changelog/workflow files. L02 emits the exact validated environment table
 as a handoff artifact; TASK-551-10-L02 is the sole `.env.example` and prose writer.
+L03 is a test-only consumer of L02's closed public telemetry and pool APIs; it
+may not change a production caller. The reviewed inventory assigns each caller
+source file to its domain leaf, so a later caller adoption belongs only to that
+leaf's explicit finite allowlist and is never inferred by TASK-551-02-L03.
 
 ## Sub-Tasks
 
 - [ ] **TASK-551-02-L01** — Validated database configuration and cluster budget.
 - [ ] **TASK-551-02-L02** — Pool lifecycle, timeouts, and sanitized telemetry.
+- [ ] **TASK-551-02-L03** — Closed measure contract and real-pool telemetry gate.
 
 ## Land Order
 
-L01 → L02. L02 integrates only the configuration API landed by L01.
+L01 → L02 → L03. L02 integrates only the configuration API landed by L01.
 L02 solely owns the pure production fingerprint registry, created from L01's
 reviewed initial handoff. Telemetry imports it directly; final L01 read-verifies
 its exact set and production imports no test artifact.
@@ -87,6 +93,12 @@ Registration is module-owned and happens before this start boundary: 03-L02's
 08-L03 preserves that registration and adds cache, retention, and backup
 participants from its sole `httpServer.ts` composition ownership; it must not
 reopen either entrypoint or introduce another signal owner.
+L03 begins only after L02's source and unit/lifecycle gates pass. It creates the
+one real-pool Bun test from its exact allowlist and exercises L02's exported
+`measureDatabaseQuery`, `databaseTelemetry`, and `probeDatabasePoolHealth`
+surfaces as closed APIs. It must not add a wrapper to any service, route, or
+future source file: domain leaves that own a reviewed caller may adopt the
+closed API later under their own explicit task contract and tests.
 
 ## Security Contract
 
@@ -105,8 +117,8 @@ reopen either entrypoint or introduce another signal owner.
 - `bunx vitest run tests/vitest/db/databaseConfig.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551DatabaseLifecycle.test.ts`
 - `bun test tests/integration/server/task551RuntimeEntrypoints.test.ts`
-- `set -a && source .env && set +a && bun test tests/perf/database-pool-telemetry.test.ts`
 - `set -a && source .env && set +a && bun test tests/perf/database-pg-stat-interval.test.ts`
+- L03 only: `set -a && source .env && set +a && bun test tests/perf/database-pool-telemetry.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso`

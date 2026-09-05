@@ -71,7 +71,7 @@ and registry identity; L03 consumes both without rewriting them.
 
 ## Collision Guard
 
-No leaf may edit TASK-414/489/545/547/548/551/554 task files, changelogs 1260/1263/
+No leaf may edit TASK-414/489/545/547/548/551/554 task files, changelogs 1260/1310/
 1266/1267/1268, board/changelog indexes, assistant/provider code, or another leaf's
 owned source/tests. The already-tracked TASK-555 workflow bootstrap is read-only to
 all product leaves. TASK-547 files are historical read-only evidence. L03 waits for

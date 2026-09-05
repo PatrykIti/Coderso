@@ -8,7 +8,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-551-06-L03; consumes TASK-551-01/02 contracts
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -54,8 +54,38 @@ Preserve the parent names and export them only from
 `ServerCacheHealth`,
 `ServerCacheCoherenceSignal`, `ServerCacheCoherenceController`,
 `CacheInvalidationAttemptToken`, `CacheInvalidationAttemptRegistration`,
-`CacheInvalidationPlan`, and an optional `DistributedCacheLoadCoordinator` plus
-`DistributedCacheOwnedWriteResult`. `decode` is the only authority for a policy's
+`CacheInvalidationPlan`. Later clauses mandate additional owned exports, which
+are enumerated here rather than left implicit: the coherence/health types
+`ProcessCacheCoherenceEpoch`, `ServerCacheForcedBypassReason`,
+`ServerCacheCoherence`, `CacheCoherenceAffectedTags`,
+`CacheCoherenceGlobalSource`, `CacheCoherenceObservationToken`,
+`ServerCacheBackendHealthInput`; the envelope/time types `UnixTimeMs` and
+`CacheGenerationDigest`; the normalized-value brands `NegativeCacheTtlMs`,
+`CacheSchemaVersion`, `PositiveCacheTtlMs` and `CacheValueByteLimit` together
+with the envelope record `ServerCacheEnvelopeV1`, which close the importable
+surface consumed by the `CachePolicy<T>` fields, `CacheConditionalWriteEntry`,
+`ServerCacheStoreDescription.maxEntryBytes` and the entry-factory input, every
+one of them exported from `serverCacheContracts.ts`; the conditional-write
+entry type `CacheConditionalWriteEntry` with its sole factory
+`createCacheConditionalWriteEntry`, both exported from
+`serverCacheContracts.ts` beside the `CacheConditionalWrite` handoff; the
+limits constant `SERVER_CACHE_LIMITS`; and the distributed types
+`DistributedCacheLeaseMs`, `DistributedCacheWaitMs`,
+`DistributedCachePollMs`, `DistributedCacheLoadAcquireInput`,
+`DistributedCacheLoadWaitResult`, `DistributedCacheLoadAcquireResult`,
+`DistributedCacheOwnedWriteResult` together with the interface
+`DistributedCacheLoadCoordinator`. Every type in that list is exported
+unconditionally: a memory-only deployment constructs no coordinator instance,
+yet the contract itself stays complete and compiled.
+`normalizeServerCacheConfig` is exported from `serverCacheConfig.ts`;
+`CachePolicyCapacityRequirement` and `assertMandatoryPolicyCapacity` are
+exported beside it because both consume normalized configuration and both fail
+startup. `SERVER_CACHE_MAX_ENTRY_BYTES` is not an extra uppercase constant: it
+names the normalized per-entry byte ceiling produced by
+`normalizeServerCacheConfig(env)` (the `SERVER_CACHE_MAX_ENTRY_BYTES=<int>`
+variable above, default 2_097_152, accepted range
+`1_024..min(total,16_777_216)`), cross-checked at startup against
+`store.describe().maxEntryBytes`. `decode` is the only authority for a policy's
 value. `CacheSchemaVersion`, `PositiveCacheTtlMs`, `CacheValueByteLimit`, and
 `NegativeCacheTtlMs` are opaque normalized integers; production callers obtain
 them through constructors rather than assertions. Schema versions accept only
@@ -882,6 +912,22 @@ function recoverCapacityFenceAtHysteresis() {
 
 ## Testing Requirements
 
+Ownership scope of every pin below (see the Contract Repair Record at the end
+of this file for the clause-by-clause mapping): each test executes offline in
+this leaf's three test files and drives pure in-memory fixtures typed exactly
+by these interfaces -- fake coherence controllers, fake stores, fake load
+contexts and fake distributed coordinators. Where a pin names a mechanism whose
+implementation another leaf owns (controller transitions and fences, adapter or
+Redis parity, lease outcomes, singleflight joins, durable drain), this leaf pins
+only the typed seam, its normalization bounds and specification-vector data;
+the owning leaf re-pins the identical behavior against its implementation:
+TASK-551-07-L02 for the memory adapter, coherence-controller transitions,
+capacity/hysteresis lifecycle stress and the loader-trigger/singleflight matrix;
+TASK-551-08-L01 for Redis store parity and failure semantics; TASK-551-08-L02
+for the independently durable drain fence; TASK-551-08-L03 for lease and
+multi-replica parity. No database connection, network service or spawned
+process exists in this lane.
+
 Pin canonical object-order, Unicode, numeric, schema-version, generation-order
 and key vectors;
 prove a legal path containing `|` cannot collide; reject every max+1 and unknown
@@ -954,17 +1000,237 @@ drain fence, durable-before-delayed-failure cannot re-fence, a settled token can
 never report, and safe-integer epoch/token overflow still fails closed.
 
 ```bash
-bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \
-  tests/vitest/cache/server-cache-codec-keys.test.ts \
-  tests/vitest/cache/server-cache-eligibility.test.ts
+node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/cache/server-cache-contracts.test.ts tests/vitest/cache/server-cache-codec-keys.test.ts tests/vitest/cache/server-cache-eligibility.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
 git diff --check
-wc -l core/services/cache/serverCache{Contracts,Codec,Keys,Eligibility,Config}.ts \
-  tests/vitest/cache/server-cache-{contracts,codec-keys,eligibility}.test.ts
+wc -l core/services/cache/serverCacheContracts.ts \
+  core/services/cache/serverCacheCodec.ts \
+  core/services/cache/serverCacheKeys.ts \
+  core/services/cache/serverCacheEligibility.ts \
+  core/services/cache/serverCacheConfig.ts \
+  tests/vitest/cache/server-cache-contracts.test.ts \
+  tests/vitest/cache/server-cache-codec-keys.test.ts \
+  tests/vitest/cache/server-cache-eligibility.test.ts
 ```
 
 ## Documentation Updates Required
 
 Send exact env/envelope/key/eligibility documentation to TASK-551-10-L02; do
 not edit shared docs or changelog here.
+
+---
+
+## Contract Repair Record (2026-08-27)
+
+Append-only log of the verification-audit repairs applied to this leaf.
+Sentences written earlier stay in place; where an entry re-scopes them, the
+entry governs. Acceptance thresholds are unchanged: nothing left the program,
+pins moved only to the leaf that owns the implementation under test. This
+record documents deltas; it does not flip task status, touch board rows,
+changelog entries or workflow files.
+
+### R1 - HIGH - Testing Requirements split by owner
+
+Exclusive Ownership above stays authoritative: this leaf ships five contract
+modules plus three test files and creates neither a store, nor a memory/Redis
+adapter, nor a coherence controller, lease coordinator, outbox worker or
+runtime. Since `core/services/cache/` holds zero implementations in this
+worktree, every behavioral pin resolves through one of two routes below.
+
+Route A - pinned here, through fixtures owned inside
+`server-cache-contracts.test.ts`, `server-cache-codec-keys.test.ts` and
+`server-cache-eligibility.test.ts`. Fixtures are pure in-memory fakes typed by
+these interfaces, so each suite stays deterministic, DB-free, socket-free and
+independently runnable:
+
+- contract union member/field sets plus normalization bounds for coherence
+  signals, `ServerCacheCoherence` snapshots, `ServerCacheBackendHealthInput`
+  and `ServerCacheHealth`;
+- specification-vector tables fixing expected force/recover ordering,
+  independent global versus exact-event fences, saturated registration shape,
+  cap `4_096` and hysteresis `3_072` as data implementors must satisfy;
+- contracts/unions, canonical key vectors, envelope decode bounds, eligibility
+  digests and matrix, `SERVER_CACHE_LIMITS`, config normalization plus
+  credential redaction, conditional-write entry factory normalization,
+  invalidation-plan strictness and the startup capacity function.
+
+Route B - delegated to the leaf owning the implementation, which already pins
+the behavior verbatim in its own Testing Requirements (verified read-only in
+this worktree at repair time):
+
+| Pin group | Owner |
+| --- | --- |
+| coherence source/transition matrix, independent-fence recovery, stale force/recover token ordering, exact-event active/failure/durable ordering, registry capacity/hysteresis, ">100k settled invalidations" lifecycle, 4,096-to-3,072 saturation ramp | TASK-551-07-L02 |
+| safe-integer epoch ceiling forcing permanent bypass until restart; `controller.health(...)` composition | TASK-551-07-L02 |
+| full loader-trigger matrix, `getOrLoad` singleflight/joiner outcomes, unequal primary/companion TTLs, `no_fill` zero-work proofs | TASK-551-07-L02 |
+| generation-digest-mismatch eviction plus coarse rejected trigger | TASK-551-07-L02 |
+| memory-adapter conformance of the `ServerCacheStore` interface and atomic all-or-nothing `writeIfGenerationsMatch` over real storage | TASK-551-07-L02 |
+| Redis store parity, `unknown` physical outcome after dispatch, redacted failure diagnostics, so "against both adapters" closes across L02 plus 08-L01 | TASK-551-08-L01 |
+| independently durable drain fence installed by Redis saturation | TASK-551-08-L02 |
+| distributed owner acquire/result/close unions, `written`/`generation_changed`/`lease_lost`/`unavailable`, generation-only write never called by an owner, post-attempt release unable to authorize a fill | TASK-551-08-L03 |
+
+Should one of those owners drop its pin, the deferral protocol handles the gap
+downstream; this leaf does not widen its allowlist to absorb adapter,
+controller or lease behavior.
+
+### R2 - MEDIUM - validation gate made env-source-free
+
+Root `package.json` defines `"test:vitest"` beginning with
+`set -a && { [ ! -f .env ] || . ./.env; } && set +a`, so the formerly
+documented wrapper invocation loaded the repository `.env` file and broke the
+program-wide rule that forbids sourcing environment state. The gate above now
+states the direct offline-safe call that the executability stage had already
+approved as its substitution:
+
+```text
+before:
+bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \
+  tests/vitest/cache/server-cache-codec-keys.test.ts \
+  tests/vitest/cache/server-cache-eligibility.test.ts
+
+after:
+node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/cache/server-cache-contracts.test.ts tests/vitest/cache/server-cache-codec-keys.test.ts tests/vitest/cache/server-cache-eligibility.test.ts
+```
+
+`vitest.config.ts` and `tests/setup/vitest.ts` read no environment values, so
+the replacement runs the same three suites with identical assertions. The
+`before:` lines are historical documentation inside a non-executable `text`
+block; the executable gate in Testing Requirements is the `after:` form alone.
+`wc -l` now lists explicit paths rather than brace expansion, mirroring the
+gates-plan variant. `bun --cwd core lint:types`, `bun --cwd core lint` and
+`git diff --check` remain untouched.
+
+### R3 - LOW - Exact Owned Surface completed
+
+- Extended the exported-symbol enumeration above with
+  `ProcessCacheCoherenceEpoch`, `ServerCacheCoherence`,
+  `ServerCacheForcedBypassReason`, `CacheCoherenceAffectedTags`,
+  `CacheCoherenceGlobalSource`, `CacheCoherenceObservationToken`,
+  `ServerCacheBackendHealthInput`, `UnixTimeMs`, `CacheGenerationDigest`,
+  `SERVER_CACHE_LIMITS`, `CacheConditionalWriteEntry`,
+  `createCacheConditionalWriteEntry`, `normalizeServerCacheConfig`,
+  `CachePolicyCapacityRequirement`, `assertMandatoryPolicyCapacity`,
+  `DistributedCacheLeaseMs`, `DistributedCacheWaitMs`,
+  `DistributedCachePollMs`, `DistributedCacheLoadAcquireInput`,
+  `DistributedCacheLoadWaitResult`, `DistributedCacheLoadAcquireResult`,
+  `DistributedCacheOwnedWriteResult` and `DistributedCacheLoadCoordinator`.
+- Defined `SERVER_CACHE_MAX_ENTRY_BYTES`: it denotes the normalized per-entry
+  ceiling returned by `normalizeServerCacheConfig(env)` and introduces no
+  separately declared constant.
+- Removed the bare "optional" qualifier from the type list:
+  `DistributedCacheOwnedWriteResult` and the remaining distributed types are
+  exported unconditionally; only constructing a `DistributedCacheLoadCoordinator`
+  instance depends on the deployment mode.
+
+### R4 - LOW - owned-surface enumeration extended with the value brands and the envelope record
+
+The verification audit found five contract-mandated symbols that appear only in
+prose and fenced blocks while the enumeration above claims completeness twice:
+`NegativeCacheTtlMs`, `CacheSchemaVersion`, `PositiveCacheTtlMs`,
+`CacheValueByteLimit` and `ServerCacheEnvelopeV1`. All five are consumer
+importable because they sit inside public signatures: the `CachePolicy<T>`
+fields `schemaVersion`, `ttlMs`, `maxValueBytes` and `negativeTtlMs`; the
+envelope field `schemaVersion`; the `CacheConditionalWriteEntry` TTL and byte
+fields; `ServerCacheStoreDescription.maxEntryBytes`; and the
+`createCacheConditionalWriteEntry` input. None of them appeared in the base
+list, in the later-clause additions or in the R3 completion bullet, so their
+owning module stayed implicit exactly where implicitness is forbidden.
+
+The Exact Owned Surface enumeration now names them and assigns each one to
+`serverCacheContracts.ts`, the same single module as `CachePolicy<T>` and
+`CacheConditionalWriteEntry`; `ServerCacheEnvelopeV1` remains a contract type
+there instead of becoming codec-local, matching the placement of every other
+symbol these blocks define. Bounds, defaults, brand shapes and every testing
+pin are unchanged, and nothing left the program: this entry completes an
+enumeration only, with no status flip, no board row, no changelog entry and no
+workflow file change.
+
+## Workflow Dispatch Envelope
+
+The finite `forbiddenPaths` list captures named current ownership conflicts.
+The closed `allowlist` rejects every omitted path, including the broad foreign
+categories described in the file-ownership contract.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-07-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-07"
+  },
+  "allowlist": [
+    "core/services/cache/serverCacheContracts.ts",
+    "core/services/cache/serverCacheCodec.ts",
+    "core/services/cache/serverCacheKeys.ts",
+    "core/services/cache/serverCacheEligibility.ts",
+    "core/services/cache/serverCacheConfig.ts",
+    "tests/vitest/cache/server-cache-contracts.test.ts",
+    "tests/vitest/cache/server-cache-codec-keys.test.ts",
+    "tests/vitest/cache/server-cache-eligibility.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/services/cache/serverCache.ts",
+    "core/services/cache/memoryServerCacheStore.ts",
+    "core/services/cache/serverCacheTelemetry.ts",
+    "core/services/cache/redisServerCacheClient.ts",
+    "core/services/cache/redisServerCacheStore.ts",
+    "core/services/cache/cacheInvalidationOutbox.ts",
+    "core/services/cache/serverCacheRuntime.ts",
+    "core/site/cache/siteCache.ts",
+    "core/server/httpServer.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json"
+  ],
+  "dependencies": ["TASK-551-06-L03:single"],
+  "commands": [
+    {
+      "id": "cache-contract-tests",
+      "lane": "vitest",
+      "environmentProfile": "none",
+      "argv": ["node_modules/.bin/vitest", "run", "--config", "vitest.config.ts", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["git", "diff", "--check"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["wc", "-l", "core/services/cache/serverCacheContracts.ts", "core/services/cache/serverCacheCodec.ts", "core/services/cache/serverCacheKeys.ts", "core/services/cache/serverCacheEligibility.ts", "core/services/cache/serverCacheConfig.ts", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-06-L03:single"],
+      "commandIds": ["cache-contract-tests", "core-lint-types", "core-lint", "diff-check", "line-count"]
+    }
+  ]
+}
+```

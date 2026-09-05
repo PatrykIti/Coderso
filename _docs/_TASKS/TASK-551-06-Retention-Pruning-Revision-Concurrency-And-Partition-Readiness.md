@@ -7,7 +7,7 @@
 **Estimated Effort:** Extra Large
 **Dependencies:** TASK-551-03-L01 and TASK-551-05-L02 complete
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -27,8 +27,12 @@ a separately reviewed migration/rollback plan.
    UUIDv5/idempotency-key search-history write consumed by TASK-551-04's later
    strict POST; its temporary legacy GET-shaped branch performs zero SQL.
 2. `TASK-551-06-L02` lands after L01 and TASK-551-05 constraints; it owns the
-   shared revision lock/allocator plus page/widget adoption and bounded revision
-   service reads/pruning. It defines the page/detail revision cursor envelopes
+   shared revision lock/allocator plus page adoption and bounded revision
+   service reads/pruning. Widget-template revisions are legacy-table
+   retention-only: TASK-580 removed the widget-template authoring stack and
+   zero production writers insert into `widget_template_revisions` today; any
+   writer revival is deferred to a follow-up task. It defines the page/detail
+   revision cursor envelopes
    consumed later by TASK-551-03-L02, but edits no route, schema, client, or UI.
    It pins generic detail/entry/post family contracts, but actual
    `detailPageDocumentService.ts` adoption is TASK-551-09-L03 and entry/post
@@ -111,8 +115,10 @@ coordination lock is not a destructive row lock or persisted progress.
 - Scheduled dry-run uses exactly the same one-replica advisory-lock protocol as
   apply mode, while direct service dry-run uses no scheduler advisory lock; both
   execute zero `DELETE`/`UPDATE`, destructive row lock, or persisted progress.
-- Page/widget service writers allocate a unique monotonic per-parent version
-  under 50 concurrent attempts here. The shared helper proves the generic
+- Page service writers allocate a unique monotonic per-parent version under 50
+  concurrent attempts here; widget-template revision rows are legacy-table
+  retention-only with no live writer after TASK-580. The shared helper proves
+  the generic
   `detail_page`, `entry`, and `post` family key/version contract directly;
   TASK-551-09-L03 must adopt it in the whole detail document writer and
   TASK-551-09 must adopt it in entry/post before closure. Every revision family
@@ -167,4 +173,4 @@ Run all leaf DB/reliability/performance suites plus
 No shared docs are edited here. Each leaf hands the policy/env tables, revision
 adoption matrix, scheduler/lifecycle API, recovery and partition evidence to
 TASK-551-10-L02. Shared operational docs, environment examples, and changelog
-1263 remain its sole ownership.
+1310 remain its sole ownership.

@@ -91,5 +91,16 @@ export const widgetTemplateRevisions = pgTable(
   },
   (t) => ({
     templateIdIdx: index("widget_template_revisions_template_id_idx").on(t.templateId),
+    // TASK-551-05-L01 revision-integrity group: duplicate versions are a data
+    // corruption class, so the uniqueness is a constraint the database owns.
+    templateVersionIdx: uniqueIndex("widget_template_revisions_template_version_idx").on(
+      t.templateId,
+      t.version
+    ),
+    // TASK-551-05-L01 retention scan.
+    widgetTemplateRevisionsRetentionIdx: index("widget_template_revisions_retention_idx").on(
+      t.createdAt,
+      t.id
+    ),
   })
 );

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Solution Kits / Read Model / Database / Security
 **Estimated Effort:** Large
-**Dependencies:** All TASK-489 parent-level start gates; TASK-547 done; complete terminal TASK-551 with the full cursor/repository/cache/active-owner evidence receipt
+**Dependencies:** All TASK-489 parent-level start gates; TASK-547 done; complete terminal TASK-551 with the full cursor/repository/cache/active-owner evidence receipt and its tracked, regular, non-symlink L11-promoted TASK-489 predecessor handoff at the fixed durable path below
 **Status:** ⏳ To Do
 **Changelog:** 1268 (pinned; closure only)
 
@@ -59,6 +59,73 @@ This leaf imports terminal TASK-551-06-L01's Bun-free
 `buildLegacyRollbackCombinedProgressDigest` plus the shared limit constants and
 strict input types read-only; it does not redeclare or fork their parser,
 canonicalization, or digest contract.
+
+Before any L01 start, dynamic-fixture setup, `EXPLAIN` capture, or p95
+measurement, terminal TASK-551 must provide the exact L11-owned
+`Task551Task489PredecessorPromotionEvidenceV1` record and its nested durable
+predecessor. The canonical promotion has exactly these 16 top-level fields, in
+order: `schemaVersion`, `sourceTask`, `sourcePhase`, `sourceProfile`,
+`sourceScenario`, `sourceHead`, `sourceDigest`, `predecessor`,
+`promotionState`, `promotionDecision`, `promotionReason`, `validationSummaries`,
+`createdAt`, `reviewedAt`, `promotedAt`, and `ownerCapabilityReceiptDigest`.
+Its schema is `"coderso.task551.task489-predecessor-promotion@v1"`, its source
+is `TASK-551-05-L02` / `05-l02` / `null` / `task489-predecessor`, and its
+promotion values are `"promoted"`, `"accept"`, and
+`"exact-byte-match-after-owner-review"`. The nested predecessor has exactly
+`sourcePath`, `durablePath`, `schemaVersion`, and `digest`; the paths are
+`.tmp/task-551/task489-predecessor-v1.json` and
+`_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`,
+and its schema is `"coderso.task551.task489-predecessor@v1"`. Every digest and
+timestamp is required, and `validationSummaries` is exactly
+`sourceIdentity`, `predecessorBytes`, `atomicNoReplace`, and `terminalHead`,
+each with value `"passed"`. Reject legacy promotion aliases such as
+`canonicalBytes` and `terminalTracking`, reduced shapes, unknown fields, and a
+promotion-level `noLeak` alias. The nested predecessor itself must be the
+canonical `pass:true, noLeak:true` record.
+
+### Exact two-path terminal fence
+
+The following fence is identical to TASK-551-10-L01's fence and is a
+precondition to any predecessor read or aggregate consumption:
+
+```ts
+const TASK551_TERMINAL_HANDOFF_PATHS = [
+  "_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json",
+  "_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-promotion-v1.json",
+] as const;
+type Task551TerminalHandoffFenceV1 = Readonly<{
+  predecessorPath: typeof TASK551_TERMINAL_HANDOFF_PATHS[0];
+  promotionPath: typeof TASK551_TERMINAL_HANDOFF_PATHS[1];
+  predecessorSchema: "coderso.task551.task489-predecessor@v1";
+  promotionSchema: "coderso.task551.task489-predecessor-promotion@v1";
+  predecessorDigest: string; promotionDigest: string;
+  predecessor: Readonly<{ noLeak: true }>;
+  sourceHead: string; terminalHead: string;
+  predecessorTrackedInHeadB: true; promotionTrackedInHeadB: true;
+  currentTreeMatchesHeadB: true; currentBytesMatchHeadB: true;
+}>;
+```
+
+L11 writes both paths in Commit B from `sourceHead = HEAD A`; the fence rereads
+`terminalHead = HEAD B`, verifies both paths are tracked in HEAD B and the
+current tree as regular non-symlinks, hashes both exact byte sequences, and
+requires the current-tree bytes to equal their HEAD B bytes. It requires
+`promotion.sourceHead === HEAD A`, `terminalHead === HEAD B`, exact paths,
+schemas, digests, and predecessor `noLeak: true`, rejecting absent or false
+values. No consumer may open, hash, parse, or otherwise consume either path
+before this fence passes.
+
+L01 opens only the fixed durable predecessor path after the fence through one
+tracked regular-file, non-symlink/no-follow read, verifies the SHA-256 of those
+exact bytes against `promotion.predecessor.digest`, and only then calls the sole
+L02 `parseTask489PredecessorReceiptV1` from
+`tests/perf/fixtures/task489SolutionKitRunPredecessor.ts` directly on the same
+unchanged bytes. Its canonical-byte round trip is the only byte-match authority;
+its immutable result is the only source of canonical fixture counts, ordered
+companion/case/statement receipts, and numeric budgets. L01 must not read the
+temporary path, define a local parser/schema/receipt shape, use a serializer,
+reconstruct/reserialize or map/project the receipt, or replace it with a
+bulk-only, pre-schema, or generic solution-kit fixture.
 
 ## Safe Types
 
@@ -164,11 +231,12 @@ its bounded point-in-time items.
 
 ## Query And Cursor Contract
 
-Implementation is blocked unless the terminal TASK-551 start receipt contains the
-two named successful-apply/successful-rollback relation indexes, sanitized small/
-large `EXPLAIN (ANALYZE, BUFFERS)` evidence for this exact predicate, the unique
-active Setup marker, and retention proof for both sides of every relation. This
-leaf does not substitute an unmeasured index or add a migration.
+Implementation is blocked unless the terminal TASK-551 receipt first satisfies
+the durable predecessor-handoff gate above, then contains the two named
+successful-apply/successful-rollback relation indexes, sanitized small/large
+`EXPLAIN (ANALYZE, BUFFERS)` evidence for this exact predicate, the unique active
+Setup marker, and retention proof for both sides of every relation. This leaf
+does not substitute an unmeasured index, receipt, fixture, or migration.
 
 - Input keys: `packageKey?`, `cursor?`, `limit?`.
 - `packageKey`: NFC, control-free, 1..128 UTF-8 bytes. `limit` is integer
@@ -585,24 +653,37 @@ proof.
 
 ## Numeric Budgets
 
+Every p95 in this section is measured only after the durable predecessor-handoff
+gate above has passed. The direct L02 parser result over the SHA-256-verified
+durable bytes supplies the full dynamic TASK-489 predecessor fixture: its
+bulk-history component is exactly 10,000 small / 1,000,000 large runs, its
+bounded-support component is exactly 109,890 runs in either profile, and its
+complete scenario total is exactly 119,890 small / 1,109,890 large runs. The
+bulk-history counts are not scenario totals. Budget tests retain the same durable
+bytes unchanged for the parser's canonical-byte check and consume the parsed
+immutable receipt unchanged for count/order/budget parity; they never substitute
+a pre-schema, bulk-only, or generic solution-kit fixture.
+
 - History: exactly one statement, <=101 decoded rows, base traversal index rows
   visited <=4*(limit+1) before separately counted bounded relation probes.
-  Default p95 is <=75 ms at 10,000 runs and <=200 ms at 1,000,000 runs. The
-  mandatory relation-heavy page evaluates exactly 101 candidates with up to 513
-  newer applies and indexed relation probes each, visits at most 51,813 rows per
-  relation arm, and has p95 <=250/750 ms on the same fixtures.
+  Default p95 is <=75 ms for the 119,890-run small scenario and <=200 ms for
+  the 1,109,890-run large scenario. The mandatory relation-heavy page evaluates
+  exactly 101 candidates with up to 513 newer applies and indexed relation
+  probes each, visits at most 51,813 rows per relation arm, and has p95
+  <=250/750 ms on those same full dynamic fixtures.
 - Effective supersession: one set-based statement returning at most one row per
   candidate after at most 513 newer-apply rows and 513 indexed rollback-relation
   probes; sanitized plans use
   `solution_kit_runs_successful_apply_order_idx` and
   `solution_kit_runs_successful_rollback_relation_idx`, never a sequential scan,
-  with p95 <=75/200 ms on the same small/large fixtures. The history statement
-  evaluates this lateral state for at most 101 candidate rows; the write recheck
-  evaluates one source.
+  with p95 <=75/200 ms on those same full dynamic small/large fixtures. The
+  history statement evaluates this lateral state for at most 101 candidate rows;
+  the write recheck evaluates one source.
 - Setup active-owner lookup: one package/actor partial-index statement with
   `LIMIT 2`, at most two decoded normalized owner rows, zero run-options predicate
   or JSON heap-wide scan, and p95 <=25/25 ms on the exact
-  10,000/1,000,000-run fixtures. Claim/CAS/finalize statements are exact owner point
+  119,890/1,109,890-run full dynamic fixtures (whose bulk-history components are
+  10,000/1,000,000 runs). Claim/CAS/finalize statements are exact owner point
   reads/writes under the package lock.
 - Legacy apply/rollback preflight uses one combined operation vector: <=512 core
   plus template members and <=100 templates. It enforces the exact 4-MiB seed,
@@ -612,10 +693,11 @@ proof.
 - Detail: exactly one run-point statement plus one item `LIMIT 513` statement,
   each with an independent plan receipt and p95 ceiling: run-point <=25/50 ms and
   items-page <=75/200 ms small/large. The two-statement combined p95 remains
-  <=100/250 ms; <=1 run + 513 item rows. Assert zero selected/transferred bytes from `actor_id`,
-  `options`, `before_snapshot`, `after_snapshot`, and `rollback_action`.
-- Capture sanitized `EXPLAIN (ANALYZE, BUFFERS)` for both fixture classes; no raw
-  customer data or payload JSON enters evidence.
+  <=100/250 ms on the same full dynamic fixtures; <=1 run + 513 item rows.
+  Assert zero selected/transferred bytes from `actor_id`, `options`,
+  `before_snapshot`, `after_snapshot`, and `rollback_action`.
+- Capture sanitized `EXPLAIN (ANALYZE, BUFFERS)` for both full dynamic fixture
+  classes; no raw customer data or payload JSON enters evidence.
 
 ## Security Contract
 
@@ -631,6 +713,25 @@ proof.
 ## Implementation Pseudocode
 
 ```ts
+async function requireTerminalTask551PredecessorForBudgetParity(deps) {
+  const promotion = await deps.readTerminalTask551PromotionMetadata();
+  requireExactTask551Task489PredecessorPromotion(promotion);
+  await deps.requireTask551TerminalHandoffFence(promotion);
+  const durable = await deps.readOneTrackedFixedRegularNonSymlinkFile(
+    "_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json",
+  );
+  try {
+    assertEqual(requireExactLowercaseSha256(sha256Hex(durable.bytes)), promotion.predecessor.digest);
+    // L02 is the sole schema/canonical-byte/count/budget authority. Do not
+    // JSON.parse, locally shape-check, clone, project, map, or reserialize.
+    const receipt = parseTask489PredecessorReceiptV1(durable.bytes);
+    if (receipt.pass !== true || receipt.noLeak !== true) throw new Error("predecessor_invalid");
+    return receipt;
+  } finally {
+    discardEphemeralBytes(durable.bytes);
+  }
+}
+
 async function listSafeInstallRuns(raw: unknown, keyring: PaginationCursorKeyring, deps = defaults) {
   const input = parseHistoryInput(raw);
   const scope = buildRunCursorScope(input.filters);
@@ -725,7 +826,11 @@ async function finalizeExactLegacyRollbackOwner(input, deps = defaults) {
 }
 ```
 
-**Data flow:** strict filters -> scoped cursor -> explicit SQL projection ->
+**Data flow:** terminal TASK-551 tracked durable predecessor file + exact L11
+promotion metadata/all-five-true terminal tracking -> fixed regular/non-symlink
+read -> SHA-256 equality -> direct L02 parser on unchanged durable bytes ->
+immutable canonical count/order/budget receipt -> dynamic fixture and p95/plan
+measurement. Then strict filters -> scoped cursor -> explicit SQL projection ->
 row-shape guard -> safe DTO parser -> route/client. Detail follows the same
 projection boundary and never loads recovery JSON. Setup persistence follows
 package lock -> unique active owner -> exact envelope digest/phase CAS -> same-tx
@@ -765,9 +870,27 @@ L02 to recovery-required. All codes are stable and sanitized.
   running, failed, unknown-engine, already-rolled-back, active-owner/recovery,
   superseded, and relation-overflow row; only a supported terminal successful apply
   with null `rollbackOfRunId` and an eligible locked classifier may parse true.
-- Budget parity byte-matches TASK-551-01-L02's companion registry, including the
-  active-owner lookup's exact <=25/25 ms small/large ceilings; either scale drifting
-  from the predecessor receipt fails.
+- Before any fixture seed, plan capture, or p95 measurement, budget parity tests
+  require terminal TASK-551's exact 16-field
+  `coderso.task551.task489-predecessor-promotion@v1` record in declared order,
+  fixed enum/null/path/schema values, required digests/timestamps, and the
+  predecessor+promotion two-path HEAD-B fence. Both paths must be tracked in
+  HEAD B and byte-equal in the current tree, with `promotion.sourceHead === HEAD A`,
+  `terminalHead === HEAD B`, and predecessor `noLeak:true`; reject any legacy
+  promotion alias, missing/false predicate, or mismatch before opening a path.
+  They make one no-follow durable read, require its strict lowercase SHA-256 to
+  equal `promotion.predecessor.digest`, then call only L02's
+  `parseTask489PredecessorReceiptV1` on those same unchanged bytes.
+- The parser's canonical-byte round trip and immutable result alone prove the
+  10,000/1,000,000 bulk-history, 109,890 bounded-support, and
+  119,890/1,109,890 complete-scenario counts; exact ordered five companion IDs,
+  fourteen logical cases, fifteen statement receipts, thirty small/large results,
+  and every received budget remain intact for parity. Reject an absent/untracked,
+  symlinked/replaced, metadata-mismatched, hash-mismatched, malformed, or
+  noncanonical durable artifact before measurement, and reject any `.tmp` read,
+  local parser/schema/receipt shape, `JSON.parse`, serializer, map/projection,
+  reconstruction/reserialization, or bulk-only/pre-schema/generic fixture
+  substitute.
 - An older legacy source becomes ineligible after a newer successful legacy apply
   even when the newer run is entirely `noop` and every before/after snapshot is
   byte-equal.
@@ -856,6 +979,11 @@ git diff --check
 
 Every listed production/test file must be <=1,000 physical lines. DB tests are
 blocked, not skipped silently, when `DATABASE_URL` is unavailable.
+
+The L01 acceptance gate includes the predecessor-handoff tests above: they must
+prove SHA-256 verification occurs before the sole direct L02 parser call and
+that the unchanged parser result, rather than a consumer-local receipt or
+fixture, drives every dynamic count and budget assertion.
 
 ## Documentation Updates Required
 

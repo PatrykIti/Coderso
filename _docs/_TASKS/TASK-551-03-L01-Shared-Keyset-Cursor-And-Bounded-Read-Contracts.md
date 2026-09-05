@@ -8,7 +8,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-551-01-L02, TASK-551-02-L02, TASK-551-05-L02
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -333,3 +333,98 @@ limits, and error codes to TASK-551-10-L02 for `.env.example`,
 - Produced predicates always include final non-null UUID `id`, interpolate zero
   cursor-supplied identifiers, and match the frozen comparator truth table for
   every direction/null/order combination with no page gaps or duplicates.
+
+## Workflow Dispatch Envelope
+
+The lifecycle suite is database-free and installs its own short-lived cursor
+secret in-process; it therefore has no L11 environment profile. The envelope
+does not authorize the later route, schema, or migration owners.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-03-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-03"
+  },
+  "allowlist": [
+    "core/services/database/keysetCursor.ts",
+    "core/services/database/boundedReadContract.ts",
+    "core/server/paginationCursorLifecycle.ts",
+    "tests/vitest/database/keysetCursor.test.ts",
+    "tests/vitest/database/boundedReadContract.test.ts",
+    "tests/integration/runtime/paginationCursorLifecycle.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/server/routes/index.ts",
+    "core/db/client.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/server/runtimeLifecycle.ts",
+    "core/server/runtimeEntrypoint.ts"
+  ],
+  "dependencies": ["TASK-551-05-L02:single"],
+  "commands": [
+    {
+      "id": "keyset-cursor-contract-tests",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/database/keysetCursor.test.ts", "tests/vitest/database/boundedReadContract.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": [
+          "tests/vitest/database/keysetCursor.test.ts",
+          "tests/vitest/database/boundedReadContract.test.ts"
+        ],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "pagination-cursor-lifecycle-test",
+      "lane": "bun-test",
+      "argv": ["bun", "test", "tests/integration/runtime/paginationCursorLifecycle.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/runtime/paginationCursorLifecycle.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-05-L02:single"],
+      "commandIds": [
+        "keyset-cursor-contract-tests",
+        "pagination-cursor-lifecycle-test",
+        "core-lint-types",
+        "core-lint",
+        "diff-check"
+      ]
+    }
+  ]
+}
+```

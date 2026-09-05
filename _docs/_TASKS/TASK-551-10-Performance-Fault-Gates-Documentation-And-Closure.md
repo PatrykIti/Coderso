@@ -6,7 +6,9 @@
 **Category:** Performance / Reliability / Security / Documentation / Closure
 **Estimated Effort:** Very Large
 **Dependencies:** compile-green sequence terminal with targeted gates green:
-TASK-551-01 → TASK-551-02 → 08-L03 INITIAL → TASK-551-05 →
+TASK-551-01-L01 (initial) → TASK-551-01-L03 → TASK-551-01-L04 → TASK-551-01-L02 →
+TASK-551-02 → 08-L03 INITIAL → TASK-551-05-L01 → TASK-551-05-L03 →
+TASK-551-05-L02 →
 TASK-551-03-L01 → TASK-551-06-L01/L02/L03 → TASK-551-07-L01 →
 09-L04 INITIAL → TASK-551-03-L02 → TASK-551-07-L02 →
 TASK-551-08-L01/L02/L03 FINAL → TASK-551-03-L03 → TASK-551-04 →
@@ -15,19 +17,20 @@ TASK-551-01-L01 re-dispatched with a fresh exact-set `phase: "final"` receipt;
 TASK-551-11 authoring-audit PASS and post-audit handoffs; parent external
 dispatch gate reverified for TASK-511, TASK-493, TASK-517, and TASK-518
 **Status:** ⏳ To Do
-**Changelog:** 1263 pinned (closure only)
+**Changelog:** 1310 pinned (closure only)
 
 ---
 
 ## Overview
 
-Prove the complete database/query/cache program against frozen small- and
-large-data budgets, real PostgreSQL, the memory backend, and a real Redis 7.2+
-service used by two independent Coderso processes. Exercise fault, security,
-reliability, migration, invalidation, and stampede behavior; publish the
+Prove the complete database/query/cache program against the ordered initial
+L01 inventory, L03 isolated-fixture bootstrap, and L02 frozen small- and
+large-data budgets; then against real PostgreSQL, the memory backend, and a
+real Redis 7.2+ service used by two independent Coderso processes. Exercise
+fault, security, reliability, migration, invalidation, and stampede behavior; publish the
 operational documentation; consume and re-prove the TASK-551-03-L02 five-scenario
 Admin-list visible-effect smoke in light and dark mode; then close every TASK-551
-descendant in terminal order under changelog 1263.
+descendant in terminal order under changelog 1310.
 
 This child is acceptance and closure only. It must not repair or reopen a
 production contract owned by TASK-551-01..09. A failed budget, security
@@ -35,19 +38,40 @@ invariant, query plan, migration, cache parity check, or smoke scenario is route
 to the exact owning leaf; that owner fixes the source and reruns its targeted
 gate before this child restarts the affected aggregate gate.
 
+The TASK-489 predecessor boundary is deliberately split: TASK-551-05-L02 is
+the sole temporary-artifact writer, TASK-551-11 is the sole durable-evidence
+promoter, and TASK-551-10-L01 is the sole aggregate consumer. TASK-551-10-L02
+never receives an L01 aggregate result directly: it closes only from L11's one
+strict, metadata-only `Task551L10L02DispatchInputV1` after L11 has projected the
+current aggregate, terminal promotion, and clean final drift. It never opens or
+parses a generated predecessor artifact.
+
 ## Child Boundary
 
 - **TASK-551-10-L01** exclusively owns aggregate load/fault/security/reliability
   harnesses, release-gate wiring, the CI Redis service contract, final Redis
   runtime-smoke evidence, and the final receipt/screenshots for the TASK-551-03-L02
-  Playwright visible-effect smoke. It does not edit the 03-L02 product surfaces.
+  Playwright visible-effect smoke. It is the sole L10 consumer of the L11-promoted
+  TASK-489 durable handoff: after L11's terminal proof, it reads the one fixed
+  regular non-symlink durable file, verifies its recorded SHA-256, and calls only
+  the L02 parser. It does not edit the 03-L02 product surfaces.
 - **TASK-551-10-L02** exclusively owns final source-of-truth docs, deployment
   runbooks, `.env.example` after TASK-511's env writer is terminal, changelog
-  1263, TASK-551 status-only transitions, and the TASK-551 board/statistics
-  closeout.
+  1310, TASK-551 status-only transitions, and the TASK-551 board/statistics
+  closeout. It consumes no generated TASK-489 artifact bytes and does not read or
+  call the predecessor parser. It accepts only L11's one exact
+  `Task551L10L02DispatchInputV1`, never a raw L01 aggregate, post-audit result,
+  or full final-drift audit.
 - **TASK-551-11** owns workflow scripts and audit evidence. It may dispatch this
-  child and verify hashes, but it cannot write L01 runtime evidence or L02 docs,
-  task statuses, board, or changelog.
+  child and verify hashes. After L05's phase evidence is green, it alone reads
+  the L05 temporary source, validates and atomically promotes its original bytes
+  to the durable handoff, retains the private durable-file identity through the
+  terminal check, and writes the promotion metadata. It cannot write L01 runtime
+  evidence or L02 docs, task statuses, board, or changelog. It alone builds
+  `Task551L10L02DispatchInputV1` through
+  `buildTask55110L02MetadataOnlyDispatchInput`; that builder is the only path
+  from the private current aggregate, post-audit/final-drift state, and promotion
+  into the L10-L02 dispatcher.
 - No TASK-551-10 owner may edit `core/**` production modules, database schema or
   migrations, TASK-551-01..09 targeted tests, cache adapters, routes, services,
   Admin clients, or browser UI. Those paths remain forbidden even when an
@@ -103,7 +127,18 @@ Immediately before L01 runs and again before L02 closes:
    server in task session `wf55103l02`. Require visible DOM/geometry/ARIA effects,
    both light and dark mode, one screenshot per scenario per mode, and zero console
    errors; then validate the strict UI-smoke receipt before aggregate acceptance.
-8. Consume TASK-551-01-L02's exact one-family-at-a-time fixture receipt. Require
+8. Consume only L11-owned durable redacted evidence: first the current
+   `coderso.task551.fixture-check-evidence@v1` object, then the current
+   `coderso.task551.baseline-check-evidence@v1` objects for `small` and `large`,
+   in that profile order. Producer stdout and producer focused-test/`--check`
+   receipts are transient and forbidden L10 inputs; L10 neither reads fixture
+   environment values nor infers a target from a generic URL, process default, or
+   loaded `.env` file. Each durable object must prove `pass=true`, `noLeak=true`,
+   its exact schema/producer/profile, schema-specific strict target proof, and
+   every immutable digest. Each also carries the exact focused-test receipt with
+   positive discovery and the exact `--check` command receipt with null discovery;
+   both receipts require zero exit and `skipped=false`. A missing, stale, duplicate,
+   malformed, leaking, or digest/proof-mismatched object blocks closure. Then require
    UUIDv5 scoped IDs, fixed ordinal-millisecond timestamps, every declared target
    and support-table count, small/large pool capacities `2/10`, three repetitions
    of five warmups plus 30 samples, calibration `20/100`, and the frozen p95
@@ -159,7 +194,8 @@ Immediately before L01 runs and again before L02 closes:
    `row_to_json(t)::text ~ ?` diagnostic UNION plus 30–60s+ `access_logs` regex
    shape. With operator evidence classify it `external_diagnostic`, otherwise
    `unknown`; exclude it from application decisions and forbid a one-off index.
-10. Consume TASK-551-05's exact schema/migration evidence. All seven
+10. Consume the ordered TASK-551-05-L01, then TASK-551-05-L03, then
+    TASK-551-05-L02 exact schema/migration/plan evidence. All seven
     `SEARCH_VECTOR_SQL` and five trigram source literals must preserve byte-exact
     `coalesce(...) || ' ' || ...` expressions, with every closed function/
     operator dependency resolving to `pg_proc.provolatile = 'i'`. The deeply
@@ -193,6 +229,41 @@ Immediately before L01 runs and again before L02 closes:
     rollback is
     `ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_active_resource_window_excl`
     without dropping the extension.
+    TASK-551-10-L01 consumes exactly one L11-promoted durable artifact at
+    `_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json`.
+    Before any L10 dispatch, require the exact L11-owned
+    `coderso.task551.task489-predecessor-promotion@v1` record with exactly these
+    16 top-level fields, in order: `schemaVersion`, `sourceTask`, `sourcePhase`,
+    `sourceProfile`, `sourceScenario`, `sourceHead`, `sourceDigest`,
+    `predecessor`, `promotionState`, `promotionDecision`, `promotionReason`,
+    `validationSummaries`, `createdAt`, `reviewedAt`, `promotedAt`, and
+    `ownerCapabilityReceiptDigest`. Its nested predecessor supplies the fixed
+    durable path, lowercase SHA-256, canonical-byte proof, and
+    `schema:"coderso.task551.task489-predecessor@v1"`; the parsed predecessor
+    must be `pass:true, noLeak:true`. Before opening either path, the exact
+    two-path HEAD fence must prove both paths are tracked in HEAD B, regular
+    non-symlinks in the current tree, byte-equal to their HEAD B versions, and
+    bound to `sourceHead === HEAD A` and `terminalHead === HEAD B`; any path,
+    schema, digest, head, or no-leak mismatch is rejected. L01 then reads only
+    the fixed durable path through a single regular/non-symlink, no-follow read,
+    verifies those bytes against `predecessor.digest`, and calls the sole L02
+    `parseTask489PredecessorReceiptV1` parser. It must neither glob nor accept a
+    missing, stale, duplicate, replaced, failed, malformed, or noncanonical
+    artifact. The parser-returned `Task489PredecessorReceiptV1` must have
+    `pass:true`; its parser-owned invariants include the exact ordered five
+    companion IDs, all eight fixture counts (bulk history `10,000/1,000,000`,
+    bounded support `109,890`, full totals `119,890/1,109,890`, 100 synthetic
+    actors, 513 safe-detail items, and one each of active owner, template
+    evidence, and rollback progress), the companion-first fourteen logical cases,
+    the ordered fifteen statement receipts, and exactly `[small, large]` finite,
+    in-budget profile results for every statement (30 results total). L01 uses
+    that exact parser result only as its in-memory aggregate input. It must not
+    read the L05 temporary source, redeclare a parser/schema/receipt shape, convert
+    the statement array to a map, clone/project/mutate the result, call a
+    serializer, or persist a replacement receipt. L05 remains the sole temporary
+    writer and L11 the sole promotion/durable-evidence writer; item 8 remains the
+    exclusive L11-owned evidence boundary for TASK-551-01. L02 does not read or
+    parse either predecessor artifact.
     Require one reserved physical migration session and L01's sole
     `createTask551ReservedDrizzleClient(poolClient,reserved)`. Direct
     `drizzle(reserved)` is impossible on postgres.js 3.4.9; only
@@ -287,7 +358,10 @@ Immediately before L01 runs and again before L02 closes:
 13. Consume a strict exact-command receipt from every executable 01..09 leaf.
     Every literal argv from its Validation Commands must have exit code zero,
     `skipped=false`, and positive discovery for test commands; paths must equal
-    the leaf's current literal manifest. Every new TASK-551 default Bun integration
+    the leaf's current literal manifest. The underlying 01 land order is L01
+    initial → L03 → L02, but L10 accepts only item 8's L11 durable evidence
+    sequence, never an L03/L02 producer stdout record or receipt; the 05 chain is
+    L01 → L03 → L02. Every new TASK-551 default Bun integration
     suite lives under `tests/integration/server`, never a legacy non-default
     integration tree. The 09 leaves
     retain ownership of all direct existing suites (including split entry/SEO,
@@ -304,7 +378,9 @@ security, persistence, migration, or test-integrity residual.
 
 ## Aggregate Acceptance Matrix
 
-- Both frozen fixture profiles from TASK-551-01 pass their exact non-weakened
+- After the initial TASK-551-01-L01 inventory and focused TASK-551-01-L03
+  bootstrap check, both frozen TASK-551-01-L02 fixture profiles pass their exact
+  non-weakened
   p50/p95/p99, rows-read/returned, query-count, pool-wait, cache-byte, hit/miss,
   coalescing, and invalidation-lag budgets.
 - Every public request executes exactly one authoritative, uncached
@@ -463,13 +539,31 @@ security, persistence, migration, or test-integrity residual.
   screenshots, and report zero console errors.
 - Full Bun, Vitest, precommit, release, strict security, task-graph, diff, and
   touched-file line-count gates pass with no required skip.
+- Terminal L11 → L10-L02 acceptance has exactly one argument:
+  `Task551L10L02DispatchInputV1` returned by L11's
+  `buildTask55110L02MetadataOnlyDispatchInput`. Its only fields are the closed
+  current aggregate projection, the closed TASK-489 promotion projection, and
+  `Task551L10L02FinalDriftProjectionV1`; L10 never calls L02 with a raw
+  aggregate, post-audit result, or `Task551AuditResultV1`. Before the first L02
+  closure write, the final-drift projection must be `clean:true` and its
+  `auditIdentity.head` and `auditIdentity.currentTreeSha256` must equal the
+  freshly read current HEAD and current-tree identity, not merely match their
+  syntactic formats.
 
 ## Structured Evidence Contract
 
-L01 and TASK-551-11 use strict reject-unknown JSON evidence. L02 consumes it
-read-only:
+L01 and TASK-551-11 use strict reject-unknown JSON evidence. L02 consumes only
+the resulting L11-built `Task551L10L02DispatchInputV1` needed for closure; it
+never receives a raw L01 aggregate, post-audit/full-final-drift audit, opens,
+parses, or receives the generated TASK-489 predecessor artifact:
 
 ```ts
+// TASK-551-10-L01 module only; L02 has no predecessor-artifact or parser import.
+import {
+  parseTask489PredecessorReceiptV1,
+  type Task489PredecessorReceiptV1,
+} from "../../tests/perf/fixtures/task489SolutionKitRunPredecessor";
+
 type Task551CommandEvidenceV1 = Readonly<{
   id: string;
   argv: readonly string[]; // allowlisted command words only; no env values
@@ -480,33 +574,12 @@ type Task551CommandEvidenceV1 = Readonly<{
   discoveredTestCount: number | null; // test commands require a positive value
 }>;
 
-type Task489CompanionId =
-  | "task489-runs-all-keyset"
-  | "task489-runs-package-keyset"
-  | "task489-effective-supersession"
-  | "task489-active-starter-owner"
-  | "task489-safe-detail";
-
 type Task551AggregateGateEvidenceV1 = Readonly<{
   schema: "coderso.task551.aggregate-gates@v1";
   pass: boolean;
   summary: string;
   head: string;
   fixtureProfiles: readonly ("small" | "large")[];
-  task489Predecessor: Readonly<{
-    schema: "coderso.task551.task489-predecessor@v1";
-    pass: boolean;
-    smallRuns: 10_000; largeRuns: 1_000_000;
-    ids: readonly Task489CompanionId[]; // exact five
-    cases: readonly Readonly<{ id: Task489CompanionId; caseId: string;
-      statementIds: readonly [string] | readonly [string, string] }>[]; // exact fourteen
-    statementReceipts: readonly Readonly<{
-      id: Task489CompanionId; caseId: string; statementId: string;
-      profile: "small" | "large"; planSha256: string;
-      normalizedP95Ms: number; p95MsMax: number; pass: boolean;
-    }>[]; // exact thirty
-    errors: readonly string[];
-  }>;
   commands: readonly Task551CommandEvidenceV1[];
   ownerTargetedHandoffs: readonly {
     taskId: "TASK-551-09-L01" | "TASK-551-09-L02" |
@@ -566,6 +639,22 @@ type Task551AdminListUiSmokeEvidenceV1 = Readonly<{
 }>;
 ```
 
+`Task551Task489PredecessorPromotionEvidenceV1` is the exact L11-owned
+16-field promotion@v1 type; L10 imports it from the sidecar contract and must
+not redeclare, extend, or project it. L01 first requires that exact field order,
+its fixed enum/null/path/schema values, all required digests/timestamps, and
+the exact two-path HEAD fence: both paths tracked in HEAD B, current-tree bytes
+equal to HEAD B, `promotion.sourceHead === HEAD A`, `terminalHead === HEAD B`,
+and the predecessor `noLeak:true` proof. It then opens only the fixed durable
+regular non-symlink file, verifies `promotion.predecessor.digest`, and calls the imported L02
+`parseTask489PredecessorReceiptV1` exactly once. That parser is the complete
+reject-unknown/canonical-byte/count/case/statement/profile-result authority. Its
+immutable `Task489PredecessorReceiptV1` result is an L01 in-memory aggregate input
+only: no L10 evidence type contains the receipt or a projection of it. L10 does
+not call `JSON.parse`, a local parser, a serializer, or
+`serializeTask489PredecessorReceiptV1`; it does not read the L05 temporary source,
+derive a local error list, or create a replacement receipt.
+
 Raw environment values, connection strings, Redis keys, cached bodies, SQL/bind
 values, cookies, user data, and provider credentials are forbidden evidence.
 Only bounded sanitized fingerprints and aggregate metrics may persist.
@@ -583,6 +672,17 @@ Only bounded sanitized fingerprints and aggregate metrics may persist.
 - **Validation:** strict evidence schemas reject unknown fields; commands,
   profiles, page/batch sizes, timeouts, metrics, scenario IDs, namespace length,
   and evidence bytes are bounded.
+- **Terminal L11 → L10-L02 boundary:** L11 alone converts the current private
+  L10 aggregate, terminal promotion, and verified clean final drift through
+  `buildTask55110L02MetadataOnlyDispatchInput` into one reject-unknown
+  `Task551L10L02DispatchInputV1`. The parent may retain `postAudit`, a raw
+  aggregate, and full audit values only for private orchestration; neither it
+  nor L10-L02 may pass any of them across the L11 → L10-L02 boundary. That
+  boundary rejects `postAudit`, a raw aggregate, `Task551AuditResultV1`, audit
+  `summary`, `findings`, `errors`, and raw audit inputs. L10-L02 must compare
+  the closed final-drift `auditIdentity.head` and
+  `auditIdentity.currentTreeSha256` to a fresh current HEAD/tree reading before
+  any closure write; format-only checks are insufficient.
 - **Redis/DB isolation:** use a task-unique Redis namespace and uniquely scoped DB
   fixtures. Cleanup deletes only keys/rows created by this run. Never use Redis
   `KEYS`, unbounded `SCAN`, table truncation, or global destructive cleanup.
@@ -594,24 +694,68 @@ Only bounded sanitized fingerprints and aggregate metrics may persist.
 ## Sub-Tasks
 
 1. [ ] **TASK-551-10-L01** — small/large performance budgets, fault/security/
-   reliability/full gates, and at least five two-process Redis real-flow smokes.
+   reliability/full gates, at least five two-process Redis real-flow smokes, and
+   the sole L10 durable TASK-489 predecessor consumer boundary.
 2. [ ] **TASK-551-10-L02** — documentation/runbooks, final task-graph and
-   changelog 1263 closure without reopening product source.
+   changelog 1310 closure without reopening product source; it has no generated
+   predecessor-artifact read or parser authority.
 
 ## Implementation Pseudocode
 
 ```ts
+async function requireL11PromotedTask489PredecessorForL01(
+  promotion: Task551Task489PredecessorPromotionEvidenceV1,
+): Promise<Task489PredecessorReceiptV1> {
+  // This L11-owned validator accepts no local promotion shape. It requires the
+  // exact 16-field promotion@v1 record and the predecessor+promotion two-path
+  // HEAD fence before L01 opens either file: both paths are tracked/current-tree
+  // bytes from HEAD B, sourceHead is HEAD A, terminalHead is HEAD B, schemas and
+  // digests match, and the predecessor has noLeak:true.
+  requireExactL11TerminalTask489PredecessorPromotion(promotion);
+  const durable = await readOneExactFixedRegularNonSymlinkFile(
+    "_docs/_workflows/_smoke/task-551/audit-evidence/task489-predecessor-v1.json",
+  );
+  try {
+    if (requireExactLowercaseSha256(sha256Hex(durable.bytes)) !== promotion.predecessor.digest) {
+      throw new Task551ClosureError("task489_predecessor_durable_hash_invalid");
+    }
+    // The L02 parser is the only receipt parser/canonicalization authority.
+    // Do not JSON.parse, locally shape-check, clone, project, or reserialize.
+    const receipt = parseTask489PredecessorReceiptV1(durable.bytes);
+    if (receipt.pass !== true || receipt.noLeak !== true) {
+      throw new Task551ClosureError("task489_predecessor_receipt_invalid");
+    }
+    return receipt;
+  } finally {
+    discardEphemeralBytes(durable.bytes);
+  }
+}
+
+async function dispatchTask55110L01(
+  input: Task551L01AggregateGateInputV1,
+): Promise<Task551AggregateGateEvidenceV1> {
+  const task489Predecessor = await requireL11PromotedTask489PredecessorForL01(
+    input.task489PredecessorPromotion,
+  );
+  // The receipt is an in-memory L01 input only. Aggregate evidence contains its
+  // own gate metrics/commands, never receipt bytes, the parsed object, or a
+  // reserialized/projection replacement of that object.
+  return runTask55110L01AggregateGates({ ...input, task489Predecessor });
+}
+
 async function closeTask551Family(): Promise<void> {
+  // Orchestration only: the predecessor file boundary stays inside L01. L02
+  // receives neither durable bytes nor a parser result.
   const handoffs = await verifyCurrentCollisionOwnerHandoffs([
     "TASK-511", "TASK-517", "TASK-493", "TASK-518",
   ]);
   const finalInventory = await requireCurrentFinalQueryInventoryReceipt();
   const ownerHandoffs = await requireExactOwnerHandoffs({
     compileGreenOrder: [
-      "551-01-L01(initial)", "551-01-L02",
+      "551-01-L01(initial)", "551-01-L03", "551-01-L04", "551-01-L02",
       "551-02-L01", "551-02-L02",
       "551-08-L03(initial)",
-      "551-05-L01", "551-05-L02", "551-03-L01",
+      "551-05-L01", "551-05-L03", "551-05-L02", "551-03-L01",
       "551-06-L01", "551-06-L02", "551-06-L03",
       "551-07-L01", "551-09-L04(initial)",
       "551-03-L02", "551-07-L02",
@@ -625,45 +769,128 @@ async function closeTask551Family(): Promise<void> {
   const adminListUiSmoke = await runAndValidateTask55103L02UiSmoke({
     session: "wf55103l02", themes: ["light", "dark"], scenarioCount: 5,
   });
-  const aggregate = await dispatchTask55110L01({
+  let task489PredecessorPromotion =
+    await task551Sidecar.requireTerminalTask489PredecessorPromotionBeforeL10();
+  let currentAggregate = await dispatchTask55110L01({
     handoffs, ownerHandoffs, finalInventory, adminListUiSmoke,
+    task489PredecessorPromotion,
   });
-  requireAggregateGatePass(aggregate);
+  requireAggregateGatePass(currentAggregate);
 
   const postAudit = await task551Sidecar.runFreshPostAuditLenses();
   if (!postAudit.pass) {
     await task551Sidecar.returnFindingsToExactOwnersOnce(postAudit.findings);
     await task551Sidecar.rerunAffectedTargetedGates();
-    requireAggregateGatePass(await dispatchTask55110L01({ handoffs }));
+    task489PredecessorPromotion =
+      await task551Sidecar.requireTerminalTask489PredecessorPromotionBeforeL10();
+    currentAggregate = await dispatchTask55110L01({
+      handoffs, ownerHandoffs, finalInventory, adminListUiSmoke,
+      task489PredecessorPromotion,
+    });
+    requireAggregateGatePass(currentAggregate);
   }
 
-  const finalDrift = await task551Sidecar.runFreshFinalDrift();
-  requireZeroUnresolvedFindings(finalDrift);
-  await dispatchTask55110L02({ aggregate, postAudit, finalDrift });
+  // Both the failed post-audit result and the full final-drift audit remain
+  // private to L11. The final verifier binds the clean audit to current HEAD
+  // and current-tree identity before the metadata-only builder may project it.
+  const verifiedFinalDrift =
+    await task551Sidecar.verifyFreshCleanCurrentTreeFinalDriftForL10L02();
+  const l10L02DispatchInput =
+    await task551Sidecar.buildTask55110L02MetadataOnlyDispatchInput({
+      currentAggregate,
+      promotion: task489PredecessorPromotion,
+      verifiedFinalDrift,
+    });
+  // Exactly one L11-built object crosses this boundary. It contains no raw
+  // aggregate, post-audit result, full audit, parser result, or byte carrier.
+  await dispatchTask55110L02(l10L02DispatchInput);
 }
 ```
 
-**Data flow:** frozen budgets + fresh post-09 exact inventory receipt + landed
-receipts + current task/handoff state + five-scenario Admin UI smoke → aggregate
-Bun/DB/Redis/security/reliability/full gates → five-lens
-post-audit → exact owner fixes and affected reruns if needed → fresh final
-drift → docs/changelog/status/board closeout.
+**Data flow:** initial inventory + isolated-fixture bootstrap check + frozen
+budgets + L05 temporary writer → L11 byte-preserving durable promotion metadata
+and the predecessor+promotion HEAD-B fence → L01 fixed durable-file SHA-256 check
+and sole L02 parser → in-memory L01 aggregate input → fresh post-09 exact
+inventory receipt + landed receipts + current task/handoff state + five-scenario
+Admin UI smoke → aggregate Bun/DB/Redis/security/reliability/full gates → five-lens
+post-audit → exact owner fixes and affected reruns if needed → the **current**
+rerun aggregate → L11-private fresh clean final drift bound to current HEAD/tree
+identity → L11 `buildTask55110L02MetadataOnlyDispatchInput` projects only the
+aggregate/promotion/final-drift metadata → one
+`dispatchTask55110L02(Task551L10L02DispatchInputV1)` call → L02
+docs/changelog/status/board closeout without predecessor-artifact, raw aggregate,
+post-audit, or full-audit access.
 
 **Error handling:** a missing/malformed result, skipped required lane, unavailable
 DB/Redis, budget weakening, leaked sensitive value, dirty fixture cleanup,
-unresolved collision, stale audit, task-graph mismatch, or file over 1,000 lines
-blocks closure. Do not reinterpret infrastructure absence as a passing skip.
+unresolved collision, stale audit, task-graph mismatch, file over 1,000 lines,
+stale initial aggregate retained after an affected rerun, a missing/non-clean
+final-drift projection, or an `auditIdentity` that differs from freshly read
+current HEAD/tree blocks closure. A direct L02 call carrying a raw aggregate,
+`postAudit`, `Task551AuditResultV1`, audit `summary`, `findings`, `errors`, or
+raw audit input is a terminal contract failure. Do not reinterpret infrastructure
+absence as a passing skip.
 
 **Regression-test shape:** aggregate tests validate exact owner command receipts
 rather than duplicating their assertions or ownership; pin frozen budgets, exact
 query counts, backend parity, fault transitions, security exclusions, two-
 process scenario identity/order, clean scoped teardown, non-zero direct-suite
-discovery, and release-gate registration.
+discovery, and release-gate registration. Add an L01-only predecessor boundary
+suite that rejects missing/wrong L11 promotion metadata, any false terminal-
+tracking proof (including identity), a non-regular/symlink/replaced durable file,
+hash mismatch, and parser rejection; assert SHA-256 is checked before the sole
+L02 parse and no local parser/shape/serialization path exists. Add a static L02
+ownership test proving it cannot read either predecessor artifact or import/call
+the predecessor parser. Add an L11 → L10-L02 boundary suite that forces both a
+clean post-audit path and an affected-rerun path: it must prove the one L02
+dispatch receives the current (rerun when applicable) aggregate only through
+`buildTask55110L02MetadataOnlyDispatchInput`, never `postAudit` or a full final
+audit. Assert exact three-field reject-unknown input shape, `clean:true`, and
+equality—not syntax alone—between final-drift `auditIdentity` and freshly read
+current HEAD/tree values before the first L02 write.
 
 ## Testing Requirements
 
 - All exact commands from TASK-551-10-L01.
 - Workflow/audit/task-graph commands from TASK-551-11.
+- Validate the terminal L11 → L10-L02 boundary with exactly one
+  `Task551L10L02DispatchInputV1` returned by L11's
+  `buildTask55110L02MetadataOnlyDispatchInput`. Force clean and affected-rerun
+  paths; the builder must receive the current aggregate, terminal promotion, and
+  L11-private verified clean drift, while L02 receives only the three closed
+  projections. Reject raw aggregate, `postAudit`, `Task551AuditResultV1`, audit
+  `summary`, `findings`, `errors`, raw audit inputs, parser results, and byte
+  carriers. Before the first L02 write, assert final-drift
+  `auditIdentity.head/currentTreeSha256` equality with fresh current HEAD/tree,
+  rather than format validation alone.
+- For TASK-551-01, validate only the ordered L11 durable evidence chain:
+  `coderso.task551.fixture-check-evidence@v1`, then both current
+  `coderso.task551.baseline-check-evidence@v1` objects (`small`, `large`). Each
+  object must have no leak, strict proof/digest fields, zero-exit/no-skip focused
+  test with positive discovery, and zero-exit/no-skip `--check` with null
+  discovery. Producer stdout, producer receipts, fixture environment values,
+  generic runtime URLs, process defaults, and a loaded `.env` file are forbidden
+  L10 inputs.
+- Validate TASK-551-05 receipts in the declared L01 → L03 → L02 order before
+  accepting their schema/migration/plan evidence.
+- For the TASK-551-05-L02 predecessor handoff, require the exact L11
+  `coderso.task551.task489-predecessor-promotion@v1` record before L01 runs:
+  the exact 16 top-level fields in order, fixed enum/null/path/schema values,
+  required digests/timestamps, the predecessor `noLeak:true` record, and the
+  predecessor+promotion two-path HEAD-B fence. Both paths must be tracked in
+  HEAD B and byte-equal in the current tree, with `promotion.sourceHead === HEAD A`
+  and `terminalHead === HEAD B`; any mismatch is rejected. L01 alone performs
+  one no-follow regular/non-symlink durable-file read, verifies those bytes
+  against `promotion.predecessor.digest`, then calls only the imported L02-owned
+  `parseTask489PredecessorReceiptV1`. The parser must prove `pass:true,
+  noLeak:true`, the exact five IDs, eight canonical counts (bulk
+  `10,000/1,000,000`, support `109,890`, totals `119,890/1,109,890`,
+  `100/513/1/1/1` normalized support), fourteen ordered logical cases, fifteen
+  ordered statement receipts, and thirty ordered finite, in-budget small/large
+  profile results. Reject any alternate or replaced durable path, hash mismatch,
+  malformed/noncanonical bytes, local parser/schema/shape, copy/map/mutation, or
+  serialization; L05 remains only the temporary writer and L11 only the durable
+  promotion writer. L02 must not read either artifact or call the parser.
 - Validate the four ordered TASK-551-09 literal command manifests, exit code
   zero, no skip, positive test discovery, and digest equality to the current
   owner leaves before accepting aggregate/full-gate results.

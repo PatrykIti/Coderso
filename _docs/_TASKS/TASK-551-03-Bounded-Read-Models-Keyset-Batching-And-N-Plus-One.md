@@ -9,7 +9,7 @@
 TASK-551-06-L03 plus TASK-551-09-L04 INITIAL Admin-authority and
 TASK-551-08-L03 INITIAL route-response-header receipts complete before L02
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 

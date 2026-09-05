@@ -8,18 +8,21 @@
 **Estimated Effort:** Extra Large
 **Dependencies:** TASK-551-06-L01, TASK-551-05-L02
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
 ## Overview
 
-Make page and widget-template service allocation monotonic and race-safe using
-transaction-scoped parent serialization plus the TASK-551-05 unique constraints.
-Bound page/widget/detail revision reads and prune superseded history in small
-batches. Export one family-aware lock/allocator/retention contract for
-TASK-551-09-L03 to adopt in the whole detail-page document writer and for later
-entry/post adoption after TASK-517 serialization.
+Make page revision allocation monotonic and race-safe using transaction-scoped
+parent serialization plus the TASK-551-05 unique constraints. Widget-template
+revisions are legacy-table retention-only: TASK-580 removed the widget-template
+authoring stack, zero production writers insert into `widget_template_revisions`
+today, and any writer revival is deferred to a follow-up task. Bound
+page/detail revision reads and prune superseded history in small batches.
+Export one family-aware lock/allocator/retention contract for TASK-551-09-L03
+to adopt in the whole detail-page document writer and for later entry/post
+adoption after TASK-517 serialization.
 
 ## Sub-Tasks
 
@@ -30,13 +33,14 @@ None; this is an executable leaf.
 **Shared revision owner:** `core/services/database/revisionAllocation.ts` and
 `core/services/content/revisionRetentionService.ts`.
 
-**Other revision services:** `core/services/pages/revisionService.ts`,
-`core/services/widgets/widgetTemplateRevisionService.ts`,
-and `core/services/content/detailPageRevisionService.ts`.
+**Other revision services:** `core/services/pages/revisionService.ts` and
+`core/services/content/detailPageRevisionService.ts`. No
+`widgetTemplateRevisionService.ts` is created: the widget-template family is
+retention-only legacy-table scope (no live writer remains after TASK-580), and
+any writer revival belongs to a follow-up task.
 
 **Tests:** `tests/vitest/database/revisionAllocation.test.ts`,
 `tests/unit/pages/revisionService.test.ts`,
-`tests/unit/widgets/widgetTemplateRevisionService.test.ts`,
 `tests/unit/content/detailPageRevisionService.test.ts`,
 `tests/integration/server/task551RevisionConcurrency.test.ts`,
 `tests/integration/server/task551RevisionRetention.test.ts`, and
@@ -59,10 +63,13 @@ published/current/protected anchors always survive. Exact environment prefixes
 are `RETENTION_PAGE_REVISIONS_`, `RETENTION_WIDGET_TEMPLATE_REVISIONS_`,
 `RETENTION_DETAIL_PAGE_REVISIONS_`, `RETENTION_ENTRY_REVISIONS_`, and
 `RETENTION_POST_REVISIONS_`; each exposes `ENABLED`, `MAX_AGE_DAYS`, and
-`KEEP_NEWEST_PER_PARENT`. This leaf adopts the first three. TASK-551-09 must
-adopt the final two without changing these values before overall closure. Here,
-"adopts" means page/widget service allocation plus bounded retention for the
-first three tables; actual detail document allocation remains TASK-551-09-L03.
+`KEEP_NEWEST_PER_PARENT`. This leaf adopts the first three, where the
+widget-template member is retention-only for the legacy table (no live writer
+exists). TASK-551-09 must adopt the final two without changing these values
+before overall closure. Here, "adopts" means page service allocation plus
+bounded retention for the first three tables, where the widget-template member
+is legacy-table retention-only; actual detail document allocation remains
+TASK-551-09-L03.
 All five families consume L01's required typed `RetentionPolicy.dryRun`; there
 is no revision-family dry-run variable or override. Global true keeps the same
 bounded eligible-ID read and anchor/count preservation, but performs zero
@@ -142,7 +149,10 @@ guard; retry only serialization/deadlock errors with capped jitter (`<= 3`), not
 domain conflicts. The helper's closed family identifiers already include entry
 and post so TASK-551-09 cannot invent incompatible advisory keys, conflict codes,
 cursor shapes, or retention defaults; that inclusion grants no source ownership
-to this leaf.
+to this leaf. `widget_template` likewise remains a closed family identifier
+solely for the legacy-table retention scope; this leaf creates no
+widget-template allocation writer and defers any writer revival to a follow-up
+task.
 `withRevisionParentLock` exists separately because TASK-551-09-L03 must serialize
 the detail autosave's latest-snapshot equality decision before allocation. In one
 transaction it locks `{ family: "detail_page", parentId }`, selects only the
@@ -215,7 +225,9 @@ No raw-array compatibility overload or invented `reason` field is permitted.
 
 - Contract tests pin all five family identifiers and prove entry/post resolve to
   the same allocator/policy shape without importing their services.
-- Synchronize 50 concurrent creates through the actual page/widget services;
+- Synchronize 50 concurrent creates through the actual page service; the
+  widget-template family has no live writer after TASK-580 and is covered as
+  legacy-table retention only;
   committed versions are unique, contiguous for successful transactions,
   monotonic, and correctly parent/family scoped. Exercise the generic
   `detail_page` lock/allocator directly without claiming document-service
@@ -263,7 +275,7 @@ No raw-array compatibility overload or invented `reason` field is permitted.
 ## Validation Commands
 
 - `bunx vitest run tests/vitest/database/revisionAllocation.test.ts`
-- `set -a && source .env && set +a && bun test tests/unit/pages/revisionService.test.ts tests/unit/widgets/widgetTemplateRevisionService.test.ts tests/unit/content/detailPageRevisionService.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/pages/revisionService.test.ts tests/unit/content/detailPageRevisionService.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551RevisionConcurrency.test.ts tests/integration/server/task551RevisionRetention.test.ts tests/perf/database-revision-budgets.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
@@ -278,8 +290,10 @@ requirements to TASK-551-10-L02.
 
 ## Quantified Acceptance
 
-- Fifty concurrent actual page/widget service attempts produce zero duplicate
-  versions/partial rows and a valid monotonic committed sequence. Generic
+- Fifty concurrent actual page service attempts produce zero duplicate
+  versions/partial rows and a valid monotonic committed sequence; widget-template
+  rows are retention-only legacy-table scope with no allocation writer in this
+  leaf. Generic
   `detail_page`/entry/post identifiers and lock/allocation behavior remain
   contract-tested for TASK-551-09 adoption; no claim is made that this leaf
   changes the detail document writer.
@@ -297,3 +311,126 @@ requirements to TASK-551-10-L02.
 - Exported and consumer-facing signatures remain exactly
   `withRevisionParentLock(identity, tx, run)` and `allocateRevision(input, tx)`,
   with no tx-first overload or adapter.
+
+## Workflow Dispatch Envelope
+
+The focused unit and integration/performance lanes use L11's generic private
+database-test capability. No command loads `.env`, exposes a profile value, or
+changes the later TASK-551-09 whole-service ownership.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-06-L02",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-06"
+  },
+  "allowlist": [
+    "core/services/database/revisionAllocation.ts",
+    "core/services/content/revisionRetentionService.ts",
+    "core/services/pages/revisionService.ts",
+    "core/services/content/detailPageRevisionService.ts",
+    "tests/vitest/database/revisionAllocation.test.ts",
+    "tests/unit/pages/revisionService.test.ts",
+    "tests/unit/content/detailPageRevisionService.test.ts",
+    "tests/integration/server/task551RevisionConcurrency.test.ts",
+    "tests/integration/server/task551RevisionRetention.test.ts",
+    "tests/perf/database-revision-budgets.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/services/content/detailPageDocumentService.ts",
+    "core/server/publicSite.tsx",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "core/services/maintenance/retentionScheduler.ts",
+    "core/services/cache/serverCacheRuntime.ts"
+  ],
+  "dependencies": ["TASK-551-06-L01:single"],
+  "commands": [
+    {
+      "id": "revision-allocation-test",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/database/revisionAllocation.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/database/revisionAllocation.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "revision-service-unit-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/pages/revisionService.test.ts", "tests/unit/content/detailPageRevisionService.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": [
+          "tests/unit/pages/revisionService.test.ts",
+          "tests/unit/content/detailPageRevisionService.test.ts"
+        ],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "revision-concurrency-and-budget-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551RevisionConcurrency.test.ts", "tests/integration/server/task551RevisionRetention.test.ts", "tests/perf/database-revision-budgets.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": [
+          "tests/integration/server/task551RevisionConcurrency.test.ts",
+          "tests/integration/server/task551RevisionRetention.test.ts",
+          "tests/perf/database-revision-budgets.test.ts"
+        ],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "performance-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-06-L01:single"],
+      "commandIds": [
+        "revision-allocation-test",
+        "revision-service-unit-tests",
+        "revision-concurrency-and-budget-tests",
+        "core-lint-types",
+        "core-lint",
+        "coderso-gate",
+        "performance-gate"
+      ]
+    }
+  ]
+}
+```

@@ -5,11 +5,11 @@
 **Priority:** Critical
 **Category:** Cache / Redis / Reliability / Database
 **Estimated Effort:** Very Large
-**Dependencies:** L03 INITIAL header-only exception after TASK-551-02-L02;
+**Dependencies:** L03 INITIAL header-only exception after TASK-551-02-L03;
 all cache phases after TASK-551-07 complete plus TASK-551-05 schema/migration
 and TASK-551-06 retention/lifecycle owners terminal; parent external dispatch gate
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -118,7 +118,7 @@ eventual model and remains uncached or fail-closed DB-backed.
   PubSub/lease/lifecycle internals stay private. Before listen, its closed four-
   policy v1 catalog must fit exact key-plus-envelope store capacity or startup
   fails.
-- TASK-551-08-L03 has an early, header-only INITIAL phase after 02-L02. It is
+- TASK-551-08-L03 has an early, header-only INITIAL phase after 02-L03. It is
   the sole writer of `router.ts` plus the route-response portion of
   `httpServer.ts` and installs a closed, request-local
   `RouteContext.setResponseHeader` contract for exactly the private/no-store,
@@ -137,7 +137,7 @@ eventual model and remains uncached or fail-closed DB-backed.
 
 **Phased land order:** `TASK-551-08-L03 INITIAL → TASK-551-03-L02 header
 receipt → TASK-551-08-L01 → TASK-551-08-L02 → TASK-551-08-L03 FINAL`. The
-INITIAL exception depends only on terminal TASK-551-02-L02 and the parent
+INITIAL exception depends only on terminal TASK-551-02-L03 and the parent
 external gate; it does not construct Redis/cache runtime and cannot mark L03 or
 this parent complete.
 
@@ -174,7 +174,7 @@ this parent complete.
   receipt, and never edits either shared transport file. L03 FINAL re-reads both
   files and preserves that validated header behavior while adding composition.
 - TASK-517 `publicSite.tsx` and TASK-493 SEO are forbidden throughout 08.
-- Shared docs, task board, changelog 1263 and workflows belong to 10/11.
+- Shared docs, task board, changelog 1310 and workflows belong to 10/11.
 
 ## Security Contract
 
@@ -233,12 +233,12 @@ this parent complete.
   lifecycle-owned started cache; before start/after close the accessor fails with
   the exact stable unavailable code and never constructs a second instance.
 - All new/touched production and test files remain below 1,000 lines.
-- The L03 INITIAL HTTP test pins exact header propagation on success and mapped
+- After terminal TASK-551-02-L03, the L03 INITIAL HTTP test pins exact header propagation on success and mapped
   route errors plus request isolation; the later 03-L02 receipt pins the real
   submission-detail route without granting it ownership of the transport.
 
 Targeted commands are specified per leaf. TASK-551-10 owns full load/fault
-gates, `_docs/SERVER_CACHE.md`, deployment runbook and changelog 1263.
+gates, `_docs/SERVER_CACHE.md`, deployment runbook and changelog 1310.
 
 ## Documentation Updates Required
 

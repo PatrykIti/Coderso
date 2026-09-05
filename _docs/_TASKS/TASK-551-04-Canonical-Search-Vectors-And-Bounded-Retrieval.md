@@ -8,7 +8,7 @@
 **Dependencies:** TASK-551-03-L03, TASK-551-06-L03, and the
 TASK-551-09-L04 INITIAL Admin-authority receipt for L01
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -27,8 +27,9 @@ strict, CSRF-protected, idempotent internal POST.
 1. `TASK-551-04-L01` consumes TASK-551-05's canonical CMS generated columns and
    indexes after TASK-551-03-L03 and TASK-551-06-L03, then owns current search
    services/routes, admin search client/hook, ranked query semantics, read-only
-   GETs, and the history POST. It imports L06's Bun-free history request/parser
-   and idempotent persistence command without editing them. Its two Admin owners
+   GETs, and the history POST. It imports TASK-551-06-L01's Bun-free history
+   request/parser and idempotent persistence command without editing them. Its
+   two Admin owners
    adopt L04 INITIAL's opaque installation/reset seam and return a receipt that
    L04 FINAL consumes without reopening those files.
 2. `TASK-551-04-L02` consumes TASK-551-05's two local assistant vectors and
@@ -144,4 +145,4 @@ constructor/token/prefix grammar, threshold/session behavior, conditional-
 fallback evidence, limits, visibility, and plan results to TASK-551-10-L02.
 Closure must update `_docs/SEARCH_SPEC.md`: its current `plainto_tsquery` and
 ILIKE wording is obsolete and cannot remain after this `to_tsquery`/indexed `%`
-contract lands. Shared docs and changelog 1263 remain closure's sole ownership.
+contract lands. Shared docs and changelog 1310 remain closure's sole ownership.

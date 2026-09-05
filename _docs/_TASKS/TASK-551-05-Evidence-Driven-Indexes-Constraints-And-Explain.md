@@ -7,7 +7,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-551-02 complete; TASK-551 external dispatch gate
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -33,8 +33,12 @@ other subtasks.
    contract (four schema surfaces, named checks, and mandatory index rows)
    that L01's one migration lands, plus the authority test suite; it writes no
    schema, migration, or service code.
-3. `TASK-551-05-L02` runs sanitized before/after plan and concurrency evidence
-   against L01; it owns no production schema, migration, or service code.
+3. `TASK-551-05-L02` runs sanitized before/after plan evidence against L01 and
+   consumes only L01's redacted concurrency receipt. `TASK-551-05-L01` alone
+   owns the raw 50-way revision/booking and transferred authority-race probe in
+   `task551ConcurrencyConstraints.test.ts`; L03 retains its focused authority-
+   contract/state-matrix suite. L02 owns no production schema, migration, service
+   code, concurrency fixture, or concurrency test.
 
 L02 cannot start until L01 migration-from-clean and migration-from-prior pass.
 L03 lands after L01 (its authority schema is part of L01's one migration) and
@@ -108,9 +112,10 @@ artifact/preflight classification; nonce-bound external adapter or cold offline-
 single admission drain plus live `pg_stat_activity` proof; guarded transactional
 expand; ordered autocommit `CREATE [UNIQUE] INDEX CONCURRENTLY`; and exact catalog
 readiness. Generic/startup migration cannot execute this guarded artifact. The
-three missing revision unique indexes are the first immutable group and every old
-`max(version)+1` binary remains rejected before SQL until they are durably ready/
-valid. External mode may then resume only the digest-pinned compatible TASK-551
+two missing revision unique indexes are the first immutable group and the old
+`max(version)+1` page and widget-template writer binaries remain rejected before
+SQL until they are durably ready/valid. External mode may then resume only the
+digest-pinned compatible TASK-551
 binary whose release receipt proves the race-safe allocator/conflict mapping;
 the old binary never resumes. Remaining read-performance members build with that
 binary's traffic and the write gate. Offline-single remains cold until final
@@ -120,7 +125,8 @@ transaction, 2-second lock timeout, 30/300-second statement, 120/900-second
 transactional phase, 30-minute per-index, and 2-hour online-phase ceilings are
 mandatory. Snapshot/manifest/live-catalog parity, DB+filesystem CAS receipts,
 adapter/identity/activity visibility, crash/resume at every state, pre-cutover
-reverse recovery, no-old-binary window, rehearsal 50-way revision races, and
+reverse recovery, no-old-binary window, L01-owned rehearsal 50-way revision/
+booking and transferred authority-race receipt, and
 16-writer read-index build safety are blocking evidence. The first external new-
 binary acknowledgement permanently makes rollback forward-fix only.
 
@@ -140,7 +146,7 @@ catalog tests resolve the closed function/operator dependency set through
 
 ## Shared Acceptance
 
-- `core/db/schema.ts` becomes a stable re-export barrel and every resulting
+- `core/db/schema.ts` remains a stable re-export barrel and every resulting
   human-authored schema/test module is at most 1,000 physical lines.
 - Migration-from-clean and migration-from-prior produce equivalent schema;
   rollback then forward-reapply also succeeds. Drizzle snapshot/journal are
@@ -176,8 +182,9 @@ catalog tests resolve the closed function/operator dependency set through
   active resource bookings. TASK-551-03 maps the booking constraint after this
   child lands; TASK-551-06 and the explicit TASK-551-09 entry/post handoff map
   revision constraints in their owning services.
-- Deployment tests prove old revision writers remain drained until all three new
-  unique indexes are ready/valid and are never resumed. External mode admits only
+- Deployment tests prove the old `max(version)+1` page and widget-template
+  revision writers remain drained until both new unique indexes are ready/valid
+  and are never resumed. External mode admits only
   the compatible TASK-551 binary after that barrier; offline mode admits none
   until final catalog. Every crash/resume point preserves that distinction.
 - Representative write p95 regression is at most 20% and storage growth is
@@ -203,7 +210,7 @@ migration/snapshot-limit/live-catalog/no-drop contract.
 The gate also runs L01's online-deployment suite/tool and verifies exact snapshot/
 manifest/live-catalog parity, numeric phase budgets, crash/resume, reverse
 recovery, exact application-name/activity drain, adapter protocol, the drained
-revision-integrity barrier/no-old-binary window, rehearsal 50-way revision races,
+revision-integrity barrier/no-old-binary window, L01-owned 50-way concurrency receipt,
 and compatible-binary concurrent-writer behavior for every later read-performance
 member. Plan/write evidence names every page/entry/post-author, role-leading,
 post/media/webhook containment/list, and all-unprocessed outbox-age index
@@ -215,4 +222,4 @@ completion updates and rejects availability/claim narrowing.
 No shared docs are edited here. Supply the table-module/facade adoption, migration, exact FTS/
 trigram contracts, selection receipt, constraints, plans, write/storage cost,
 and recovery handoff to TASK-551-10-L02, which owns shared docs and changelog
-1263.
+1310.

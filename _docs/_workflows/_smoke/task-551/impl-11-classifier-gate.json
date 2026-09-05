@@ -1,0 +1,125 @@
+{
+  "task": "TASK-551-11",
+  "occurrence": "classifier-materialization-gate",
+  "phase": "BARRIER",
+  "capturedAt": "2026-09-02T23:10:07Z",
+  "worktree": "/home/coder/project/Coderso-551",
+  "branch": "feat/task-551-db-cache",
+  "headAtBarrier": "7bc41f75b9de972ce3ee4d794cf5fce14e08c5cb",
+  "commitsMadeByFlow": 0,
+  "stagedByFlow": false,
+  "dbConnections": 0,
+  "manualExecutionNote": "Owner-authorized manual AGENTS.md flow. This is the L11 non-product classifier barrier between TASK-551-01-L04 and TASK-551-01-L02 (contract TASK-551-11 :290-320 and TASK-551-01-L01 :314-357). It fabricates no automatic L11 permit, snapshot, or receipt; it records the manual owner-led execution of the contracted gate steps.",
+  "preconditions": {
+    "l03Accepted": "impl-01-l03.json SINGLE_ADMITTED_GATES_GREEN",
+    "l04Accepted": "impl-01-l04.json SINGLE_ADMITTED_GATES_GREEN (L04 bootstrap test materialized 2026-09-02T22:03)",
+    "nineTestPathsPresent": "all nine TASK551_PLANNED_BUN_TEST_PATHS verified regular, non-symlink, current-worktree before the prerequisite"
+  },
+  "preClassifierStaticPrerequisite": {
+    "command": "bun --env-file=/dev/null test tests/perf/task551FixtureTargetBootstrap.test.ts tests/perf/database-query-baseline.test.ts tests/perf/task551DatabaseBaseline/digestContract.test.ts tests/perf/task551DatabaseBaseline/fixtureTarget.test.ts",
+    "result": "43 pass / 0 fail / 2859 expect() calls, exit 0 (dry run earlier identical: 43/0/2859)",
+    "note": "exactly the contracted four suites; no fixture source, target, database value, or fixture map passed"
+  },
+  "classifierMaterialization": {
+    "command": "bun scripts/bun-lane-classify.ts",
+    "invocations": 1,
+    "exit": 0,
+    "stdout": "[bun-lane-classify] files=454 buckets={\"A\":175,\"B\":208,\"C\":55,\"perf\":16}",
+    "onePathMutationProof": "git status --porcelain snapshotted before (126 entries) and after; diff = exactly one line: 'M tests/bun-lane-manifest.json'. No other file mutated.",
+    "manifest": {
+      "path": "tests/bun-lane-manifest.json",
+      "sha256": "0da925552ef993475871456f6889646765f2f2612a8bacaad79a5b92ddcac88b",
+      "generatedAt": "2026-09-02T22:16:08.940Z",
+      "totalRows": 454,
+      "rowsSorted": true,
+      "duplicates": 0
+    },
+    "exactNineManifestMembership": {
+      "plannedPresent": 9,
+      "plannedSortedUnique": true,
+      "planned": [
+        "tests/integration/server/task551BunLaneMembership.test.ts",
+        "tests/perf/database-query-baseline.test.ts",
+        "tests/perf/database-query-inventory.test.ts",
+        "tests/perf/task551DatabaseBaseline/digestContract.test.ts",
+        "tests/perf/task551DatabaseBaseline/fixtureTarget.test.ts",
+        "tests/perf/task551DatabaseBaseline/freezeCandidateGenerationBootstrap.test.ts",
+        "tests/perf/task551DatabaseBaseline/reviewedPairPersistence.test.ts",
+        "tests/perf/task551DatabaseBaseline/runnerLifecycle.test.ts",
+        "tests/perf/task551FixtureTargetBootstrap.test.ts"
+      ],
+      "contractedNonPlannedRowsPresent": [
+        "tests/integration/server/task551DatabaseLifecycle.test.ts",
+        "tests/integration/server/task551RuntimeEntrypoints.test.ts",
+        "tests/unit/workflows/task551AuthorAudit.test.ts",
+        "tests/unit/workflows/task551EvidenceContract.test.ts",
+        "tests/unit/workflows/task551WorkflowContracts.test.ts"
+      ],
+      "auxiliaryExcluded": "tests/perf/database-query-inventory-capability-routes.test.ts is L01-owned auxiliary, deliberately outside the nine and outside the task551-marked slice per contract :376-377"
+    }
+  },
+  "postGeneratorManifestMembershipValidation": {
+    "sharedManifestSuite": {
+      "command": "bun test tests/unit/toolchain/bunLaneManifest.test.ts",
+      "result": "16 pass / 0 fail / 2996 expects, exit 0"
+    },
+    "l01Battery": {
+      "command": "bun test tests/perf/database-query-inventory.test.ts tests/integration/server/task551BunLaneMembership.test.ts tests/unit/toolchain/bunLaneManifest.test.ts",
+      "result": "49 pass / 0 fail / 9340 expects, exit 0 (orchestrator rerun on final bytes)"
+    },
+    "cliFailClosedProbe": {
+      "command": "bun scripts/task-551-query-inventory.ts --check --phase initial",
+      "result": "exit 1, FAIL query_inventory_invalid:initial-inventory-state, zero scans",
+      "interpretation": "contracted behavior: on the materialized lane the initial-phase check fails closed; its successor is --check --phase final at TASK-551-01-L01:final"
+    }
+  },
+  "contractCorrection": {
+    "file": "_docs/_TASKS/TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md",
+    "lines": "1713 -> 1749 (append-only correction section at :1717-1749)",
+    "reason": "The slice rule ('an unplanned task551-marked row fails', authored 2026-07-24) collided with five lane test files materialized 2026-08-26..28 as contracted products of TASK-551-02-L02 / TASK-551-11, each pinned by literal path in its own contract; renaming/moving/planning them would violate those owning contracts.",
+    "effect": "Post-generation exact equality = planned paths + task551-marked rows MINUS exactly the five contracted literal paths; any other stray still fails; the five are pinned present, unique, valid-bucket in the membership suite; the recovery-era L04-absent filesystem pin flipped to all-nine-present.",
+    "precedent": "same discipline as the dated 2026-08-26 MAX_QUERY_FINGERPRINTS 512->2048 contract correction"
+  },
+  "fixLoop": {
+    "trigger": "membership suite 1 red test after materialization (scheduled phase-pin flip per contract :340-357) + one same-class stale pin in the inventory suite (L04-absent pin, stale since L04 closure)",
+    "writer": "single writer, 4 files total (contract md, bunLane.ts, membership test, inventory test); manifest never touched",
+    "postAudit": "fresh adversarial audit (checks A-F incl. gap probes): A-D PASS, no assertion weakened; confirmed findings: 1 MEDIUM (this receipt was pending -> closed by writing it), 2 LOW (case-sensitive stray predicate; excluded rows unvalidated)",
+    "lowFixes": "stray predicate now case-insensitive (bunLane.ts:219-220, cased stray probe now rejected); five contracted rows pinned unique + valid-bucket; case-varied stray vector added to the rejection loop; membership expects 146 -> 154"
+  },
+  "gates": [
+    {
+      "command": "pre-classifier four-test command",
+      "pass": true,
+      "detail": "43/0/2859, exit 0, before the classifier"
+    },
+    {
+      "command": "bun scripts/bun-lane-classify.ts",
+      "pass": true,
+      "detail": "exit 0, exactly once, one-path mutation proof"
+    },
+    {
+      "command": "bun test tests/unit/toolchain/bunLaneManifest.test.ts",
+      "pass": true,
+      "detail": "16/0/2996"
+    },
+    {
+      "command": "L01 battery (3 suites)",
+      "pass": true,
+      "detail": "49/0/9340, orchestrator rerun on final bytes"
+    },
+    {
+      "command": "bunx eslint --max-warnings=0 scripts/task551QueryInventory/bunLane.ts tests/integration/server/task551BunLaneMembership.test.ts tests/perf/database-query-inventory.test.ts",
+      "pass": true,
+      "detail": "exit 0"
+    },
+    { "command": "bun run lint:repo:types", "pass": true, "detail": "exit 0" },
+    {
+      "command": "wc -l changed code files",
+      "pass": true,
+      "detail": "341 / 406 / 999, all <= 1000"
+    },
+    { "command": "git diff --check", "pass": true, "detail": "clean" }
+  ],
+  "verdict": "BARRIER_PASSED_L01_GATES_GREEN_MANIFEST_MATERIALIZED",
+  "nextInSpine": "TASK-551-01-L02 (small/large fixtures, baselines, budgets) occurrence dispatch; real-DB --freeze/--check and reviewed-pair promotion remain owner barriers behind L02's static evidence."
+}

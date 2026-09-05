@@ -24,7 +24,7 @@ bootstrap modes and the immediate pre-01-L03 dispatch gate additionally
 derive and verify the complete terminal TASK-551 family on the CURRENT HEAD
 through
 `deriveAndVerifyTask551CurrentTerminalStateV1` (parent `✅ Done`, every physical
-descendant terminal, current board/changelog synchronized, changelog 1263
+descendant terminal, current board/changelog synchronized, changelog 1310
 present and valid, current task files and no unresolved drift — no
 expected-HEAD receipt and no unique historical commit/hash authority)
 and require the exact TASK-551-02-L02/04-L02/05-L01 handoff

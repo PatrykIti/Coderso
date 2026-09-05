@@ -10,7 +10,7 @@
 TASK-551-09-L04 INITIAL Admin-authority receipt; TASK-551-08-L03 INITIAL
 route-response-header receipt
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -92,39 +92,52 @@ installation token before async work, and verifies that token plus its own
 resource generation immediately before any cache install. Its reset callback
 clears every legacy and newly added page/summary/facet/detail promise or value.
 
-**Complete current list-client consumer graph, all in this leaf's allowlist:**
+**List-shape consumer subset this leaf may edit:** the eight owned clients
+(`pagesClient`, `detailPagesClient`, `entriesClient`, `postsClient`,
+`adminUsersClient`, `formsClient`, `mediaClient`, `bookingClient`) are imported
+by 78 `core/admin` files today, per the exact grounded command
+`rg -l "from ['\"].*(pagesClient|entriesClient|postsClient|adminUsersClient|formsClient|mediaClient|bookingClient|detailPagesClient)" core/admin`.
+The following 26 files are the SUB-SET of those 78 importers that this leaf may
+edit — the list-shape surface (tables, grids, pickers, and lists that render
+paginated lists and therefore receive a list-call-site change):
 `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx`,
+`core/admin/ui/custom-screens/CustomScreenEntriesTable.tsx`,
+`core/admin/ui/custom-screens/customScreenListModel.ts`,
 `core/admin/ui/custom-screens/customScreenPreviewData.ts`,
 `core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts`,
 `core/admin/ui/custom-screens/hooks/useScreenRelatedEntries.ts`,
+`core/admin/ui/custom-screens/ListViewCanvas.tsx`,
+`core/admin/ui/content-types/DetailTemplateInspector.tsx`,
+`core/admin/ui/entries/EntryGrid.tsx`,
+`core/admin/ui/entries/EntryTable.tsx`,
 `core/admin/ui/entries/FieldRenderer.tsx`,
 `core/admin/ui/forms/hooks/useForms.ts`,
 `core/admin/ui/menus/MenuDesignEditor.tsx`,
+`core/admin/ui/menus/MenuDesignEditorBrandNavControls.tsx`,
 `core/admin/ui/menus/MenuEditorPage.tsx`,
+`core/admin/ui/menus/MenuItemDrawer.tsx`,
+`core/admin/ui/menus/MenuItemForm.tsx`,
+`core/admin/ui/pages/editor/PageEditorRegistryFields.tsx`,
+`core/admin/ui/pages/editorControls/MediaUrlControl.tsx`,
+`core/admin/ui/pages/PageTable.tsx`,
 `core/admin/ui/posts/editor/PostEditorCanvas.tsx`,
+`core/admin/ui/posts/PostsTable.tsx`,
 `core/admin/ui/site/SiteSettingsPage.tsx`,
 `core/admin/ui/themes/ThemeEditorPage.tsx`,
-`core/admin/ui/widgets/WidgetLibraryPage.tsx`,
-`core/admin/ui/widgets/editors/ContentListEditors.tsx`,
-`core/admin/ui/widgets/editors/CtaBannerEditors.tsx`,
-`core/admin/ui/widgets/editors/EntryTeaserEditors.tsx`,
-`core/admin/ui/widgets/editors/FeatureGridEditors.tsx`,
-`core/admin/ui/widgets/editors/FooterEditors.tsx`,
-`core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx`,
-`core/admin/ui/widgets/editors/HeroEditors.tsx`,
-`core/admin/ui/widgets/editors/LinkDestinationField.tsx`,
-`core/admin/ui/widgets/editors/LogoCloudEditors.tsx`,
-`core/admin/ui/widgets/editors/NavigationEditors.tsx`,
-`core/admin/ui/widgets/editors/PostsFeedEditors.tsx`,
-`core/admin/ui/widgets/editors/RichTextSectionEditors.tsx`,
-`core/admin/ui/widgets/editors/SectionEditors.tsx`,
-`core/admin/ui/widgets/editors/TeamEditors.tsx`,
-`core/admin/ui/widgets/editors/TestimonialsEditors.tsx`,
 `core/admin/utils/adminPrefetch.ts`, and
-`core/admin/utils/adminPrefetchCustomScreens.ts`. This is the grounded current
-`rg -l` call graph for the seven changed clients. Rerun it immediately before
-implementation and add any new consumer to this same single-writer leaf before
-changing a client contract.
+`core/admin/utils/adminPrefetchCustomScreens.ts`. `core/admin/utils/adminPrefetch.ts`
+is sole-owned by this leaf for TASK-551 (it consumes six of the eight owned
+clients); TASK-551-09-L04 is read-only on this file and composes its
+cache-identity hardening through `adminCacheAuthority.ts`. Every one of the 78 importers
+not listed here is either a non-list-shape consumer (a read-only import whose
+list call site does not change) or outside this leaf's ownership. The
+implementer MUST rerun the exact pinned `rg -l` command above immediately before
+implementation and add every newly affected list-call-site file to this
+allowlist before changing the corresponding client contract. This set is
+rebaselined after TASK-580 deleted `core/admin/ui/widgets/**`; the surviving
+Dashboard widget surface (including
+`core/admin/ui/dashboard/widgetRenderers.tsx`) imports none of the eight owned
+clients and is not in this graph.
 
 **Cohesive UI extractions required before behavior changes:** the existing
 `components/ReservationsTab.tsx` already owns the reservation table and row
@@ -143,9 +156,10 @@ in `UsersRolesPage.tsx`. The page modules retain orchestration, cache hydration,
 dirty-state guards, dialogs, and selection state. These names are part of the
 single-writer allowlist; do not invent generic helper dumping grounds.
 
-Every other touched legacy module currently above 1,000 lines is split by these
-exact cohesive paths before pagination; originals and extractions must each end
-at or below 1,000 lines:
+Every other touched legacy module above 1,000 lines — or, like
+`DetailTemplateEditorPage.tsx` at 952 lines, one the leaf chooses to split for
+cohesive growth — is split by these exact cohesive paths before pagination;
+originals and extractions must each end at or below 1,000 lines:
 
 | Existing module | Required extraction paths |
 |---|---|
@@ -161,23 +175,11 @@ at or below 1,000 lines:
 > TASK-542.
 | `MenuEditorPage.tsx` | `MenuEditorWorkspace.tsx` (editor frame, add-items rail, canvas, and inspector composition; page retains loading, mutation, dialog, and cache orchestration) |
 | `PostEditorCanvas.tsx` | `PostEditorMediaControls.tsx` |
-| `ContentListEditors.tsx` | `ContentListSourceEditors.tsx`; `ContentListPresentationEditors.tsx` |
-| `CtaBannerEditors.tsx` | `CtaBannerContentEditors.tsx` |
-| `EntryTeaserEditors.tsx` | `EntryTeaserSourceEditors.tsx`; `EntryTeaserPresentationEditors.tsx` |
-| `FeatureGridEditors.tsx` | `FeatureGridItemEditors.tsx` |
-| `FooterEditors.tsx` | `FooterNavigationEditors.tsx`; `FooterBrandEditors.tsx` |
-| `GalleryMosaicEditors.tsx` | `GalleryMosaicItemEditors.tsx` |
-| `HeroEditors.tsx` | `HeroContentEditors.tsx`; `HeroMediaEditors.tsx`; `HeroLayoutEditors.tsx` |
-| `LogoCloudEditors.tsx` | `LogoCloudItemEditors.tsx` |
-| `NavigationEditors.tsx` | `NavigationItemEditors.tsx`; `NavigationPresentationEditors.tsx` |
-| `PostsFeedEditors.tsx` | `PostsFeedSourceEditors.tsx` |
-| `RichTextSectionEditors.tsx` | `RichTextContentEditors.tsx`; `RichTextLayoutEditors.tsx` |
-| `SectionEditors.tsx` | `SectionContentEditors.tsx`; `SectionLayoutEditors.tsx` |
-| `TeamEditors.tsx` | `TeamMemberEditors.tsx`; `TeamLayoutEditors.tsx` |
-| `TestimonialsEditors.tsx` | `TestimonialItemEditors.tsx` |
 
 Each extraction lives beside its named existing module; these resolved exact
-paths are also in the single-writer allowlist.
+paths are also in the single-writer allowlist. The former `core/admin/ui/widgets/**`
+editor modules were deleted by TASK-580 (v1 widget system removal), so no
+widget-editor extraction paths remain in this leaf's scope.
 
 **Tests:** `tests/integration/routes/task551BoundedAdminLists.test.ts`,
 `tests/integration/routes/bookingRoutes.test.ts`,
@@ -194,43 +196,66 @@ paths are also in the single-writer allowlist.
 `tests/vitest/admin/pagesClientPagination.test.ts`,
 `tests/vitest/admin/detailPagesClient.test.ts`,
 `tests/vitest/ui/page-revision-drawer.test.tsx`,
-the replaced legacy `tests/vitest/ui/page-editor-v2-flow.test.tsx`,
-`tests/vitest/ui/pageEditorV2FlowFixtures.tsx`,
-`tests/vitest/ui/page-editor-v2-loading-cache.test.tsx`,
-`tests/vitest/ui/page-editor-v2-editing-dirty-state.test.tsx`,
-`tests/vitest/ui/page-editor-v2-autosave-conflicts.test.tsx`,
-`tests/vitest/ui/page-editor-v2-preview-device.test.tsx`,
-`tests/vitest/ui/page-editor-v2-publish-revisions.test.tsx`,
-`tests/vitest/ui/page-editor-v2-sections-blocks.test.tsx`,
-`tests/vitest/ui/page-editor-v2-accessibility-navigation.test.tsx`,
-`tests/vitest/ui/page-editor-v2-persistence-roundtrip.test.tsx`,
+`tests/vitest/ui/pageEditorV2Fixtures.tsx`,
+`tests/vitest/ui/pageEditorV2FlowHarness.tsx`,
+`tests/vitest/ui/pageEditorV2Helpers.tsx`,
+`tests/vitest/ui/pageEditorV2Interactions.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-columns.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-controls.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-loading.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-panels.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-sections.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-settings.test.tsx`,
+`tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx`,
 `tests/vitest/ui/detail-template-editor.test.tsx`,
-the replaced legacy `tests/vitest/ui/booking-page.test.tsx`,
-`tests/vitest/ui/bookingPageTestFixtures.tsx`,
-`tests/vitest/ui/booking-page-loading-pagination.test.tsx`,
-`tests/vitest/ui/booking-page-mutations.test.tsx`,
-`tests/vitest/ui/booking-page-calendar.test.tsx`,
+`tests/vitest/ui/bookingPageFixtureState.tsx`,
+`tests/vitest/ui/bookingPageFixtureMocks.tsx`,
+`tests/vitest/ui/bookingPageFixtureHarness.tsx`,
+`tests/vitest/ui/booking-page-wave.test.tsx`,
+`tests/vitest/ui/booking-page-errors.test.tsx`,
+`tests/vitest/ui/booking-page-schedule-crud.test.tsx`,
+`tests/vitest/ui/booking-page-tabs.test.tsx`,
 `tests/vitest/ui/booking-tabs-interactions-wave.test.tsx`,
 `tests/vitest/ui/booking-tabs-leaf.test.tsx`,
 `tests/vitest/ui/booking-helpers.test.ts`,
+`tests/vitest/ui/booking-helpers-wave.test.ts`,
 `tests/vitest/ui/form-submissions-page.test.tsx`,
-the replaced legacy `tests/vitest/ui/media-library.test.tsx`,
-`tests/vitest/ui/mediaLibraryTestFixtures.tsx`,
-`tests/vitest/ui/media-library-loading-pagination.test.tsx`,
-`tests/vitest/ui/media-library-selection-folders.test.tsx`,
-`tests/vitest/ui/media-library-upload-edit.test.tsx`,
+`tests/vitest/ui/media-library.test.tsx`,
+`tests/vitest/ui/mediaLibraryTestUtils.tsx`,
+`tests/vitest/ui/media-library-load-retry-wave.test.tsx`,
+`tests/vitest/ui/media-library-mutation-retry-wave.test.tsx`,
+`tests/vitest/ui/media-library-page-wave.test.tsx`,
+`tests/vitest/ui/media-card.test.tsx`,
+`tests/vitest/ui/media-components.test.tsx`,
+`tests/vitest/ui/media-details.test.tsx`,
+`tests/vitest/ui/media-details-panel.test.tsx`,
+`tests/vitest/ui/media-filter-panel.test.tsx`,
+`tests/vitest/ui/media-folder-rail.test.tsx`,
 `tests/vitest/ui/media-picker.test.tsx`,
-the replaced legacy `tests/vitest/ui/forms-pages-wave.test.tsx`,
+`tests/vitest/ui/media-toolbar.test.tsx`,
+`tests/vitest/ui/forms-pages-wave.test.tsx`,
 `tests/vitest/ui/formsPagesWaveFixtures.tsx`,
-`tests/vitest/ui/forms-list-page-wave.test.tsx`,
 `tests/vitest/ui/form-builder-page-wave.test.tsx`,
 `tests/vitest/ui/forms-component-wave.test.tsx`,
+`tests/vitest/ui/use-forms-wave.test.tsx`,
 `tests/vitest/ui-integration/forms-list-restyle.test.tsx`,
 `tests/vitest/ui-integration/forms.test.tsx`,
 `tests/vitest/ui-integration/forms-submissions-restyle.test.tsx`,
 `tests/integration/routes/forms.test.ts`,
 `tests/vitest/validation/task551ListSchemas.test.ts`, and
 `tests/perf/database-admin-list-budgets.test.ts`.
+
+**Dual-writer handoff (TASK-551-09-L01):**
+`tests/integration/routes/bookingRoutes.test.ts` and
+`tests/integration/routes/forms.test.ts` are sole-owned by TASK-551-09-L01 for
+its existing-dispatcher invalidation regressions. This leaf may extend those
+two files only for bounded list/pagination behavior and must preserve every
+09-owned assertion; any wider change coordinates through the TASK-551-09
+contract and never silently re-owns the dispatcher sections.
 
 No other files may be edited. In particular, TASK-517 owns
 `core/services/content/entryService.ts` and `core/server/publicSite.tsx`;
@@ -274,46 +299,62 @@ never folded into a pagination fix.
 The only cache/transport handoff exceptions are read-only imports of
 `core/admin/utils/adminCacheAuthority.ts`,
 `core/admin/services/cachePolicy.ts`, `core/server/router.ts`, and execution of
-L03's `tests/integration/server/route-response-headers.test.ts`. This leaf edits
+TASK-551-08-L03's `tests/integration/server/route-response-headers.test.ts`. This leaf edits
 none of them; absence or drift of either INITIAL receipt blocks implementation.
 
-The 6,813-line `page-editor-v2-flow.test.tsx` is deleted after its assertions are
-partitioned by the eight exact behavior suites above. Shared render builders and
-fixtures live only in `pageEditorV2FlowFixtures.tsx`; each suite imports that
-focused helper, remains independently runnable, and stays at most 1,000 physical
-lines. `pagesClient.test.ts` retains non-pagination CRUD/cache behavior and the
-new `pagesClientPagination.test.ts` owns every envelope/cursor/filter test, so
-the current 943-line file cannot cross the gate. These are mandatory splits,
-not conditional follow-up work.
-The current 1,186-line `forms-pages-wave.test.tsx` is likewise deleted after its
-shared mocks/builders move to `formsPagesWaveFixtures.tsx`, list/hook behavior
-moves to `forms-list-page-wave.test.tsx`, and builder/detail behavior moves to
-`form-builder-page-wave.test.tsx`. All three replacements remain independently
-runnable and at most 1,000 physical lines.
+The 6,813-line `page-editor-v2-flow.test.tsx` monolith is already absent from
+the current tree; its split landed as the independently runnable
+`page-editor-v2-flow-*` suites (autosave, columns, controls, inline-edit,
+inserters, loading, panels, responsive, sections, settings, toolbar) with
+shared builders/fixtures in `pageEditorV2Fixtures.tsx`,
+`pageEditorV2FlowHarness.tsx`, `pageEditorV2Helpers.tsx`, and
+`pageEditorV2Interactions.tsx`. This leaf rebaselines its ownership to that
+actual set and keeps every one of those suites independently runnable and at
+most 1,000 physical lines while bounded list/pagination adoption lands.
+`pagesClient.test.ts` retains non-pagination CRUD/cache behavior and the new
+`pagesClientPagination.test.ts` owns every envelope/cursor/filter test, so the
+current 943-line file cannot cross the gate. These are mandatory splits, not
+conditional follow-up work.
 
-The current 1,313-line `booking-page.test.tsx` is deleted after its shared
-mocks/render builders move only to `bookingPageTestFixtures.tsx`. Assertion
-ownership is exact: `booking-page-loading-pagination.test.tsx` owns initial/
-cache/background loading, five-tab summary stability, filters, first/next/
-previous/reset/end pagination; `booking-page-mutations.test.tsx` owns create,
-edit, delete, status, conflict, dirty-state and mutation-error behavior; and
-`booking-page-calendar.test.tsx` owns overview cards, quick actions, weekly
-calendar, date navigation, timezone and layout behavior. The fixture module has
-no tests. Each behavior suite imports it and is independently runnable.
+The current 180-line `forms-pages-wave.test.tsx` and its landed siblings form
+the existing split: shared mocks/builders live in `formsPagesWaveFixtures.tsx`,
+list/hook behavior is covered by `forms-pages-wave.test.tsx` and
+`use-forms-wave.test.tsx`, and builder/detail/component behavior is owned by
+`form-builder-page-wave.test.tsx` and `forms-component-wave.test.tsx`. This
+leaf adopts that existing split, deletes no legacy monolith, and keeps each
+suite independently runnable and at most 1,000 physical lines.
 
-The current 1,973-line `media-library.test.tsx` is deleted after shared mocks,
-builders and render helpers move only to `mediaLibraryTestFixtures.tsx`.
-`media-library-loading-pagination.test.tsx` owns loading/cache/revalidation,
-filters, result modes and first/next/reset/end behavior;
-`media-library-selection-folders.test.tsx` owns grid/list selection, folder
-tree/descendants, folder mutations and selected-detail boundaries; and
-`media-library-upload-edit.test.tsx` owns upload, edit, delete, progress, error
-and dirty-dialog behavior. The helper has no tests; all three suites remain
-independently runnable. Both legacy files must be absent at leaf completion,
-all eight replacement/helper files are in this leaf's exact allowlist, and each
-result is at most 1,000 physical lines. Shared runner manifest reconciliation is
-deferred only to the family reconciliation owner; this leaf's explicit commands
-below already invoke every replacement suite directly.
+The legacy `booking-page.test.tsx` monolith is already absent; its assertion
+groups live in the existing `booking-page-wave.test.tsx` (overview/filters/
+pagination), `booking-page-errors.test.tsx`, `booking-page-schedule-crud.test.tsx`,
+`booking-page-tabs.test.tsx`, `booking-tabs-interactions-wave.test.tsx`,
+`booking-tabs-leaf.test.tsx`, `booking-helpers.test.ts`, and
+`booking-helpers-wave.test.ts`. The current 1,123-line `bookingPageFixtures.tsx`
+must still cross the 1,000-line gate and is split by exact responsibility:
+`bookingPageFixtureState.tsx` owns the hoisted data/cache state factory plus
+`getBookingPageState`; `bookingPageFixtureMocks.tsx` owns every `vi.mock`
+factory (shared UI, cachePolicy, bookingClient, AdminShell/PageHeader,
+cacheBus, and the five booking tab modules); and
+`bookingPageFixtureHarness.tsx` owns `mount`/`flush`/`clickByText`. Each new
+fixture module is independently importable, has no tests, and stays at most
+1,000 physical lines; suites import only the fixture modules they need, and
+the 1,123-line file is deleted after the move.
+
+The current 360-line `media-library.test.tsx` is not deleted; it remains the
+owned media-library suite alongside its already-landed siblings
+`media-library-load-retry-wave.test.tsx` (loading/cache/revalidation),
+`media-library-mutation-retry-wave.test.tsx` (upload, edit, delete, progress,
+error and dirty-dialog behavior), `media-library-page-wave.test.tsx` (filters,
+result modes and first/next/reset/end behavior), `media-card.test.tsx`,
+`media-components.test.tsx`, `media-details.test.tsx`,
+`media-details-panel.test.tsx`, `media-filter-panel.test.tsx`,
+`media-folder-rail.test.tsx` (grid/list selection, folder tree/descendants,
+folder mutations and selected-detail boundaries), `media-picker.test.tsx`,
+`media-toolbar.test.tsx`, and shared helpers in `mediaLibraryTestUtils.tsx`.
+Every one of those suites remains independently runnable and at most 1,000
+physical lines. Shared runner manifest reconciliation is deferred only to the
+family reconciliation owner; this leaf's explicit commands below already
+invoke every owned suite directly.
 
 Every data-sized list uses `{ items, nextCursor, hasMore }`, default 50/max 100.
 The only full-array exceptions are service-resource assignments and per-resource
@@ -402,6 +443,51 @@ and `SlotPreviewTab` consume the bounded resource/service picker summaries;
 `bookingHelpers.ts` accepts only the reservation/resource fields it renders.
 Every tab has explicit load-more/end/reset state, and none widens a summary type
 back to the legacy full record or reconstructs all pages.
+
+### TASK-571 forms export-job route adoption
+
+TASK-571 already landed `core/services/forms/submissionExportJob.ts`
+(`createSubmissionExportJob`, `getSubmissionExportJob`,
+`getSubmissionExportJobRecord`, `verifySubmissionExportToken`,
+`readSubmissionExportArtifact`), `core/server/jobs/submissionExportScheduler.ts`,
+the export-job table/migration, and their tests; this leaf imports those
+modules read-only and edits neither. Its changelog land-order note defers the
+`formsRoutes.ts` rewiring to this single-writer leaf, which decides explicitly
+to REPLACE the legacy synchronous `GET /forms/:id/submissions/export` path with
+job orchestration: the leaf deletes that route and its
+`buildFormSubmissionsExport` import/call, leaving zero production callers of
+the legacy synchronous export.
+
+The replacement routes are exactly:
+- `POST /forms/:id/submissions/export-job`: internal `forms:read`, shared CSRF,
+  `admin_write` rate-limit bucket, strict UUID form path parameter, strict
+  reject-unknown body `{format?: "csv"|"json"}` (default `csv`), calls
+  `createSubmissionExportJob`, and returns exactly
+  `{jobId,status:"queued",token,tokenExpiresAt}`. The raw token is never
+  persisted in the response twice, logged, or stored client-side beyond the
+  download handoff.
+- `GET /forms/:id/submissions/export-job/:jobId`: internal `forms:read`,
+  `admin_read` rate-limit bucket, strict UUID path parameters, calls
+  `getSubmissionExportJob` after enforcing parent form scoping
+  (`job.formId === :id`), and returns only the public status shape
+  `{id,formId,format,status,rowCount,bytes,errorCode,tokenExpiresAt,createdBy,createdAt,updatedAt}`;
+  it never returns `tokenHash` or `artifactKey`.
+- `GET /forms/:id/submissions/export-job/:jobId/download`: internal
+  `forms:read`, `admin_read` rate-limit bucket, strict reject-unknown query
+  `{token}`, parent form scoping, `status === "done"` required, then
+  `getSubmissionExportJobRecord` + `verifySubmissionExportToken` (constant-time,
+  TTL-checked) + `readSubmissionExportArtifact` before streaming the artifact.
+  Token/artifact failures map to the existing export-job errors without leaking
+  the token, artifact path, or SQL in errors/logs.
+
+`formSchemas.ts` gains the three strict reject-unknown schemas; `formsClient.ts`
+replaces `exportFormSubmissions` with `createFormSubmissionsExportJob`,
+`getFormSubmissionsExportJob`, and `downloadFormSubmissionsExport`;
+`FormSubmissionsPage.tsx` migrates atomically from the synchronous export to
+create, bounded-backoff status poll, then token-guarded download, with visible
+progress/error/retry state and zero polling after unmount. The TASK-571
+scheduler keeps dispatching queued jobs; this leaf adds no timer, worker, or
+prune call.
 
 ## Global Summary and Relation-Facet Contract
 
@@ -560,13 +646,33 @@ batch. The query-count ceiling is therefore 3 including role/author/content-
 type/folder/tag resolution; no hidden per-row query or filtered-count statement
 is allowed. These are exactly the 32 planned Admin statement IDs/symbols in
 TASK-551-01 and the 32 Admin members of TASK-551-05-L02's closed 37-ID registry.
-Every one—not only each page query—must have checked-in numeric small/large
-receipts with finite rows-read, rows-returned, shared-buffer and normalized-p95
-ceilings before this leaf dispatches. The aggregate
-receipt may honestly budget a scan proportional to the 100,000-row authorized
-fixture, but it cannot use “one result row” as a bounded-work claim. Any missing
-receipt, unexpected growing-table scan, or failed numeric ceiling blocks L02 and
-returns to the evidence owner for a contract amendment; this leaf neither adds a
+
+After those 32 production builders land, but before this leaf accepts any
+production/static behavior result, it consumes the L02 fixture artifact
+read-only and enforces this handoff gate:
+
+- Render every landed Admin SQL string with the fixed placeholder mapping of
+  its matching `task551-admin-read-v1` L02 shape, then compare its UTF-8 bytes
+  and lowercase SHA-256 digest exactly to that shape's canonical template and
+  published digest. Normalized, parsed, whitespace-insensitive, partial, or
+  anonymous-string comparisons do not satisfy this gate.
+- Read the two `TASK551_DATABASE_FREEZE_RECEIPT` records, one for each profile.
+  Each must be `reviewed`; its canonical contract, fixture, schema, runner, and
+  reviewable-receipt digests must be current; and its sanitized context and
+  calibration must validate. This leaf neither writes, re-reviews, nor repairs
+  that artifact.
+- Independently enforce all eight L02 numeric ceilings for every exact
+  shape/profile pair: query count, rows read, rows returned, transferred bytes,
+  shared buffers, and normalized p50, p95, and p99. A subset such as only
+  rows/buffers/p95 is invalid.
+
+The 32-member Admin equality contract remains distinct from TASK-551-05-L02's
+37-member plan registry; this handoff neither adds an Admin variant nor consumes
+one of its five preserved non-Admin members. The aggregate receipt may honestly
+budget a scan proportional to the 100,000-row authorized fixture, but it cannot
+use “one result row” as a bounded-work claim. Any missing receipt, stale handoff,
+unexpected growing-table scan, or failed numeric ceiling blocks L02 and returns
+to the evidence owner for a contract amendment; this leaf neither adds a
 speculative index nor silently removes a metric/facet.
 
 Clients cache the row page, fixed global summary and each facet page under
@@ -746,9 +852,11 @@ async function updateUserRoles(command: UserRoleCommand, tx: Tx): Promise<UserRo
 Implement the same projection/keyset shape for entries, posts, users, forms,
 form submissions, media, reservations, booking resources/services/blackouts,
 and the two exact parent-capped booking collections above. Every SQL helper
-name, projection, predicate/order, output bound and normalized rendered byte
-string equals its L01 planned-shape row; the 32-member set is exact, so inline
-or merged anonymous statements fail. Keep
+name, projection, predicate/order, output bound and rendered byte string equals
+its L01 planned-shape row. Once the 32 builders exist, their rendered SQL must
+also pass the L02 fixed-placeholder, canonical-template, and digest comparison
+defined above before production/static behavior tests run; the 32-member set is
+exact, so inline or merged anonymous statements fail. Keep
 `bookingService.ts` as a compatibility
 facade after extracting read/mutation/schedule modules; all four files must be
 under 1,000 physical lines. Route code validates and maps known domain errors;
@@ -824,12 +932,15 @@ components, while cache identity and mutation state remain in their page owner.
   status/type/access/date/timezone/role/folder/tag case in the global scope and
   prove the corresponding fixed field changes by exactly one.
 - The performance suite enumerates exactly the 32 planned page/list/fixed-
-  summary/facet fingerprints. Each resolves to a reviewed TASK-551-01 numeric
-  small/large budget and TASK-551-05-L02 receipt; a missing/placeholder receipt
-  or production/static shape-byte mismatch fails before execution. Assertions
-  distinguish rows read from the one
-  aggregate row returned and apply the checked-in rows/buffers/normalized-p95
-  ceilings to each statement independently.
+  summary/facet fingerprints. Before execution, each must resolve to its
+  reviewed, canonical-digest-current and context/calibration-valid L02
+  small/large `TASK551_DATABASE_FREEZE_RECEIPT` handoff, while each landed SQL
+  string must exactly match its L02 canonical template/digest through the fixed
+  placeholder mapping. A missing/placeholder receipt or any byte mismatch fails
+  before execution. Assertions independently enforce query count, rows read,
+  rows returned, transferred bytes, shared buffers, and normalized p50/p95/p99
+  for every statement and profile; they do not collapse the aggregate's one
+  returned row into a rows-read assertion.
 - Pin page/post/entry global author facets, entry zero-count content types, user
   global role usage and sole-administrator identity, media global bytes/kinds/
   recursive-folder/tag facets, form and rolling-seven-day submission cards, and
@@ -884,6 +995,14 @@ components, while cache identity and mutation state remain in their page owner.
   duplicate clicks single-flight, and close/other-row/unmount/logout/permission
   transition aborts and erases payload memory. Reopen issues one new query.
   Browser/local/session/cacheBus/telemetry spies observe zero payload bytes.
+- Form export-job route/schema/client/UI tests pin the strict create/status/
+  download schemas, parent form scoping, `forms:read` plus CSRF and
+  admin-write/admin-read buckets, the exact create response
+  `{jobId,status:"queued",token,tokenExpiresAt}`, status polling that never
+  returns `tokenHash`/`artifactKey`, done-only constant-time token-guarded
+  download with TTL expiry, and zero remaining production callers of the
+  legacy synchronous export path. TASK-571's
+  `tests/unit/forms/submissionExportJob.test.ts` reruns unchanged.
 - Media route/client/utils tests pin `originalName -> title -> sanitized key
   basename -> asset` for empty, Unicode, 255-byte, nested path, traversal,
   control and bidi fixtures. List JSON and client/cache values contain the
@@ -935,6 +1054,12 @@ components, while cache identity and mutation state remain in their page owner.
   `roles:read`; an unauthorized relation facet is the declared empty page.
 - Known conflicts map through centralized route error helpers; SQL/details,
   binds, cursor payloads, session material, and PII are not logged.
+- Form export jobs remain internal `forms:read`: shared CSRF on create,
+  `admin_write` bucket on create, `admin_read` on status/download, strict
+  reject-unknown schemas, and the download token is server-verified
+  (constant-time hash, TTL) and never logged, cached, or re-issued. The
+  TASK-571 scheduler remains the sole job dispatcher; this leaf edits no
+  export-job service, scheduler, table, or migration file.
 - Admin client module caches are availability optimizations only. L04's opaque
   installation token/reset seam prevents pre-transition promises from writing
   into a later deployment/auth audience; these clients do not infer RBAC from a
@@ -942,10 +1067,11 @@ components, while cache identity and mutation state remain in their page owner.
 
 ## Validation Commands
 
-- `set -a && source .env && set +a && bun test tests/integration/routes/task551BoundedAdminLists.test.ts tests/integration/routes/bookingRoutes.test.ts tests/integration/routes/forms.test.ts tests/integration/server/task551AdminWriteConcurrency.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/task551BoundedAdminLists.test.ts tests/integration/routes/bookingRoutes.test.ts tests/integration/routes/forms.test.ts tests/integration/server/task551AdminWriteConcurrency.test.ts` (the two route files are 09-L01-owned dispatcher files; this leaf extends them only per the dual-writer handoff above)
 - `set -a && source .env && set +a && bun test tests/integration/server/route-response-headers.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/runtime/paginationCursorLifecycle.test.ts`
-- `bunx vitest run tests/vitest/admin/task551PaginatedClients.test.ts tests/vitest/admin/task551PaginatedListViews.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/bookingClient.test.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/admin/pagesClientPagination.test.ts tests/vitest/admin/detailPagesClient.test.ts tests/vitest/ui/booking-page-loading-pagination.test.tsx tests/vitest/ui/booking-page-mutations.test.tsx tests/vitest/ui/booking-page-calendar.test.tsx tests/vitest/ui/booking-tabs-interactions-wave.test.tsx tests/vitest/ui/booking-tabs-leaf.test.tsx tests/vitest/ui/booking-helpers.test.ts tests/vitest/ui/form-submissions-page.test.tsx tests/vitest/ui/media-library-loading-pagination.test.tsx tests/vitest/ui/media-library-selection-folders.test.tsx tests/vitest/ui/media-library-upload-edit.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/ui/forms-list-page-wave.test.tsx tests/vitest/ui/form-builder-page-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms-list-restyle.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui-integration/forms-submissions-restyle.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-v2-loading-cache.test.tsx tests/vitest/ui/page-editor-v2-editing-dirty-state.test.tsx tests/vitest/ui/page-editor-v2-autosave-conflicts.test.tsx tests/vitest/ui/page-editor-v2-preview-device.test.tsx tests/vitest/ui/page-editor-v2-publish-revisions.test.tsx tests/vitest/ui/page-editor-v2-sections-blocks.test.tsx tests/vitest/ui/page-editor-v2-accessibility-navigation.test.tsx tests/vitest/ui/page-editor-v2-persistence-roundtrip.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/validation/task551ListSchemas.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/forms/submissionExportJob.test.ts` (TASK-571 landed suite; rerun unchanged as the read-only receipt for the export-job adoption above)
+- `bunx vitest run tests/vitest/admin/task551PaginatedClients.test.ts tests/vitest/admin/task551PaginatedListViews.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/bookingClient.test.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/admin/pagesClientPagination.test.ts tests/vitest/admin/detailPagesClient.test.ts tests/vitest/ui/booking-page-wave.test.tsx tests/vitest/ui/booking-page-errors.test.tsx tests/vitest/ui/booking-page-schedule-crud.test.tsx tests/vitest/ui/booking-page-tabs.test.tsx tests/vitest/ui/booking-tabs-interactions-wave.test.tsx tests/vitest/ui/booking-tabs-leaf.test.tsx tests/vitest/ui/booking-helpers.test.ts tests/vitest/ui/booking-helpers-wave.test.ts tests/vitest/ui/form-submissions-page.test.tsx tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-library-load-retry-wave.test.tsx tests/vitest/ui/media-library-mutation-retry-wave.test.tsx tests/vitest/ui/media-library-page-wave.test.tsx tests/vitest/ui/media-card.test.tsx tests/vitest/ui/media-components.test.tsx tests/vitest/ui/media-details.test.tsx tests/vitest/ui/media-details-panel.test.tsx tests/vitest/ui/media-filter-panel.test.tsx tests/vitest/ui/media-folder-rail.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/ui/media-toolbar.test.tsx tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/form-builder-page-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui/use-forms-wave.test.tsx tests/vitest/ui-integration/forms-list-restyle.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui-integration/forms-submissions-restyle.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-v2-flow-loading.test.tsx tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx tests/vitest/ui/page-editor-v2-flow-columns.test.tsx tests/vitest/ui/page-editor-v2-flow-controls.test.tsx tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx tests/vitest/ui/page-editor-v2-flow-panels.test.tsx tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx tests/vitest/ui/page-editor-v2-flow-sections.test.tsx tests/vitest/ui/page-editor-v2-flow-settings.test.tsx tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/validation/task551ListSchemas.test.ts`
 - `set -a && source .env && set +a && bun test tests/perf/database-admin-list-budgets.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
@@ -957,9 +1083,10 @@ components, while cache identity and mutation state remain in their page owner.
 
 ## Documentation Updates Required
 
-No shared docs. Supply endpoint cursor/limit/error deltas and service split map
-to TASK-551-10-L02; that closure leaf owns `_docs/CMS_API.md`, ORM docs, and
-changelog 1263.
+No shared docs. Supply endpoint cursor/limit/error deltas, the form
+export-job route replacement delta, and the service split map to
+TASK-551-10-L02; that closure leaf owns `_docs/CMS_API.md`, ORM docs, and
+changelog 1310.
 
 ## Quantified Acceptance
 
@@ -971,12 +1098,13 @@ changelog 1263.
   exactly `id,name,slug,status,description,submissionAccess,updatedAt`; current
   list filters/table work without N+1 or hidden detail fallback.
 - Every representative 100k-row list request is at most 3 SQL statements and
-  every page/fixed-summary/facet statement has its own checked-in L01/L02 numeric
-  p95/row/buffer budget plus L05 sanitized-plan receipt; response size stays
-  within its fixture budget. Fixed summaries return exactly one row without
-  claiming one-row work, relation facets are bounded as declared, arbitrary
-  filters use `matchingTotal:null` plus `hasMore`, and no displayed global metric
-  changes while traversing pages.
+  every page/fixed-summary/facet statement has its own checked-in reviewed L02
+  budget/receipt for all eight fields (query count, rows read, rows returned,
+  transferred bytes, shared buffers, normalized p50/p95/p99), plus the L05
+  sanitized-plan receipt; response size stays within its fixture budget. Fixed
+  summaries return exactly one row without claiming one-row work, relation
+  facets are bounded as declared, arbitrary filters use `matchingTotal:null`
+  plus `hasMore`, and no displayed global metric changes while traversing pages.
 - Production/static identity is 32/32 after land; L05 remains exactly 37 plan
   IDs/38 cases/76 numeric scale receipts, with no prior Admin variant counted
   twice.
@@ -992,7 +1120,7 @@ changelog 1263.
   `RouteDeps` call shape, registers one cursor participant before both prod/dev
   lifecycle starts, and contains zero environment/key-loading logic.
 - Every touched/split production and test file is at most 1,000 physical lines.
-- The complete seven-client graph has no remaining array assumption,
+- The complete eight-client graph has no remaining array assumption,
   auto-fetch-all path, or first-page truncation, and its direct tests map
   one-for-one to production consumers. Revision route/schema/client/UI ownership
   begins only after TASK-551-06-L02's bounded services are complete.
@@ -1007,3 +1135,328 @@ changelog 1263.
   completions install nothing. The submission-detail route consumes the already-
   landed L03 INITIAL header seam and emits its exact private/no-store headers on
   success and mapped 4xx without editing shared HTTP transport.
+- The legacy synchronous form-submissions export route and its client method
+  have zero production callers; create/status/download job orchestration is the
+  only export path, TASK-571's export-job tests rerun unchanged, and no
+  export-job service/scheduler file is edited by this leaf.
+
+## Workflow Dispatch Envelope
+
+The canonical graph records the Task-551 edge only; header-named external
+receipts remain mandatory contract preconditions. The two 09-L01 dispatcher
+tests and the L08/TASK-571 receipt suites below are execution-only: they remain
+foreign write targets even when a literal validation command reruns them.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-03-L02",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-03"
+  },
+  "allowlist": [
+    "core/services/pages/pageReadService.ts",
+    "core/services/content/entryReadService.ts",
+    "core/services/content/postReadService.ts",
+    "core/services/admin/userReadService.ts",
+    "core/services/forms/formReadService.ts",
+    "core/services/forms/submissionReadService.ts",
+    "core/services/media/mediaReadService.ts",
+    "core/services/booking/bookingReadService.ts",
+    "core/services/booking/bookingMutationService.ts",
+    "core/services/booking/bookingScheduleService.ts",
+    "core/services/booking/bookingService.ts",
+    "core/services/admin/usersService.ts",
+    "core/services/auth/sessionService.ts",
+    "core/server/routes/index.ts",
+    "core/server/routes/pageRoutes.ts",
+    "core/server/routes/detailPageRoutes.ts",
+    "core/server/routes/contentEntryRoutes.ts",
+    "core/server/routes/postsRoutes.ts",
+    "core/server/routes/adminUsersRoutes.ts",
+    "core/server/routes/formsRoutes.ts",
+    "core/server/routes/mediaRoutes.ts",
+    "core/server/routes/bookingRoutes.ts",
+    "core/server/validation/pageSchemas.ts",
+    "core/server/validation/detailPageSchemas.ts",
+    "core/server/validation/contentSchemas.ts",
+    "core/server/validation/postSchemas.ts",
+    "core/server/validation/adminUserSchemas.ts",
+    "core/server/validation/formSchemas.ts",
+    "core/server/validation/mediaSchemas.ts",
+    "core/server/validation/bookingSchemas.ts",
+    "core/admin/services/pagesClient.ts",
+    "core/admin/services/detailPagesClient.ts",
+    "core/admin/services/entriesClient.ts",
+    "core/admin/services/postsClient.ts",
+    "core/admin/services/adminUsersClient.ts",
+    "core/admin/services/formsClient.ts",
+    "core/admin/services/mediaClient.ts",
+    "core/admin/services/bookingClient.ts",
+    "core/admin/ui/pages/PageListPage.tsx",
+    "core/admin/ui/pages/PageRevisionDrawer.tsx",
+    "core/admin/ui/pages/PageTable.tsx",
+    "core/admin/ui/pages/editor/PageEditorRegistryFields.tsx",
+    "core/admin/ui/pages/editorControls/MediaUrlControl.tsx",
+    "core/admin/ui/content-types/DetailTemplateEditorPage.tsx",
+    "core/admin/ui/content-types/DetailTemplateInspector.tsx",
+    "core/admin/ui/content-types/DetailTemplateRevisionPanel.tsx",
+    "core/admin/ui/entries/EntryList.tsx",
+    "core/admin/ui/entries/EntryGrid.tsx",
+    "core/admin/ui/entries/EntryTable.tsx",
+    "core/admin/ui/entries/FieldRenderer.tsx",
+    "core/admin/ui/posts/PostsListPage.tsx",
+    "core/admin/ui/posts/PostsTable.tsx",
+    "core/admin/ui/posts/editor/PostEditorCanvas.tsx",
+    "core/admin/ui/posts/editor/PostEditorMediaControls.tsx",
+    "core/admin/ui/users/UsersRolesPage.tsx",
+    "core/admin/ui/users/UsersRolesContent.tsx",
+    "core/admin/ui/forms/FormListPage.tsx",
+    "core/admin/ui/forms/FormTable.tsx",
+    "core/admin/ui/forms/FormSubmissionsPage.tsx",
+    "core/admin/ui/forms/hooks/useForms.ts",
+    "core/admin/ui/media/MediaLibraryPage.tsx",
+    "core/admin/ui/media/MediaLibraryFolderState.ts",
+    "core/admin/ui/media/MediaLibraryResults.tsx",
+    "core/admin/ui/media/MediaPicker.tsx",
+    "core/admin/ui/media/utils.ts",
+    "core/admin/ui/booking/BookingPage.tsx",
+    "core/admin/ui/booking/BookingOverviewPanel.tsx",
+    "core/admin/ui/booking/bookingHelpers.ts",
+    "core/admin/ui/booking/bookingTypes.ts",
+    "core/admin/ui/booking/components/AvailabilityTab.tsx",
+    "core/admin/ui/booking/components/ReservationsTab.tsx",
+    "core/admin/ui/booking/components/ResourcesTab.tsx",
+    "core/admin/ui/booking/components/ServicesTab.tsx",
+    "core/admin/ui/booking/components/SlotPreviewTab.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx",
+    "core/admin/ui/custom-screens/CustomScreenEntriesTable.tsx",
+    "core/admin/ui/custom-screens/customScreenListModel.ts",
+    "core/admin/ui/custom-screens/customScreenPreviewData.ts",
+    "core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts",
+    "core/admin/ui/custom-screens/hooks/useScreenRelatedEntries.ts",
+    "core/admin/ui/custom-screens/ListViewCanvas.tsx",
+    "core/admin/ui/menus/MenuDesignEditor.tsx",
+    "core/admin/ui/menus/MenuDesignEditorCanvas.tsx",
+    "core/admin/ui/menus/MenuDesignEditorControls.tsx",
+    "core/admin/ui/menus/MenuDesignEditorBarPanel.tsx",
+    "core/admin/ui/menus/MenuDesignEditorBrandNavControls.tsx",
+    "core/admin/ui/menus/MenuDesignEditorBlockPanel.tsx",
+    "core/admin/ui/menus/MenuDesignEditorBlockFields.tsx",
+    "core/admin/ui/menus/MenuEditorPage.tsx",
+    "core/admin/ui/menus/MenuEditorWorkspace.tsx",
+    "core/admin/ui/menus/MenuItemDrawer.tsx",
+    "core/admin/ui/menus/MenuItemForm.tsx",
+    "core/admin/ui/site/SiteSettingsPage.tsx",
+    "core/admin/ui/themes/ThemeEditorPage.tsx",
+    "core/admin/utils/adminPrefetch.ts",
+    "core/admin/utils/adminPrefetchCustomScreens.ts",
+    "tests/integration/routes/task551BoundedAdminLists.test.ts",
+    "tests/integration/server/task551AdminWriteConcurrency.test.ts",
+    "tests/vitest/admin/task551PaginatedClients.test.ts",
+    "tests/vitest/admin/task551PaginatedListViews.test.tsx",
+    "tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx",
+    "tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx",
+    "tests/vitest/admin/formsClient.test.ts",
+    "tests/vitest/admin/bookingClient.test.ts",
+    "tests/vitest/admin/mediaClient.test.ts",
+    "tests/vitest/admin/mediaUtils.test.ts",
+    "tests/vitest/admin/pagesClient.test.ts",
+    "tests/vitest/admin/pagesClientPagination.test.ts",
+    "tests/vitest/admin/detailPagesClient.test.ts",
+    "tests/vitest/ui/page-revision-drawer.test.tsx",
+    "tests/vitest/ui/pageEditorV2Fixtures.tsx",
+    "tests/vitest/ui/pageEditorV2FlowHarness.tsx",
+    "tests/vitest/ui/pageEditorV2Helpers.tsx",
+    "tests/vitest/ui/pageEditorV2Interactions.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-columns.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-controls.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-loading.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-panels.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-sections.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-settings.test.tsx",
+    "tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx",
+    "tests/vitest/ui/detail-template-editor.test.tsx",
+    "tests/vitest/ui/bookingPageFixtures.tsx",
+    "tests/vitest/ui/bookingPageFixtureState.tsx",
+    "tests/vitest/ui/bookingPageFixtureMocks.tsx",
+    "tests/vitest/ui/bookingPageFixtureHarness.tsx",
+    "tests/vitest/ui/booking-page-wave.test.tsx",
+    "tests/vitest/ui/booking-page-errors.test.tsx",
+    "tests/vitest/ui/booking-page-schedule-crud.test.tsx",
+    "tests/vitest/ui/booking-page-tabs.test.tsx",
+    "tests/vitest/ui/booking-tabs-interactions-wave.test.tsx",
+    "tests/vitest/ui/booking-tabs-leaf.test.tsx",
+    "tests/vitest/ui/booking-helpers.test.ts",
+    "tests/vitest/ui/booking-helpers-wave.test.ts",
+    "tests/vitest/ui/form-submissions-page.test.tsx",
+    "tests/vitest/ui/media-library.test.tsx",
+    "tests/vitest/ui/mediaLibraryTestUtils.tsx",
+    "tests/vitest/ui/media-library-load-retry-wave.test.tsx",
+    "tests/vitest/ui/media-library-mutation-retry-wave.test.tsx",
+    "tests/vitest/ui/media-library-page-wave.test.tsx",
+    "tests/vitest/ui/media-card.test.tsx",
+    "tests/vitest/ui/media-components.test.tsx",
+    "tests/vitest/ui/media-details.test.tsx",
+    "tests/vitest/ui/media-details-panel.test.tsx",
+    "tests/vitest/ui/media-filter-panel.test.tsx",
+    "tests/vitest/ui/media-folder-rail.test.tsx",
+    "tests/vitest/ui/media-picker.test.tsx",
+    "tests/vitest/ui/media-toolbar.test.tsx",
+    "tests/vitest/ui/forms-pages-wave.test.tsx",
+    "tests/vitest/ui/formsPagesWaveFixtures.tsx",
+    "tests/vitest/ui/form-builder-page-wave.test.tsx",
+    "tests/vitest/ui/forms-component-wave.test.tsx",
+    "tests/vitest/ui/use-forms-wave.test.tsx",
+    "tests/vitest/ui-integration/forms-list-restyle.test.tsx",
+    "tests/vitest/ui-integration/forms.test.tsx",
+    "tests/vitest/ui-integration/forms-submissions-restyle.test.tsx",
+    "tests/vitest/validation/task551ListSchemas.test.ts",
+    "tests/perf/database-admin-list-budgets.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/admin/services/cachePolicy.ts",
+    "core/admin/utils/adminCacheAuthority.ts",
+    "core/server/router.ts",
+    "core/server/httpServer.ts",
+    "core/services/forms/submissionExportJob.ts",
+    "core/server/jobs/submissionExportScheduler.ts",
+    "core/services/posts/postMetadataContract.ts",
+    "core/services/content/entryService.ts",
+    "core/server/publicSite.tsx",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "tests/integration/routes/bookingRoutes.test.ts",
+    "tests/integration/routes/forms.test.ts",
+    "tests/integration/server/route-response-headers.test.ts",
+    "tests/integration/runtime/paginationCursorLifecycle.test.ts",
+    "tests/unit/forms/submissionExportJob.test.ts",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-09-L04:initial"],
+  "commands": [
+    {
+      "id": "bounded-admin-list-bun-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/routes/task551BoundedAdminLists.test.ts", "tests/integration/routes/bookingRoutes.test.ts", "tests/integration/routes/forms.test.ts", "tests/integration/server/task551AdminWriteConcurrency.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/routes/task551BoundedAdminLists.test.ts", "tests/integration/routes/bookingRoutes.test.ts", "tests/integration/routes/forms.test.ts", "tests/integration/server/task551AdminWriteConcurrency.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "route-response-header-receipt",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/route-response-headers.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/route-response-headers.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "pagination-cursor-lifecycle-receipt",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/paginationCursorLifecycle.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/runtime/paginationCursorLifecycle.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "submission-export-job-receipt",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/forms/submissionExportJob.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/forms/submissionExportJob.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "admin-pagination-vitest",
+      "lane": "vitest",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedListViews.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx", "tests/vitest/admin/formsClient.test.ts", "tests/vitest/admin/bookingClient.test.ts", "tests/vitest/admin/mediaClient.test.ts", "tests/vitest/admin/mediaUtils.test.ts", "tests/vitest/admin/pagesClient.test.ts", "tests/vitest/admin/pagesClientPagination.test.ts", "tests/vitest/admin/detailPagesClient.test.ts", "tests/vitest/ui/booking-page-wave.test.tsx", "tests/vitest/ui/booking-page-errors.test.tsx", "tests/vitest/ui/booking-page-schedule-crud.test.tsx", "tests/vitest/ui/booking-page-tabs.test.tsx", "tests/vitest/ui/booking-tabs-interactions-wave.test.tsx", "tests/vitest/ui/booking-tabs-leaf.test.tsx", "tests/vitest/ui/booking-helpers.test.ts", "tests/vitest/ui/booking-helpers-wave.test.ts", "tests/vitest/ui/form-submissions-page.test.tsx", "tests/vitest/ui/media-library.test.tsx", "tests/vitest/ui/media-library-load-retry-wave.test.tsx", "tests/vitest/ui/media-library-mutation-retry-wave.test.tsx", "tests/vitest/ui/media-library-page-wave.test.tsx", "tests/vitest/ui/media-card.test.tsx", "tests/vitest/ui/media-components.test.tsx", "tests/vitest/ui/media-details.test.tsx", "tests/vitest/ui/media-details-panel.test.tsx", "tests/vitest/ui/media-filter-panel.test.tsx", "tests/vitest/ui/media-folder-rail.test.tsx", "tests/vitest/ui/media-picker.test.tsx", "tests/vitest/ui/media-toolbar.test.tsx", "tests/vitest/ui/forms-pages-wave.test.tsx", "tests/vitest/ui/form-builder-page-wave.test.tsx", "tests/vitest/ui/forms-component-wave.test.tsx", "tests/vitest/ui/use-forms-wave.test.tsx", "tests/vitest/ui-integration/forms-list-restyle.test.tsx", "tests/vitest/ui-integration/forms.test.tsx", "tests/vitest/ui-integration/forms-submissions-restyle.test.tsx", "tests/vitest/ui/page-revision-drawer.test.tsx", "tests/vitest/ui/page-editor-v2-flow-loading.test.tsx", "tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx", "tests/vitest/ui/page-editor-v2-flow-columns.test.tsx", "tests/vitest/ui/page-editor-v2-flow-controls.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx", "tests/vitest/ui/page-editor-v2-flow-panels.test.tsx", "tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx", "tests/vitest/ui/page-editor-v2-flow-sections.test.tsx", "tests/vitest/ui/page-editor-v2-flow-settings.test.tsx", "tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx", "tests/vitest/ui/detail-template-editor.test.tsx", "tests/vitest/validation/task551ListSchemas.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedListViews.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx", "tests/vitest/admin/formsClient.test.ts", "tests/vitest/admin/bookingClient.test.ts", "tests/vitest/admin/mediaClient.test.ts", "tests/vitest/admin/mediaUtils.test.ts", "tests/vitest/admin/pagesClient.test.ts", "tests/vitest/admin/pagesClientPagination.test.ts", "tests/vitest/admin/detailPagesClient.test.ts", "tests/vitest/ui/booking-page-wave.test.tsx", "tests/vitest/ui/booking-page-errors.test.tsx", "tests/vitest/ui/booking-page-schedule-crud.test.tsx", "tests/vitest/ui/booking-page-tabs.test.tsx", "tests/vitest/ui/booking-tabs-interactions-wave.test.tsx", "tests/vitest/ui/booking-tabs-leaf.test.tsx", "tests/vitest/ui/booking-helpers.test.ts", "tests/vitest/ui/booking-helpers-wave.test.ts", "tests/vitest/ui/form-submissions-page.test.tsx", "tests/vitest/ui/media-library.test.tsx", "tests/vitest/ui/media-library-load-retry-wave.test.tsx", "tests/vitest/ui/media-library-mutation-retry-wave.test.tsx", "tests/vitest/ui/media-library-page-wave.test.tsx", "tests/vitest/ui/media-card.test.tsx", "tests/vitest/ui/media-components.test.tsx", "tests/vitest/ui/media-details.test.tsx", "tests/vitest/ui/media-details-panel.test.tsx", "tests/vitest/ui/media-filter-panel.test.tsx", "tests/vitest/ui/media-folder-rail.test.tsx", "tests/vitest/ui/media-picker.test.tsx", "tests/vitest/ui/media-toolbar.test.tsx", "tests/vitest/ui/forms-pages-wave.test.tsx", "tests/vitest/ui/form-builder-page-wave.test.tsx", "tests/vitest/ui/forms-component-wave.test.tsx", "tests/vitest/ui/use-forms-wave.test.tsx", "tests/vitest/ui-integration/forms-list-restyle.test.tsx", "tests/vitest/ui-integration/forms.test.tsx", "tests/vitest/ui-integration/forms-submissions-restyle.test.tsx", "tests/vitest/ui/page-revision-drawer.test.tsx", "tests/vitest/ui/page-editor-v2-flow-loading.test.tsx", "tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx", "tests/vitest/ui/page-editor-v2-flow-columns.test.tsx", "tests/vitest/ui/page-editor-v2-flow-controls.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx", "tests/vitest/ui/page-editor-v2-flow-panels.test.tsx", "tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx", "tests/vitest/ui/page-editor-v2-flow-sections.test.tsx", "tests/vitest/ui/page-editor-v2-flow-settings.test.tsx", "tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx", "tests/vitest/ui/detail-template-editor.test.tsx", "tests/vitest/validation/task551ListSchemas.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "admin-list-performance-test",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/perf/database-admin-list-budgets.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/perf/database-admin-list-budgets.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "coderso-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "performance-gate",
+      "lane": "tooling",
+      "argv": ["bun", "run", "gates:coderso:perf"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "security-scan",
+      "lane": "tooling",
+      "argv": ["bun", "run", "scan:security"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "admin-list-playwright-smoke",
+      "lane": "runtime-smoke",
+      "argv": ["playwright-cli", "-s=wf55103l02"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-09-L04:initial"],
+      "commandIds": ["bounded-admin-list-bun-tests", "route-response-header-receipt", "pagination-cursor-lifecycle-receipt", "submission-export-job-receipt", "admin-pagination-vitest", "admin-list-performance-test", "core-lint-types", "core-lint", "coderso-gate", "performance-gate", "security-scan", "admin-list-playwright-smoke"]
+    }
+  ]
+}
+```

@@ -177,13 +177,17 @@ export const TASK551_RUNNER_DIGEST_SOURCE_PATHS = [
   "scripts/task-551-database-baseline.ts",
   "scripts/task551DatabaseBaseline/catalog.ts",
   "scripts/task551DatabaseBaseline/digestContract.ts",
-  "scripts/task551DatabaseBaseline/requiredSanitizedCatalogProjection.ts",
   "scripts/task551DatabaseBaseline/fixtureTarget.ts",
   "scripts/task551DatabaseBaseline/fixtureValidation.ts",
+  "scripts/task551DatabaseBaseline/freezeCandidateGenerationStore.ts",
   "scripts/task551DatabaseBaseline/metrics.ts",
   "scripts/task551DatabaseBaseline/postgresTransport.ts",
   "scripts/task551DatabaseBaseline/receiptContract.ts",
+  "scripts/task551DatabaseBaseline/requiredSanitizedCatalogProjection.ts",
+  "scripts/task551DatabaseBaseline/reviewedPairOwnerHost.ts",
   "scripts/task551DatabaseBaseline/reviewedPairPersistence.ts",
+  "scripts/task551DatabaseBaseline/reviewedPairReceiptSource.ts",
+  "scripts/task551DatabaseBaseline/reviewedPairTransition.ts",
   "scripts/task551DatabaseBaseline/runner.ts",
   "scripts/task551DatabaseBaseline/runtimeProvenance.ts",
   "tests/perf/fixtures/task489SolutionKitRunPredecessor.ts",
@@ -769,9 +773,19 @@ export function computeTask551ManifestScenarioResultDigest(
 }
 export {
   computeTask551ReviewableReceiptDigest,
+  requireExactTask551L02ActiveStateTransitionReceiptV2,
+  requireExactTask551L02ReviewedStateAttestationV2,
+  TASK551_L02_ACTIVE_STATE_TRANSITION_RECEIPT_SCHEMA_V2,
+  TASK551_L02_ACTIVE_GENERATION_ARCHIVE_SHA256_V2,
+  TASK551_L02_REVIEWED_STATE_ATTESTATION_SCHEMA_V2,
   buildTask551ReviewedCandidateTransitionInput,
   assertExactTask551ReviewedCandidateTransitionInput,
   assertExactTask551ReviewedCandidateTransition,
   buildExactTask551ReviewedResultByChangingOnlyReviewState,
+  parseTask551StrictJson,
   parseCanonicalTask551BaselineCheckStdout,
+} from "./receiptContract";
+export type {
+  Task551L02ActiveStateTransitionReceiptV2,
+  Task551L02ReviewedStateAttestationV2,
 } from "./receiptContract";

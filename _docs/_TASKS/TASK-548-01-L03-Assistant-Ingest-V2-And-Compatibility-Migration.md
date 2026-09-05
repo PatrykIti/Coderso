@@ -7,7 +7,7 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-548-01-L02; the complete terminal TASK-551 family
 (parent `✅ Done`, every physical descendant terminal, board/changelog
-synchronized, changelog 1263 present and valid) with the exact serialized
+synchronized, changelog 1310 present and valid) with the exact serialized
 handoff exports present: TASK-551-02-L02's dedicated-session API
 (`withDedicatedDatabaseSession`,
 `withDedicatedDatabaseAdvisoryLock`,

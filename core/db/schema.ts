@@ -24,6 +24,7 @@
 export * from "./tables/analytics";
 export * from "./tables/assistant";
 export * from "./tables/bookings";
+export * from "./tables/cacheInvalidationOutbox";
 export * from "./tables/commerce";
 export * from "./tables/content";
 export * from "./tables/customScreens";
@@ -39,5 +40,7 @@ export * from "./tables/pages";
 export * from "./tables/platform";
 export * from "./tables/posts";
 export * from "./tables/seo";
+export * from "./tables/solutionKitRollbackAuthority";
+export * from "./tables/task551MigrationOperations";
 export * from "./tables/theming";
 export * from "./tables/widgets";

@@ -8,7 +8,7 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-551-01 initial exact-set receipt and TASK-551-01-L02
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
+**Changelog:** 1310 (pinned; TASK-551-10-L02 closure only)
 
 ---
 
@@ -213,3 +213,79 @@ No docs in this leaf; hand the exact env table to TASK-551-02-L02/10-L02.
 - No parsed/config-error/log/snapshot value contains either database URL. Every
   configuration that enables a distinct maintenance pool budgets all of its
   per-process connections before startup.
+
+## Workflow Dispatch Envelope
+
+The finite `forbiddenPaths` list captures named current ownership conflicts.
+The closed `allowlist` rejects every omitted path, including the broad foreign
+categories described in the file-ownership contract.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-02-L01",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-02"
+  },
+  "allowlist": [
+    "core/db/databaseConfig.ts",
+    "tests/vitest/db/databaseConfig.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/db/client.ts",
+    "core/db/databaseLifecycle.ts",
+    "core/db/databaseApplicationIdentity.ts",
+    "core/db/queryFingerprintRegistry.ts",
+    "core/db/queryTelemetry.ts",
+    "core/server/runtimeLifecycle.ts",
+    "core/server/runtimeEntrypoint.ts",
+    "core/server/prod.ts",
+    "core/server/dev.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json"
+  ],
+  "dependencies": ["TASK-551-01-L02:single"],
+  "commands": [
+    {
+      "id": "database-config-test",
+      "lane": "vitest",
+      "environmentProfile": "none",
+      "argv": ["bunx", "vitest", "run", "tests/vitest/db/databaseConfig.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/db/databaseConfig.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["git", "diff", "--check"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-01-L02:single"],
+      "commandIds": ["database-config-test", "core-lint-types", "core-lint", "diff-check"]
+    }
+  ]
+}
+```

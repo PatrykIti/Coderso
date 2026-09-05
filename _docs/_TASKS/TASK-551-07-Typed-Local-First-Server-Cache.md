@@ -8,7 +8,7 @@
 **Dependencies:** TASK-551-06 complete; consumes TASK-551-01/02 frozen budgets
 and telemetry/lifecycle seams
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -207,4 +207,4 @@ wc -l core/services/cache/*.ts tests/vitest/cache/*.test.ts
 
 ## Documentation Updates Required
 
-Documentation and changelog 1263 are handed to TASK-551-10-L02.
+Documentation and changelog 1310 are handed to TASK-551-10-L02.

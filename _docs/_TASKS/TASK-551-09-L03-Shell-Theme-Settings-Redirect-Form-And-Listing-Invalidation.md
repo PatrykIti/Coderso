@@ -9,7 +9,7 @@
 **Dependencies:** TASK-551-09-L02; TASK-551-03 query/batch and TASK-551-06
 detail-page revision handoffs terminal; parent external dispatch gate
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -373,3 +373,133 @@ wc -l core/services/{menus/menuService,pages/pageTemplateLibraryService,pages/pu
 
 Split any touched production/test file that would exceed 1,000 lines by cohesive
 ownership before adding behavior. Documentation remains 10-L02 ownership.
+
+## Workflow Dispatch Envelope
+
+The memory lane relies on the documented default backend. The Redis lane is
+bound only through the sidecar's private DB/Redis profile with a derived
+namespace; neither command accepts dotenv or caller-selected environment input.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-09-L03",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-09"
+  },
+  "artifactPolicy": "none",
+  "allowlist": [
+    "core/services/menus/menuService.ts",
+    "core/services/pages/pageTemplateLibraryService.ts",
+    "core/services/pages/publicSiteShell.ts",
+    "core/services/themes/themeProfileService.ts",
+    "core/services/settings/settingsService.ts",
+    "core/services/redirects/redirectService.ts",
+    "core/services/redirects/redirectCachePolicy.ts",
+    "core/services/forms/formsService.ts",
+    "core/services/content/listingQueriesService.ts",
+    "core/services/content/listingTemplatesService.ts",
+    "core/services/content/detailPageDocumentService.ts",
+    "core/services/tools/importExportService.ts",
+    "core/services/kits/fullSiteInstall/aggregateAdapters.ts",
+    "core/services/kits/fullSiteInstall/lifecycleAdapters.ts",
+    "core/services/kits/fullSiteInstall/executePreparedSaga.ts",
+    "core/services/kits/fullSiteInstall/compensation.ts",
+    "core/services/kits/fullSiteInstall/execute.ts",
+    "core/services/kits/fullSiteInstall/rollback.ts",
+    "core/services/cache/siteDependencyInvalidation.ts",
+    "tests/vitest/cache/site-dependency-invalidation.test.ts",
+    "tests/vitest/cache/redirect-cache-policy.test.ts",
+    "tests/integration/runtime/site-shell-cache-invalidation.test.ts",
+    "tests/integration/runtime/site-routing-cache-invalidation.test.ts",
+    "tests/integration/runtime/site-form-listing-cache-invalidation.test.ts",
+    "tests/integration/kits/fullSiteInstallInvalidation.test.ts",
+    "tests/integration/runtime/site-shell-runtime.test.ts",
+    "tests/integration/runtime/detail-page-preview-cache.test.ts",
+    "tests/unit/menus/menuService.test.ts",
+    "tests/unit/pages/pageTemplateLibraryService.test.ts",
+    "tests/unit/pages/publicSiteShell.test.ts",
+    "tests/unit/themes/themeProfileService.test.ts",
+    "tests/unit/settings/settingsService.test.ts",
+    "tests/unit/redirects/redirectService.test.ts",
+    "tests/unit/forms/formsService.test.ts",
+    "tests/unit/content/listingQueriesService.test.ts",
+    "tests/unit/content/listingTemplatesService.test.ts",
+    "tests/unit/tools/importExport.test.ts",
+    "tests/integration/routes/importExport.test.ts",
+    "tests/unit/content/detailPageDocumentService.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/services/backups/backupService.ts",
+    "core/server/publicSite.tsx",
+    "core/site/cache/siteCache.ts",
+    "core/services/pages/pageService.ts",
+    "core/services/content/entryService.ts",
+    "core/services/content/postsService.ts",
+    "core/services/seo/seoService.ts",
+    "core/services/forms/formActionsService.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json"
+  ],
+  "dependencies": ["TASK-551-09-L02:single"],
+  "commands": [
+    {
+      "id": "site-dependency-vitest",
+      "lane": "vitest",
+      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/cache/site-dependency-invalidation.test.ts", "tests/vitest/cache/redirect-cache-policy.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/cache/site-dependency-invalidation.test.ts", "tests/vitest/cache/redirect-cache-policy.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "site-dependency-memory-db-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/site-shell-cache-invalidation.test.ts", "tests/integration/runtime/site-routing-cache-invalidation.test.ts", "tests/integration/runtime/site-form-listing-cache-invalidation.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/runtime/site-shell-runtime.test.ts", "tests/integration/runtime/detail-page-preview-cache.test.ts", "tests/integration/kits/fullSiteInstallInvalidation.test.ts", "tests/unit/menus/menuService.test.ts", "tests/unit/pages/pageTemplateLibraryService.test.ts", "tests/unit/pages/publicSiteShell.test.ts", "tests/unit/themes/themeProfileService.test.ts", "tests/unit/settings/settingsService.test.ts", "tests/unit/redirects/redirectService.test.ts", "tests/unit/forms/formsService.test.ts", "tests/unit/content/listingQueriesService.test.ts", "tests/unit/content/listingTemplatesService.test.ts", "tests/unit/tools/importExport.test.ts", "tests/integration/routes/importExport.test.ts", "tests/unit/content/detailPageDocumentService.test.ts"],
+      "environmentProfile": "task551-db-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/runtime/site-shell-cache-invalidation.test.ts", "tests/integration/runtime/site-routing-cache-invalidation.test.ts", "tests/integration/runtime/site-form-listing-cache-invalidation.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/runtime/site-shell-runtime.test.ts", "tests/integration/runtime/detail-page-preview-cache.test.ts", "tests/integration/kits/fullSiteInstallInvalidation.test.ts", "tests/unit/menus/menuService.test.ts", "tests/unit/pages/pageTemplateLibraryService.test.ts", "tests/unit/pages/publicSiteShell.test.ts", "tests/unit/themes/themeProfileService.test.ts", "tests/unit/settings/settingsService.test.ts", "tests/unit/redirects/redirectService.test.ts", "tests/unit/forms/formsService.test.ts", "tests/unit/content/listingQueriesService.test.ts", "tests/unit/content/listingTemplatesService.test.ts", "tests/unit/tools/importExport.test.ts", "tests/integration/routes/importExport.test.ts", "tests/unit/content/detailPageDocumentService.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "site-dependency-redis-db-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/site-shell-cache-invalidation.test.ts", "tests/integration/runtime/site-routing-cache-invalidation.test.ts", "tests/integration/runtime/site-form-listing-cache-invalidation.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/kits/fullSiteInstallInvalidation.test.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/runtime/site-shell-cache-invalidation.test.ts", "tests/integration/runtime/site-routing-cache-invalidation.test.ts", "tests/integration/runtime/site-form-listing-cache-invalidation.test.ts", "tests/integration/runtime/public-site-cache-eligibility.test.ts", "tests/integration/kits/fullSiteInstallInvalidation.test.ts"], "minimum": 1 }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "argv": ["wc", "-l", "core/services/menus/menuService.ts", "core/services/pages/pageTemplateLibraryService.ts", "core/services/pages/publicSiteShell.ts", "core/services/themes/themeProfileService.ts", "core/services/settings/settingsService.ts", "core/services/redirects/redirectService.ts", "core/services/redirects/redirectCachePolicy.ts", "core/services/forms/formsService.ts", "core/services/content/listingQueriesService.ts", "core/services/content/listingTemplatesService.ts", "core/services/content/detailPageDocumentService.ts", "core/services/tools/importExportService.ts", "core/services/kits/fullSiteInstall/aggregateAdapters.ts", "core/services/kits/fullSiteInstall/lifecycleAdapters.ts", "core/services/kits/fullSiteInstall/executePreparedSaga.ts", "core/services/kits/fullSiteInstall/compensation.ts", "core/services/kits/fullSiteInstall/execute.ts", "core/services/kits/fullSiteInstall/rollback.ts", "core/services/cache/siteDependencyInvalidation.ts", "tests/vitest/cache/site-dependency-invalidation.test.ts", "tests/vitest/cache/redirect-cache-policy.test.ts", "tests/integration/runtime/site-shell-cache-invalidation.test.ts", "tests/integration/runtime/site-routing-cache-invalidation.test.ts", "tests/integration/runtime/site-form-listing-cache-invalidation.test.ts", "tests/integration/kits/fullSiteInstallInvalidation.test.ts", "tests/integration/runtime/site-shell-runtime.test.ts", "tests/integration/runtime/detail-page-preview-cache.test.ts", "tests/unit/menus/menuService.test.ts", "tests/unit/pages/pageTemplateLibraryService.test.ts", "tests/unit/pages/publicSiteShell.test.ts", "tests/unit/themes/themeProfileService.test.ts", "tests/unit/settings/settingsService.test.ts", "tests/unit/redirects/redirectService.test.ts", "tests/unit/forms/formsService.test.ts", "tests/unit/content/listingQueriesService.test.ts", "tests/unit/content/listingTemplatesService.test.ts", "tests/unit/tools/importExport.test.ts", "tests/integration/routes/importExport.test.ts", "tests/unit/content/detailPageDocumentService.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-09-L02:single"],
+      "commandIds": ["site-dependency-vitest", "site-dependency-memory-db-tests", "site-dependency-redis-db-tests", "core-lint-types", "core-lint", "diff-check", "line-count"]
+    }
+  ]
+}
+```

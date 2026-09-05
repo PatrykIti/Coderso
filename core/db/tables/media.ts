@@ -4,6 +4,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -17,6 +18,12 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { users } from "./identity";
+import {
+  normalizeTask551TrigramSql,
+  SEARCH_VECTOR_SQL,
+  TRIGRAM_SOURCE_SQL,
+  tsvector,
+} from "../searchVectorDefinitions";
 
 export const mediaFolders = pgTable(
   "media_folders",
@@ -61,8 +68,31 @@ export const media = pgTable(
     credit: text("credit"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     createdBy: uuid("created_by").references(() => users.id),
+    // TASK-551-05-L01: canonical local search vectors. Stored generated, so
+    // the column is maintained by the database and every reader sees the same
+    // tsvector the GIN index holds.
+    searchVector: tsvector("search_vector").generatedAlwaysAs(sql.raw(SEARCH_VECTOR_SQL.media)),
+    searchTrigramText: text("search_trigram_text").generatedAlwaysAs(
+      normalizeTask551TrigramSql(sql.raw(TRIGRAM_SOURCE_SQL.media))
+    ),
   },
   (t) => ({
     folderIdx: index("media_folder_idx").on(t.folderId),
+    mediaSearchVectorIdx: index("media_search_vector_idx").using("gin", t.searchVector),
+    mediaSearchTrigramIdx: index("media_search_trigram_idx").using(
+      "gin",
+      t.searchTrigramText.op("gin_trgm_ops")
+    ),
+    // TASK-551-05-L01 tag containment: `tags @> :normalizedUniqueSortedTags::jsonb`
+    // resolves through this opclass only, preserving AND semantics.
+    mediaTagsGinIdx: index("media_tags_gin_idx").using("gin", t.tags.op("jsonb_path_ops")),
+    // TASK-551-05-L01 evidence-backed list traversal: the library sorts by
+    // recency and paginates on the stable (created_at DESC, id DESC) keyset.
+    mediaListCreatedIdIdx: index("media_list_created_id_idx").on(desc(t.createdAt), desc(t.id)),
+    mediaFolderListCreatedIdIdx: index("media_folder_list_created_id_idx").on(
+      t.folderId,
+      desc(t.createdAt),
+      desc(t.id)
+    ),
   })
 );

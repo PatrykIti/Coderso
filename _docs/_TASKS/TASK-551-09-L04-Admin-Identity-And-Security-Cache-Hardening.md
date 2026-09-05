@@ -9,7 +9,7 @@
 **Dependencies:** INITIAL phase after TASK-551-07-L01; FINAL phase after
 TASK-551-09-L03 plus TASK-551-03-L02/TASK-551-04-L01 adoption receipts
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -47,7 +47,6 @@ Sole writer of:
 - `core/admin/utils/storageCache.ts`;
 - `core/admin/utils/cacheBus.ts`;
 - `core/admin/utils/readThroughCache.ts`;
-- `core/admin/utils/adminPrefetch.ts`;
 - `core/admin/utils/sessionCache.ts`;
 - `core/services/settings/securitySettings.ts`;
 - `core/server/routes/settingsRoutes.ts` only for centralized
@@ -97,6 +96,10 @@ owners `pagesClient.ts`, `detailPagesClient.ts`, `entriesClient.ts`,
 `core/admin/utils/adminPaths.ts` is a read-only dependency: import its existing
 `resolveAdminBasePath(...)` and `DEFAULT_ADMIN_PATH` exports exactly; L04 neither
 owns nor changes that module and does not invent an `adminPaths` object API.
+`core/admin/utils/adminPrefetch.ts` is a read-only dependency for this leaf:
+TASK-551-03-L02 is its sole TASK-551 writer (it consumes six of the eight
+03-L02-owned clients), and L04 composes its cache-identity epoch/registration
+through `adminCacheAuthority.ts` without editing the file.
 This leaf is the sole TASK-551 writer of `cacheRefresh.test.ts`; it preserves the
 existing refresh behavior while adopting the scoped cacheBus/read-through
 contract. No read-only cross-owner test exception remains.
@@ -121,7 +124,7 @@ contract. No read-only cross-owner test exception remains.
   |---|---|
   | 03-L02 after INITIAL | pages, detail pages, entries, posts, Admin users, forms, media and booking clients; every new paginated cache/promise included |
   | 04-L01 after INITIAL | `searchClient.ts` maps/promises and `useSearchResults.ts` delayed search/history/cache work |
-  | L04 FINAL | auth/CSRF, Admin theme, analytics, assistant status, backups, commerce, content types, shortcuts/custom screens, Dashboard, import/export, listings, media folders, menus, page templates, popups, redirects, reviews, SEO, redacted/general/site settings, solution kits, user settings, widgets, prefetch and all generic storage/read-through/cacheBus utilities listed above |
+  | L04 FINAL | auth/CSRF, Admin theme, analytics, assistant status, backups, commerce, content types, shortcuts/custom screens, Dashboard, import/export, listings, media folders, menus, page templates, popups, redirects, reviews, SEO, redacted/general/site settings, solution kits, user settings, widgets, prefetch REGISTRY/semantics via `adminCacheAuthority` (not edits to `adminPrefetch.ts`, which is 03-L02-owned and read-only here), and all generic storage/read-through/cacheBus utilities listed above |
 
   `assistantClient.ts`/`customScreensCache.ts` own event/clear-only adoption;
   `importExportClient.ts` and `settingsCache.ts` own helper-backed values even
@@ -131,7 +134,10 @@ contract. No read-only cross-owner test exception remains.
   manifest and fails on a newly discovered module-level cached value, promise,
   map, read-through/storage-cache handle, or prefetch registry without exactly
   one writer and either shared authority registration or an explicit security
-  exclusion. No implicit "generic clients are safe" claim is accepted.
+  exclusion. It scans `adminPrefetch.ts`'s exports read-only (03-L02 sole-owns
+  that module; the test may assert the prefetch registry/semantics but must not
+  claim L04 edits the module). No implicit "generic clients are safe" claim is
+  accepted.
 - Preserve `AdminAuthIdentitySnapshot.userId/epoch` for existing consumers and
   add a separate `AdminCacheIdentitySnapshot` with schema version `3` containing
   normalized deployment identity plus its SHA-256 digest, crypto-random auth
@@ -572,6 +578,8 @@ bun run check:admin-boundary
 bun --cwd core lint:types
 bun --cwd core lint
 git diff --check
+# adminPrefetch.ts below is read-only for L04 (sole-owned by TASK-551-03-L02);
+# it stays in the line-count gate for verification only.
 wc -l core/admin/services/{adminAuthIdentity,adminCacheIdentity,authClient,cachePolicy}.ts \
   core/admin/services/{adminThemeClient,analyticsClient,apiClient,assistantClient,assistantStatusClient,backupsClient,commerceClient,contentTypesClient,customScreenShortcutsClient,customScreensCache,customScreensClient,dashboardClient,importExportClient,listingsClient,mediaFoldersClient,menusClient,pageTemplatesClient,popupsClient,redirectsClient,reviewsClient,seoClient,settingsCache,settingsClient,siteSettingsClient,solutionKitsClient,userSettingsClient,widgetsClient}.ts \
   core/admin/ui/contexts/AdminAuthContext.tsx \
@@ -592,4 +600,194 @@ wc -l core/admin/services/{adminAuthIdentity,adminCacheIdentity,authClient,cache
 ## Documentation Updates Required
 
 Update `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md` and security/cache docs
-only through TASK-551-10-L02; do not edit changelog 1263 here.
+only through TASK-551-10-L02; do not edit changelog 1310 here.
+
+## Workflow Dispatch Envelope
+
+The finite `forbiddenPaths` list captures named current ownership conflicts.
+The closed `allowlist` rejects every omitted path, including the broad foreign
+categories described in the file-ownership contract. The Redis command carries
+no endpoint, namespace, assignment, or override token: TASK-551-11 derives the
+private namespace under `task551-db-redis-test`.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-09-L04",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-09"
+  },
+  "allowlist": [
+    "core/admin/services/adminAuthIdentity.ts",
+    "core/admin/services/adminCacheIdentity.ts",
+    "core/admin/services/authClient.ts",
+    "core/admin/services/cachePolicy.ts",
+    "core/admin/services/adminThemeClient.ts",
+    "core/admin/services/analyticsClient.ts",
+    "core/admin/services/apiClient.ts",
+    "core/admin/services/assistantClient.ts",
+    "core/admin/services/assistantStatusClient.ts",
+    "core/admin/services/backupsClient.ts",
+    "core/admin/services/commerceClient.ts",
+    "core/admin/services/contentTypesClient.ts",
+    "core/admin/services/customScreenShortcutsClient.ts",
+    "core/admin/services/customScreensCache.ts",
+    "core/admin/services/customScreensClient.ts",
+    "core/admin/services/dashboardClient.ts",
+    "core/admin/services/importExportClient.ts",
+    "core/admin/services/listingsClient.ts",
+    "core/admin/services/mediaFoldersClient.ts",
+    "core/admin/services/menusClient.ts",
+    "core/admin/services/pageTemplatesClient.ts",
+    "core/admin/services/popupsClient.ts",
+    "core/admin/services/redirectsClient.ts",
+    "core/admin/services/reviewsClient.ts",
+    "core/admin/services/seoClient.ts",
+    "core/admin/services/settingsCache.ts",
+    "core/admin/services/settingsClient.ts",
+    "core/admin/services/siteSettingsClient.ts",
+    "core/admin/services/solutionKitsClient.ts",
+    "core/admin/services/userSettingsClient.ts",
+    "core/admin/services/widgetsClient.ts",
+    "core/admin/ui/contexts/AdminAuthContext.tsx",
+    "core/admin/utils/adminCacheAuthority.ts",
+    "core/admin/utils/storageCache.ts",
+    "core/admin/utils/cacheBus.ts",
+    "core/admin/utils/readThroughCache.ts",
+    "core/admin/utils/sessionCache.ts",
+    "core/services/settings/securitySettings.ts",
+    "core/server/routes/settingsRoutes.ts",
+    "tests/vitest/admin/storageCache.test.ts",
+    "tests/vitest/admin/cacheBusHardening.test.ts",
+    "tests/vitest/admin/readThroughCache.test.ts",
+    "tests/vitest/admin/cacheBus.test.ts",
+    "tests/vitest/admin/cacheBusCorrelation.test.ts",
+    "tests/vitest/admin/cacheRefresh.test.ts",
+    "tests/vitest/admin/support/cacheBusTestHarness.ts",
+    "tests/vitest/admin/admin-cache-identity.test.ts",
+    "tests/vitest/admin/admin-cache-authority.test.ts",
+    "tests/vitest/admin/read-through-cache-generation.test.ts",
+    "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts",
+    "tests/vitest/admin/authClient.test.ts",
+    "tests/vitest/authUi/authClient.test.ts",
+    "tests/vitest/ui/admin-auth-identity.test.tsx",
+    "tests/unit/security/securitySettings.test.ts",
+    "tests/integration/routes/securitySettings.test.ts",
+    "tests/integration/routes/settings.test.ts",
+    "tests/integration/server/security-settings-db-authority.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/admin/services/pagesClient.ts",
+    "core/admin/services/detailPagesClient.ts",
+    "core/admin/services/entriesClient.ts",
+    "core/admin/services/postsClient.ts",
+    "core/admin/services/adminUsersClient.ts",
+    "core/admin/services/formsClient.ts",
+    "core/admin/services/mediaClient.ts",
+    "core/admin/services/bookingClient.ts",
+    "core/admin/services/searchClient.ts",
+    "core/admin/ui/search/useSearchResults.ts",
+    "core/admin/utils/adminPrefetch.ts",
+    "core/server/publicSite.tsx",
+    "core/services/cache/serverCacheContracts.ts",
+    "core/services/cache/serverCacheRuntime.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json"
+  ],
+  "dependencies": ["TASK-551-07-L01:single", "TASK-551-09-L03:single"],
+  "commands": [
+    {
+      "id": "initial-authority-test",
+      "lane": "vitest",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/admin/admin-cache-authority.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/admin/admin-cache-authority.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "final-admin-cache-tests",
+      "lane": "vitest",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "memory-security-settings-tests",
+      "lane": "bun-test",
+      "environmentProfile": "task551-db-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/security/securitySettings.test.ts", "tests/integration/routes/settings.test.ts", "tests/integration/routes/securitySettings.test.ts", "tests/integration/server/security-settings-db-authority.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/unit/security/securitySettings.test.ts", "tests/integration/routes/settings.test.ts", "tests/integration/routes/securitySettings.test.ts", "tests/integration/server/security-settings-db-authority.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "redis-security-settings-tests",
+      "lane": "bun-test",
+      "environmentProfile": "task551-db-redis-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/security-settings-db-authority.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/security-settings-db-authority.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "admin-boundary-check",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "run", "check:admin-boundary"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["git", "diff", "--check"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["wc", "-l", "core/admin/services/adminAuthIdentity.ts", "core/admin/services/adminCacheIdentity.ts", "core/admin/services/authClient.ts", "core/admin/services/cachePolicy.ts", "core/admin/services/adminThemeClient.ts", "core/admin/services/analyticsClient.ts", "core/admin/services/apiClient.ts", "core/admin/services/assistantClient.ts", "core/admin/services/assistantStatusClient.ts", "core/admin/services/backupsClient.ts", "core/admin/services/commerceClient.ts", "core/admin/services/contentTypesClient.ts", "core/admin/services/customScreenShortcutsClient.ts", "core/admin/services/customScreensCache.ts", "core/admin/services/customScreensClient.ts", "core/admin/services/dashboardClient.ts", "core/admin/services/importExportClient.ts", "core/admin/services/listingsClient.ts", "core/admin/services/mediaFoldersClient.ts", "core/admin/services/menusClient.ts", "core/admin/services/pageTemplatesClient.ts", "core/admin/services/popupsClient.ts", "core/admin/services/redirectsClient.ts", "core/admin/services/reviewsClient.ts", "core/admin/services/seoClient.ts", "core/admin/services/settingsCache.ts", "core/admin/services/settingsClient.ts", "core/admin/services/siteSettingsClient.ts", "core/admin/services/solutionKitsClient.ts", "core/admin/services/userSettingsClient.ts", "core/admin/services/widgetsClient.ts", "core/admin/ui/contexts/AdminAuthContext.tsx", "core/admin/utils/adminCacheAuthority.ts", "core/admin/utils/storageCache.ts", "core/admin/utils/sessionCache.ts", "core/admin/utils/cacheBus.ts", "core/admin/utils/readThroughCache.ts", "core/admin/utils/adminPrefetch.ts", "core/server/routes/settingsRoutes.ts", "core/services/settings/securitySettings.ts", "tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-authority.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx", "tests/vitest/admin/support/cacheBusTestHarness.ts", "tests/unit/security/securitySettings.test.ts", "tests/integration/routes/settings.test.ts", "tests/integration/routes/securitySettings.test.ts", "tests/integration/server/security-settings-db-authority.test.ts"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "initial",
+      "dependsOn": ["TASK-551-07-L01:single"],
+      "commandIds": ["initial-authority-test", "core-lint-types", "core-lint"]
+    },
+    {
+      "id": "final",
+      "dependsOn": ["TASK-551-09-L03:single"],
+      "commandIds": ["final-admin-cache-tests", "memory-security-settings-tests", "redis-security-settings-tests", "admin-boundary-check", "core-lint-types", "core-lint", "diff-check", "line-count"]
+    }
+  ]
+}
+```

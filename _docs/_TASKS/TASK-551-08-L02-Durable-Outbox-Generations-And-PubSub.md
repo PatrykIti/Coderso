@@ -6,10 +6,12 @@
 **Priority:** Critical
 **Category:** Cache / Database / Reliability
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-08-L01; TASK-551-05 schema/migration and TASK-551-06
-retention/lifecycle work terminal
+**Dependencies:** TASK-551-08-L01 (itself after TASK-551-08-L03 INITIAL and
+the TASK-551-03-L02 response-header consumption receipt; parent phased land
+order); TASK-551-05 schema/migration and TASK-551-06 retention/lifecycle work
+terminal
 **Status:** ⏳ To Do
-**Changelog:** 1263 (pinned; closure only)
+**Changelog:** 1310 (pinned; closure only)
 
 ---
 
@@ -389,7 +391,14 @@ delete only owned rows; Redis cleanup uses only the test namespace.
 
 ```bash
 set -a && source .env && set +a
-bun run db:migrate
+# Provision the disposable DB in TASK-551-05-L02's stated order: generic
+# migration tooling applies only pre-TASK-551 migrations; the guarded TASK-551
+# migration is then applied exclusively through TASK-551-05-L01's one
+# rollout-forward path, because generic/startup `bun run db:migrate` is an
+# invalid TASK-551 rollout path (05-L01).
+TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped \
+  bun scripts/task-551-online-indexes.ts rollout-forward \
+  --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single
 SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-l02 \
   bun test tests/integration/server/cache-invalidation-outbox.test.ts \
   tests/integration/server/cache-invalidation-worker.test.ts \
@@ -406,3 +415,102 @@ wc -l core/services/cache/cacheInvalidation{Outbox,Worker,PubSub}.ts \
 Consume TASK-551-05's migration lock/forward-recovery evidence and record worker,
 bounded-eventual/CAP, health and outbox runbook inputs for 10-L02; do not edit
 shared docs/changelog here.
+
+## Workflow Dispatch Envelope
+
+The guarded rollout is a prerequisite only. Its offline-single admission proof
+is supplied by the owner-only migration capability, never by argv or a command
+override. The DB-and-Redis test profile independently derives the namespace
+from this task occurrence and run nonce; neither command can read `.env` or
+accept a DB/Redis endpoint. The brace-expanded line-count gate is represented by
+the same finite owned path set.
+
+```json
+{
+  "schema": "coderso.task551.workflow-dispatch@v1",
+  "taskId": "TASK-551-08-L02",
+  "parent": {
+    "taskId": "TASK-551",
+    "subtaskId": "TASK-551-08"
+  },
+  "allowlist": [
+    "core/services/cache/cacheInvalidationOutbox.ts",
+    "core/services/cache/cacheInvalidationWorker.ts",
+    "core/services/cache/cacheInvalidationPubSub.ts",
+    "tests/integration/server/cache-invalidation-outbox.test.ts",
+    "tests/integration/server/cache-invalidation-worker.test.ts",
+    "tests/integration/server/cache-invalidation-pubsub.test.ts"
+  ],
+  "forbiddenPaths": [
+    "core/services/cache/redisServerCacheStore.ts",
+    "core/services/cache/redisServerCacheHealth.ts",
+    "core/services/cache/redisCacheLease.ts",
+    "core/services/cache/serverCache.ts",
+    "core/site/cache/siteCache.ts",
+    "core/db/schema.ts",
+    "core/db/migrations/meta/_journal.json",
+    "scripts/task-551-online-indexes.ts",
+    "tests/integration/server/redis-server-cache-store.test.ts",
+    "tests/integration/server/redis-distributed-lease.test.ts",
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    "_docs/_workflows/task-551-implement.mjs"
+  ],
+  "dependencies": ["TASK-551-08-L01:single"],
+  "commands": [
+    {
+      "id": "migration-rollout-prerequisite",
+      "lane": "cli",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "rollout-forward", "--receipt", ".tmp/task551-migration-receipt.json", "--admission-mode", "offline-single"],
+      "environmentProfile": "task551-db-migration-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "outbox-redis-tests",
+      "lane": "bun-test",
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/cache-invalidation-outbox.test.ts", "tests/integration/server/cache-invalidation-worker.test.ts", "tests/integration/server/cache-invalidation-pubsub.test.ts"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/integration/server/cache-invalidation-outbox.test.ts", "tests/integration/server/cache-invalidation-worker.test.ts", "tests/integration/server/cache-invalidation-pubsub.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "core-lint-types",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint:types"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "core-lint",
+      "lane": "tooling",
+      "argv": ["bun", "--cwd", "core", "lint"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "diff-check",
+      "lane": "tooling",
+      "argv": ["git", "diff", "--check"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "line-count",
+      "lane": "tooling",
+      "argv": ["wc", "-l", "core/services/cache/cacheInvalidationOutbox.ts", "core/services/cache/cacheInvalidationWorker.ts", "core/services/cache/cacheInvalidationPubSub.ts", "tests/integration/server/cache-invalidation-outbox.test.ts", "tests/integration/server/cache-invalidation-worker.test.ts", "tests/integration/server/cache-invalidation-pubsub.test.ts"],
+      "environmentProfile": "none",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    }
+  ],
+  "occurrences": [
+    {
+      "id": "single",
+      "dependsOn": ["TASK-551-08-L01:single"],
+      "commandIds": ["migration-rollout-prerequisite", "outbox-redis-tests", "core-lint-types", "core-lint", "diff-check", "line-count"]
+    }
+  ]
+}
+```

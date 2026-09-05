@@ -15,13 +15,25 @@ import {
   boolean,
   bigserial,
   primaryKey,
+  unique,
   uniqueIndex,
   index,
   check,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { users } from "./identity";
+
+/** Lowercase 64-hex digest grammar shared by the TASK-551-05-L03 checks. */
+const HEX64 = "^[0-9a-f]{64}$";
+
+/**
+ * Inline a contract byte as a SQL literal. Generated check DDL is executed
+ * verbatim, so a drizzle `sql` parameter would land as an unbound `$1` and a
+ * raw splice would lose its quotes; the named checks below go through this
+ * helper instead.
+ */
+const sqlLiteral = (value: string) => sql.raw(`'${value.replace(/'/g, "''")}'`);
 
 export const plugins = pgTable(
   "plugins",
@@ -168,13 +180,27 @@ export const solutionKitInstallRuns = pgTable(
     actorId: uuid("actor_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    // TASK-551-05-L03: a rollback run may never lose its source by cascade —
+    // the sole existing-FK action change in the TASK-551-05 migration scope.
     rollbackOfRunId: uuid("rollback_of_run_id").references(
       (): AnyPgColumn => solutionKitInstallRuns.id,
-      { onDelete: "set null" }
+      { onDelete: "restrict" }
     ),
     options: jsonb("options").notNull().default({}),
     summary: jsonb("summary").notNull().default({}),
     error: text("error"),
+    // TASK-551-05-L03 template-plan proof: all null for a run outside the
+    // high-level legacy template coordinator, or exactly version 1 with a
+    // bounded count and a lowercase 64-hex digest on `mode = 'apply'`.
+    legacyTemplatePlanVersion: integer("legacy_template_plan_version"),
+    legacyTemplatePlanCount: integer("legacy_template_plan_count"),
+    legacyTemplatePlanDigest: text("legacy_template_plan_digest"),
+    // TASK-551-05-L03 rollback proof: all null, or version 1 with a closed
+    // kind on a terminal rollback run. Historical terminal rows stay null and
+    // therefore never become TASK-489 retry authority.
+    rollbackProofVersion: integer("rollback_proof_version"),
+    rollbackProofKind: text("rollback_proof_kind"),
+    rollbackProofDigest: text("rollback_proof_digest"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     finishedAt: timestamp("finished_at"),
@@ -184,6 +210,61 @@ export const solutionKitInstallRuns = pgTable(
     statusIdx: index("solution_kit_install_runs_status_idx").on(t.status),
     createdAtIdx: index("solution_kit_install_runs_created_at_idx").on(t.createdAt),
     rollbackIdx: index("solution_kit_install_runs_rollback_idx").on(t.rollbackOfRunId),
+    // --- TASK-551-05-L01 mandatory btree catalog ---
+    retentionIdx: index("solution_kit_runs_retention_idx").on(t.createdAt, t.id),
+    anchorIdx: index("solution_kit_runs_anchor_idx").on(t.kitId, desc(t.createdAt), desc(t.id)),
+    // --- TASK-551-05-L03 mandatory index rows ---
+    historyIdx: index("solution_kit_runs_history_idx").on(desc(t.createdAt), desc(t.id)),
+    successfulApplyOrderIdx: index("solution_kit_runs_successful_apply_order_idx")
+      .on(t.kitId, desc(t.createdAt), desc(t.id))
+      .where(sql`mode = 'apply' AND status = 'success' AND finished_at IS NOT NULL`),
+    successfulRollbackRelationIdx: index("solution_kit_runs_successful_rollback_relation_idx")
+      .on(t.kitId, t.rollbackOfRunId, t.id)
+      .where(sql`mode = 'rollback' AND status = 'success' AND finished_at IS NOT NULL`),
+    // One running rollback owner per source run, enforced by the database.
+    activeRollbackSourceIdx: uniqueIndex("solution_kit_runs_active_rollback_source_idx")
+      .on(t.rollbackOfRunId)
+      .where(sql`mode = 'rollback' AND status = 'running' AND rollback_of_run_id IS NOT NULL`),
+    rollbackRelationChk: check(
+      "solution_kit_runs_rollback_relation_chk",
+      // A run is a rollback run exactly when it names its source.
+      sql`(${t.mode} = 'rollback') = (${t.rollbackOfRunId} IS NOT NULL)`
+    ),
+    legacyTemplatePlanChk: check(
+      "solution_kit_runs_legacy_template_plan_chk",
+      sql`(${t.legacyTemplatePlanVersion} IS NULL AND ${t.legacyTemplatePlanCount} IS NULL AND ${t.legacyTemplatePlanDigest} IS NULL)
+        OR (${t.mode} = 'apply'
+          AND ${t.legacyTemplatePlanVersion} = 1
+          AND ${t.legacyTemplatePlanCount} BETWEEN 0 AND 100
+          AND ${t.legacyTemplatePlanDigest} ~ ${sqlLiteral(HEX64)})`
+    ),
+    rollbackProofStateChk: check(
+      "solution_kit_runs_rollback_proof_state_chk",
+      sql`(${t.rollbackProofVersion} IS NULL AND ${t.rollbackProofKind} IS NULL AND ${t.rollbackProofDigest} IS NULL)
+        OR (${t.rollbackProofVersion} = 1
+          AND ${t.mode} = 'rollback'
+          AND ${t.finishedAt} IS NOT NULL
+          AND ${t.rollbackProofDigest} ~ ${sqlLiteral(HEX64)}
+          AND ((${t.status} = 'success' AND ${t.rollbackProofKind} = 'complete')
+            OR (${t.status} = 'failed' AND ${t.rollbackProofKind} = 'zero_net')))`
+    ),
+    // Composite foreign-key targets. Unique CONSTRAINTS, not indexes: a
+    // foreign key can only be created once the unique key it references
+    // exists, so these three members belong to the transactional migration
+    // itself and are asserted — never rebuilt — by the online-index manifest.
+    idPackageActorKey: unique("solution_kit_runs_id_package_actor_key").on(
+      t.id,
+      t.kitId,
+      t.actorId
+    ),
+    idRollbackRelationKey: unique("solution_kit_runs_id_rollback_relation_key").on(
+      t.id,
+      t.rollbackOfRunId
+    ),
+    idLegacyTemplatePlanKey: unique("solution_kit_runs_id_legacy_template_plan_key").on(
+      t.id,
+      t.legacyTemplatePlanDigest
+    ),
   })
 );
 
