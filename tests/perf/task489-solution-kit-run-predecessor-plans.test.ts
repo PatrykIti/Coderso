@@ -2453,11 +2453,22 @@ describe("injection-gated dynamic half and the one artifact", () => {
 const SELF_SOURCE_LINES: readonly string[] = textOf(
   readFileSync(fileURLToPath(import.meta.url))
 ).split("\n");
+// Every import is one contiguous span: a line starting with "import" through the
+// line whose trimmed text ends with the closing module-specifier clause (a
+// single-line import closes itself). Dropping whole spans keeps the counted body
+// free of import text, whatever layout the canonical formatter gives those spans.
+const SELF_IMPORT_SPAN_LINES: ReadonlySet<number> = (() => {
+  const inside = new Set<number>();
+  let open = false;
+  SELF_SOURCE_LINES.forEach((line, index) => {
+    if (line.trimStart().startsWith("import")) open = true;
+    if (open) inside.add(index);
+    if (open && /from "[^"]+";$/.test(line.trim())) open = false;
+  });
+  return inside;
+})();
 const SELF_SOURCE_BODY: string = SELF_SOURCE_LINES.filter(
-  (line) =>
-    !line.trimStart().startsWith("import") &&
-    !line.trimStart().startsWith("} from") &&
-    !line.includes("occurrencesOf(")
+  (line, index) => !SELF_IMPORT_SPAN_LINES.has(index) && !line.includes("occurrencesOf(")
 ).join("\n");
 const SELF_IMPORT_SPECIFIERS: readonly string[] = SELF_SOURCE_LINES.flatMap((line) => {
   const match = /from "([^"]+)"/.exec(line);

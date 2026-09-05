@@ -5057,7 +5057,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "keyById",
-    202,
+    204,
     8,
     "D",
     "s",
@@ -5082,7 +5082,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "keyByUserRole",
-    223,
+    225,
     8,
     "D",
     "s",
@@ -5107,7 +5107,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    365,
+    367,
     12,
     "T",
     "d",
@@ -5132,7 +5132,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    383,
+    385,
     16,
     "T",
     "i",
@@ -5157,7 +5157,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    396,
+    398,
     14,
     "T",
     "e",
@@ -5182,7 +5182,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    409,
+    411,
     14,
     "T",
     "e",
@@ -5207,7 +5207,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    427,
+    429,
     14,
     "T",
     "e",
@@ -5232,7 +5232,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    455,
+    457,
     6,
     "T",
     "i",
@@ -5257,7 +5257,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    456,
+    458,
     6,
     "T",
     "s",
@@ -5282,7 +5282,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    477,
+    479,
     6,
     "T",
     "i",
@@ -5307,7 +5307,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    478,
+    480,
     6,
     "T",
     "s",
@@ -5332,7 +5332,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    510,
+    512,
     12,
     "T",
     "e",
@@ -5357,7 +5357,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    520,
+    522,
     6,
     "T",
     "i",
@@ -5382,7 +5382,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    521,
+    523,
     6,
     "T",
     "s",
@@ -5407,7 +5407,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    544,
+    546,
     10,
     "T",
     "s",
@@ -5432,7 +5432,7 @@ const CURRENT_ROWS: readonly CurrentRow[] = [
   [
     "core/services/backups/backupUsersSection.ts",
     "restoreUsersSectionTx",
-    554,
+    556,
     12,
     "T",
     "d",
@@ -30051,8 +30051,8 @@ export const TASK551_PLANNED_BUN_TEST_PATHS: readonly string[] = Object.freeze([
 export const TASK551_QUERY_INVENTORY_RECEIPT: QueryInventoryReceipt = Object.freeze({
   schemaVersion: 1,
   phase: "initial",
-  sourceTreeDigest: "39f51d1227b7add1e6ab6687416c25ef7114becd235f3f1ea149904b7e92786e",
-  inventoryDigest: "70fac5aac5475c09e685b8098b114c69b30fb3df93784b3a0088f385b46eb3a6",
+  sourceTreeDigest: "c26ca008063022fff529690012bd8b36dc3ceddb86a80fae265601ef25bca133",
+  inventoryDigest: "2927efb9fbb5abefc8e1549155866ed61173689a19525b1f0173cdcf702537a1",
   plannedDeltaDigest: "5d99b6448543d1a0d84aa7883e142ffc0b6df219fd6086af069560bd2f344b48",
   fingerprintAssociationDigest: "6600c5c163d65d0d66862a9877595245a3945519f01186be62e1a8bef989252b",
   discoveredCount: 1150,

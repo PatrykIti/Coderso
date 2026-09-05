@@ -737,35 +737,35 @@ describe("task551 online index deployment: reserved Drizzle adapter", () => {
         "the poison state is shared by the adapter and the command's own exit path",
       ],
       [
-        "function poisonLease(): void { leaseGuard.poisoned = true; }",
+        "function poisonLease(): void {\n  leaseGuard.poisoned = true;\n}",
         "poisoning is one irreversible flag",
       ],
       [
-        "async function endPoolOnce(): Promise<void> { if (leaseGuard.ended || reservedPool === null) return;",
+        "async function endPoolOnce(): Promise<void> {\n  if (leaseGuard.ended || reservedPool === null) return;",
         "the pool end is guarded against a second run",
       ],
       [
-        "leaseGuard.ended = true; await reservedPool.end({ timeout: 0 }).catch(() => undefined);}",
+        "leaseGuard.ended = true;\n  await reservedPool.end({ timeout: 0 }).catch(() => undefined);\n}",
         "the pool is ended immediately, with timeout 0",
       ],
       [
-        "if (leaseGuard.poisoned) { await endPoolOnce(); return; } if (operationId !== null) await releaseAdvisoryLock(session, operationId).catch(() => undefined);",
+        "if (leaseGuard.poisoned) {\n    await endPoolOnce();\n    return;\n  }\n  if (operationId !== null) await releaseAdvisoryLock(session, operationId).catch(() => undefined);",
         "a poisoned exit path performs no unlock and no release, and ends the pool",
       ],
       [
-        "try { await resetVerifyTask551Gucs(session, pid); } catch (error) { poisonLease(); await endPoolOnce(); throw error; }};",
+        "try {\n      await resetVerifyTask551Gucs(session, pid);\n    } catch (error) {\n      poisonLease();\n      await endPoolOnce();\n      throw error;\n    }\n  };",
         "a failed reset-and-verify poisons the lease and ends the pool before the error propagates",
       ],
       [
-        "reservedPool = pool; leaseGuard.poisoned = false; leaseGuard.ended = false;",
+        "reservedPool = pool;\n  leaseGuard.poisoned = false;\n  leaseGuard.ended = false;",
         "each newly opened reserved session restarts the exactly-once clock, so one ended pool can never silence a later session's end",
       ],
       [
-        "} finally { await closeReserved(session, receipt.operationId); }}",
+        "} finally {\n    await closeReserved(session, receipt.operationId);\n  }\n}",
         "both rollouts exit through the one poisoned-aware close path, never a bespoke teardown",
       ],
       [
-        'state.inTransaction = false; try { await reserved.unsafe("ROLLBACK"); } catch { state.poisoned = true; poisonLease(); }',
+        'state.inTransaction = false;\n    try {\n      await reserved.unsafe("ROLLBACK");\n    } catch {\n      state.poisoned = true;\n      poisonLease();\n    }',
         "an unknown-outcome rollback poisons the adapter lease AND the shared guard",
       ],
     ]);
@@ -808,11 +808,11 @@ describe("task551 online index deployment: reserved Drizzle adapter", () => {
         "the lease is one dedicated step",
       ],
       [
-        "const locked = await values<[boolean | string]>(session`select pg_try_advisory_lock(hashtext(${ADVISORY_LOCK_PURPOSE}), hashtext(${operationId}))`); const granted = locked[0]?.[0];",
+        "const locked = await values<[boolean | string]>(\n    session`select pg_try_advisory_lock(hashtext(${ADVISORY_LOCK_PURPOSE}), hashtext(${operationId}))`\n  );\n  const granted = locked[0]?.[0];",
         "the grant is read raw from the row, before any text render",
       ],
       [
-        'if (granted !== true && granted !== "true" && granted !== "t") fail(TASK551_ORCHESTRATOR_ERROR_CODES.leasePoisoned, "the rollout advisory lock is held elsewhere");',
+        'if (granted !== true && granted !== "true" && granted !== "t")\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.leasePoisoned,\n      "the rollout advisory lock is held elsewhere"\n    );',
         "the runtime boolean is the admitted shape, with the two legacy text shapes beside it",
       ],
       [
@@ -881,11 +881,11 @@ describe("task551 online index deployment: reserved Drizzle adapter", () => {
         "the migrator's journal insert is recognized by a named structural predicate",
       ],
       [
-        'tokenizeSqlFragment(statement, TASK551_ORCHESTRATOR_ERROR_CODES.leasePoisoned).slice(0, 5).join(" ") === "I:INSERT I:INTO I:DRIZZLE . I:__DRIZZLE_MIGRATIONS"',
+        'tokenizeSqlFragment(statement, TASK551_ORCHESTRATOR_ERROR_CODES.leasePoisoned)\n      .slice(0, 5)\n      .join(" ") === "I:INSERT I:INTO I:DRIZZLE . I:__DRIZZLE_MIGRATIONS"',
         "the recognizer compares I:-tagged tokens against a token-spelled head, so quoting, case and whitespace cannot bypass it",
       ],
       [
-        "if (plan.progress.insertRan && !plan.progress.journaled && isDrizzleJournalInsert(statement)) { plan.progress.journaled = true; return plan.session.unsafe(query, ...parameters); }",
+        "if (plan.progress.insertRan && !plan.progress.journaled && isDrizzleJournalInsert(statement)) {\n    plan.progress.journaled = true;\n    return plan.session.unsafe(query, ...parameters);\n  }",
         "exactly one journal insert is forwarded after the receipt insert, with the migrator's own parameters",
       ],
       [
@@ -902,7 +902,7 @@ describe("task551 online index deployment: reserved Drizzle adapter", () => {
       false
     );
     expect(
-      source.includes("postgres(target, { max: 1,"),
+      source.includes("postgres(target, {\n    max: 1,"),
       "the migration session is one max-1 client"
     ).toBe(true);
     expect(
@@ -989,7 +989,7 @@ describe("task551 online index deployment: in-transaction GUC guard and receipt 
         "anything but exactly one row refuses",
       ],
       [
-        "if (!plan.progress.guardRan || !plan.progress.insertRan || !plan.progress.journaled || plan.progress.applied !== plan.statements.length)",
+        "if (\n      !plan.progress.guardRan ||\n      !plan.progress.insertRan ||\n      !plan.progress.journaled ||\n      plan.progress.applied !== plan.statements.length\n    )",
         "a partially driven transaction cannot be reported as applied",
       ],
       [
@@ -1001,11 +1001,11 @@ describe("task551 online index deployment: in-transaction GUC guard and receipt 
         "each GUC is statically reset on the exit path",
       ],
       [
-        "if (!(await relationExists(session, RECEIPT_TABLE))) fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict",
+        "if (!(await relationExists(session, RECEIPT_TABLE)))\n    fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict",
         "a cold pre-0081 database is refused instead of crashing on the missing relation",
       ],
       [
-        'if (existing === undefined) fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict, "the receipt row is absent; only the guarded transaction may create it");',
+        'if (existing === undefined)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict,\n      "the receipt row is absent; only the guarded transaction may create it"\n    );',
         "no receipt row is ever written from outside the transaction",
       ],
       [
@@ -1077,11 +1077,11 @@ describe("task551 online index deployment: phase-4 guarded apply and crash recov
     ]);
     pinRunner([
       [
-        'if (receipt.state !== "transaction_applied") fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptInvalid, "the transactional receipt is not the transaction_applied successor");',
+        'if (receipt.state !== "transaction_applied")\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.receiptInvalid,\n      "the transactional receipt is not the transaction_applied successor"\n    );',
         "the plan builder refuses a receipt in any other state — the guard is never relaxed",
       ],
       [
-        'const successor = casReceipt(receipt, "transaction_apply_pending", { state: "transaction_applied", transaction: { apply: "applied", catalogSha256: null } });',
+        'const successor = casReceipt(receipt, "transaction_apply_pending", {\n        state: "transaction_applied",\n        transaction: { apply: "applied", catalogSha256: null },\n      });',
         "the successor is precomputed at the phase-4 call site, before the migrator runs",
       ],
       [
@@ -1089,11 +1089,11 @@ describe("task551 online index deployment: phase-4 guarded apply and crash recov
         "the precomputed successor is the receipt bound into the three GUCs",
       ],
       [
-        'if (row === null || row.stateSha256 !== successor.stateSha256) fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict, "the guarded insert did not land this receipt");',
+        'if (row === null || row.stateSha256 !== successor.stateSha256)\n        fail(\n          TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict,\n          "the guarded insert did not land this receipt"\n        );',
         "the landed row's digest is verified before the catalog digest is CASed",
       ],
       [
-        'await step("transaction_applied", { transaction: { apply: "applied", catalogSha256: await catalogDigest(session) } });',
+        'await step("transaction_applied", {\n        transaction: { apply: "applied", catalogSha256: await catalogDigest(session) },\n      });',
         "the catalog digest is CASed only onto the verified successor",
       ],
     ]);
@@ -1244,7 +1244,7 @@ describe("task551 online index deployment: phase-4 guarded apply and crash recov
         "the rerun re-applies the frozen budgets verbatim",
       ],
       [
-        "async function assertNothingCommitted(session: ReservedSession, artifacts: Task551Artifacts, operationId: string): Promise<void> {",
+        "async function assertNothingCommitted(\n  session: ReservedSession,\n  artifacts: Task551Artifacts,\n  operationId: string\n): Promise<void> {",
         "the nothing-committed proof is one closed probe set",
       ],
       [
@@ -1252,19 +1252,19 @@ describe("task551 online index deployment: phase-4 guarded apply and crash recov
         "every committed residue refuses with the same fail-closed code",
       ],
       [
-        'if (await relationExists(session, RECEIPT_TABLE) && (await readReceiptRow(session, operationId)) !== null) fail(code, "the guarded transaction already committed this operation\'s receipt row; the phase-4 rerun is forbidden");',
+        'if (\n    (await relationExists(session, RECEIPT_TABLE)) &&\n    (await readReceiptRow(session, operationId)) !== null\n  )\n    fail(\n      code,\n      "the guarded transaction already committed this operation\'s receipt row; the phase-4 rerun is forbidden"\n    );',
         "a landed receipt row forbids the rerun",
       ],
       [
-        "const applied = await values<[string]>(session`select 1 from drizzle.__drizzle_migrations where hash = ${artifacts.transactionalSha256} limit 1`);",
+        "const applied = await values<[string]>(\n      session`select 1 from drizzle.__drizzle_migrations where hash = ${artifacts.transactionalSha256} limit 1`\n    );",
         "the journal is probed by the artifact's own content hash",
       ],
       [
-        'if (applied.length > 0) fail(code, "the 0081 journal row is already applied, so the transactional phase cannot rerun");',
+        'if (applied.length > 0)\n      fail(\n        code,\n        "the 0081 journal row is already applied, so the transactional phase cannot rerun"\n      );',
         "a journaled 0081 forbids the rerun",
       ],
       [
-        'if (await relationExists(session, "public.cache_invalidation_outbox")) fail(code, "a transactional-artifact table already exists, so phase 4 is not rerunnable");',
+        'if (await relationExists(session, "public.cache_invalidation_outbox"))\n    fail(code, "a transactional-artifact table already exists, so phase 4 is not rerunnable");',
         "an artifact table is committed residue, never a reason to rerun",
       ],
     ]);
@@ -1317,7 +1317,7 @@ describe("task551 online index deployment: admission adapter argv, nonce and ech
     // The runner implements exactly those flags, in that order, with runner-held values.
     expect(
       source.includes(
-        'const argv = [action, "--operation-id", operationId, "--nonce", nonce, "--receipt-sha256", receiptSha256];'
+        'const argv = [\n    action,\n    "--operation-id",\n    operationId,\n    "--nonce",\n    nonce,\n    "--receipt-sha256",\n    receiptSha256,\n  ];'
       ),
       "the prepare/resume argv is the contract's flag form"
     ).toBe(true);
@@ -1328,7 +1328,7 @@ describe("task551 online index deployment: admission adapter argv, nonce and ech
       "only the resume invocation appends the authorization flag"
     ).toBe(true);
     expect(
-      source.includes("execFile(path, argv, { timeout:"),
+      source.includes("execFile(\n      path,\n      argv,\n      {\n        timeout:"),
       "execFile consumes exactly that argv"
     ).toBe(true);
     // No other flag literal exists in the adapter invocation path, so no adapter- or receipt-supplied string can become an argument boundary.
@@ -1346,27 +1346,27 @@ describe("task551 online index deployment: admission adapter argv, nonce and ech
         "execFile is the only child-process import",
       ],
       [
-        'maxBuffer: BUDGETS.adapterStdoutMaxBytes, encoding: "utf8", windowsHide: true }',
+        'maxBuffer: BUDGETS.adapterStdoutMaxBytes,\n        encoding: "utf8",\n        windowsHide: true,\n      }',
         "stdout is byte-capped and the window layer is hidden",
       ],
       [
-        "if (stderr.length > BUDGETS.adapterStderrMaxBytes) fail(TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid",
+        "if (stderr.length > BUDGETS.adapterStderrMaxBytes)\n            fail(\n              TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid",
         "stderr beyond its ceiling refuses",
       ],
       [
-        "adapterPrepareTimeoutMs: 120_000, adapterResumeTimeoutMs: 180_000",
+        "adapterPrepareTimeoutMs: 120_000,\n  adapterResumeTimeoutMs: 180_000",
         "prepare gets 120s and resume 180s",
       ],
       [
-        "adapterStdoutMaxBytes: 16 * 1024, adapterStderrMaxBytes: 16 * 1024",
+        "adapterStdoutMaxBytes: 16 * 1024,\n  adapterStderrMaxBytes: 16 * 1024",
         "both streams are capped at 16 KiB",
       ],
       [
-        "if (!offline && adapterPath === undefined) fail(TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid",
+        "if (!offline && adapterPath === undefined)\n    fail(TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid",
         "external mode without an adapter refuses",
       ],
       [
-        'if (stats === null || !path.startsWith("/") || !stats.isFile() || (stats.mode & 0o500) !== 0o500 || (stats.mode & 0o022) !== 0)',
+        'if (\n    stats === null ||\n    !path.startsWith("/") ||\n    !stats.isFile() ||\n    (stats.mode & 0o500) !== 0o500 ||\n    (stats.mode & 0o022) !== 0\n  )',
         "the adapter executable is absolute, regular, owner-executable, not group/world writable",
       ],
       [
@@ -1374,11 +1374,11 @@ describe("task551 online index deployment: admission adapter argv, nonce and ech
         "the CONTENT bytes are pinned, never the path string",
       ],
       [
-        'const pinnedSha = adapterSha === "" ? admissionAdapterSha256(adapterPath as string) : adapterSha;',
+        'const pinnedSha =\n          adapterSha === "" ? admissionAdapterSha256(adapterPath as string) : adapterSha;',
         "a resumed external mirror re-derives the digest once and compares it, never blind-persists a re-derivation",
       ],
       [
-        'if (receipt.admission.adapterSha256 !== null && receipt.admission.adapterSha256 !== derivedSha256) fail(TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid, "the admission adapter\'s content does not reproduce the digest frozen in the receipt");',
+        'if (receipt.admission.adapterSha256 !== null && receipt.admission.adapterSha256 !== derivedSha256)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid,\n      "the admission adapter\'s content does not reproduce the digest frozen in the receipt"\n    );',
         "drift from the frozen digest refuses — adapterSha256 is never silently overwritten",
       ],
       [
@@ -1386,15 +1386,15 @@ describe("task551 online index deployment: admission adapter argv, nonce and ech
         "phase 2 compares through the one shared refusal",
       ],
       [
-        "if (receipt.admission.prepareAckSha256 !== null) fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict,",
+        "if (receipt.admission.prepareAckSha256 !== null)\n          fail(\n            TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict,",
         "a mirror that already records a prepare acknowledgement refuses instead of re-running prepare over it",
       ],
       [
-        "adapterSha256: pinnedSha, prepareAckSha256: sha256Hex(canonicalJson(ack))",
+        "adapterSha256: pinnedSha,\n            prepareAckSha256: sha256Hex(canonicalJson(ack))",
         "the compared digest is exactly what the drain transition persists",
       ],
       [
-        'const resumeSha = adapterSha === "" ? admissionAdapterSha256(adapterPath as string) : adapterSha;',
+        'const resumeSha =\n        adapterSha === "" ? admissionAdapterSha256(adapterPath as string) : adapterSha;',
         "the phase-6 cutover re-derives the env-path bytes' digest exactly as phase 2 does",
       ],
       [
@@ -1402,7 +1402,7 @@ describe("task551 online index deployment: admission adapter argv, nonce and ech
         "and compares the prepare-time pin before the resume adapter executes",
       ],
       [
-        "export function assertAdapterDigestReproduced(receipt: Task551MigrationReceipt, derivedSha256: string): void {",
+        "export function assertAdapterDigestReproduced(\n  receipt: Task551MigrationReceipt,\n  derivedSha256: string\n): void {",
         "one named refusal, from the closed code set, serves both phases",
       ],
     ]);
@@ -1624,15 +1624,15 @@ describe("task551 online index deployment: cutover evidence", () => {
       expect(run, label).toThrow(codes.adapterInvalid);
     pinRunner([
       [
-        'if (new Set(ids).size !== ids.length) fail(TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid, "a replica id repeats across the runtime and worker arrays");',
+        'if (new Set(ids).size !== ids.length)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.adapterInvalid,\n      "a replica id repeats across the runtime and worker arrays"\n    );',
         "cross-array id uniqueness is a refusal, not a deduplication",
       ],
       [
-        "!REPLICA_ID_GRAMMAR.test(replica.id) || !HEX64.test(replica.binarySha256)",
+        "!REPLICA_ID_GRAMMAR.test(replica.id) ||\n            !HEX64.test(replica.binarySha256)",
         "replica ids and binary digests must match their grammars",
       ],
       [
-        'if (Buffer.byteLength(text, "utf8") > BUDGETS.adapterStdoutMaxBytes || Object.keys(ack).some((key) => !(ALLOWED_ACK_KEYS as readonly string[]).includes(key)))',
+        'if (\n    Buffer.byteLength(text, "utf8") > BUDGETS.adapterStdoutMaxBytes ||\n    Object.keys(ack).some((key) => !(ALLOWED_ACK_KEYS as readonly string[]).includes(key))\n  )',
         "the byte ceiling and the closed key set are one gate",
       ],
       [
@@ -1705,16 +1705,16 @@ describe("task551 online index deployment: cutover evidence", () => {
         "the flag is persisted only after the awaited adapter acknowledgement",
       ],
       [
-        "if (replica.binarySha256 !== receipt.admission.resumeBinarySha256) fail(TASK551_ORCHESTRATOR_ERROR_CODES.adapterResumeFailed, `${replica.id} does not run the authorized binary`);",
+        "if (replica.binarySha256 !== receipt.admission.resumeBinarySha256)\n          fail(\n            TASK551_ORCHESTRATOR_ERROR_CODES.adapterResumeFailed,\n            `${replica.id} does not run the authorized binary`\n          );",
         "every resumed replica must run the authorized binary digest",
       ],
-      ["newBinaryTrafficAccepted: false }", "a seeded receipt never carries the flag"],
+      ["newBinaryTrafficAccepted: false,\n    }", "a seeded receipt never carries the flag"],
       [
         'if (receipt.admission.mode === "offline-single") {',
         "offline-single never enters the resume/cutover machinery",
       ],
       [
-        'await step("revision_integrity_ready", { state: "read_performance_building" });}',
+        'await step("revision_integrity_ready", { state: "read_performance_building" });\n      }',
         "offline-single stays cold into the read-performance group",
       ],
     ]);
@@ -1755,7 +1755,7 @@ describe("task551 online index deployment: cutover evidence", () => {
         "offline-single persists its terminal only after forward_ready and only in offline mode",
       ],
       [
-        'if (receipt.state === "forward_ready") { await verifyFinalCatalog(session, true);',
+        'if (receipt.state === "forward_ready") {\n      await verifyFinalCatalog(session, true);',
         "that terminal is produced only after the final catalog gate",
       ],
       [
@@ -1767,7 +1767,7 @@ describe("task551 online index deployment: cutover evidence", () => {
         "the resumed binary digest is pinned into the resume_authorized receipt",
       ],
       [
-        'revisionWriterCompatibilitySha256: requireReleaseDigest(env, "TASK551_REVISION_WRITER_COMPATIBILITY_SHA256")',
+        'revisionWriterCompatibilitySha256: requireReleaseDigest(\n              env,\n              "TASK551_REVISION_WRITER_COMPATIBILITY_SHA256"\n            )',
         "the revision-writer compatibility digest is pinned beside it",
       ],
     ]);
@@ -1836,19 +1836,19 @@ describe("task551 online index deployment: write-cost gate and autoscaling eligi
     });
     pinRunner([
       [
-        'const requiredSource = mode === "external" ? "live-traffic" as const : "rehearsal" as const;',
+        'const requiredSource = mode === "external" ? ("live-traffic" as const) : ("rehearsal" as const);',
         "the required evidence source is the admission mode",
       ],
       [
-        "if (evidence.writers !== 16 || !Number.isInteger(evidence.writers)) fail(code, `the write-cost evidence covers ${String(evidence.writers)} representative writers, not 16`);",
+        "if (evidence.writers !== 16 || !Number.isInteger(evidence.writers))\n    fail(\n      code,\n      `the write-cost evidence covers ${String(evidence.writers)} representative writers, not 16`\n    );",
         "exactly 16 representative writers",
       ],
       [
-        'if (evidence.invariantErrors !== 0 || evidence.deadlockErrors !== 0) fail(code, "the write-cost evidence records an invariant or deadlock error");',
+        'if (evidence.invariantErrors !== 0 || evidence.deadlockErrors !== 0)\n    fail(code, "the write-cost evidence records an invariant or deadlock error");',
         "zero invariant and deadlock errors",
       ],
       [
-        'ratio > 1.2) fail(code, "the write-cost p95 regression is absent or above the 20% ceiling");',
+        'ratio > 1.2)\n    fail(code, "the write-cost p95 regression is absent or above the 20% ceiling");',
         "at most a 20% p95 regression",
       ],
     ]);
@@ -1856,7 +1856,7 @@ describe("task551 online index deployment: write-cost gate and autoscaling eligi
     expect(
       source.indexOf("readWriteCostEvidence(env, receipt.admission.mode);"),
       "the gate is consumed before forward_ready"
-    ).toBeLessThan(source.indexOf('await step(null, { state: "forward_ready"'));
+    ).toBeLessThan(source.indexOf('await step(null, {\n        state: "forward_ready",'));
     for (const [label, body] of [
       ["a rehearsal document under external mode", evidence({ source: "rehearsal" })],
       ["fifteen writers", evidence({ writers: 15 })],
@@ -1936,7 +1936,7 @@ describe("task551 online index deployment: write-cost gate and autoscaling eligi
       ],
       ['if (value === "true") return true;', "`true` is enabled"],
       [
-        'if (offline && autoscalingEnabled(env)) fail(TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied, "autoscaling/scale-to-zero is enabled, so external admission is mandatory");',
+        'if (offline && autoscalingEnabled(env))\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied,\n      "autoscaling/scale-to-zero is enabled, so external admission is mandatory"\n    );',
         "enabled autoscaling forbids offline-single",
       ],
       [
@@ -1993,11 +1993,11 @@ describe("task551 online index deployment: per-table classification and health r
         "the closed small/large rule is one exported seam",
       ],
       [
-        'return tables.every((table) => table.rows <= BUDGETS.smallTableRows && table.bytes <= BUDGETS.smallTableBytes) && combined <= BUDGETS.combinedBytes ? "small" : "large";',
+        'return tables.every(\n    (table) => table.rows <= BUDGETS.smallTableRows && table.bytes <= BUDGETS.smallTableBytes\n  ) && combined <= BUDGETS.combinedBytes\n    ? "small"\n    : "large";',
         "the rule is per table for both ceilings and combined for the size",
       ],
       [
-        "smallTableRows: 100_000, smallTableBytes: 256 * 1024 * 1024, combinedBytes: 1024 * 1024 * 1024,",
+        "smallTableRows: 100_000,\n  smallTableBytes: 256 * 1024 * 1024,\n  combinedBytes: 1024 * 1024 * 1024,",
         "the three ceilings are the contract's numbers",
       ],
     ]);
@@ -2098,7 +2098,7 @@ describe("task551 online index deployment: per-table classification and health r
         "that reproduction is its own pre-DDL branch, not part of the artifact proof",
       ],
       [
-        "await assertPreflightReproduced(session, receipt, artifacts.touchedTables, consumePredecisionIntervalFiles().digest); }",
+        "await assertPreflightReproduced(\n        session,\n        receipt,\n        artifacts.touchedTables,\n        consumePredecisionIntervalFiles().digest\n      );\n    }",
         "the branch re-measures the evidence and compares the canonical digest",
       ],
     ]);
@@ -2147,7 +2147,7 @@ describe("task551 online index deployment: per-table classification and health r
     expect(rechecked.recheckDigests.at(-1)).toMatch(/^[0-9a-f]{64}$/);
     pinRunner([
       [
-        "const digest = sha256Hex(canonicalJson({ at: nowUtc(), aggregateSha256: receipt.artifacts.aggregateSha256, bytes: measured.bytes, tables: measured.tables,",
+        "const digest = sha256Hex(\n    canonicalJson({\n      at: nowUtc(),\n      aggregateSha256: receipt.artifacts.aggregateSha256,\n      bytes: measured.bytes,\n      tables: measured.tables,",
         "the appended digest binds the per-table measurement, never one aggregate number",
       ],
       [
@@ -2159,19 +2159,19 @@ describe("task551 online index deployment: per-table classification and health r
         "exactly the touched set is measured, ordinary tables only",
       ],
       [
-        "if (row === undefined) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, `the touched table ${name} does not exist`);",
+        "if (row === undefined)\n      fail(\n        TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n        `the touched table ${name} does not exist`\n      );",
         "a missing touched table refuses instead of measuring a partial family",
       ],
       [
-        "if (!Number.isFinite(estimate) || estimate < 0) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, `${name} has no analyzed row estimate`);",
+        "if (!Number.isFinite(estimate) || estimate < 0)\n      fail(\n        TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n        `${name} has no analyzed row estimate`\n      );",
         "a never-analyzed table refuses instead of reading as empty",
       ],
       [
-        "if (tables.length !== rows.length) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, `${String(rows.length)} measured rows for ${String(tables.length)} touched tables`);",
+        "if (tables.length !== rows.length)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n      `${String(rows.length)} measured rows for ${String(tables.length)} touched tables`\n    );",
         "one aggregate row can no longer satisfy the measurement",
       ],
       [
-        'if (classifyMeasured(measured.tables) === "large" && receipt.preflight.classification === "small") {',
+        'if (\n    classifyMeasured(measured.tables) === "large" &&\n    receipt.preflight.classification === "small"\n  ) {',
         "the frozen classification must still cover the live counts",
       ],
       [
@@ -2187,11 +2187,11 @@ describe("task551 online index deployment: per-table classification and health r
         "the session budgets are re-applied from the frozen receipt, never recomputed",
       ],
       [
-        "await step(null, { preflight: await appendHealthRecheck(session, receipt, artifacts.touchedTables) });",
+        "await step(null, {\n        preflight: await appendHealthRecheck(session, receipt, artifacts.touchedTables),\n      });",
         "the fresh recheck digest is CASed into the receipt",
       ],
       [
-        "maxLagSeconds: 5, maxOldestTransactionSeconds: 30,",
+        "maxLagSeconds: 5,\n  maxOldestTransactionSeconds: 30,",
         "the :186-189 timing ceilings are the contract's numbers",
       ],
       [
@@ -2211,27 +2211,27 @@ describe("task551 online index deployment: per-table classification and health r
         "bool::text arrives as the server's own 't'/'f' render — text OID 25 has no registered parser — never the assumed \"true\"",
       ],
       [
-        'if (inRecovery && row[1] === null) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, "the standby has replayed no transaction, so replication lag is unbounded");',
+        'if (inRecovery && row[1] === null)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n      "the standby has replayed no transaction, so replication lag is unbounded"\n    );',
         "a standby that replayed nothing is unbounded, never zero",
       ],
       [
-        "if (!Number.isFinite(lagSeconds) || lagSeconds < 0 || !Number.isFinite(Number(row[2])) || Number(row[2]) < 0 || !Number.isFinite(Number(row[3]))) {",
+        "if (\n    !Number.isFinite(lagSeconds) ||\n    lagSeconds < 0 ||\n    !Number.isFinite(Number(row[2])) ||\n    Number(row[2]) < 0 ||\n    !Number.isFinite(Number(row[3]))\n  ) {",
         "every health column is domain-checked as its text-rendered number",
       ],
       [
-        "const health = await measureHealthCeilings(session); assertHealthCeilings(health); const conflicts = await measureDataConflicts(session); assertDataConflicts(conflicts);",
+        "const health = await measureHealthCeilings(session);\n  assertHealthCeilings(health);\n  const conflicts = await measureDataConflicts(session);\n  assertDataConflicts(conflicts);",
         "the captured evidence re-quires every ceiling and conflict invariant before it is bound",
       ],
       [
-        "if (health.lagSeconds > BUDGETS.maxLagSeconds) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, `replication lag ${health.lagSeconds}s exceeds the ${BUDGETS.maxLagSeconds}s ceiling`);",
+        "if (health.lagSeconds > BUDGETS.maxLagSeconds)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n      `replication lag ${health.lagSeconds}s exceeds the ${BUDGETS.maxLagSeconds}s ceiling`\n    );",
         "the replication-lag ceiling refuses",
       ],
       [
-        "if (health.oldestTransactionSeconds > BUDGETS.maxOldestTransactionSeconds) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, `the oldest transaction ${health.oldestTransactionSeconds}s exceeds the ${BUDGETS.maxOldestTransactionSeconds}s ceiling`);",
+        "if (health.oldestTransactionSeconds > BUDGETS.maxOldestTransactionSeconds)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n      `the oldest transaction ${health.oldestTransactionSeconds}s exceeds the ${BUDGETS.maxOldestTransactionSeconds}s ceiling`\n    );",
         "the oldest-transaction ceiling refuses",
       ],
       [
-        "if (health.invalidBookingWindows > 0) fail(TASK551_ORCHESTRATOR_ERROR_CODES.dataConflict, `${health.invalidBookingWindows} booking windows end before they start`);",
+        "if (health.invalidBookingWindows > 0)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.dataConflict,\n      `${health.invalidBookingWindows} booking windows end before they start`\n    );",
         "a corrupt window is a data conflict, never a warning",
       ],
     ]);
@@ -2381,7 +2381,7 @@ describe("task551 online index deployment: per-table classification and health r
     ).toThrow(codes.dataConflict);
     pinRunner([
       [
-        'if (!Number.isInteger(health.invalidBookingWindows) || health.invalidBookingWindows < 0) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, "the invalid booking window count is not a count");',
+        'if (!Number.isInteger(health.invalidBookingWindows) || health.invalidBookingWindows < 0)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n      "the invalid booking window count is not a count"\n    );',
         "the count-domain refusal precedes the data-conflict refusal",
       ],
     ]);
@@ -2540,15 +2540,15 @@ describe("task551 online index deployment: the canonical preflight digest and it
     ).not.toBe(digest);
     pinRunner([
       [
-        'export function canonicalPreflightDigest(input: { aggregateSha256: string; classification: "small" | "large"; conflicts: PreflightConflicts; lockTimeoutMs: number;',
+        'export function canonicalPreflightDigest(input: {\n  aggregateSha256: string;\n  classification: "small" | "large";\n  conflicts: PreflightConflicts;\n  lockTimeoutMs: number;',
         "the canonical digest is one closed input shape",
       ],
       [
-        "predecisionSha256: string; health: PreflightHealth; tables: readonly TouchedMeasure[]; bytes: number; freeBytes: number }): string {",
+        "predecisionSha256: string;\n  health: PreflightHealth;\n  tables: readonly TouchedMeasure[];\n  bytes: number;\n  freeBytes: number;\n}): string {",
         "health, the interval digest, the tables and the free disk are bound beside the frozen budgets",
       ],
       [
-        "return sha256Hex(canonicalJson(input));}",
+        "return sha256Hex(canonicalJson(input));\n}",
         "the binding is one canonical SHA-256 over the whole bundle",
       ],
     ]);
@@ -2610,11 +2610,11 @@ describe("task551 online index deployment: the canonical preflight digest and it
     ).rejects.toThrow(codes.preflightFailed);
     pinRunner([
       [
-        'if (digest !== receipt.preflight.digest) fail(TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed, "the canonical preflight digest does not reproduce its captured evidence");',
+        'if (digest !== receipt.preflight.digest)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.preflightFailed,\n      "the canonical preflight digest does not reproduce its captured evidence"\n    );',
         "any evidence drift refuses while nothing has been written yet",
       ],
       [
-        "export async function assertPreflightReproduced(session: ReservedSession, receipt: Task551MigrationReceipt, touchedTables: readonly string[], predecisionSha256: string): Promise<void> {",
+        "export async function assertPreflightReproduced(\n  session: ReservedSession,\n  receipt: Task551MigrationReceipt,\n  touchedTables: readonly string[],\n  predecisionSha256: string\n): Promise<void> {",
         "the reproduction is one named gate over re-measured evidence",
       ],
     ]);
@@ -2788,23 +2788,23 @@ describe("task551 online index deployment: the L02 pre-decision interval consume
         "exactly L02's closed interval name is consumed",
       ],
       [
-        "export function consumePredecisionInterval(startBytes: Buffer, receiptBytes: Buffer, evidenceBytes: Buffer): { digest: string; statsReset: string } {",
+        "export function consumePredecisionInterval(\n  startBytes: Buffer,\n  receiptBytes: Buffer,\n  evidenceBytes: Buffer\n): { digest: string; statsReset: string } {",
         "the byte-bound form is the sealed entry point",
       ],
       [
-        'const start = decodeSnapshot(startBytes); if (start.name !== PREDECISION_INTERVAL_NAME || start.boundary !== "start") refuse("the start snapshot is not this interval\'s start boundary");',
+        'const start = decodeSnapshot(startBytes);\n  if (start.name !== PREDECISION_INTERVAL_NAME || start.boundary !== "start")\n    refuse("the start snapshot is not this interval\'s start boundary");',
         "the start bytes are decoded by L02's own strict decoder and must be this interval's start",
       ],
       [
-        'if (new Date(start.capturedAt) <= new Date(evidence.diagnosticsEndedAt)) refuse("the interval started before the operator\'s diagnostics ended");',
+        'if (new Date(start.capturedAt) <= new Date(evidence.diagnosticsEndedAt))\n    refuse("the interval started before the operator\'s diagnostics ended");',
         "the interval must postdate the operator's diagnostics",
       ],
       [
-        'if (receipt === null || typeof receipt !== "object" || Object.keys(receipt).sort().join(",") !== INTERVAL_RECEIPT_KEYS.join(",")) refuse("the interval receipt carries a foreign key set");',
+        'if (\n    receipt === null ||\n    typeof receipt !== "object" ||\n    Object.keys(receipt).sort().join(",") !== INTERVAL_RECEIPT_KEYS.join(",")\n  )\n    refuse("the interval receipt carries a foreign key set");',
         "the collector's closed key set is enforced",
       ],
       [
-        '(receipt.start as { snapshotSha256?: unknown }).snapshotSha256 !== sha256Hex(canonicalJson(start))) refuse("the receipt is not bound to this start snapshot");',
+        '(receipt.start as { snapshotSha256?: unknown }).snapshotSha256 !==\n      sha256Hex(canonicalJson(start))\n  )\n    refuse("the receipt is not bound to this start snapshot");',
         "the receipt is byte-bound to the start snapshot",
       ],
       [
@@ -2824,15 +2824,15 @@ describe("task551 online index deployment: the L02 pre-decision interval consume
         "only application-driven candidates may pass",
       ],
       [
-        "const predecision = consumePredecisionIntervalFiles(); const evidence = await measurePreflightEvidence(session, artifacts.touchedTables);",
+        "const predecision = consumePredecisionIntervalFiles();\n      const evidence = await measurePreflightEvidence(session, artifacts.touchedTables);",
         "phase 1 consumes the interval before measuring the preflight evidence",
       ],
       [
-        "predecisionSha256: predecision.digest, ...evidence }),",
+        "predecisionSha256: predecision.digest,\n          ...evidence,\n        }),",
         "the interval digest is bound into the canonical preflight digest",
       ],
       [
-        'await step("resolved", { state: "preflight_passed", preflight });}',
+        'await step("resolved", { state: "preflight_passed", preflight });\n    }',
         "the candidates freeze only at the preflight_passed transition",
       ],
     ]);
@@ -2848,7 +2848,7 @@ describe("task551 online index deployment: quiescence and visibility", () => {
     pinRunner([
       ["probeIntervalMs: 250,", "the sample interval is 250ms"],
       [
-        "quiescenceWindowMs: 5_000, quiescenceDeadlineMs: 120_000,",
+        "quiescenceWindowMs: 5_000,\n  quiescenceDeadlineMs: 120_000,",
         "a continuous 5s window inside a 120s deadline",
       ],
       [
@@ -2856,11 +2856,11 @@ describe("task551 online index deployment: quiescence and visibility", () => {
         "the sample is closed-world AND role-scoped: only another session of the same database and application role is an intruder",
       ],
       [
-        "if (intruders.length > 0) { quietSince = null; if (Date.now() > deadline) fail(TASK551_ORCHESTRATOR_ERROR_CODES.quiescenceFailed",
+        "if (intruders.length > 0) {\n      quietSince = null;\n      if (Date.now() > deadline)\n        fail(TASK551_ORCHESTRATOR_ERROR_CODES.quiescenceFailed",
         "an intruder resets the window and the deadline fails closed",
       ],
       [
-        "if (Date.now() - quietSince >= BUDGETS.quiescenceWindowMs) return new Date(quietSince).toISOString();",
+        "if (Date.now() - quietSince >= BUDGETS.quiescenceWindowMs)\n        return new Date(quietSince).toISOString();",
         "only a full quiet window authorizes the next phase",
       ],
       [
@@ -2892,11 +2892,11 @@ describe("task551 online index deployment: quiescence and visibility", () => {
         "every forward rollout re-proves quiescence at command completion",
       ],
       [
-        'const VISIBILITY_PROBES: readonly (readonly ["runtime" | "worker", string])[] = [["runtime", "rollout-probe-runtime"], ["worker", "rollout-probe-worker"]];',
+        'const VISIBILITY_PROBES: readonly (readonly ["runtime" | "worker", string])[] = [\n  ["runtime", "rollout-probe-runtime"],\n  ["worker", "rollout-probe-worker"],\n];',
         "exactly one runtime and one worker probe",
       ],
       [
-        'if (row === undefined || row[1] === "" || row[1] !== identity || row[2] !== name) fail(code, `${name} is not visible under the application role`);',
+        'if (row === undefined || row[1] === "" || row[1] !== identity || row[2] !== name)\n        fail(code, `${name} is not visible under the application role`);',
         "redacted, foreign-role or missing identity is never an empty result",
       ],
       [
@@ -2904,11 +2904,11 @@ describe("task551 online index deployment: quiescence and visibility", () => {
         "both probes must hold distinct backends",
       ],
       [
-        'if (observed.size !== VISIBILITY_PROBES.length) fail(code, "the probes did not yield distinct backends");',
+        'if (observed.size !== VISIBILITY_PROBES.length)\n      fail(code, "the probes did not yield distinct backends");',
         "the probe set is complete",
       ],
       [
-        "if ((await values<[string]>(session`select pid from pg_stat_activity where application_name = ${name}`)).length > 0) fail(code, `${name} survived the probe release`);",
+        "if (\n      (\n        await values<[string]>(\n          session`select pid from pg_stat_activity where application_name = ${name}`\n        )\n      ).length > 0\n    )\n      fail(code, `${name} survived the probe release`);",
         "both probes must be gone after they close",
       ],
       [
@@ -2963,7 +2963,7 @@ describe("task551 online index deployment: receipt CAS, mirror and pre-transacti
         "the pre-transaction states are a closed list",
       ],
       [
-        '["resolved", "preflight_passed", "drain_requested", "drain_confirmed", "transaction_apply_pending", "reverse_complete"]',
+        '[\n  "resolved",\n  "preflight_passed",\n  "drain_requested",\n  "drain_confirmed",\n  "transaction_apply_pending",\n  "reverse_complete",\n]',
         "mirror-only states cover everything before phase 4 and after reverse",
       ],
       [
@@ -2971,11 +2971,11 @@ describe("task551 online index deployment: receipt CAS, mirror and pre-transacti
         "row persistence is derived from the state, never from a guess",
       ],
       [
-        'const TERMINAL_FORWARD_STATES: readonly ReceiptState[] = ["forward_ready", "operator_resume_authorized"];',
+        'const TERMINAL_FORWARD_STATES: readonly ReceiptState[] = [\n  "forward_ready",\n  "operator_resume_authorized",\n];',
         "the terminal rerun verifies and transitions nothing",
       ],
       [
-        'if (receipt.admission.mode !== (spec.admissionMode ?? "external")) fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict, "the receipt was seeded under a different admission mode");',
+        'if (receipt.admission.mode !== (spec.admissionMode ?? "external"))\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict,\n      "the receipt was seeded under a different admission mode"\n    );',
         "a mirror cannot be replayed under another admission mode",
       ],
     ]);
@@ -3028,15 +3028,15 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "the exact environment acknowledgement literal",
       ],
       [
-        "if (env.TASK551_OFFLINE_SINGLE_ACK !== OFFLINE_SINGLE_ACK) fail(TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied",
+        "if (env.TASK551_OFFLINE_SINGLE_ACK !== OFFLINE_SINGLE_ACK)\n          fail(\n            TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied",
         "a missing or foreign ack refuses",
       ],
       [
-        "if (fleet.runtimeProcessCount !== 1 || fleet.workerProcessCount !== 0) fail(TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied",
+        "if (fleet.runtimeProcessCount !== 1 || fleet.workerProcessCount !== 0)\n          fail(\n            TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied",
         "exactly one runtime and zero workers",
       ],
       [
-        'if (await relationExists(session, RECEIPT_TABLE)) fail(TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied, "the receipt table exists, so this is not a cold upgrade");',
+        'if (await relationExists(session, RECEIPT_TABLE))\n          fail(\n            TASK551_ORCHESTRATOR_ERROR_CODES.offlineSingleDenied,\n            "the receipt table exists, so this is not a cold upgrade"\n          );',
         "offline-single is a cold upgrade only",
       ],
       ["adapterSha256: null", "offline-single pins no adapter"],
@@ -3045,23 +3045,23 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "the mode is read from the argv, never inferred",
       ],
       [
-        'const REVERSE_START_STATES: readonly ReceiptState[] = ["transaction_applied", "revision_integrity_building", "revision_integrity_ready", "resume_authorized", "read_performance_building", "forward_ready", "operator_resume_authorized"];',
+        'const REVERSE_START_STATES: readonly ReceiptState[] = [\n  "transaction_applied",\n  "revision_integrity_building",\n  "revision_integrity_ready",\n  "resume_authorized",\n  "read_performance_building",\n  "forward_ready",\n  "operator_resume_authorized",\n];',
         "the reverse window is a closed list of the post-commit, pre-cutover states",
       ],
       [
-        'const REVERSE_CONTINUATION_STATES: readonly ReceiptState[] = [...REVERSE_START_STATES, "reverse_drain_requested", "reverse_drain_confirmed", "reverse_indexes_building", "reverse_transaction_pending"];',
+        'const REVERSE_CONTINUATION_STATES: readonly ReceiptState[] = [\n  ...REVERSE_START_STATES,\n  "reverse_drain_requested",\n  "reverse_drain_confirmed",\n  "reverse_indexes_building",\n  "reverse_transaction_pending",\n];',
         "a reverse continues through its own four states",
       ],
       [
-        'if (receipt.admission.newBinaryTrafficAccepted) fail(TASK551_ORCHESTRATOR_ERROR_CODES.reverseForbidden, "compatible-binary traffic was already admitted");',
+        'if (receipt.admission.newBinaryTrafficAccepted)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.reverseForbidden,\n      "compatible-binary traffic was already admitted"\n    );',
         "the flag gate refuses before the window gate: reverse is forward-fix only after the cutover",
       ],
       [
-        'if (env.TASK551_REVERSE_AUTHORIZATION !== reverseAuthorizationSha256(receipt)) fail(TASK551_ORCHESTRATOR_ERROR_CODES.reverseForbidden, "the nonce-bound reverse authorization is absent or foreign");',
+        'if (env.TASK551_REVERSE_AUTHORIZATION !== reverseAuthorizationSha256(receipt))\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.reverseForbidden,\n      "the nonce-bound reverse authorization is absent or foreign"\n    );',
         "a replayed or foreign authorization cannot drive a reverse",
       ],
       [
-        "if (!REVERSE_CONTINUATION_STATES.includes(receipt.state)) fail(TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict, `a ${receipt.state} receipt has no reverse continuation; forward owns it`);",
+        "if (!REVERSE_CONTINUATION_STATES.includes(receipt.state))\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.receiptConflict,\n      `a ${receipt.state} receipt has no reverse continuation; forward owns it`\n    );",
         "reverse refuses every mirror outside the contracted window",
       ],
       [
@@ -3069,11 +3069,11 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "a resume landing past the start branch is a reverse continuation of its own",
       ],
       [
-        "if (REVERSE_START_STATES.includes(receipt.state)) { await setSessionBudgets(session, receipt.preflight);",
+        "if (REVERSE_START_STATES.includes(receipt.state)) {\n      await setSessionBudgets(session, receipt.preflight);",
         "and the entering branch re-applies them verbatim too, never recomputing a ceiling",
       ],
       [
-        'await step(null, { state: "reverse_drain_requested", direction: "reverse", reverseMembers: reverseMemberSeed() });}',
+        'await step(null, {\n        state: "reverse_drain_requested",\n        direction: "reverse",\n        reverseMembers: reverseMemberSeed(),\n      });\n    }',
         "the entering transition seeds the full ordered member list",
       ],
     ]);
@@ -3168,7 +3168,7 @@ describe("task551 online index deployment: offline-single, reverse window and ar
     ).toBe(1);
     pinRunner([
       [
-        "if (await relationExists(session, RECEIPT_TABLE)) await reverseTransactionalArtifact(session, artifacts);",
+        "if (await relationExists(session, RECEIPT_TABLE))\n        await reverseTransactionalArtifact(session, artifacts);",
         "the transactional reversal runs only while the receipt table still exists",
       ],
       [
@@ -3180,11 +3180,11 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "so is the composite-unique probe — the seam proof counts public objects only",
       ],
       [
-        'if (await relationExists(session, RECEIPT_TABLE)) fail(TASK551_ORCHESTRATOR_ERROR_CODES.catalogMismatch, "the receipt table survived the reverse");',
+        'if (await relationExists(session, RECEIPT_TABLE))\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.catalogMismatch,\n      "the receipt table survived the reverse"\n    );',
         "a surviving receipt table refuses instead of completing",
       ],
       [
-        'RECEIPT_TABLE.split(".")[1])) {\n    fail(TASK551_ORCHESTRATOR_ERROR_CODES.artifactDigestChanged, "the artifact no longer creates the receipt table, so a reverse could not remove it"); }',
+        'RECEIPT_TABLE.split(".")[1]\n    )\n  ) {\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.artifactDigestChanged,\n      "the artifact no longer creates the receipt table, so a reverse could not remove it"\n    );\n  }',
         "a reverse without the receipt table is a refusal, never a partial cleanup",
       ],
       [
@@ -3196,7 +3196,7 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "the exclusion is removed only through its descriptor dropSql",
       ],
       [
-        "if ((await values<[string]>(session`select 1 from drizzle.__drizzle_migrations where hash = ${artifacts.transactionalSha256} limit 1`)).length > 0) await dropJournalRow(session, artifacts.transactionalSha256);",
+        "if (\n        (\n          await values<[string]>(\n            session`select 1 from drizzle.__drizzle_migrations where hash = ${artifacts.transactionalSha256} limit 1`\n          )\n        ).length > 0\n      )\n        await dropJournalRow(session, artifacts.transactionalSha256);",
         "the journal row is removed by its content hash when present",
       ],
       [
@@ -3204,11 +3204,11 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "reverse proves the catalog empty before completing",
       ],
       [
-        'await step("reverse_transaction_pending", { state: "reverse_complete", finalCatalogReady: false }, false);',
+        'await step(\n        "reverse_transaction_pending",\n        { state: "reverse_complete", finalCatalogReady: false },\n        false\n      );',
         "reverse_complete persists to the mirror alone",
       ],
       [
-        'if (name === PRESERVED_MEMBER_SHAPE.name) fail(TASK551_ORCHESTRATOR_ERROR_CODES.reverseForbidden, "the preserved revision index is never dropped");',
+        'if (name === PRESERVED_MEMBER_SHAPE.name)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.reverseForbidden,\n      "the preserved revision index is never dropped"\n    );',
         "the preserved member is never dropped",
       ],
       [
@@ -3216,11 +3216,11 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "a foreign dropSql refuses",
       ],
       [
-        "if (await indexCatalogRow(session, name) !== null) fail(TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid, `${name} survived its concurrent drop`);",
+        "if ((await indexCatalogRow(session, name)) !== null)\n    fail(TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid, `${name} survived its concurrent drop`);",
         "a surviving index refuses its own drop completion",
       ],
       [
-        "if (removed.length !== 1) fail(TASK551_ORCHESTRATOR_ERROR_CODES.artifactDigestChanged,",
+        "if (removed.length !== 1)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.artifactDigestChanged,",
         "exactly one journal row must match the transactional hash",
       ],
     ]);
@@ -3260,7 +3260,7 @@ describe("task551 online index deployment: offline-single, reverse window and ar
     const body = runnerBetween("async function buildMember", "async function dropMember");
     expect(
       body.includes(
-        "const member = manifestMember(name); const existing = await indexCatalogRow(session, name);"
+        "const member = manifestMember(name);\n  const existing = await indexCatalogRow(session, name);"
       ),
       "the classification reads the live catalog row for the exact member name"
     ).toBe(true);
@@ -3270,7 +3270,7 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "the expected shape comes from the manifest bytes",
       ],
       [
-        "if (canonicalJson(canonicalIndexShape(existing.definition)) !== canonicalJson(expected) || expected.name !== name) fail(TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid, `${name} is a foreign or wrongly shaped object and is never adopted or dropped`);",
+        "if (\n      canonicalJson(canonicalIndexShape(existing.definition)) !== canonicalJson(expected) ||\n      expected.name !== name\n    )\n      fail(\n        TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid,\n        `${name} is a foreign or wrongly shaped object and is never adopted or dropped`\n      );",
         "a foreign or wrongly shaped object refuses instead of being adopted or dropped",
       ],
       [
@@ -3282,7 +3282,7 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "task-owned invalid residue drops concurrently first",
       ],
       [
-        "if (await indexCatalogRow(session, name) !== null) fail(TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid, `${name} survived its invalid-residue drop`);",
+        "if ((await indexCatalogRow(session, name)) !== null)\n      fail(\n        TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid,\n        `${name} survived its invalid-residue drop`\n      );",
         "the residue drop is proven before the rebuild",
       ],
       [
@@ -3294,7 +3294,7 @@ describe("task551 online index deployment: offline-single, reverse window and ar
         "the manifest bytes are the executable build truth",
       ],
       [
-        "if (row === null || !row.valid || !row.ready) fail(TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid, `${name} is not valid and ready after its concurrent build`);",
+        "if (row === null || !row.valid || !row.ready)\n    fail(\n      TASK551_ORCHESTRATOR_ERROR_CODES.memberInvalid,\n      `${name} is not valid and ready after its concurrent build`\n    );",
         "indisready/indisvalid must both be true",
       ],
       [
@@ -3350,25 +3350,25 @@ describe("task551 online index deployment: the locked state machine shape", () =
     // Each handled state advances: the entering transition, the drain proof, the shared drop branch and the artifact reversal each step to a successor.
     expect(
       reverseBody.includes(
-        'if (receipt.state === "reverse_drain_requested") { await proveQuiescence(session, target, true);'
+        'if (receipt.state === "reverse_drain_requested") {\n      await proveQuiescence(session, target, true);'
       ),
       "the drain request is proven quiescent before confirmation"
     ).toBe(true);
     expect(
       reverseBody.includes(
-        'if (receipt.state === "reverse_drain_confirmed") await step("reverse_drain_confirmed", { state: "reverse_indexes_building" });'
+        'if (receipt.state === "reverse_drain_confirmed")\n        await step("reverse_drain_confirmed", { state: "reverse_indexes_building" });'
       ),
       "the drain confirmation enters the building state"
     ).toBe(true);
     expect(
       reverseBody.includes(
-        'await step(null, { state: "reverse_transaction_pending", transaction: { apply: "reversed", catalogSha256: null } });}'
+        'await step(null, {\n        state: "reverse_transaction_pending",\n        transaction: { apply: "reversed", catalogSha256: null },\n      });\n    }'
       ),
       "the drop branch terminates in reverse_transaction_pending"
     ).toBe(true);
     expect(
       reverseBody.includes(
-        'await step("reverse_transaction_pending", { state: "reverse_complete", finalCatalogReady: false }, false);}'
+        'await step(\n        "reverse_transaction_pending",\n        { state: "reverse_complete", finalCatalogReady: false },\n        false\n      );\n    }'
       ),
       "and reverse_transaction_pending completes to the mirror-only terminal"
     ).toBe(true);
@@ -3377,7 +3377,7 @@ describe("task551 online index deployment: the locked state machine shape", () =
       "if (!REVERSE_START_STATES.includes(receipt.state)) {"
     );
     const reapplyAt = reverseBody.indexOf(
-      "await setSessionBudgets(session, receipt.preflight);}",
+      "await setSessionBudgets(session, receipt.preflight);\n    }",
       continuationAt
     );
     expect(continuationAt, "the continuation budget branch exists").toBeGreaterThan(-1);
@@ -3430,19 +3430,19 @@ describe("task551 online index deployment: the locked state machine shape", () =
   test("both building loops CAS-persist progress around each concurrent statement, and the ordered drop loop reseeds exactly once", () => {
     pinRunner([
       [
-        'if (memberState(receipt, name) !== "building") await step(null, { forwardMembers: memberReceipt(receipt, "forwardMembers", name, "building") });',
+        'if (memberState(receipt, name) !== "building")\n          await step(null, {\n            forwardMembers: memberReceipt(receipt, "forwardMembers", name, "building"),\n          });',
         "the drained group CAS-persists `building` before each build",
       ],
       [
-        'if (memberState(receipt, member.name) !== "building") await step(null, { forwardMembers: memberReceipt(receipt, "forwardMembers", member.name, "building") });',
+        'if (memberState(receipt, member.name) !== "building")\n          await step(null, {\n            forwardMembers: memberReceipt(receipt, "forwardMembers", member.name, "building"),\n          });',
         "so does the read-performance loop",
       ],
       [
-        'await buildMember(session, name); await step(null, { forwardMembers: memberReceipt(receipt, "forwardMembers", name, "ready") });}',
+        'await buildMember(session, name);\n        await step(null, {\n          forwardMembers: memberReceipt(receipt, "forwardMembers", name, "ready"),\n        });\n      }',
         "and `ready` after it",
       ],
       [
-        'for (const name of TASK551_REVISION_INTEGRITY_MEMBERS) { if (memberState(receipt, name) === "ready") continue;',
+        'for (const name of TASK551_REVISION_INTEGRITY_MEMBERS) {\n        if (memberState(receipt, name) === "ready") continue;',
         "a finished member is never rebuilt",
       ],
       [
@@ -3450,7 +3450,7 @@ describe("task551 online index deployment: the locked state machine shape", () =
         "a foreign or partial member list reseeds",
       ],
       [
-        'await step(null, { state: "reverse_indexes_building", reverseMembers: reverseMemberSeed() });}',
+        'await step(null, {\n          state: "reverse_indexes_building",\n          reverseMembers: reverseMemberSeed(),\n        });\n      }',
         "the reseed is itself a persisted state, not a silent local variable",
       ],
       [
@@ -3458,19 +3458,19 @@ describe("task551 online index deployment: the locked state machine shape", () =
         "the drop loop walks the locked reverse order",
       ],
       [
-        'if (reverseMemberState(receipt, member.name) === "dropped") continue; await dropMember(session, member.name);',
+        'if (reverseMemberState(receipt, member.name) === "dropped") continue;\n        await dropMember(session, member.name);',
         "a member already recorded as dropped is never dropped twice",
       ],
       [
-        'await step(null, { reverseMembers: memberReceipt(receipt, "reverseMembers", member.name, "dropped") }); }',
+        'await step(null, {\n          reverseMembers: memberReceipt(receipt, "reverseMembers", member.name, "dropped"),\n        });\n      }',
         "and each drop CAS-persists its own `dropped`",
       ],
       [
-        'if (receipt.state === "reverse_drain_confirmed") await step("reverse_drain_confirmed", { state: "reverse_indexes_building" }); if (receipt.reverseMembers.length !== TASK551_ONLINE_INDEX_MEMBERS.length) {',
+        'if (receipt.state === "reverse_drain_confirmed")\n        await step("reverse_drain_confirmed", { state: "reverse_indexes_building" });\n      if (receipt.reverseMembers.length !== TASK551_ONLINE_INDEX_MEMBERS.length) {',
         "the entering transition is hoisted ahead of the loop, so a mid-group resume re-enters it without re-proving the drain",
       ],
       [
-        "function reverseMemberSeed(): Task551OnlineIndexMemberReceipt[] { return TASK551_ONLINE_INDEX_MEMBERS.map(",
+        "function reverseMemberSeed(): Task551OnlineIndexMemberReceipt[] {\n  return TASK551_ONLINE_INDEX_MEMBERS.map(",
         "the seed is a closed synchronous function over the manifest order",
       ],
     ]);
@@ -3504,7 +3504,7 @@ describe("task551 online index deployment: the locked state machine shape", () =
     expect(
       [
         ...forwardBody.matchAll(
-          /await step\(null, \{ forwardMembers: memberReceipt\(receipt, "forwardMembers", (?:member\.)?name, "ready"\) \}\);/g
+          /await step\(null, \{\s*forwardMembers: memberReceipt\(receipt, "forwardMembers", (?:member\.)?name, "ready"\),\s*\}\);/g
         ),
       ].length,
       "each build site CAS-persists ready"

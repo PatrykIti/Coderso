@@ -337,3 +337,58 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   względem lanowanych bajtów (predykaty cytowane in-source), wykonanie
   real-DB = bariera ownera. Następne w spine: **05-L02** (zamyka rodzinę 05),
   potem 03-L01.
+
+## 05-L02 — fix loop R1-R5 + incydent formatu (stan 2026-09-05 wieczór)
+
+- R1 (wf_f14f6b82-e99): autoryng per-file — S1 fixtura 1292L (ujawnione
+  złamanie konwencji), S2 CLI 577L fail-closed, S3 970L, S4 1257L; audit
+  10 findinek (3H/4M/3L). R2 (wf_d0d2df34-5c7): 11 findinek naprawionych
+  rzeczowo (normalizacja sygnatur proc 9/9, EXCLUDE wspólną ścieżką
+  kanoniczną, pełne porównanie indeksów, pg_get_expr, freeze gate,
+  combined p95, ACTUAL rows, mutation arms); re-audit 1M+4L. R3
+  (wf_abe95709-10d): domknięte (syntetyczny katalog S3 → airtight wykonanie
+  nowych ścieżek + 14 ramion mutacji; actual-rows w S4; doc-forma CLI);
+  verify clean poza pustym `.tmp/task-551/` (pre-existing, tolerowane).
+- R4 (wf_530ea84c-a08): 7 błędów root-tsc (S1×2, S3×2, S4×3) naprawionych
+  (fixer S4 zginął na StructuredOutput retry-cap — edity salwowane
+  z transkryptu i zweryfikowane bezpośrednio); root tsc **0**, core tsc 0.
+- **INCYDENT FORMATU (2026-09-05)**: owner autoryzował bieżące commity na
+  worktree („pamiętaj commitować na bieżąco"); pierwszy snapshot-commit
+  `62438e4e` odpalił pre-commit hook `format-staged.ts` → **160 plików
+  przepisanych** ze stylu long-line flow na kanoniczny zawijany (root tsc,
+  core lint/tsc, eslint w hooku zielone; semantyka zachowana). Pin manifestu
+  zmienił bajty `0da92555…`→`3a522218…` (treść ta sama — test dalej
+  **14/2**, ta sama klasa golden-count; nowy hash do ujawnienia w receipcie,
+  regeneracja nadal własność 01-L01:final). Historyczne hashe w receiptach
+  odnoszą się do stanu pre-format (append-only, nie przepisuję).
+- Sweep po formacie: S3 64/6/0 i L03 14/6/0 zielone; suite deploymentu
+  L01 **26/49 fail** (piny sha/lines runnera), S4 **1 fail** (self-source
+  contract), query-inventory **1 fail** (immutable receipt vs sformatowany
+  skan), pool-telemetry **3 fail** — **nie format**: regresja fail-closed
+  z 02-L03 (import `database_url_missing` przestał failować, gdy 05-L01
+  wprowadziło `core/db/databaseConfig.ts`; niezabezpieczone testy real-pool
+  odpalają się bez mapy ownera). Vitest cache 1+1 = znane pre-existing
+  czerwone własności 07-L01. `task551WorkflowContracts` 2 fail = pre-existing
+  seam-red (01/L11, osobny trop).
+- R5 (wf_6b490c60-3a1): rebaseline WYKONANY — deployment 130 pinów
+  re-bound 1:1 (49/0/2299), S4 self-source contract re-bound (27/0/1897),
+  query-inventory receipt ZREGENEROWANY lanowanym skanerem L01 (po
+  weryfikacji DB/env-free; 1150==1150 wierszy, tylko 16 komórek linii
+  + 2 digesty; 23/0/6190), pool-telemetry bramka owner-map PRZYWRÓCONA
+  (skipIf na 3 testach real-pool; 2/3 skip/0). Verify: SOUND (1 LOW
+  księgowy: 128 vs 130 w prozie).
+- **05-L02 ADMITTED** 2026-09-05 (`impl-05-l02.json`,
+  SINGLE_ADMITTED_GATES_GREEN) na bajtach kanonicznych. Bateria 12 ścieżek
+  **206 pass / 13 skip / 0 fail / 19163 expect**; root+core tsc 0; generate
+  **zero-drift na sformatowanych modułach**; manifest 14/2 (kontraktowe);
+  vitest 14; CLI fail-closed ×2; piny: freezeReceipts `17da0343…` (bez
+  zmian), manifest `3a522218…` (drift bajtowy ujawniony, treść ta sama).
+  Canonical hashe: S1 `83179c31…` (4142L), S2 `e851021c…` (757L),
+  S3 `7576ab9b…` (2661L), S4 `5af207c1…` (2576L), L03 suite `369b5ba8…`
+  (2182L), runner `71fd8520…` (2959L), inventory fixtura `9abc05cf…`
+  (30741L). Limity linii (>1000) ujawnione w receipcie (formatter = polityka
+  repo; allowlisty zabraniają splitów).
+- Rezidualne czerwone (nie właść 05-L02): `task551WorkflowContracts` 2
+  (seam-red pre-existing z 09-01, harness 01/L11 — diagnoza w toku, musi być
+  zamknięte przed 10-L02); vitest cache 2 (własność 07-L01 wg spiny).
+- Następne w spine: **03-L01**, potem 06-L01 → 06-L02 → 06-L03 → 07-L01.
