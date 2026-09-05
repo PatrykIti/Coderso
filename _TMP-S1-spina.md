@@ -397,3 +397,46 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   Pozostaje: vitest cache 2 (własność 07-L01 wg spiny); manifest 14/2
   (kontraktowe, do 01-L01:final).
 - Następne w spine: **03-L01**, potem 06-L01 → 06-L02 → 06-L03 → 07-L01.
+
+## 03-L01 (Shared Keyset Cursor And Bounded Read Contracts) — w toku (2026-09-05 wieczór)
+
+- Recon (wf_3d0712f9, read-only): verdict **READY_WITH_CONTRACT_GAPS**. Wszystkie 6 plików
+  allowlisty istnieje i należy do tego leafa (weszły do gita w snapshocie `62438e4e`,
+  bez walidacji; zero adopcji poza 3 plikami core; `core/services/database/` i
+  `tests/vitest/database/` zawierają WYŁĄCZNIE pliki allowlisty). Implementacja pokrywa
+  kontrakt: MAC-all-candidates constant-time, b64url 2-segment, TTL 24h+60s skew,
+  keyring rotation/retired, 16-rzędowa tabela comparatora, ORDER BY reversal, limit+1,
+  parsePageLimit 50/100, piny nazw eksportów, czystość importów, lifecycle handoff.
+- **Brak (jeden)**: test kolejności weryfikacji (doc L276-279) — instrumentacja
+  wszystkich kandydatów HMAC, zero dostępu do payload-JSON/keyVersion przed
+  bounded comparisons. Dodawany w R1 (keysetCursor.test.ts, bez edycji produkcji).
+- **Defekty kontraktu** (ujawnione, nie naprawiane — doc to forbidden file):
+  M1 doc L265-268 wymaga truth-table „against PostgreSQL", ale envelope działa
+  profile none → noga PG nieegzekwowalna; L2 impl pinuje dodatkowo asc/last;
+  L3 impl+testy pinują 2 kody więcej niż wylicza doc L208-212
+  (pagination_cursor_config_invalid, bounded_read_window_overflow);
+  L4/L5 sygnatury (toBoundedPage object-arg, buildKeysetPredicate 3-arg);
+  L6 doc L309 „source .env" sprzeczne z L339-341 database-free.
+- Baza bramek (moje własne runy airtight na HEAD `bb7d7cad`): keysetCursor 32/0
+  (vitest), paginationCursorLifecycle 4/0/17 (bun), boundedReadContract **19 pass /
+  1 FAIL** — noga „executes all 16 modes on real PostgreSQL" ma guard na samą
+  OBECNOŚĆ `DATABASE_URL`, forma airtight ustawia martwy URL → próba połączenia.
+  Ten sam mechanizm co regresja pool-telemetry z R5; naprawa w R1: gate owner-map
+  (mirror 1:1 z tests/perf/database-pool-telemetry.test.ts, ZERO zmian asercji).
+- workflowContracts 25/0/385 potwierdzone na HEAD po commicie #3 (`bb7d7cad`).
+- R1 (wf_d7e25c1b) w toku: 2 author-agenty per-file (A: test kolejności;
+  B: gate alignment) + verify per plik, STRICTLY READ-ONLY. Następnie moje bramki
+  wolne + bateria admission + receipt `impl-03-l01.json` + commit #4.
+
+- **03-L01 ADMITTED** 2026-09-05 (`impl-03-l01.json`,
+  SINGLE_ADMITTED_GATES_GREEN): R0 recon (READY_WITH_CONTRACT_GAPS, korekta
+  recona — noga PG NIE skipowała pod formą airtight) → R1 (wf_d7e25c1b):
+  +1 test kolejności MAC-vs-parse w keysetCursor.test.ts (mutant-check
+  autorza; produkcja nietknięta, PROD_CLEAN zweryfikowane), gate owner-map
+  w boundedReadContract.test.ts (mirror pool-telemetry R5, asercje
+  byte-identical; 19 pass / 1 skip / 0 fail). Bateria: vitest 52/1skip/0,
+  lifecycle 4/0/17, pool 2/3/0, workflowContracts 25/0/385, manifest 14/2
+  (kontraktowe), root tsc 0, wc 754/512, diff --check clean. 6 defektów
+  kontraktu ujawnionych w receipcie (1M+5L); eslint 314:64 pre-existing
+  (2× niezależnie na HEAD). Produkcja 3 plików core nietknięta.
+  Następne w spine: **06-L01**, potem 06-L02 → 06-L03 → 07-L01.

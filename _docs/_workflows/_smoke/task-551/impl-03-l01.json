@@ -1,0 +1,104 @@
+{
+  "task": "TASK-551-03-L01",
+  "occurrence": "single",
+  "phase": "ADMISSION",
+  "capturedAt": "2026-09-05T20:16:32Z",
+  "worktree": "/home/coder/project/Coderso-551",
+  "branch": "feat/task-551-db-cache",
+  "headAtAdmission": "bb7d7cad (admission edits uncommitted on top; commit #4 follows immediately under the owner-authorized worktree-commit instruction)",
+  "commitsMadeByFlow": 4,
+  "stagedByFlow": false,
+  "dbConnections": 0,
+  "commitAuthorizationNote": "Owner instruction 2026-09-05 ('pamietaj sobie commitowac na biezaco na worktree') authorizes regular worktree commits; push/merge remain owner decisions. The pre-commit hook will canonize the two edited test files (format:staged); admission gates below ran on the admission (pre-commit) bytes; post-commit canonical rerun recorded in the spine, receipts stay append-only.",
+  "manualExecutionNote": "Owner-authorized manual AGENTS.md flow: read-only recon (wf_3d0712f9) -> per-file R1 authoring + per-file strictly-read-only verify (wf_d7e25c1b) -> orchestrator's own admission battery (true exit codes). All execution DB-free per the airtight form: env DATABASE_URL='postgresql://127.0.0.1:1/none' (bunx vitest run for tests/vitest files, bun --env-file=/dev/null test for the rest); no tsc/generate inside agents (180s watchdog); no network; no .env sourced.",
+  "predecessorAccepted": "impl-05-l02.json (05-L02 single, satisfied at 741b8b98) per contract dependency line; recon additionally re-verified pins: freezeReceipts 17da0343..., bun-lane-manifest 3a522218... (14 pass / 2 fail contracted red, untouched).",
+  "provenance": "All six allowlisted files pre-existed as untracked flow bytes and entered git only in owner snapshot 62438e4e, receipt-unvalidated. Recon proved ownership (this leaf's deliverables: no other receipt claims them; zero references to keyset*/pagination* outside the three core files; core/services/database/ and tests/vitest/database/ contain ONLY allowlisted files; forbidden neighbors core/server/routes/index.ts, core/server/{runtimeLifecycle,runtimeEntrypoint}.ts, core/db/* untouched).",
+  "deliverables": {
+    "keysetCursor": "core/services/database/keysetCursor.ts - 815L, sha256 e6ad08093f20cad05724b805d787b989c7144a6760be18beebe9b32eb73b84cd, UNTOUCHED by R1. Pure node:crypto; error codes; spec normalization; scalar wire validators; loader (previous-as-pair, retired<=16 asc dedup >=32B); constant-time MAC over ALL candidates before payload parse; encode/decodeKeysetCursor (unpadded b64url pair, 1024/2048B caps, dup-key scanner, one-match, version equality, retired check, scope equality, 24h TTL + 60s skew).",
+    "boundedReadContract": "core/services/database/boundedReadContract.ts - 264L, sha256 400f2d2c3e4474c8c6e453f8153ce4c1e6e2c3c3d7f9d4a68b4cf981d23d376d, UNTOUCHED by R1. parsePageLimit 50/100; strictComparison = frozen 16-row table; buildKeysetPredicate (OR-of-prefixes, code-owned columns, $N binds); ORDER BY reversal for previous; toBoundedPage (limit+1, boundary last/first row).",
+    "paginationCursorLifecycle": "core/server/paginationCursorLifecycle.ts - 53L, sha256 f82d448869eb06ce723782db8b28496ce393cfea8478a76d94d2a33bf521d87f, UNTOUCHED by R1. Sole adapter; idempotent register (env read only in awaited start); fail-closed require; test reset.",
+    "keysetCursorSuite": "tests/vitest/database/keysetCursor.test.ts - 754L (was 627L), admission sha256 cdf23c0f9b99a6a06e674604cf6cce56232425d58458c3ab822deee107a72d19. R1 added EXACTLY ONE it(): 'MACs every configured candidate before any payload JSON or keyVersion access' (contract doc L276-279) - instruments all configured HMAC candidates via Buffer.from(secret) + keyVersion Proxy signals (createHmac unpatchable), proves every candidate MACed before any JSON.parse/keyVersion access (version_mismatch arm returns version_unsupported without attacker-key selection; duplicate-keyring stays invalid). Author's mutant check: genuine MAC-after-parse reorder of production killed the new test (2 failed), production restored byte-identical (cmp + git diff clean; orchestrator re-verified PROD_CLEAN).",
+    "boundedReadContractSuite": "tests/vitest/database/boundedReadContract.test.ts - 512L (was 494L), admission sha256 71892408fa9b3f133b22d0f3cc82bda7a3dcaad3f6cbc86fff8baab1c730e89c. R1 re-gated the single real-PostgreSQL arm from it.runIf(DATABASE_URL presence) to the contracted owner-map gate mirrored VERBATIM from the R5-restored tests/perf/database-pool-telemetry.test.ts (presence-only OWNER_DB_TEST_MAP_PRESENT over TASK551_FIXTURE_DATABASE_URL/_NAME/_SENTINEL; it.skipIf on exactly that arm); dial line now sources postgres(process.env.TASK551_FIXTURE_DATABASE_URL!, {max:1}). ZERO assertion/name/body changes to any of the 20 tests (verifier: bodies byte-identical outside the 3 gate hunks + orchestrator's one-line describe-title truthfulness rename, see honestyNotes); no process.env.DATABASE_URL read remains.",
+    "paginationCursorLifecycleSuite": "tests/integration/runtime/paginationCursorLifecycle.test.ts - 153L, sha256 4d4dbd9ca2557e53123874f98da2b27e1e6e888afa352bd416a865d7e9694c37, UNTOUCHED. 4 bun tests, DB-free, counting env getter."
+  },
+  "admissionStory": {
+    "rounds": [
+      {
+        "round": "R0 recon",
+        "workflow": "wf_3d0712f9",
+        "outcome": "READY_WITH_CONTRACT_GAPS: implementation matches the contract on all core semantics; exactly ONE missing test (verification order, doc L276-279); 6 contract defects disclosed below; recon's 'PG arm skips' claim CORRECTED by the orchestrator's own baseline run (guard keyed on DATABASE_URL presence, which the airtight form sets to a dead URL -> the arm dialed and failed: 19 pass / 1 FAIL pre-R1)."
+      },
+      {
+        "round": "R1 authoring + per-file verify",
+        "workflow": "wf_d7e25c1b",
+        "outcome": "Author A: +127L one new it(), airtight 33/0, eslint clean, mutant-verified ordering signal. Author B: gate alignment 22+/4-, airtight 19 pass / 1 skip / 0 fail, pool-telemetry still 2 pass / 3 skip / 0. Both verifies FINDINGS -> residuals adjudicated by the orchestrator: stale describe title renamed (truthfulness); fixtureTarget clause unimplementable (pool-telemetry imports nothing from fixtureTarget - mirroring the actual file was the only conforming option); eslint 314:64 unused 'i' proven PRE-EXISTING on HEAD (two independent eslint --stdin checks of git show HEAD content)."
+      }
+    ],
+    "convergence": "Missing-test gap closed + airtight fail converted to contracted skip with zero assertion changes; production bytes untouched throughout (git diff PROD_CLEAN re-verified by the orchestrator)."
+  },
+  "gates": [
+    {
+      "command": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bunx vitest run tests/vitest/database/keysetCursor.test.ts tests/vitest/database/boundedReadContract.test.ts",
+      "pass": true,
+      "detail": "52 passed / 1 skipped (53) / 0 failed; skip is exactly the real-PostgreSQL 16-mode arm, gated on the owner map."
+    },
+    {
+      "command": "env ... bun --env-file=/dev/null test tests/integration/runtime/paginationCursorLifecycle.test.ts",
+      "pass": true,
+      "detail": "4 pass / 0 fail / 17 expect."
+    },
+    {
+      "command": "env ... bun --env-file=/dev/null test tests/perf/database-pool-telemetry.test.ts",
+      "pass": true,
+      "detail": "5 tests: 2 pass / 3 skip / 0 fail / 32 expect - mirrored gate source still green."
+    },
+    {
+      "command": "env ... bun --env-file=/dev/null test tests/unit/workflows/task551WorkflowContracts.test.ts",
+      "pass": true,
+      "detail": "25 pass / 0 fail / 385 expect - commit #3 closure still holding."
+    },
+    {
+      "command": "env ... bun --env-file=/dev/null test tests/unit/toolchain/bunLaneManifest.test.ts",
+      "pass": true,
+      "detail": "EXACTLY 14 pass / 2 fail - the contracted golden-count red, never regenerated (01-L01:final owns it)."
+    },
+    {
+      "command": "bunx tsc -p tsconfig.json --noEmit",
+      "pass": true,
+      "detail": "exit 0 (root tsc covers the edited vitest suites - proven by 05-L02 R4)."
+    },
+    {
+      "command": "eslint + wc + git diff --check + git status",
+      "pass": true,
+      "detail": "keysetCursor.test.ts eslint exit 0; boundedReadContract.test.ts exactly 1 error at 314:64 ('i' unused) proven PRE-EXISTING on HEAD by both verifiers, unfixable without a forbidden body change - disclosed. wc 754/512 (<1000). diff --check clean. status = exactly _TMP-S1-spina.md + the 2 edited test files."
+    }
+  ],
+  "contractDefectsDisclosed": [
+    "MEDIUM: doc L265-268 demands truth-table tests 'against PostgreSQL' while the envelope/validation run profile none - the PG arm is unenforceable in the contracted envelope; resolved the same way as 02-L03/R5: airtight skip via owner map, real-DB execution stays an owner barrier.",
+    "LOW: doc L178 permits any final tie-breaker; implementation additionally pins asc/last (stricter).",
+    "LOW: doc L208-212 lists 10 codes; impl+tests pin 2 more (pagination_cursor_config_invalid, bounded_read_window_overflow).",
+    "LOW: doc L207 toBoundedPage(rows,limit,encode) vs implemented object arg with required direction.",
+    "LOW: doc L118 2-param buildKeysetPredicate vs implemented 3-param (adds relation).",
+    "LOW: doc L309 'source .env && bun test' contradicts doc L339-341 database-free/no-L11-profile."
+  ],
+  "ownerBarriersRecorded": [
+    "The real-PostgreSQL 16-mode arm is authored and desk-checked but NEVER executed against a real DB; owner execution via the L11 owner-injected task551-db-test map remains the barrier.",
+    "No --initialize/--freeze/--check, no reviewed-pair promotion, no gates:coderso* (owner-routed to 10-L01); changelog 1310 pinned for 10-L02; push and merge to feat/implementations = owner decisions.",
+    "Stale impl-01-l02.json untouched (L11 recovery-protocol property); bunLaneManifest regeneration is 01-L01:final property.",
+    "Contract doc edits are forbidden task files - the 6 defects above are disclosed, not repaired."
+  ],
+  "residualRedsNotOwnedHere": [
+    "tests/vitest/cache/server-cache-codec-keys.test.ts + server-cache-contracts.test.ts: the 2 pre-existing cache reds the spine routes to 07-L01.",
+    "tests/unit/toolchain/bunLaneManifest.test.ts 14/2: contracted until 01-L01:final.",
+    "boundedReadContract.test.ts:314 eslint unused 'i': pre-existing on HEAD, body-change required to fix - left untouched on the zero-weakening constraint."
+  ],
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "honestyNotes": [
+    "Admission gates ran on pre-commit bytes; the commit #4 hook (format:staged) may canonize the two edited test files - receipts are append-only, so the post-commit canonical hashes and the post-commit rerun of the two suites are recorded in _TMP-S1-spina.md rather than by mutating this receipt.",
+    "One orchestrator edit after the verifiers: describe title '(requires DATABASE_URL)' -> '(requires the owner-injected task551-db-test map)' (L427) - a truthfulness rename of a stale title, no assertion/name-of-test/body change; both verifiers had flagged the mismatch.",
+    "Author A's mutant check transiently patched production to prove the ordering test fails on a MAC-after-parse reorder; restored in the same command and re-verified byte-identical via cmp + git diff --exit-code (orchestrator PROD_CLEAN check).",
+    "Recon's 'PG arm skips' was WRONG under the mandated airtight form (presence guard + dead URL = dial-and-fail); caught by the orchestrator's own baseline before authoring and fixed as part of R1 - recorded here because the recon report alone would have admitted a red suite.",
+    "Verification-order signals are Buffer.from(secret) + keyVersion Proxy (createHmac unspyable); strength proven by the mutant check, not by a spy."
+  ],
+  "nextInSpine": "TASK-551-06-L01 per the spine order in _TMP-S1-spina.md (then 06-L02, 06-L03, 07-L01 - the 07-L01 leaf owns the 2 vitest cache reds)."
+}

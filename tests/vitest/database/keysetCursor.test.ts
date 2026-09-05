@@ -460,6 +460,133 @@ describe("spec, scope, version, retirement, and expiry semantics", () => {
     ).toBe("expired_or_retired");
   });
 
+  it("MACs every configured candidate before any payload JSON or keyVersion access", () => {
+    const fullKeyring = keyringFromEnv({
+      PAGINATION_CURSOR_SECRET: SECRET_C,
+      PAGINATION_CURSOR_KEY_VERSION: "3",
+      PAGINATION_CURSOR_PREVIOUS_SECRET: SECRET_B,
+      PAGINATION_CURSOR_PREVIOUS_KEY_VERSION: "2",
+      PAGINATION_CURSOR_RETIRED_KEYS: JSON.stringify([{ version: 1, secret: SECRET_A }]),
+    });
+    const secretLabels = new Map<string, string>([
+      [Buffer.from(SECRET_A).toString("hex"), "secret-A"],
+      [Buffer.from(SECRET_B).toString("hex"), "secret-B"],
+      [Buffer.from(SECRET_C).toString("hex"), "secret-C"],
+    ]);
+    const forged = signRaw(
+      JSON.stringify({
+        formatVersion: 1,
+        keyVersion: 3,
+        issuedAtUnixSeconds: NOW,
+        scope: SCOPE,
+        direction: "next",
+        fields: [
+          { name: "title", type: "text", value: "forged" },
+          { name: "id", type: "uuid", value: UUID },
+        ],
+      }),
+      SECRET_A
+    );
+
+    /**
+     * Records the real call order of candidate key materialization (Buffer.from
+     * over a keyring secret), payload JSON.parse, and keyVersion reads, then
+     * restores both globals.
+     */
+    const probe = (cursor: string, keys: PaginationCursorKeyring) => {
+      const events: string[] = [];
+      const originalFrom = Buffer.from;
+      const originalParse = JSON.parse;
+      Buffer.from = ((value: string | Uint8Array | ArrayBuffer, ...rest: unknown[]) => {
+        if (value instanceof Uint8Array) {
+          const label = secretLabels.get(originalFrom(value).toString("hex"));
+          if (label !== undefined) events.push(`mac:${label}`);
+        }
+        return (
+          originalFrom as unknown as (
+            v: string | Uint8Array | ArrayBuffer,
+            ...r: unknown[]
+          ) => Buffer
+        )(value, ...rest);
+      }) as unknown as typeof Buffer.from;
+      JSON.parse = ((text: string, reviver?: unknown) => {
+        events.push("json-parse");
+        const parsed = (originalParse as unknown as (t: string, r?: unknown) => unknown)(
+          text,
+          reviver
+        );
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return parsed;
+        return new Proxy(parsed as Record<string, unknown>, {
+          get(target, property: string) {
+            if (property === "keyVersion") events.push("keyVersion-read");
+            return target[property];
+          },
+        });
+      }) as unknown as typeof JSON.parse;
+      try {
+        return {
+          code: codeOf(() => decodeKeysetCursor(cursor, SPEC, keys, { nowUnixSeconds: NOW })),
+          events,
+        };
+      } finally {
+        Buffer.from = originalFrom;
+        JSON.parse = originalParse;
+      }
+    };
+
+    // Fixed current -> previous -> retired candidate order, no payload access
+    // before the third comparison finishes.
+    const honest = probe(
+      encodeKeysetCursor(
+        { scope: SCOPE, direction: "next", values: ["ok", UUID], nowUnixSeconds: NOW },
+        SPEC,
+        fullKeyring
+      ),
+      fullKeyring
+    );
+    expect(honest.code).toBe("<no-error>");
+    expect(honest.events).toEqual([
+      "mac:secret-C",
+      "mac:secret-B",
+      "mac:secret-A",
+      "json-parse",
+      "keyVersion-read",
+    ]);
+
+    // Signed with the retired secret while claiming the current version: the
+    // match stays bound to secret-A and the embedded lie never selects a key.
+    const forgedRun = probe(forged, fullKeyring);
+    expect(forgedRun.code).toBe(PAGINATION_CURSOR_ERROR_CODES.versionUnsupported);
+    expect(forgedRun.events).toEqual([
+      "mac:secret-C",
+      "mac:secret-B",
+      "mac:secret-A",
+      "json-parse",
+      "keyVersion-read",
+    ]);
+    // Without secret-A in the keyring the same cursor is generic invalid, so
+    // the version_unsupported above came from the keyring, not the payload.
+    const withoutAttackerKey = keyringFromEnv({
+      PAGINATION_CURSOR_SECRET: SECRET_C,
+      PAGINATION_CURSOR_KEY_VERSION: "3",
+      PAGINATION_CURSOR_PREVIOUS_SECRET: SECRET_B,
+      PAGINATION_CURSOR_PREVIOUS_KEY_VERSION: "2",
+    });
+    const unmatched = probe(forged, withoutAttackerKey);
+    expect(unmatched.code).toBe(PAGINATION_CURSOR_ERROR_CODES.invalid);
+    expect(unmatched.events).toEqual(["mac:secret-C", "mac:secret-B"]);
+
+    // Duplicate secret across candidates: both bounded MACs run and the
+    // multi-match ring fails closed before any payload interpretation.
+    const duplicated: PaginationCursorKeyring = {
+      current: { version: 3, secret: Buffer.from(SECRET_A) },
+      retired: [{ version: 2, secret: Buffer.from(SECRET_A) }],
+    };
+    const duplicateRun = probe(encode(["ok", UUID]), duplicated);
+    expect(duplicateRun.code).toBe(PAGINATION_CURSOR_ERROR_CODES.invalid);
+    expect(duplicateRun.events).toEqual(["mac:secret-A", "mac:secret-A"]);
+  });
+
   it("enforces the fixed 24-hour expiry with bounded future skew", () => {
     const cursor = encode(["ok", UUID]);
     expect(() => decodeOk(cursor, NOW + CURSOR_TTL_SECONDS)).not.toThrow();

@@ -6,7 +6,8 @@
  * gaps or duplicates, prefix ties from two through five fields, ORDER BY
  * reversal, bounded page envelope behavior, and an import-purity scan over
  * the pure production modules. Real-PostgreSQL execution of the same table is
- * DB-gated below and skips without DATABASE_URL (blocked in this environment).
+ * gated below on TASK-551-11's owner-injected `task551-db-test` map and skips
+ * without it, mirroring tests/perf/database-pool-telemetry.test.ts.
  */
 
 import { readFileSync } from "node:fs";
@@ -408,12 +409,29 @@ describe("order-by reversal and bounded pages", () => {
 // DB-gated PostgreSQL execution of the identical truth table
 // ---------------------------------------------------------------------------
 
-describe("comparator truth table against PostgreSQL (requires DATABASE_URL)", () => {
-  const hasDatabase = Boolean(process.env.DATABASE_URL);
+/**
+ * Presence-only gate for TASK-551-11's owner-injected `task551-db-test` map
+ * (`TASK551_FIXTURE_DATABASE_URL`, `_NAME`, `_SENTINEL`), mirroring the
+ * restored gate of tests/perf/database-pool-telemetry.test.ts. The map is
+ * injected only by the owner, so its presence -- never its values -- decides
+ * whether the real database may be dialed. Under the airtight local form no
+ * key is set, so the real-PostgreSQL arm skips by name instead of dialing an
+ * ambient URL.
+ */
+const OWNER_DB_TEST_MAP_PRESENT = [
+  process.env.TASK551_FIXTURE_DATABASE_URL,
+  process.env.TASK551_FIXTURE_DATABASE_NAME,
+  process.env.TASK551_FIXTURE_DATABASE_SENTINEL,
+].every((value) => typeof value === "string" && value.length > 0);
 
-  it.runIf(hasDatabase)("executes all 16 modes on real PostgreSQL without gaps", async () => {
+describe("comparator truth table against PostgreSQL (requires the owner-injected task551-db-test map)", () => {
+  // Named gate: the single real-PostgreSQL arm registers through `it.skipIf`
+  // on the owner map above and skips when it is absent.
+  const ownerMapTest = it.skipIf(!OWNER_DB_TEST_MAP_PRESENT);
+
+  ownerMapTest("executes all 16 modes on real PostgreSQL without gaps", async () => {
     const { default: postgres } = await import("postgres");
-    const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+    const sql = postgres(process.env.TASK551_FIXTURE_DATABASE_URL!, { max: 1 });
     try {
       await sql`CREATE TEMP TABLE keyset_truth(score int, id uuid)`;
       for (const [score, id] of [
