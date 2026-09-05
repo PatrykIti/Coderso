@@ -1038,10 +1038,7 @@ const task489CommitA = (sourceHead: string) =>
     promotedAt: "2026-08-30T00:00:00.000Z",
     ownerCapabilityReceiptDigest: sha("capability"),
   });
-const task489Source = () => {
-  const { noLeak: _noLeak, ...source } = task489PredecessorEvidence();
-  return source;
-};
+const task489Source = () => task489PredecessorEvidence();
 async function withTask489Temporary<T>(run: (bytes: Uint8Array) => Promise<T>) {
   const bytes = new TextEncoder().encode(`${JSON.stringify(task489Source())}\n`),
     directory = ".tmp/task-551";

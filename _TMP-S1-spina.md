@@ -388,7 +388,12 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   (2182L), runner `71fd8520…` (2959L), inventory fixtura `9abc05cf…`
   (30741L). Limity linii (>1000) ujawnione w receipcie (formatter = polityka
   repo; allowlisty zabraniają splitów).
-- Rezidualne czerwone (nie właść 05-L02): `task551WorkflowContracts` 2
-  (seam-red pre-existing z 09-01, harness 01/L11 — diagnoza w toku, musi być
-  zamknięte przed 10-L02); vitest cache 2 (własność 07-L01 wg spiny).
+- Rezidualne czerwone: **`task551WorkflowContracts` ZAMKNIĘTE** (2026-09-05
+  późny wieczór, wf_a7aee7f5-6a0): root cause — canned payload harnessu
+  pisał artefakt bez `noLeak` (parser wymaga exact 7 kluczy; test z 09-01
+  pisany przed lanem parsera, nigdy nie wykonany do dziś). Jedno-edytowa
+  reconciliacja (keep noLeak), 25/0/385 ×2, read-only verify CLEAN, zero
+  osłabień (oba negatywne ramiona dalej asertują swoje rejection regexy).
+  Pozostaje: vitest cache 2 (własność 07-L01 wg spiny); manifest 14/2
+  (kontraktowe, do 01-L01:final).
 - Następne w spine: **03-L01**, potem 06-L01 → 06-L02 → 06-L03 → 07-L01.
