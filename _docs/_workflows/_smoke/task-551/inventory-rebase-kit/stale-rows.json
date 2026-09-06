@@ -1,0 +1,83 @@
+{
+  "stale": [
+    {
+      "id": "core/services/assistant/actionExecutionStore.ts#saveAssistantActionExecutionResult:L73:C6:drizzle-executor:insert",
+      "file": "core/services/assistant/actionExecutionStore.ts",
+      "symbol": "saveAssistantActionExecutionResult",
+      "line": 73,
+      "column": 6,
+      "family": "drizzle-executor",
+      "operation": "insert",
+      "budgetId": "current-124"
+    },
+    {
+      "id": "core/services/assistant/actionExecutionStore.ts#saveAssistantActionExecutionResult:L99:C6:drizzle-executor:insert",
+      "file": "core/services/assistant/actionExecutionStore.ts",
+      "symbol": "saveAssistantActionExecutionResult",
+      "line": 99,
+      "column": 6,
+      "family": "drizzle-executor",
+      "operation": "insert",
+      "budgetId": "current-126"
+    },
+    {
+      "id": "core/services/assistant/actionExecutionStore.ts#saveAssistantActionExecutionResult:L91:C10:drizzle-executor:select",
+      "file": "core/services/assistant/actionExecutionStore.ts",
+      "symbol": "saveAssistantActionExecutionResult",
+      "line": 91,
+      "column": 10,
+      "family": "drizzle-executor",
+      "operation": "select",
+      "budgetId": "current-125"
+    },
+    {
+      "id": "core/services/search/searchHistoryService.ts#pruneHistory:L17:C6:drizzle-executor:select",
+      "file": "core/services/search/searchHistoryService.ts",
+      "symbol": "pruneHistory",
+      "line": 17,
+      "column": 6,
+      "family": "drizzle-executor",
+      "operation": "select",
+      "budgetId": "current-979"
+    },
+    {
+      "id": "core/services/search/searchHistoryService.ts#pruneHistory:L26:C6:drizzle-executor:delete",
+      "file": "core/services/search/searchHistoryService.ts",
+      "symbol": "pruneHistory",
+      "line": 26,
+      "column": 6,
+      "family": "drizzle-executor",
+      "operation": "delete",
+      "budgetId": "current-980"
+    },
+    {
+      "id": "core/services/search/searchHistoryService.ts#recordSearch:L39:C6:drizzle-executor:select",
+      "file": "core/services/search/searchHistoryService.ts",
+      "symbol": "recordSearch",
+      "line": 39,
+      "column": 6,
+      "family": "drizzle-executor",
+      "operation": "select",
+      "budgetId": "current-981"
+    },
+    {
+      "id": "core/services/search/searchHistoryService.ts#recordSearch:L50:C6:drizzle-executor:insert",
+      "file": "core/services/search/searchHistoryService.ts",
+      "symbol": "recordSearch",
+      "line": 50,
+      "column": 6,
+      "family": "drizzle-executor",
+      "operation": "insert",
+      "budgetId": "current-982"
+    }
+  ],
+  "keptLineShifts": [
+    "core/services/analytics/trafficRepository.ts#deletePageviewsOlderThan:transaction-executor:delete L121:C6 -> L165:C6",
+    "core/services/analytics/trafficRepository.ts#deleteSessionsOlderThan:transaction-executor:delete L130:C6 -> L173:C6",
+    "core/services/analytics/trafficRepository.ts#recordTrafficEvent:drizzle-executor:select L37:C8 -> L39:C8",
+    "core/services/analytics/trafficRepository.ts#recordTrafficEvent:drizzle-executor:insert L53:C10 -> L55:C10",
+    "core/services/analytics/trafficRepository.ts#recordTrafficEvent:drizzle-executor:insert L78:C14 -> L80:C14",
+    "core/services/analytics/trafficRepository.ts#recordTrafficEvent:drizzle-executor:update L69:C10 -> L71:C10",
+    "core/services/search/searchHistoryService.ts#listRecentSearches:drizzle-executor:select L65:C6 -> L241:C6"
+  ]
+}

@@ -440,3 +440,129 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   kontraktu ujawnionych w receipcie (1M+5L); eslint 314:64 pre-existing
   (2× niezależnie na HEAD). Produkcja 3 plików core nietknięta.
   Następne w spine: **06-L01**, potem 06-L02 → 06-L03 → 07-L01.
+- 03-L01 post-commit (`801334e2`): hook format-staged — 3 pliki **unchanged**
+  (bajty admission = kanoniczne, hashe z receiptu ważne); rerun vitest
+  52/1skip/0 identycznie; drzewo czyste. Scope repo-eslinta potwierdzony
+  (`{server,services,ui,db,src}` — tests/vitest/ poza bramką).
+
+## 06-L01 (retention family) — w toku (2026-09-05 noc)
+
+- Recon (wf_099b11a8, read-only): verdict **READY_WITH_CONTRACT_GAPS**. Allowlista
+  31 plików (20 prod + 11 testów); **20 missing/pre-change**: 14 prod brakuje
+  (retentionPolicy, appendHeavyRetentionRegistry, 8 retention services,
+  searchHistoryContract, searchHistoryRetentionService, legacyRollbackProgressDigest,
+  solutionKitRetentionService), 2 sprzeczne (searchHistoryService — inline
+  pruneHistory/preflight do usunięcia wg L70-80; actionExecutionStore — execution+undo
+  w JEDNEJ transakcji wg L590-596), trafficRepository — wyciąć inline-prune (L67-70).
+  Istniejące 5 testów pre-change / 6 testów brakuje.
+- **Defekty kontraktu** (ujawnione): M1 Validation Commands każą „source .env" — to
+  narusza twardą formę airtight; envelope L873/887/898 (`bun --env-file=/dev/null` +
+  task551-db-test) jest zgodny i NADPISUJE prozę; M2 Testing Requirements nie mają
+  gate'ów owner-map — obowiązują kanoniczne wzorce (pool-telemetry L61-65 /
+  boundedReadContract L421-430). LOW: deps L9 vs envelope L835 (oba lądowały),
+  stare komentarze TASK-483 w parach traffic, L703 wskażówka na
+  task551DatabaseBudgets.ts (nie-allowlista → binding read-only do
+  task551DatabaseScale.ts), limit 1000L ciasny dla legacyRollbackProgressDigest.
+- Prereqy na ziemi: nic nie importuje 14 brakujących modułów (czysty start);
+  tabele 05-L01 (rollbackProof, owners/legacyEvidence/legacyProgress) są;
+  zamrożony zegar 01-L02 (2036-01-01, task551DatabaseScale.ts L33) zgodny z
+  L651-654; searchRoutes.ts:76 ignoruje zwrotkę recordSearch — zmiana sygnatury
+  kompiluje bez edycji routes.
+- R1 (wf_302630b5) w toku: 9 author-agentów Wave A równolegle → bariera → 3
+  DB-suite'y (owner-map) → 12 verify read-only. Potem moje bramki wolne + bateria
+  + receipt `impl-06-l01.json` + commit #5.
+
+- **06-L01 R1 wynik** (wf_302630b5; 18 agentów, 17 done): 9/9 grup na dysku
+  (20/20 prod, 8/11 testów); CLEAN: retentionPolicy (137/0), searchHistoryContract
+  (19/0), store tx-wrap. 6× FINDINGS. **Śmierć #7**: A2 (registry) zmarł na
+  StructuredOutput retry-cap PO wylądowaniu pliku (527L na dysku, verified) —
+  przez to `landed===8` i **Wave B (3 DB-suite'y) nie wystartowała** (gate w
+  skrypcie). Findings R1: **HIGH systemowy** — licznik deleted czyta `rowCount`,
+  a postgres.js wystawia `count` → deleted zawsze 0 → drain po 1 paczce (8
+  jednolitych serwisów + access + audit + trafficRepository); HIGH kit — proof
+  szablonu nie przeliczony (hash zapamiętanych digiestów → usuwa zamiast
+  proof_invalid); MED: unique-identity w combined parserze (A3), normalizacja
+  strict path (A5), dry-run analytics (A6), cap kit bez evidence, unbudgeted
+  child sweeps (assistant/forms); LOW: martwy maybePruneExpiredTraffic,
+  hardcoded KEEP_NEWEST_PER_USER, komentarze registry, inventowane kody błędów.
+  **Do mojej ręki po R2**: frozen query-inventory czerwony 1205 vs 1150 (call
+  site'y leafa) → regeneracja skanerem L01 + machine-check diff (procedura R5).
+- R2 (wf_a9a94cec) w toku: 6 fixerów → bariera → B1/B2/B3 (suite'y owner-map) →
+  9 verify. Potem: moje bramki wolne, regeneracja inventory, bateria, receipt
+  `impl-06-l01.json`, commit #5.
+
+- **06-L01 R2 wynik** (wf_a9a94cec; 18/18, zero błędów): count-bug naprawiony we
+  WSZYSTKICH 11 modułach bounded-delete (postgres.js `count`, stub-y driver-accurate;
+  konwergencja zpinowana: 10×500+200+0, caps trzymają); analytics dry-run wg L614-622
+  (zero DELETE, obserwacyjne count; nogi airtight (5)/(5b)); martwy
+  maybePruneExpiredTraffic usunięty; identity-uniqueness w combined parserze
+  (mutational proof); normalizacja strict path przed bound 2..200; KEEP_NEWEST
+  z constant; hygiene registry (nagłówek/komentarz/kody). **Wave B wylądowała CLEAN**:
+  B1 9/4skip/0 (994L, gate byte-identical z kanonem), B2 8/6skip/0 (891L; 14 rodzin/
+  7 exemptions; schema-sweep realnie wykonany), B3 37/2skip/0 (859L; sufity zgodne
+  3-krotnie: fixture=policy=registry; sentinel 2001). Verifies: 4 CLEAN, 5 FINDINGS
+  → R3: MED terminality predicate kit (L209-211/L424-427), HIGH coverage (kit graph
+  zero testów behawioralnych; preview/forms/assistant untested AND uncalled, B2 ma
+  6/9 rodzin), assertion-loss listRecentSearches (3 asercje), ternary→verbatim skipIf,
+  source-guardy L685-687, kłamliwy header retentionPolicy. LOW ujawniane bez walki:
+  4 kody spoza zamkniętego zbioru (graph_unresolved, digest_schema/_value_invalid,
+  idempotency_namespace_invalid).
+- R3 (wf_4ada1fe8) w toku — ostatnia runda 06-L01: G1 (terminality + coverage B2→9
+  rodzin + B3 kit nogi), G2 (restauracja asercji search), G3 (nagłówek). Potem moje
+  bramki wolne + regeneracja query-inventory (1205 vs 1150) + bateria + receipt +
+  commit #5.
+
+- **06-L01 R3 wynik** (wf_4ada1fe8; 5/6, verify G2 zmarł na retry-cap — śmierć #8,
+  substytuowane moim spot-checkiem + rerunami G1): G1 CLEAN — terminality
+  predicate `solutionKitRetentionGraphIsTerminal` (L209-211/L424-427; non-terminal
+  → graph_unresolved skip, zero deletes; mutational proof: wpuszczenie „planned"
+  flipuje graph_unresolved→proof_invalid i przewala nogi), B2 rozszerzony do
+  9/9 rodzin (3 nowe nogi DB skipują czysto; 8/9skip/0, 999L), B3 +5 nóg kit
+  (42/2skip/0, 995L, 998L serwis); G2 naprawiony (18 pass/3 skip/0, 118 expect;
+  listRecentSearches ×10, verbatim skipIf L151, source-guardy; potwierdzone
+  moim grepem); G3 nagłówek prawdziwy (137/137; FINDING tylko o niedowodliwości
+  „comment-only" na untracked — do ujawnienia). Wszystkie 31 plików ≤1000 (max 999).
+- **06-L01 R4 w toku** (wf_854cfb58): 12 błędów typów (root 10 + core 2) na 6
+  plikach — 4 fixerów (T1 core prod: assistantRetentionService SQLWrapper,
+  digest generic T; T2 store-suite nulls ×4; T3 insert partials + nazwy eksportów
+  executorów w 2 unit suite'ach; T4 digest-test unknown/symbol). Równolegle agent
+  regeneracji query-inventory (1207 vs 1150; driver .tmp, machine-check diff,
+  procedura R5). Po obu: mój rerun tsc (oczekiwane 0), pełna bateria airtight
+  (wszystkie 31 plików + sąsiedzi), receipt `impl-06-l01.json`, commit #5.
+
+- **06-L01 R4 + typy**: 12 → 3 → **0** (root i core tsc ZERO). Root cause pary
+  TS2339: **TS 6.0.3 nie eksponuje type-only exports przez `typeof import(...)`
+  indexed access** — naprawione `import type` (forma kanoniczna, jak w B3);
+  store-test `expected` miroruje produkcyjny guard `canonicalize` (throw zamiast
+  `?? ''` — zero osłabienia). Store suite dokładnie 1000L (zero zapasu).
+- **Query-inventory: deferral do skonsolidowanej rebaseline'y na ogonie spiny**
+  (decyzja orchestratora, kit w
+  `_docs/_workflows/_smoke/task-551/inventory-rebase-kit/`): agent regeneracji
+  STOP"kował poprawnie — 64 nowe wiersze wymaga 17 pól review-owned (kind/
+  transactionMode/disposition/owner; codebook A-G bez litery 06-L01; fixtura
+  zabrania inferencji), 7 wierszy stale (call-site'y leafa przeształtowane),
+  test ma literalne `toHaveLength(1150)` (L109-110). 1150 → 1207 odkrytych.
+  Późniejsze leafy (07 cache, 03-L02/L03, 09-x) też dodadzą call-site'y → jedna
+  rebaseline przy 01-L01:final (który i tak regeneruje manifest). Kit
+  zwalidowany: 1150/1150 byte-exact re-serializacji.
+- **Pre-existing na HEAD (do decyzji ownera)**: CLI
+  `task-551-query-inventory --check` failuje `query_inventory_invalid:initial-
+  inventory-state` — lane resolves to post-finalization (pliki lane-state
+  w snapshocie 62438e4e), check.ts:88 odmawia przed skanem. Niezależne od
+  fixtury. Nie ruszane.
+- Bateria admission w toku; potem receipt `impl-06-l01.json` + commit #5.
+
+- **06-L01 ADMITTED — SINGLE_ADMITTED_GATES_GREEN** (receipt
+  `_docs/_workflows/_smoke/task-551/impl-06-l01.json`, head 801334e2,
+  2026-09-06T02:23Z). Bateria pełna: leaf bun 54/8skip/0/270 + store
+  13/4skip/0/40 + appendHeavy 17/9skip/0/540 + retention-batches 44/2skip/0/570
+  + analytics 17/6skip/0/45 + pool 5/3skip/0/32 + workflowContracts 25/0/385 +
+  lifecycle 4/0/17; manifest 14/2 (kontraktowe, 01-L01:final); inventory
+  22/1/6187 (udokumentowany deferral + kit); 05-guardy **146/6skip/0/7969**
+  (1 fail był od 18 plików roboczych regena w `.tmp/task-551/` — kit
+  ewakuowany do _docs, katalog opróżniony, rerun zielony). Vitest: leaf 191/0,
+  03-suite 52/1skip/0, cache 75/2 (07-L01-owned). eslint 28 plików exit 0;
+  root+core tsc 0; diffcheck clean. 31 plików ≤1000L (dwa dokładnie 1000).
+  Roundy R1–R4 i śmierci agentów #7/#8 w receipcie; defekty M1/M2 (inventory
+  stale + brak litery codebooka) ujawnione, NIE naprawiane; kit rebaseline'y
+  trwały. Następne: **06-L02**.

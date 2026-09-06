@@ -63,13 +63,18 @@ export async function getAssistantActionExecutionByIdempotencyKey(
   );
 }
 
-export async function saveAssistantActionExecutionResult(
-  input: AssistantActionExecutionSaveInput
-) {
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type AssistantActionExecutionRow = typeof assistantActionExecutions.$inferSelect;
+
+const insertOrLoadIdempotentExecution = async (
+  input: AssistantActionExecutionSaveInput,
+  tx: DbTransaction
+): Promise<AssistantActionExecutionRow | undefined> => {
   const result = sanitizeExecutionResult(
     withAssistantActionExecutionReplayMetadata(input.result, false)
   );
-  const [inserted] = await db
+  const [inserted] = await tx
     .insert(assistantActionExecutions)
     .values({
       idempotencyKey: input.idempotencyKey,
@@ -84,22 +89,42 @@ export async function saveAssistantActionExecutionResult(
     })
     .returning();
 
-  const execution =
+  return (
     inserted ??
     (
-      await db
+      await tx
         .select()
         .from(assistantActionExecutions)
         .where(eq(assistantActionExecutions.idempotencyKey, input.idempotencyKey))
-    )[0];
+    )[0]
+  );
+};
 
-  if (!execution || !input.undoItems?.length) return;
+const assertSameActorPlanHash = (
+  execution: AssistantActionExecutionRow,
+  input: AssistantActionExecutionSaveInput
+): void => {
+  if (
+    execution.actorId !== input.actorId ||
+    execution.planId !== input.planId ||
+    execution.planHash !== input.planHash
+  ) {
+    throw new Error("assistant_action_idempotency_conflict");
+  }
+};
 
-  await db
+const insertUndoItems = async (
+  executionId: string,
+  undoItems: AssistantUndoManifestItem[] | undefined,
+  tx: DbTransaction
+): Promise<void> => {
+  if (!undoItems?.length) return;
+
+  await tx
     .insert(assistantActionUndoItems)
     .values(
-      input.undoItems.map((item) => ({
-        executionId: execution.id,
+      undoItems.map((item) => ({
+        executionId,
         actionId: item.actionId,
         actionType: item.actionType,
         operation: item.operation,
@@ -127,4 +152,17 @@ export async function saveAssistantActionExecutionResult(
         assistantActionUndoItems.resourceKey,
       ],
     });
+};
+
+// Execution and undo-manifest persistence is one transaction: a failure
+// between the two statements leaves neither row behind, and a racing save
+// that loses the idempotency insert rejects on the stored actor/plan identity
+// instead of appending its undo items to another actor's execution.
+export async function saveAssistantActionExecutionResult(input: AssistantActionExecutionSaveInput) {
+  await db.transaction(async (tx) => {
+    const execution = await insertOrLoadIdempotentExecution(input, tx);
+    if (!execution) return;
+    assertSameActorPlanHash(execution, input);
+    await insertUndoItems(execution.id, input.undoItems, tx);
+  });
 }

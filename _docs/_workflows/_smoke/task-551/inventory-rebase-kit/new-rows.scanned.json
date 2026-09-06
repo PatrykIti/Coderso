@@ -1,0 +1,578 @@
+[
+  {
+    "file": "core/services/access/accessLogService.ts",
+    "symbol": "buildAccessLogsRetentionCandidateQuery",
+    "line": 809,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/access/accessLogService.ts#buildAccessLogsRetentionCandidateQuery:L809:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/access/accessLogService.ts",
+    "symbol": "deleteAccessLogIds",
+    "line": 836,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/access/accessLogService.ts#deleteAccessLogIds:L836:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/analytics/trafficRepository.ts",
+    "symbol": "countExpiredPageviewsBatch",
+    "line": 188,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/analytics/trafficRepository.ts#countExpiredPageviewsBatch:L188:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/analytics/trafficRepository.ts",
+    "symbol": "countExpiredSessionsBatch",
+    "line": 202,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/analytics/trafficRepository.ts#countExpiredSessionsBatch:L202:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/analytics/trafficRepository.ts",
+    "symbol": "deleteOldestPageviewsBatch",
+    "line": 125,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/analytics/trafficRepository.ts#deleteOldestPageviewsBatch:L125:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/analytics/trafficRepository.ts",
+    "symbol": "deleteOldestPageviewsBatch",
+    "line": 131,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/analytics/trafficRepository.ts#deleteOldestPageviewsBatch:L131:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/analytics/trafficRepository.ts",
+    "symbol": "deleteOldestSessionsBatch",
+    "line": 146,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/analytics/trafficRepository.ts#deleteOldestSessionsBatch:L146:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/analytics/trafficRepository.ts",
+    "symbol": "deleteOldestSessionsBatch",
+    "line": 154,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/analytics/trafficRepository.ts#deleteOldestSessionsBatch:L154:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/assistant/actionExecutionStore.ts",
+    "symbol": "insertOrLoadIdempotentExecution",
+    "line": 78,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "insert",
+    "id": "core/services/assistant/actionExecutionStore.ts#insertOrLoadIdempotentExecution:L78:C6:transaction-executor:insert"
+  },
+  {
+    "file": "core/services/assistant/actionExecutionStore.ts",
+    "symbol": "insertOrLoadIdempotentExecution",
+    "line": 96,
+    "column": 10,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/assistant/actionExecutionStore.ts#insertOrLoadIdempotentExecution:L96:C10:transaction-executor:select"
+  },
+  {
+    "file": "core/services/assistant/actionExecutionStore.ts",
+    "symbol": "insertUndoItems",
+    "line": 124,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "insert",
+    "id": "core/services/assistant/actionExecutionStore.ts#insertUndoItems:L124:C6:transaction-executor:insert"
+  },
+  {
+    "file": "core/services/assistant/actionExecutionStore.ts",
+    "symbol": "saveAssistantActionExecutionResult",
+    "line": 164,
+    "column": 12,
+    "family": "drizzle-executor",
+    "operation": "transaction",
+    "id": "core/services/assistant/actionExecutionStore.ts#saveAssistantActionExecutionResult:L164:C12:drizzle-executor:transaction"
+  },
+  {
+    "file": "core/services/assistant/assistantRetentionService.ts",
+    "symbol": "deleteExecutionIds",
+    "line": 535,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/assistant/assistantRetentionService.ts#deleteExecutionIds:L535:C6:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/assistant/assistantRetentionService.ts",
+    "symbol": "deleteIngestRunIds",
+    "line": 338,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/assistant/assistantRetentionService.ts#deleteIngestRunIds:L338:C6:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/assistant/assistantRetentionService.ts",
+    "symbol": "deleteUndoItemIds",
+    "line": 524,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/assistant/assistantRetentionService.ts#deleteUndoItemIds:L524:C6:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/assistant/assistantRetentionService.ts",
+    "symbol": "selectAgedExecutionIds",
+    "line": 483,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/assistant/assistantRetentionService.ts#selectAgedExecutionIds:L483:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/assistant/assistantRetentionService.ts",
+    "symbol": "selectAgedNonAnchorRunIds",
+    "line": 291,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/assistant/assistantRetentionService.ts#selectAgedNonAnchorRunIds:L291:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/assistant/assistantRetentionService.ts",
+    "symbol": "selectAgedNonAnchorRunIds",
+    "line": 304,
+    "column": 18,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/assistant/assistantRetentionService.ts#selectAgedNonAnchorRunIds:L304:C18:transaction-executor:select"
+  },
+  {
+    "file": "core/services/assistant/assistantRetentionService.ts",
+    "symbol": "selectUndoItemIdsForExecutions",
+    "line": 505,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/assistant/assistantRetentionService.ts#selectUndoItemIdsForExecutions:L505:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/audit/auditService.ts",
+    "symbol": "buildAuditLogsRetentionCandidateQuery",
+    "line": 479,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/audit/auditService.ts#buildAuditLogsRetentionCandidateQuery:L479:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/audit/auditService.ts",
+    "symbol": "deleteAuditLogIds",
+    "line": 506,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/audit/auditService.ts#deleteAuditLogIds:L506:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/auth/expiredAuthArtifactRetentionService.ts",
+    "symbol": "deleteByIds",
+    "line": 215,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/auth/expiredAuthArtifactRetentionService.ts#deleteByIds:L215:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/auth/expiredAuthArtifactRetentionService.ts",
+    "symbol": "selectAgedIds",
+    "line": 197,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/auth/expiredAuthArtifactRetentionService.ts#selectAgedIds:L197:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/auth/sessionRetentionService.ts",
+    "symbol": "deleteByIds",
+    "line": 231,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/auth/sessionRetentionService.ts#deleteByIds:L231:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/auth/sessionRetentionService.ts",
+    "symbol": "selectSweepIds",
+    "line": 213,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/auth/sessionRetentionService.ts#selectSweepIds:L213:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/email/emailDeliveryRetentionService.ts",
+    "symbol": "deleteByIds",
+    "line": 215,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/email/emailDeliveryRetentionService.ts#deleteByIds:L215:C6:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/email/emailDeliveryRetentionService.ts",
+    "symbol": "selectAgedIds",
+    "line": 196,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/email/emailDeliveryRetentionService.ts#selectAgedIds:L196:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/forms/submissionRetentionService.ts",
+    "symbol": "deleteRunIds",
+    "line": 267,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/forms/submissionRetentionService.ts#deleteRunIds:L267:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/forms/submissionRetentionService.ts",
+    "symbol": "deleteSubmissionIds",
+    "line": 276,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/forms/submissionRetentionService.ts#deleteSubmissionIds:L276:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/forms/submissionRetentionService.ts",
+    "symbol": "selectAgedRunIds",
+    "line": 209,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/forms/submissionRetentionService.ts#selectAgedRunIds:L209:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/forms/submissionRetentionService.ts",
+    "symbol": "selectAgedSubmissionIds",
+    "line": 228,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/forms/submissionRetentionService.ts#selectAgedSubmissionIds:L228:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/forms/submissionRetentionService.ts",
+    "symbol": "selectChildRunIds",
+    "line": 251,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/forms/submissionRetentionService.ts#selectChildRunIds:L251:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/integrations/integrationRequestRetentionService.ts",
+    "symbol": "deleteByIds",
+    "line": 215,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/integrations/integrationRequestRetentionService.ts#deleteByIds:L215:C6:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/integrations/integrationRequestRetentionService.ts",
+    "symbol": "selectAgedIds",
+    "line": 196,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/integrations/integrationRequestRetentionService.ts#selectAgedIds:L196:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteFailedOwnerUnit",
+    "line": 705,
+    "column": 14,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteFailedOwnerUnit:L705:C14:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteFailedOwnerUnit",
+    "line": 707,
+    "column": 16,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteFailedOwnerUnit:L707:C16:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteFailedOwnerUnit",
+    "line": 709,
+    "column": 14,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteFailedOwnerUnit:L709:C14:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteSourceGraphUnit",
+    "line": 717,
+    "column": 16,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteSourceGraphUnit:L717:C16:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteSourceGraphUnit",
+    "line": 719,
+    "column": 18,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteSourceGraphUnit:L719:C18:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteSourceGraphUnit",
+    "line": 721,
+    "column": 16,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteSourceGraphUnit:L721:C16:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteSourceGraphUnit",
+    "line": 725,
+    "column": 14,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteSourceGraphUnit:L725:C14:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteSourceGraphUnit",
+    "line": 726,
+    "column": 14,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteSourceGraphUnit:L726:C14:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteSourceGraphUnit",
+    "line": 728,
+    "column": 16,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteSourceGraphUnit:L728:C16:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "deleteSourceGraphUnit",
+    "line": 730,
+    "column": 14,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/kits/solutionKitRetentionService.ts#deleteSourceGraphUnit:L730:C14:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "hasNewerSuccessfulApply",
+    "line": 368,
+    "column": 27,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#hasNewerSuccessfulApply:L368:C27:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "hasOwner",
+    "line": 313,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#hasOwner:L313:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "lockSourceRun",
+    "line": 300,
+    "column": 28,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#lockSourceRun:L300:C28:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "pruneSolutionKitRunsBatch",
+    "line": 895,
+    "column": 23,
+    "family": "transaction-executor",
+    "operation": "transaction",
+    "id": "core/services/kits/solutionKitRetentionService.ts#pruneSolutionKitRunsBatch:L895:C23:transaction-executor:transaction"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "selectAgeCandidateRuns",
+    "line": 289,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#selectAgeCandidateRuns:L289:C8:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "selectEvidenceBySource",
+    "line": 347,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#selectEvidenceBySource:L347:C8:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "selectItemsByRun",
+    "line": 338,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#selectItemsByRun:L338:C8:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "selectProgressByRollback",
+    "line": 356,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#selectProgressByRollback:L356:C8:transaction-executor:select"
+  },
+  {
+    "file": "core/services/kits/solutionKitRetentionService.ts",
+    "symbol": "selectRollbackRuns",
+    "line": 329,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/kits/solutionKitRetentionService.ts#selectRollbackRuns:L329:C8:transaction-executor:select"
+  },
+  {
+    "file": "core/services/pages/previewTokenRetentionService.ts",
+    "symbol": "deletePageTokenIds",
+    "line": 238,
+    "column": 29,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/pages/previewTokenRetentionService.ts#deletePageTokenIds:L238:C29:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/pages/previewTokenRetentionService.ts",
+    "symbol": "deletePostTokenIds",
+    "line": 248,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/pages/previewTokenRetentionService.ts#deletePostTokenIds:L248:C6:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/pages/previewTokenRetentionService.ts",
+    "symbol": "selectExpiredPageTokenIds",
+    "line": 203,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/pages/previewTokenRetentionService.ts#selectExpiredPageTokenIds:L203:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/pages/previewTokenRetentionService.ts",
+    "symbol": "selectExpiredPostTokenIds",
+    "line": 222,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/pages/previewTokenRetentionService.ts#selectExpiredPostTokenIds:L222:C6:transaction-executor:select"
+  },
+  {
+    "file": "core/services/search/searchHistoryRetentionService.ts",
+    "symbol": "pruneSearchHistoryBatch",
+    "line": 112,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/search/searchHistoryRetentionService.ts#pruneSearchHistoryBatch:L112:C8:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/search/searchHistoryRetentionService.ts",
+    "symbol": "pruneSearchHistoryBatch",
+    "line": 83,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/search/searchHistoryRetentionService.ts#pruneSearchHistoryBatch:L83:C8:transaction-executor:select"
+  },
+  {
+    "file": "core/services/search/searchHistoryService.ts",
+    "symbol": "recordSearch",
+    "line": 200,
+    "column": 13,
+    "family": "drizzle-executor",
+    "operation": "transaction",
+    "id": "core/services/search/searchHistoryService.ts#recordSearch:L200:C13:drizzle-executor:transaction"
+  },
+  {
+    "file": "core/services/search/searchHistoryService.ts",
+    "symbol": "recordSearch",
+    "line": 202,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "insert",
+    "id": "core/services/search/searchHistoryService.ts#recordSearch:L202:C8:transaction-executor:insert"
+  },
+  {
+    "file": "core/services/search/searchHistoryService.ts",
+    "symbol": "recordSearch",
+    "line": 214,
+    "column": 8,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/search/searchHistoryService.ts#recordSearch:L214:C8:transaction-executor:select"
+  },
+  {
+    "file": "core/services/webhooks/webhookRetentionService.ts",
+    "symbol": "deleteByIds",
+    "line": 225,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "delete",
+    "id": "core/services/webhooks/webhookRetentionService.ts#deleteByIds:L225:C6:transaction-executor:delete"
+  },
+  {
+    "file": "core/services/webhooks/webhookRetentionService.ts",
+    "symbol": "selectAgedTerminalIds",
+    "line": 201,
+    "column": 6,
+    "family": "transaction-executor",
+    "operation": "select",
+    "id": "core/services/webhooks/webhookRetentionService.ts#selectAgedTerminalIds:L201:C6:transaction-executor:select"
+  }
+]

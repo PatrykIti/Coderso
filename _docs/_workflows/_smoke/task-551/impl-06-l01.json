@@ -1,0 +1,367 @@
+{
+  "task": "TASK-551",
+  "leaf": "06-L01",
+  "leafTitle": "Database-bound delete/retention paths: bounded batches, proofs, driver-accurate counts",
+  "capturedAt": "2026-09-06T02:23:03Z",
+  "headAtAdmission": "801334e2",
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "verdictQualification": "All leaf gates green on airtight invocations; three disclosed debts are owned elsewhere by contract (manifest 14/2 = 01-L01:final; vitest cache 2 red = 07-L01; query-inventory 1 red = deferred consolidated rebaseline at spine tail with durable kit). Zero real-DB execution; zero .env sourcing; zero network.",
+  "allowlist": {
+    "production": [
+      {
+        "file": "core/services/maintenance/retentionPolicy.ts",
+        "lines": 823,
+        "sha256": "dfaa725b60755dbdd1d40c8ea72849a55529169292f8072a96ff076a5232042e"
+      },
+      {
+        "file": "core/services/maintenance/appendHeavyRetentionRegistry.ts",
+        "lines": 535,
+        "sha256": "1985b1094ee1cbdf3f115c5bd1fd52c532a67ac6c84e3c57d1df8dfadc32a61b"
+      },
+      {
+        "file": "core/services/access/accessLogService.ts",
+        "lines": 948,
+        "sha256": "f506692390650d87a437d03cce18fb29a8b527ab0c96bdc04a505c90e6ed00e4"
+      },
+      {
+        "file": "core/services/audit/auditService.ts",
+        "lines": 626,
+        "sha256": "bf12c53b6b5babc7232cb5f00a45f962e08eaf8f72dcad59c85ea45e95542b0f"
+      },
+      {
+        "file": "core/services/email/emailDeliveryRetentionService.ts",
+        "lines": 305,
+        "sha256": "1c418a8397c6039a57dc1761c898b2ee0e57855272b1a7179cf54e37fefdc57f"
+      },
+      {
+        "file": "core/services/search/searchHistoryContract.ts",
+        "lines": 124,
+        "sha256": "15b1cf8f177ef09339e4f623301e8295cbc55b5367ed9d28335ff3b9e032e478"
+      },
+      {
+        "file": "core/services/search/searchHistoryService.ts",
+        "lines": 257,
+        "sha256": "f7135c3406239921eac08bc65301dca5782a58ca98c9b74e1a9e4a490f38fe35"
+      },
+      {
+        "file": "core/services/search/searchHistoryRetentionService.ts",
+        "lines": 131,
+        "sha256": "49dd4d2ec0c11a16696af472a59f291914f9eb096c8b8bead55341091bc4b0a1"
+      },
+      {
+        "file": "core/services/integrations/integrationRequestRetentionService.ts",
+        "lines": 305,
+        "sha256": "5afb29504df3d789407a48f745d22ba02b8fd52d663ca191be90ba71f35f223c"
+      },
+      {
+        "file": "core/services/auth/expiredAuthArtifactRetentionService.ts",
+        "lines": 304,
+        "sha256": "92e2c186b271f81803c93868adc329c93d4066ee7ed0410bcbe14aa70afa8c5e"
+      },
+      {
+        "file": "core/services/auth/sessionRetentionService.ts",
+        "lines": 336,
+        "sha256": "6d6d218bf2219f4c0cbe6f5a15ba36a80f62021d10dc39bbeec1900fe3f3a3dd"
+      },
+      {
+        "file": "core/services/pages/previewTokenRetentionService.ts",
+        "lines": 347,
+        "sha256": "59fabfce825f9e356fd60524b8111267480c6e0f42e96a68132d47380da2716e"
+      },
+      {
+        "file": "core/services/assistant/actionExecutionStore.ts",
+        "lines": 168,
+        "sha256": "19aa7fc8df0d9fd7f1f33438fdd2c253e121ee4055edcbd35bbaf29776844faf"
+      },
+      {
+        "file": "core/services/assistant/assistantRetentionService.ts",
+        "lines": 635,
+        "sha256": "2e3e8357ada61ea8c1b067d08e5a845069031bd1a729af36b786fe70a6c9018b"
+      },
+      {
+        "file": "core/services/analytics/trafficRepository.ts",
+        "lines": 221,
+        "sha256": "25245397d00e38863c6f965674835bf35023a778609651235546bf52a937028c"
+      },
+      {
+        "file": "core/services/analytics/trafficRetentionService.ts",
+        "lines": 142,
+        "sha256": "8378092402081624079e7918e621047baeabd5826017247e35c7792d31cb7a2b"
+      },
+      {
+        "file": "core/services/forms/submissionRetentionService.ts",
+        "lines": 400,
+        "sha256": "531578dbd0db69a833b8ef22eef683c3e9d6dd744130dbc98f9b92b5c9842683"
+      },
+      {
+        "file": "core/services/webhooks/webhookRetentionService.ts",
+        "lines": 315,
+        "sha256": "4dc5b6dd38006052f8ec55758acb874d7788d0be704db4cf1afdd28aa764fe9e"
+      },
+      {
+        "file": "core/services/kits/legacyRollbackProgressDigest.ts",
+        "lines": 869,
+        "sha256": "6e99c955d1e05011796a5c55158623d8025006191bd1d1c1d90d4498a91fb12f"
+      },
+      {
+        "file": "core/services/kits/solutionKitRetentionService.ts",
+        "lines": 968,
+        "sha256": "96778b160b3245b135ec70471ddaae9bcf652f53ffa001e45652a6130e0b4fb5"
+      }
+    ],
+    "tests": [
+      {
+        "file": "tests/vitest/maintenance/retentionPolicy.test.ts",
+        "lines": 971,
+        "sha256": "dfac50a4a50bfef31163f84698f9b0ae47ee03c40ed524ed6da925ad3c24d3bd"
+      },
+      {
+        "file": "tests/vitest/search/searchHistoryContract.test.ts",
+        "lines": 303,
+        "sha256": "f5c440a6aeffa1a3840849235c488ded13f61d7cdb5ae25f110f4b83af61cd98"
+      },
+      {
+        "file": "tests/vitest/kits/legacyRollbackProgressDigest.test.ts",
+        "lines": 966,
+        "sha256": "c96ddbc7e61ae6f881cf4556965457ec3f39eaa3d6b735a5584897637e6d4039"
+      },
+      {
+        "file": "tests/unit/access/accessLogService.test.ts",
+        "lines": 862,
+        "sha256": "a0c9b012fce446a3e5cc3124e85b99fa2dbe3550fa0c678a1a85647b34aa0451"
+      },
+      {
+        "file": "tests/unit/audit/auditService.test.ts",
+        "lines": 771,
+        "sha256": "d0d2c3a0148b4ceb431b11d6fd3cfc721bd0d778ce5274aa887779107d8408e6"
+      },
+      {
+        "file": "tests/unit/search/searchHistoryService.test.ts",
+        "lines": 605,
+        "sha256": "cf98be3446cf0f805df1410cb2f51f234e33c7401914c0cb0b55173d9dea0525"
+      },
+      {
+        "file": "tests/integration/server/task551ActionExecutionStore.test.ts",
+        "lines": 1000,
+        "sha256": "e0b6805843c58da6ae41ee6d242808720826472c948c4e9fe0d53b0add0f83a4"
+      },
+      {
+        "file": "tests/integration/server/task551AppendHeavyRetention.test.ts",
+        "lines": 922,
+        "sha256": "40a4939a3e44326d4086c02b384b4c7a9cc96565dd4f478bd244662e487ce494"
+      },
+      {
+        "file": "tests/integration/analytics/trafficRepository.test.ts",
+        "lines": 310,
+        "sha256": "7ab7cb095156685e2f4e5f86d536b01963622415a32d9adee6b3112033c8072a"
+      },
+      {
+        "file": "tests/integration/analytics/trafficRetention.test.ts",
+        "lines": 601,
+        "sha256": "bb3c4313ac22cac46ba06df286efabcf49df0c86a8976164de806b5786b11002"
+      },
+      {
+        "file": "tests/perf/database-retention-batches.test.ts",
+        "lines": 970,
+        "sha256": "580700c3de5d678786bb9fae6833459cf8d7d296a1b0f9b89b46c2e2582c5e62"
+      }
+    ],
+    "support": [
+      {
+        "file": "_docs/_workflows/_smoke/task-551/inventory-rebase-kit/",
+        "note": "durable kit for the deferred query-inventory rebaseline (README, regen-inventory.ts, emit-rows.ts, old-inventory.json, new-rows.scanned.json (64 rows scanner-fields-only), stale-rows.json (7 rows), discovered.json (full scan 412KB), write-artifacts.ts)"
+      }
+    ]
+  },
+  "executionDiscipline": {
+    "airtightForm": "cd /home/coder/project/Coderso-551 && env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <files>",
+    "vitestForm": "cd /home/coder/project/Coderso-551 && env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null bunx vitest run <files>",
+    "realDbExecutions": 0,
+    "envSourcing": 0,
+    "network": 0,
+    "ownerBarrier": "DB legs (9/9 append-heavy families, pool-telemetry real-PG arms, analytics integration legs, retention integration legs) skip airtight via the owner-map gate and run ONLY under the owner-injected task551-db-test map (TASK551_FIXTURE_DATABASE_URL/_NAME/_SENTINEL)."
+  },
+  "admissionGates": {
+    "BUN_leafUnits_3files": {
+      "tests": 54,
+      "skip": 8,
+      "fail": 0,
+      "expect": 270
+    },
+    "BUN_actionExecutionStore": {
+      "tests": 13,
+      "skip": 4,
+      "fail": 0,
+      "expect": 40
+    },
+    "BUN_appendHeavyRetention": {
+      "tests": 17,
+      "skip": 9,
+      "fail": 0,
+      "expect": 540
+    },
+    "BUN_retentionBatches": {
+      "tests": 44,
+      "skip": 2,
+      "fail": 0,
+      "expect": 570
+    },
+    "BUN_analytics_2files": {
+      "tests": 17,
+      "skip": 6,
+      "fail": 0,
+      "expect": 45
+    },
+    "BUN_poolTelemetry": {
+      "tests": 5,
+      "skip": 3,
+      "fail": 0,
+      "expect": 32
+    },
+    "BUN_workflowContracts": {
+      "tests": 25,
+      "skip": 0,
+      "fail": 0,
+      "expect": 385
+    },
+    "BUN_bunLaneManifest": {
+      "tests": 16,
+      "pass": 14,
+      "fail": 2,
+      "expect": 272,
+      "status": "CONTRACTED_RED owned by 01-L01:final (manifest regen is that leaf's property)"
+    },
+    "BUN_queryInventory": {
+      "tests": 23,
+      "pass": 22,
+      "fail": 1,
+      "expect": 6187,
+      "status": "DOCUMENTED_DEFERRAL — see inventoryDebt below"
+    },
+    "BUN_05FamilyGuards": {
+      "tests": 146,
+      "skip": 6,
+      "fail": 0,
+      "expect": 7969,
+      "note": "one transient fail (S4: 18 work files left in .tmp/task-551/) fixed by evacuating kit files to _docs and emptying the dir; rerun green"
+    },
+    "VITEST_leafVitest_3files": {
+      "passed": 191,
+      "failed": 0
+    },
+    "VITEST_03Suites": {
+      "passed": 52,
+      "skipped": 1,
+      "failed": 0
+    },
+    "VITEST_cache": {
+      "passed": 75,
+      "failed": 2,
+      "status": "KNOWN_RED owned by 07-L01"
+    },
+    "LIFECYCLE_paginationCursorLifecycle": {
+      "tests": 4,
+      "fail": 0,
+      "expect": 17
+    },
+    "ESLINT": {
+      "files": 28,
+      "exit": 0,
+      "note": "tests/** is outside repo eslint scope; leaf test files linted explicitly anyway"
+    },
+    "ROOT_TSC": 0,
+    "CORE_TSC": 0,
+    "DIFFCHECK": "clean",
+    "LINE_CAP": "all 31 files <= 1000 lines on final canonical bytes (max 1000); after the prettier-expansion incident, 4 files were compressed prettier-stable (appendHeavy 1139->922, retention-batches 1151->970, digest-test 1086->966, solutionKitRetentionService 1033->968)"
+  },
+  "rounds": [
+    {
+      "round": "R1",
+      "story": "9 per-group authors (retentionPolicy, registry, 8 uniform services, access, audit, search, kits-digest, kits-retention, analytics+actionStore). One StructuredOutput retry-cap death (registry author) — file HAD landed on disk (535L), verified directly; side effect: landed.length gate collapsed so Wave B (3 DB suites) never ran. Verify round surfaced HIGH: all bounded deletes read rowCount, but postgres.js RowList carries count — deleted always 0, drain stops after batch 1. Also: kit proof hashed persisted digests instead of recomputing (deletes instead of proof_invalid); actionExecutionStore missing db.transaction wrap."
+    },
+    {
+      "round": "R2",
+      "story": "6 fixers (rowCount->count across all 11 executor modules with driver-accurate {count:n} stubs + 10x500+200+0 convergence proofs; proof recompute; transaction wrap) + explicit Wave B run of the 3 DB suites (17/9skip/0, 13/4skip/0, 44/2skip/0)."
+    },
+    {
+      "round": "R3",
+      "story": "3 fixers: (a) solutionKit terminality gate solutionKitRetentionGraphIsTerminal + proof recompute + evidence-counted cap + LIMIT 2001; (b) searchHistoryContract coverage (recordSearch strict normalization before the 2..200 bound) + restore 3 listRecentSearches dedup assertions the rewrite had dropped (doc L610-612 pins them); (c) truthy header for retentionPolicy after G3. One verify-agent StructuredOutput retry-cap death — substituted with direct orchestrator greps (listRecentSearches x10, verbatim test.skipIf line, source guards) + corroborating reruns."
+    },
+    {
+      "round": "R4",
+      "story": "tsc 12 errors -> 3 -> 0. Root causes fixed: canonicalize returns string|undefined (tests mirror production guard-then-throw, not ?? ''); TS 6.0.3 type-only exports invisible through typeof import() indexed access (TS2339) -> canonical import type form per database-retention-batches.test.ts:44; SQLWrapper undefined in assistantRetentionService (?? sql`true`); generic T in requireEnum; null-vs-string in NOT NULL columns (5 sites incl. one beyond mandate); partial insert rows (tokenHash/expiresAt/targetType/targetId)."
+    }
+  ],
+  "contractDefects": [
+    {
+      "id": "06-L01-M1",
+      "severity": "MEDIUM",
+      "defect": "tests/perf/fixtures/task551QueryInventory.ts is stale for 06-L01 surfaces: 64 new query identities absent, 7 stale rows present; literal toHaveLength(1150) at database-query-inventory.test.ts L109-110 enforces the old count",
+      "disposition": "DISCLOSED, NOT REPAIRED — contract docs are forbidden to edit; rebaseline deferred to spine tail (see inventoryDebt)"
+    },
+    {
+      "id": "06-L01-M2",
+      "severity": "MEDIUM",
+      "defect": "fixture header contract 'lossless review data… closed spelling codes only; they never infer a field' cannot be satisfied for the 64 new rows without review-owned inputs (17 fields each) and a new codebook leaf letter (current OWNER letters A-G have no 06-L01 entry)",
+      "disposition": "DISCLOSED — review decision surfaced to owner; kit carries scanner-fields-only rows"
+    }
+  ],
+  "inventoryDebt": {
+    "decision": "Deferred to consolidated rebaseline at spine tail (09-L04:final / 01-L01:final window), NOT silently absorbed: test literal stays at 1150 with the 1-fail documented in every battery run until then.",
+    "durableKit": "_docs/_workflows/_smoke/task-551/inventory-rebase-kit/ (scanner-only new rows; stale-row drop list; full discovered.json scan; write-artifacts.ts; README with completion path)",
+    "preExistingCliIssue": "bun task-551-query-inventory --check fails query_inventory_invalid:initial-inventory-state at HEAD (lane-state files committed in snapshot 62438e4e; check.ts:88 refuses) — PRE-EXISTING, owner decision required, not repaired here",
+    "reviewAsks": [
+      "classification for 64 new rows (17 review-owned fields each)",
+      "drop list approval for 7 stale rows",
+      "new codebook leaf letter for 06-family",
+      "test literal bump 1150 -> 1214 at rebaseline time"
+    ]
+  },
+  "agentDeaths": [
+    {
+      "n": 7,
+      "round": "R1",
+      "agent": "appendHeavyRetentionRegistry author",
+      "cause": "StructuredOutput retry cap",
+      "resolution": "file verified landed (535L) directly from disk; gate restructured in R2"
+    },
+    {
+      "n": 8,
+      "round": "R3",
+      "agent": "G2 verify agent",
+      "cause": "StructuredOutput retry cap",
+      "resolution": "substituted with direct orchestrator checks (listRecentSearches x10, verbatim OWNER_DB_TEST_MAP_PRESENT skipIf line, source guards) + corroborating reruns from G1 report"
+    }
+  ],
+  "honestyNotes": [
+    "Pre-commit format:staged DID rewrap 7 files; the 3 that breached the 1000-line cap were compressed prettier-stable and the commit amended — see postFormatReconfirmation.",
+    "BUN-10 initially 1 fail in this battery (S4 contract: .tmp/task-551/ holds at most the one artifact file) — root cause was inventory-regen work files; fixed and rerun green (146/6skip/0/7969) before this receipt.",
+    "Recon note: boundedReadContract real-PG arm FAILS airtight by design (presence-guarded dial against the dead URL) unless the owner map is injected — that is the owner barrier, not a skip; owner-map gate is presence-only.",
+    "No assertion weakening anywhere; restored assertions (listRecentSearches x3) are additive.",
+    "Production touched only within the 20-file allowlist; keysetCursor/boundedReadContract/pagination files from 03-L01 untouched this leaf."
+  ],
+  "postFormatReconfirmation": {
+    "incident": "commit 5b360430 initially landed with prettier-expanded bytes: 3 test files breached the 1000-line cap (1139/1151/1086) because authors wrote >100-char lines (printWidth 100). Fixed by 3 single-file compression agents (data-driven tables, local helpers, comment tightening; all test names, owner-map gates and assertion counts preserved 1:1).",
+    "fixCommits": "amended into 5b360430 (local, unpushed) — this receipt is regenerated from the final canonical bytes",
+    "bunReruns": {
+      "appendHeavyRetention": "17 tests / 9 skip / 0 fail / 540 expect (8 pass airtight)",
+      "retentionBatches": "44 tests / 2 skip / 0 fail / 570 expect (42 pass airtight)",
+      "actionExecutionStore": "13 tests / 4 skip / 0 fail / 40 expect (9 pass airtight)",
+      "leafUnitsBun": "54 tests / 8 skip / 0 fail / 270 expect (46 pass airtight)"
+    },
+    "vitestReruns": {
+      "leafTrio": "191 passed / 3 files (retentionPolicy + searchHistoryContract + digest)"
+    },
+    "entrypointNote": "bun 1.4.0 on this host has no bunx subcommand; canonical vitest invocations use the builtin entrypoint node_modules/vitest/vitest.mjs under the same airtight env envelope.",
+    "prettierIdempotence": "all 3 compressed files re-verified '(unchanged)' on second --write by their agents",
+    "prodDimension": "Second wave of the same incident: 6 production files were also prettier-expanded (access 948, audit 626, actionExecutionStore 168, submission 400, digest 869, solutionKitRetentionService 1033 = over cap). solutionKitRetentionService.ts compressed to 968 prettier-stable by a dedicated agent with zero semantic change: export lines byte-identical to HEAD, terminality gate/proof recompute/evidence-counted cap/LIMIT 2001/count-based RowList semantics/batch bounds/frozen clock untouched, perf-suite source pins preserved (GRAPH_SENTINEL_LIMIT x7, .limit x4, PROOF_INVALID x4 — one planned dedup refactor abandoned to keep those counts).",
+    "prodVerification": {
+      "coreTsc": 0,
+      "rootTsc": 0,
+      "eslint": 0,
+      "retentionBatches": "44 tests / 2 skip / 0 fail / 570 expect",
+      "appendHeavyRetention": "17 tests / 9 skip / 0 fail / 540 expect",
+      "sha256_solutionKit": "96778b160b3245b135ec70471ddaae9bcf652f53ffa001e45652a6130e0b4fb5"
+    }
+  }
+}
