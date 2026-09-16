@@ -566,3 +566,201 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   Roundy R1–R4 i śmierci agentów #7/#8 w receipcie; defekty M1/M2 (inventory
   stale + brak litery codebooka) ujawnione, NIE naprawiane; kit rebaseline'y
   trwały. Następne: **06-L02**.
+
+- **Incydent cap-1000 na commicie 5b360430** (06-L01): hook `format:staged`
+  (Prettier printWidth 100) rozwinął 7 plików autorowanych z liniami >100 zn.;
+  3 testy przekroczyły cap: appendHeavy 1000→**1139**, retention-batches
+  995→**1151**, digest 971→**1086** (access/audit/searchContract/searchService
+  się zmieniły, ale zostały ≤1000). Bateria liczona była na bajtach
+  pre-format → claim „31 plików ≤1000" prawdziwy w momencie baterii, fałszywy
+  dla bajtów commita. Fix w toku: 3 równoległych agentów (jeden na plik)
+  kompresuje do ≤980L prettier-stabilnie (pętle data-driven, helpery,
+  skrót komentarzy; nazwy testów/gate'e owner-map/540+570 expect + 35 pass
+  vitest zachowane 1:1), potem recompute 31 hashy → update receipt →
+  **amend** 5b360430 (lokalny, nigdzie nie wypchnięty) → rerun 3 suite'ów
+  na bajtach finalnych.
+
+- **06-L02 recon** (read-only agent; weryfikacja kontraktu własna): 10 plików —
+  prod: MISSING `core/services/database/revisionAllocation.ts`
+  (`withRevisionParentLock(identity, tx, run)` / `allocateRevision(input, tx)`,
+  `RevisionFamily` 5 literałów, `revision_conflict`, retry ≤3 tylko
+  serialization/deadlock), MISSING `core/services/content/revisionRetentionService.ts`
+  (L03 to konsumuje — zamrozić kształty eksportów), PRE-CHANGE
+  `core/services/pages/revisionService.ts` (428L: nextRevisionVersion bez
+  advisory lock, listRevisions raw-array unbounded, autosave ładuje WSZYSTKIE
+  autosaves + ID-list delete, pruneRevisionsTx offset-bulk) i
+  `core/services/content/detailPageRevisionService.ts` (200L: list raw-array).
+  Testy: MISSING vitest `tests/vitest/database/revisionAllocation.test.ts`,
+  MISSING integration `task551RevisionConcurrency` + `task551RevisionRetention`,
+  MISSING perf `database-revision-budgets`, PRE-CHANGE 2 unit suite'y (dziś
+  dzwonią po ambient DATABASE_URL przez `hasDb` probe — **HIGH**: przepisać na
+  OWNER_DB_TEST_MAP_PRESENT + czyste nogi airtight). Envelope
+  `RevisionPage<T>` {items,nextCursor,hasMore}, default 50 cap 100, LIMIT+1,
+  „no raw-array compatibility overload" — potwierdzone w kontrakcie L208-222;
+  przerwa w routes/clients do 03-L02 kontraktowa (do ujawnienia).
+- **06-L02 defekty kontraktu (4×MEDIUM + 4×LOW)**: M1 `source .env` w walidacji
+  (airtight obowiązuje); M2 „no request-path bulk prune" niewykonalne w
+  allowliście — `pageService.ts:238` woła `pruneRevisionsTx` (plik chroniony,
+  L49-51); dyspozycja: przepisać pruneRevisionsTx na bounded per-parent LIMIT +
+  ujawnić (pełne usunięcie = własność 03-L02/09); M3 envelope łamie
+  nieallowlistowanych konsumentów do 03-L02 (pageRoutes:277, detailPageRoutes:222,
+  detailPagesClient:400, DetailTemplateEditorPage:477, pageService.test,
+  pageRevisionAutosave.test, detailPagesClient.test:375); M4 fixture inventory
+  debt rośnie (rows :8233/:23158, `toHaveLength(1150)`). Prereqy L01/05 wszystkie
+  na drzewie (dryRun, resolveRetentionBatchSize/MaxBatchesPerRun, exemptions
+  revisions owner 06-L02, indeksy retention na 5 tabelach rewizji, zegar 2036).
+  Mismatch: RetentionPolicy.family = zamknięte 14 rodzin — literały rewizji NIE
+  przechodzą przez normalizer L01; użyć resolverów knobów + leaf-local bounds.
+- **Incydent — wymiar 2 (produkcyjny)**: patch receiptu ujawnił, że formatter
+  rozwinął też 6 plików PRODUKCYJNYCH (access 946→948, audit 616→626,
+  actionExecutionStore 170→168, submission 405→400, digest 825→869,
+  **solutionKitRetentionService 998→1033 = PONAD CAP**). 3 testy już
+  skompresowane (922/970/966, prettier-stabilne, liczby identyczne: 8/9/0/540,
+  42/2/0/570, 35/35 vitest, 191/191 trio; prettier 2× unchanged; agent digestu:
+  bun 1.4.0 bez `bunx` → forma kanoniczna vitest = builtin
+  `node_modules/vitest/vitest.mjs` pod tą samą kopertą env). W toku: 4. agent
+  (produkcja, zero zmian semantycznych — terminality gate/proof recompute/
+  LIMIT 2001/evidence-counted cap strzeżone; weryfikacja: core+root tsc 0,
+  oba suite'y 1:1, eslint 0). Potem: finalny patch receiptu (13+1 wpisów),
+  amend 5b360430, rerun, spine.
+- **06-L01 DOMKNIĘTY na bajtach kanonicznych: amend 5b360430 → `7132f3b6`**
+  (hook: 5 plików wszystkie „(unchanged)" — prettier-stabilność potwierdzona na
+  poziomie hooka; exit 0; drzewo czyste poza spiną). Komplet hashy receiptu =
+  bajty commita (solutionKit 968L `9677…`, appendHeavy 922L `40a4…`,
+  retention-batches 970L `5807…`, digest-test 966L `c96d…`). Incydent
+  formattera zamknięty dwuwymiarowo (3 testy + 1 produkcja), wszystkie liczby
+  suite'ów 1:1 odtworzone. Start **06-L02**: fala A (4 autorów prod).
+- **06-L02 Fala A landed (4/4 prod)** — wszystkie prettier-stabilne, smoke
+  load-OK airtight: `revisionAllocation.ts` **443L** `de898d4f…` (advisory
+  int4+int4, klucze rodzin 551001–551005, scope digest `revision:<f>:v1:<hex>`,
+  retry tx-level `retryRevisionAllocation` — w-tx retry niemożliwy po 40001;
+  pisarze tylko page/detail_page, reszta fail-closed
+  `revision_family_writer_unavailable`); `revisionRetentionService.ts` **647L**
+  `1b6f0952…` (5 rodzin→tabele, knoby z L01, dry-run = 1 LIMIT-read zero
+  `FOR UPDATE`, SKIP LOCKED + `.returning().length` (bez rowCount), kotwice
+  strukturalne — floor keepNewestPerParent + newest publish; global drain
+  `created_at ASC` (indeks retention_idx), per-parent `version ASC`;
+  env-sweep fail-closed); `pages/revisionService.ts` **680L** `29eb62be…`
+  (autosave 2/5 stmt budżet, envelope 1-stmt, nextRevisionVersion usunięty,
+  pruneRevisionsTx → delegacja bounded per-parent, pageService 6/6 kompat.);
+  `detailPageRevisionService.ts` **399L** `8ae7c37b…` (envelope 6-kol.,
+  punktowy odczyt, discard/restore byte-identical z HEAD, autosave writer
+  odroczony — mieszka w zakazanym detailPageDocumentService, 09-L03).
+  Interim-redy policzone (kontraktowe, do 03-L02): pageService.test :197/272,
+  revisionService.test :117, pageRevisionAutosave.test :135/148,
+  detailPagesClient UI/client — envelope adoptuje 03-L02. Uwaga międzyleafowa:
+  sweep L01 `assertNoUnsupportedRetentionEnvKeys` nie zna 5 prefixów
+  `RETENTION_*_REVISIONS_*` — rejestracja przy starcie = 06-L03/integracja.
+- **06-L02 bramy po Fali A**: core lint:types **0**, core lint **0**; root tsc
+  — 1 prawdziwy błąd naprawiony (revisionService.ts:526 TS2352, cast zbędny →
+  `created.id`; prettier unchanged), pozostałe **13 błędów = policzony interim
+  kontraktowy**: pageService.test ×6 + pageRevisionAutosave.test ×5 (03-L02
+  owns) + revisionService.test ×2 (zniknie w Fali B). Zero błędów w plikach
+  produkcyjnych leafa. **Fala B start** (6 autorów: vitest allocation, rewrite
+  revisionService.test + detailPageRevision.test na owner-map gate, integration
+  concurrency/retention, perf budgets) — wszyscy prettier-stabilni ≤950L,
+  gate bajt-w-bajt z kanonu, markery `task551-06l02-*`.
+- **06-L02 DOMKNIĘTY (2026-09-06): receipt `impl-06-l02.json`** —
+  SINGLE_ADMITTED_GATES_GREEN na bajtach kanonicznych (head bazowy 7132f3b6).
+  Allowlista 10 plików, wszystkie prettier-stabilne, max 959L — prod:
+  revisionAllocation **444L** `3de658ad…`, revisionRetentionService **649L**
+  `756ffc64…`, pages/revisionService **680L** `fd2ab07d…`,
+  detailPageRevisionService **401L** `0ff5ecfd…`; testy: vitest allocation
+  **859L** `c374abde…`, revisionService.test **949L** `09f375b0…`,
+  detailPageRevision.test **947L** `c130f03a…`, concurrency **752L**
+  `4481b45a…`, retention **945L** `5d73c261…`, budgets **959L** `6a551017…`.
+  Bateria: bun aggregate 5 plików **92/20/0/1013**, vitest pure lane **36/36**;
+  sąsiedzi: appendHeavy 8/9/0, store 9/4/0, retention-batches 42/2/0/570,
+  traffic 11/6/0, pool 2/3/0, 05-guardy (constraints+onlineIndex) 50/3/0/2325,
+  lifecycle 26/0, workflowContracts 34/0/448; manifest **14/2 kontraktowe**
+  (do 01-L01:final); vitest cache **2 znane redy 07-L01**; root tsc **11
+  interim** (pageService ×6 + pageRevisionAutosave ×5 — 03-L02 owns); core
+  tsc+lint **0**; diffcheck clean; query-inventory FAIL
+  `initial-inventory-state` — **pre-existing dowiedziony na czystym HEAD**
+  (git-archive probe, ten sam kod błędu), decyzja ownera, nietknięte.
+- **Pętla fixów 06-L02 (R3)** — 8 błędów tsc w 2 testach leafa, naprawione
+  inline, ZERO zmian semantycznych (liczby 1:1 po prettier reflow): retention
+  test (import type z revisionAllocation; `family as RevisionFamily` w mapie
+  gramatyki ENV; cast `unknownField`), budgets test (casty wrapperów
+  unsafe/begin/then na własne sygnatury, `beginCaller` rest-parameter view dla
+  spreadu, brakujący import typu `RevisionRetentionPolicyInput`). Core lint
+  przy re-runie na zamrożonych bajtach złapał nieużywany import
+  `RETENTION_POLICY_ERROR_CODE` (wcześniejsze 0 wyścigało bajty autorów) —
+  usunięty; lint+tsc 0; wszystko przeliczone na finalnych bajtach.
+- **Fala C — weryfikatorzy READ-ONLY**: V-TEST **9/9 PASS, zero findinek**
+  (owner-map kanon w 5 plikach bun + 20 skipów, markery per-run, stuby
+  driver-accurate bez rowCount, piny 50/51, 100/101, budżety 2/6, 500/2000,
+  10/100, 180/30/2555, 50/1/500, zegar 2036-01-01, retry cap 3, grep .env
+  pusty); V-PROD **12/12 PASS + 4 LOW**: (1) nagłówek allocation mylił revival
+  widget_template z 09 — komentarz naprawiony; (2) docstring
+  getDetailPageRevision „ONLY" — naprawiony (jedyne CZYTANIE pełnego
+  dokumentu; discard/restore to pisarze); (3) **UJAWNIONE, nie naprawiane**:
+  list createdBy.email = raw `users.email` vs `resolveEmailValue` na point
+  read (drift przy szyfrowanych mailach — decyzja kształtu envelope, owner);
+  (4) martwy eksport `type Db` — usunięty; dodatkowo nagłówek retention
+  doprecyzowany do dokładnej semantyki published anchor (NOT EXISTS: chroni
+  całą linię od newest publish w górę).
+- **Kwalifikacje verdictu 06-L02**: envelope interim breakage (routes/client/
+  2 suite'y = 11 błędów root tsc) kontraktowy do 03-L02 („No raw-array
+  compatibility overload is permitted"); 55P03 lock_timeout możliwy na
+  wolnym owner DB (nogi concurrency 50-way); zmiana semantyki prune na
+  request path (per-page keepNewestPerParent + published anchor + age
+  zamiast czystego licznika); lekcja lane-form: plik vitest odpalony pod
+  bunem = 8 fałszywych faili (fake-timery) — agregaty tylko per lane.
+- **Następne w spine: 06-L03** (Maintenance Scheduling / Partition Readiness —
+  konsumuje zamrożoną powierzchnię eksportu revisionRetentionService), potem
+  **07-L01** (właściciel 2 cache redów). Commit #6 (10 plików + receipt +
+  spina) zaraz po tym wpisie.
+- **STOP na życzenie ownera (2026-09-09) — stan zamrożony przed commit #6.**
+  06-L02 autored + zweryfikowany (V-TEST 9/9, V-PROD 12/12+4 LOW), receipt
+  `impl-06-l02.json` gotowy i prettier-stabilny, spine zaktualizowana. Commit
+  #6 **ZATRZYMANY przez hook**: `precommit:check` odpala pełny root tsc, a
+  envelope z 06-L02 łamie typy w 2 plikach **poza** allowlistą leafa —
+  `pageService.test.ts` ×6 (:198 `.length`, :199/200 indeksy `0`,
+  :273 `.length`, :274/275 indeksy `0`/`1`) i `pageRevisionAutosave.test.ts`
+  ×5 (:137/138/139 indeksy, :141/146 indeksy) — jedyne ofiary w root tsconfig
+  (routes/client/UI siedzą w tsconfigach admina i hooka nie dotykają).
+  Konflikt: kontrakt 06-L02 przydziela te pliki 03-L02 („sole later writer of
+  … their page/detail UI/tests"), a AGENTS.md nie przewiduje bypassu.
+- **Decyzja ownera (2026-09-09, AskUserQuestion): „Mechaniczna adaptacja
+  teraz"** — naprawić wyłącznie przesunięcie dostępu do właściwości
+  (`revisions.length` → `revisions.items.length`, `revisions[0]` →
+  `revisions.items[0]`) w tych 2 plikach, zero zmian asercji/mocków/liczb,
+  zapis jako datowany wyjątek sekcji w receipt; pełna adopcja envelope
+  (semantyczne piny, routes/client/UI) zostaje własnością 03-L02.
+  Odrzucone opcje: `--no-verify` (seria bypassów do 03-L02), pełne 03-L02
+  przed commitem (przestawienie spiny).
+- **Next session — dokładna kolejność domknięcia 06-L02**: (1) 11 edycji
+  `.items` w podanych liniach; (2) `node_modules/.bin/prettier --write` obu;
+  (3) rerun airtight obu suite'ów — bez owner map są DB-gated i skipują
+  (pomiar bazowy: 0 pass / 6 skip / 0 fail — liczb się nie zmienia, edycja
+  tylko dostępowo-typowa); (4) pełny root tsc → **0**; (5) aktualizacja
+  receiptu: ROOT_TSC 0, allowlista +2 pliki (linie+sha256), nowa sekcja
+  `ownerDecision` (data + decyzja „Mechaniczna adaptacja teraz"), kwalifikacja
+  verdictu bez „11 interim"; (6) prettier receipt+spina; (7) commit — 12
+  ścieżek już ZASTAGOWANE + 2 adaptowane, wiadomość
+  „feat(task551): admit 06-L02 (SINGLE_ADMITTED_GATES_GREEN) — revision
+  allocation, envelopes, retention"; hook musi pokazać wszystkie
+  „(unchanged)"; (8) mirror w głównym repo z sha commita.
+- **Stan gita w chwili STOP-u**: worktree `/home/coder/project/Coderso-551`,
+  branch `feat/task-551-db-cache`, HEAD `7132f3b6`, index: 12 ścieżek staged
+  (4 prod + 6 testów leafa + receipt + spina), drzewo robocze poza tym czyste,
+  nic nie commitowane, nic nie pushowane. Po domknięciu: spine dalej bez
+  zmian — **06-L03** (konsumuje zamrożony eksport revisionRetentionService),
+  potem **07-L01**.
+- **06-L02 ZAMKNIĘTY (2026-09-15/16)** — decyzja ownera wykonana dokładnie wg
+  planu: writer-agent 11/11 wstawek `.items` (pageService.test ×6
+  :198-200/:273-275, pageRevisionAutosave.test ×5 :137-139/:141/:146),
+  prettier oba „(unchanged)", airtight rerun 0 pass / 6 skip / 0 fail
+  identycznie przed i po, linie 315/155 bez zmian. Moje bramki wolne:
+  root tsc **0** (exit 0). Niezależny verify read-only (wf_a19642e5-3fd):
+  **8/8 PASS** + 3 informacyjne LOW (brak behawioralnych); orkiestrator
+  potwierdził diff bajt-po-bajcie (dokładnie 11 zmienionych linii, każda
+  czysta wstawka `.items`). Receipt `impl-06-l02.json` zaktualizowany:
+  `ownerDecision` (data decyzji 2026-09-09, applied 2026-09-15), allowlista
+  **12** wpisów (+2 pliki z sha256/liniami), ROOT_TSC → 0, LINE_CAP/
+  PRETTIER_CHECK → 12/12, R5 w rounds, kwantyfikacja verdictu bez „11
+  interim". Reziduum ujawnione w honestyNotes: `expect(...).toHaveLength(n)`
+  na kopercie :136/:149 (semantyka envelope, ślinie skipują pod airtight) —
+  pełna adopcja semantyczna zostaje **03-L02**. Commit #6 = 14 ścieżek
+  (12 staged + 2 adaptowane). Następne w spine: **06-L03** → **07-L01**.

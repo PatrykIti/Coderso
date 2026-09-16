@@ -195,9 +195,9 @@ testIfDb("create/update/publish/unpublish page", async () => {
   });
 
   const revisions = await listRevisions(page.id);
-  expect(revisions.length).toBe(1);
-  expect(revisions[0]?.kind).toBe("publish");
-  expect(revisions[0]?.title).toBe("Home Updated");
+  expect(revisions.items.length).toBe(1);
+  expect(revisions.items[0]?.kind).toBe("publish");
+  expect(revisions.items[0]?.title).toBe("Home Updated");
 
   const clone = await duplicatePage(page.id, createdUserId);
   expect(clone?.id).not.toBe(page.id);
@@ -270,9 +270,9 @@ testIfDb("publish respects revision retention", async () => {
   await publishPage(page.id, userId!, payload);
 
   const revisions = await listRevisions(page.id);
-  expect(revisions.length).toBe(2);
-  expect(revisions[0]?.version).toBe(3);
-  expect(revisions[1]?.version).toBe(2);
+  expect(revisions.items.length).toBe(2);
+  expect(revisions.items[0]?.version).toBe(3);
+  expect(revisions.items[1]?.version).toBe(2);
 
   await cleanup(page.id, userId);
 });

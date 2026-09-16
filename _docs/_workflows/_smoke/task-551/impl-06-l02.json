@@ -1,0 +1,231 @@
+{
+  "task": "TASK-551",
+  "leaf": "06-L02",
+  "leafTitle": "Family-aware revision allocation + bounded revision lists + autosave budgets + five-family revision retention",
+  "capturedAt": "2026-09-06",
+  "closedAt": "2026-09-15",
+  "headAtAdmission": "7132f3b6313358b1d24dcc631ac62bf63889ea2b",
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "verdictQualification": "All leaf gates green on the final bytes listed in allowlist. Disclosed qualifications: (a) the 11 interim root-tsc errors in tests/unit/pages/pageService.test.ts (x6) and tests/unit/pages/pageRevisionAutosave.test.ts (x5) were resolved on 2026-09-15 via the OWNER-DECIDED strictly mechanical property-access adaptation (11 bare \".items\" insertions; zero assertion/mock/fixture/comment changes -- see ownerDecision); root tsc is now 0 on the final adapted bytes. The full SEMANTIC envelope adoption of these two suites -- including the two expect(...).toHaveLength(n) calls on the envelope (pageRevisionAutosave.test.ts:136/:149) -- remains owned by TASK-551-03-L02. Routes/client/UI interim consumers (core/routes pageRoutes.ts, detailPageRoutes.ts, admin client detailPagesClient.ts, DetailTemplateEditorPage.tsx) remain contractual interim consumers until 03-L02 adopts the envelope (\"No raw-array compatibility overload is permitted\"); (b) bunLaneManifest stays 14 pass / 2 fail (contracted red until 01-L01:final regen); (c) the 2 known vitest cache reds (server-cache-codec-keys, server-cache-contracts) remain owned by 07-L01; (d) query-inventory CLI fails with query_inventory_invalid:initial-inventory-state -- proven PRE-EXISTING at this HEAD via a git-archive probe (identical failure on a pristine HEAD checkout), owner-routed decision, untouched.",
+  "allowlist": [
+    {
+      "path": "core/services/database/revisionAllocation.ts",
+      "lines": 444,
+      "sha256": "3de658ad4c9ac5693851c5e07db471b018fda223e875f46b6dfdc8106d72d616",
+      "role": "NEW: closed RevisionFamily union, withRevisionParentLock (pg_advisory_xact_lock(int4,int4), family keys 551001..551005 frozen, parent key = first 4 sha256 bytes re-biased into signed int4), allocateRevision (page+detail_page writers only; entry/post/widget_template fail-closed revision_family_writer_unavailable), RevisionConflictError->revision_conflict (23505 never retried), retryRevisionAllocation (40001/40P01 only, cap 3, fixed 20/60ms), revisionScopeDigest = revision:<family>:v1:<sha256(canonicalJson({parentId}))>"
+    },
+    {
+      "path": "core/services/content/revisionRetentionService.ts",
+      "lines": 649,
+      "sha256": "756ffc64d35d96b47efe3d4cee829f0bc9d8d62c09a93ec8677d6a00c193280c",
+      "role": "NEW: runRevisionFamilyRetention -> frozen RevisionRetentionLedger {family,enabled,dryRun,batches,matched,deleted}; pruneParentRevisions; normalizeRevisionRetentionPolicy with leaf-local bounds maxAgeDays 180 [30..2555], keepNewestPerParent 50 [1..500]; env keys RETENTION_<FAMILY>_REVISIONS_{ENABLED,MAX_AGE_DAYS,KEEP_NEWEST_PER_PARENT} fail-closed on unknown suffix; FOR UPDATE SKIP LOCKED candidate read; dry-run = single LIMIT-bounded read, deleted 0; anchors = keep-newest floor + published anchor (no same-parent kind='publish' row strictly newer) + strict age <; export surface frozen for 06-L03 consumption"
+    },
+    {
+      "path": "core/services/pages/revisionService.ts",
+      "lines": 680,
+      "sha256": "fd2ab07d11ef114e15897e95a286a7fa91623824624699877316138ba05abec9",
+      "role": "REWRITE: createOrReplaceAutosaveRevisionTx (lock -> latest LIMIT 1 -> byte-equality reuse zero-write -> allocateRevision -> delete exact superseded id/pageId/kind='autosave'/id<>createdId; budgets <=2 reuse / <=6 changed); listRevisions -> RevisionPage envelope (1 statement, LIMIT+1 keyset version DESC,id DESC, ->>'title'/'slug' bounded extraction, never data, default 50 cap 100, {cursor?,limit?} reject unknown keys); getPageRevision point read; pruneRevisionsTx delegates to pruneParentRevisions; nextRevisionVersion deleted; pageService.ts 6/6 imports compile-compatible"
+    },
+    {
+      "path": "core/services/content/detailPageRevisionService.ts",
+      "lines": 401,
+      "sha256": "0ff5ecfd9f9dadc9be336117f62235201e389384fcec106b42e1d9f3777b130b",
+      "role": "REWRITE: listDetailPageRevisions -> 6-column RevisionPage envelope (document never selected); getDetailPageRevision = only full-document READ (one statement); discard/restore byte-identical (fence pins); autosave writer deliberately deferred to 09-L03"
+    },
+    {
+      "path": "tests/vitest/database/revisionAllocation.test.ts",
+      "lines": 859,
+      "sha256": "c374abdef08cb1bbd4641ef98d91f7ca796e712154acb129632d794b61054140",
+      "role": "NEW pure lane suite: 36 pass / 0 fail / 0 skip (vitest only); @ts-expect-error tx-first drift fixture asserted fail-closed; fake-timer retry pins; family key + digest tail + conflict identity for all five families"
+    },
+    {
+      "path": "tests/unit/pages/revisionService.test.ts",
+      "lines": 949,
+      "sha256": "09f375b0c30834ae034d30f016f733661b644b198ab7c116edd2f024e5396618",
+      "role": "REWRITE: 14 pass / 2 skip / 0 fail / 159 expect, byte-exact gate over listRevisions body, autosave budgets measured 2/6/5, cursor '' treated as absent pinned"
+    },
+    {
+      "path": "tests/unit/content/detailPageRevisionService.test.ts",
+      "lines": 947,
+      "sha256": "c130f03a1f582710286bf23cf58c51346c5bdd8aa10558b433f73970a5c313d3",
+      "role": "REWRITE: 16 pass / 4 skip / 0 fail / 166 expect; fence inventory GREEN; 6-column envelope pins; full-document read exclusivity"
+    },
+    {
+      "path": "tests/integration/server/task551RevisionConcurrency.test.ts",
+      "lines": 752,
+      "sha256": "4481b45a611c6250e19fa731f94085a21234d95187987ef115c159274f175423",
+      "role": "NEW: 7 pass / 5 skip / 0 fail / 84 expect; DB legs 50-way concurrent create/autosave through the real service under owner map; unique-constraint backstop + lock fairness; caveat: 55P03 lock_timeout possible on high-RTT owner DB"
+    },
+    {
+      "path": "tests/integration/server/task551RevisionRetention.test.ts",
+      "lines": 945,
+      "sha256": "5d73c261cc13ac1a7034048bbb310ea49e641af5890630f954dfcd8c0d0cd758",
+      "role": "NEW: 35 pass / 6 skip / 0 fail / 416 expect; ENV grammar rejections per family, anchor probes (floor/published/boundary), frozen 2036-01-01 clock legs, dry-run LIMIT-read proof"
+    },
+    {
+      "path": "tests/perf/database-revision-budgets.test.ts",
+      "lines": 959,
+      "sha256": "6a55101780512ee7d5fa0752b251ec0508b0173410f6bab21cb70e8155e2dba7",
+      "role": "NEW: 20 pass / 3 skip / 0 fail / 188 expect; toSQL()-compiled list pins (LIMIT 51/101, projection inventory), counting-driver stubs (client.unsafe/begin wrappers, returning-observer batch sizes), scale-profile arithmetic, source-literal anchors over revisionService/revisionRetentionService bodies"
+    },
+    {
+      "path": "tests/unit/pages/pageService.test.ts",
+      "lines": 315,
+      "sha256": "57897623d0955efa6bcc10e1e4b3097303e5b7fd4cbad0d30cdaabeeea1fa625",
+      "role": "OWNER-DECISION MECHANICAL ADAPTATION (decided 2026-09-09, applied 2026-09-15): exactly 6 property-access shifts at former root-tsc error sites :198-200/:273-275 (.length/[i] -> .items...); zero assertion/mock/fixture/comment changes. Interim raw-array consumer of the RevisionPage envelope; full semantic envelope adoption remains TASK-551-03-L02."
+    },
+    {
+      "path": "tests/unit/pages/pageRevisionAutosave.test.ts",
+      "lines": 155,
+      "sha256": "b779436881a6540bcece4f6a79cfa6696632f3b48c44e60bb53cd4652bf2528e",
+      "role": "OWNER-DECISION MECHANICAL ADAPTATION (decided 2026-09-09, applied 2026-09-15): exactly 5 property-access shifts at former root-tsc error sites :137-139/:141/:146 (.length/[i] -> .items...); zero assertion/mock/fixture/comment changes. Interim raw-array consumer of the RevisionPage envelope; full semantic envelope adoption (incl. toHaveLength envelope semantics at :136/:149) remains TASK-551-03-L02."
+    }
+  ],
+  "ownerDecision": {
+    "decided": "2026-09-09",
+    "decision": "Mechanical adaptation now: repair ONLY the property-access offset caused by the RevisionPage envelope in the two interim test files (revisions.length -> revisions.items.length, revisions[0]/[1] -> revisions.items[0]/[1]); zero changes to assertions, mocks, fixtures or numbers; recorded as this dated ownerDecision section. Full envelope adoption (semantic pins, routes/client/UI) remains TASK-551-03-L02. Rejected alternatives: a --no-verify commit series, and pulling the full 03-L02 leaf before this commit (spine reordering).",
+    "applied": "2026-09-15",
+    "edits": 11,
+    "rootTscAfter": "0 errors",
+    "suiteAirtightReruns": "Both adapted suites rerun airtight pre and post edit with identical counts: 0 pass / 6 skip / 0 fail across the 2 files (testIfDb DB legs skip without the owner map); the adaptation is access-path-only, so leg counts are unchanged.",
+    "verify": "Independent READ-ONLY verifier (wf_a19642e5-3fd): 8/8 checks PASS, 3 informational LOW (unstaged pre-existing spine journal delta, mandate line-number approximation, rerun claim writer-executed but not auditor-re-executed). Orchestrator independently confirmed the diff byte-level: exactly 11 changed lines, every one a bare .items insertion."
+  },
+  "executionDiscipline": {
+    "airtightForms": "All bun runs: cd <worktree> && env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <files>. All vitest runs: env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run <files> (bun 1.4.0 has no bunx). No real DB, no network, no .env sourcing, zero real-DB execution.",
+    "entrypointNote": "vitest invoked through its builtin node entrypoint node_modules/vitest/vitest.mjs; bunx does not exist on bun 1.4.0.",
+    "ownerMapGate": "Presence-only OWNER_DB_TEST_MAP_PRESENT over TASK551_FIXTURE_DATABASE_URL/_NAME/_SENTINEL in all 5 bun-lane files; DB legs registered through test.skipIf; zero process.env.DATABASE_URL reads; RUN markers task551-06l02-*-${randomUUID()}; assertions parent-scoped; driver-accurate stubs (RowList count, .returning() length, never rowCount).",
+    "prettierIdempotence": "All 12 allowlist files prettier --check clean on the exact listed bytes (the 2 mechanically adapted files prettier-stable by construction: prettier reported both unchanged after the 11 edits); line caps: max 959 (target <=950 with margin, hard cap 1000 respected).",
+    "laneFormNote": "tests/vitest/database/revisionAllocation.test.ts is a vitest-lane file: under a wrong-form bun aggregate its vitest fake-timer legs produce 8 spurious failures. The contracted forms are bun over the 5 bun-lane files (aggregate 92/20/0/1013) and vitest over the pure-lane file (36/36)."
+  },
+  "admissionGates": [
+    {
+      "name": "BUN_leafAggregate_5files",
+      "command": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/unit/pages/revisionService.test.ts tests/unit/content/detailPageRevisionService.test.ts tests/integration/server/task551RevisionConcurrency.test.ts tests/integration/server/task551RevisionRetention.test.ts tests/perf/database-revision-budgets.test.ts",
+      "outcome": "92 pass / 20 skip / 0 fail / 1013 expect across 5 files (final bytes)"
+    },
+    {
+      "name": "VITEST_leafPureLane",
+      "command": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/database/revisionAllocation.test.ts",
+      "outcome": "1 file passed, 36/36 tests, 0 failed 0 skipped"
+    },
+    { "name": "BUN_appendHeavyRetention", "outcome": "8 pass / 9 skip / 0 fail" },
+    { "name": "BUN_actionExecutionStore", "outcome": "9 pass / 4 skip / 0 fail" },
+    {
+      "name": "BUN_retentionBatches",
+      "command": "tests/perf/database-retention-batches.test.ts",
+      "outcome": "42 pass / 2 skip / 0 fail / 570 expect"
+    },
+    {
+      "name": "BUN_analytics_2files",
+      "outcome": "tests/integration/analytics/trafficRepository.test.ts + trafficRetention.test.ts: 11 pass / 6 skip / 0 fail"
+    },
+    {
+      "name": "BUN_poolTelemetry",
+      "outcome": "2 pass / 3 skip / 0 fail (DB legs skip under airtight form)"
+    },
+    { "name": "BUN_workflowContracts", "outcome": "34 pass / 0 fail / 448 expect" },
+    {
+      "name": "BUN_bunLaneManifest",
+      "outcome": "14 pass / 2 fail -- CONTRACTED RED until 01-L01:final manifest regen"
+    },
+    {
+      "name": "BUN_05FamilyGuards",
+      "outcome": "task551ConcurrencyConstraints.test.ts + task551OnlineIndexDeployment.test.ts: 50 pass / 3 skip / 0 fail / 2325 expect"
+    },
+    {
+      "name": "BUN_lifecycle",
+      "outcome": "tests/integration/server/task551DatabaseLifecycle.test.ts: 26 pass / 0 fail"
+    },
+    {
+      "name": "BUN_queryInventory",
+      "command": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null scripts/task-551-query-inventory.ts --check --phase initial",
+      "outcome": "FAIL query_inventory_invalid:initial-inventory-state -- PRE-EXISTING, proven identical on a pristine git-archive HEAD checkout; owner-routed decision; rebaseline deferred to 01-L01:final with _docs/_workflows/_smoke/task-551/inventory-rebase-kit/"
+    },
+    {
+      "name": "VITEST_03Suites_plus_db",
+      "outcome": "tests/vitest/database/{keysetCursor,boundedReadContract,revisionAllocation}.test.ts + tests/vitest/db/*: all pass"
+    },
+    {
+      "name": "VITEST_cache",
+      "outcome": "248 passed / 2 failed / 1 skipped -- the 2 reds are the KNOWN 07-L01-owned cache reds (server-cache-codec-keys canonical byte budget, server-cache-contracts negative-TTL pin)"
+    },
+    { "name": "CORE_TSC", "outcome": "0 errors" },
+    {
+      "name": "CORE_LINT",
+      "outcome": "0 errors (after removing one unused import the round caught; see rounds)"
+    },
+    {
+      "name": "ROOT_TSC",
+      "outcome": "0 errors on the final adapted bytes (the 11 interim envelope-consumer errors in the 2 test files were resolved by the owner-decision mechanical adaptation; 0 errors in any other file)"
+    },
+    { "name": "DIFFCHECK", "outcome": "git diff --check clean" },
+    { "name": "LINE_CAP", "outcome": "12/12 files <= 1000 (max 959)" },
+    {
+      "name": "PRETTIER_CHECK",
+      "outcome": "12/12 files 'All matched files use Prettier code style!'"
+    }
+  ],
+  "verifierAudit": {
+    "vTestDiscipline": "READ-ONLY agent audit: 9/9 points PASS, zero HIGH/MED/LOW findings requiring repair. Confirmed: owner-map gate canonical in all 5 bun files with 20 skips under airtight form; vitest purity (pure-lane file imports only vitest/node builtins + revisionAllocation); marker discipline per-run per-parent, cleanup fixture-scoped; driver-accurate stubs (2 rowCount mentions, both banning comments); line caps; prettier 6/6; contract pins 50/51, 100/101, budgets 2/6, batch 500/2000 + 10/100, bounds 180/30/2555 + 50/1/500 + edge rejections, frozen clock 2036-01-01 with derived cutoffs, revision_conflict, retry cap 3, family keys 551001..551005; env-sourcing grep empty. Aggregate reproduced: 92/20/0/1013 bun + 36/36 vitest.",
+    "vProdContract": "READ-ONLY agent audit: 12/12 contract points PASS. Confirmed: exact callable orders (no tx-first overload), closed family union with fail-closed writers, two-arg int4 advisory lock with frozen keys, retry only 40001/40P01 cap 3 (23505 never retried), envelope rules both services (50/100, LIMIT+1, keyset, unknown-key rejection, no raw-array overload), autosave latest-only + equality reuse + exact superseded delete within budgets, retention consumes L01 resolvers (batch 500/10, max 2000/100) with SKIP LOCKED + returning-length counts + dry-run LIMIT read, pruneRevisionsTx delegation bounded (pageService.ts untouched call site, resolvePageRevisionRetention pre-clamps into keep bounds), forbidden paths untouched (delta = exactly the 10 allowlist files + _TMP-S1-spina.md), L03 handoff export surface frozen and documented.",
+    "vProdFindingsDisposition": "4 LOW findings, none behavioral: (1) revisionAllocation header misattributed widget_template writer revival to TASK-551-09 -- FIXED inline (comment now: entry/post adoption 09, widget_template legacy-table retention-only with writer revival outside TASK-551); (2) getDetailPageRevision docstring claimed ONLY full-document op -- FIXED inline (now 'only read operation'; discard/restore writers noted); (3) revisionService list createdBy.email uses raw users.email while point read resolves via resolveEmailValue -- DISCLOSED, NOT FIXED (design-level consistency drift under encrypted-email deployments; changing the envelope projection is a contract-visible decision for the owner); (4) dead export type Db -- REMOVED inline. Additionally the retention header's published-anchor description under-stated the implemented mechanism -- FIXED inline to state the exact NOT EXISTS semantics.",
+    "vOwnerDecisionAdaptation": "READ-ONLY verifier wf_a19642e5-3fd over the 2026-09-15 mechanical adaptation: 8/8 checks PASS (diff = exactly 11 bare .items insertions; sha256/wc match; prettier --check clean; no assertion semantics changed; envelope .items shape type-correct for all 11 accesses; no remaining non-compiling raw accesses; semantics residuals = exactly the two toHaveLength calls at pageRevisionAutosave.test.ts:136/:149; worktree delta limited to staged set + the 2 files). 3 informational LOW recorded.",
+    "lintRaceNote": "CORE_LINT passed clean immediately after Wave A/B authoring but failed on the post-verification rerun (unused RETENTION_POLICY_ERROR_CODE import in revisionRetentionService.ts). Explanation: the earlier clean run raced the author agents' final byte states; the admission battery rerun on frozen bytes caught it. Import removed; lint + tsc re-run green; all counts re-verified identical."
+  },
+  "rounds": [
+    {
+      "round": "R1",
+      "scope": "Recon verified on the two riskiest handoff claims; Wave A: 4 production authors (revisionAllocation, revisionRetentionService, revisionService rewrite, detailPageRevisionService rewrite), all landed prettier-stable <=680L.",
+      "outcome": "Core tsc 0 after 1 inline fix (TS2352 revisionService created.id); core lint clean-at-the-time; 13 root-tsc interim errors identified as 03-L02-owned (2 later eliminated by the B2 rewrite)."
+    },
+    {
+      "round": "R2",
+      "scope": "Wave B: 6 test authors with byte-exact gates and prettier-stable <=950L mandates.",
+      "outcome": "All 6 landed green on their own gates: B1 36/0 (vitest), B2 14/2skip/159, B3 16/4skip/166, B4 7/5skip/84, B5 35/6skip/416, B6 20/3skip/188."
+    },
+    {
+      "round": "R3",
+      "scope": "Admission fix loop on frozen bytes: 8 unexpected root-tsc errors in 2 leaf test files (mechanical type frictions at driver-wrapper seams and deliberate negative inputs).",
+      "outcome": "Fixed inline with zero semantic change: retention test (import type RevisionFamily from revisionAllocation; family as RevisionFamily in grammar map; unknownField as unknown as RevisionRetentionPolicyInput); budgets test (fail-closed table widening cast; unsafe/begin wrapper re-typing casts; beginCaller rest-parameter view for the spread; returning-observer query.then cast; missing RevisionRetentionPolicyInput type import). Prettier reflowed both files; counts re-verified IDENTICAL (55/9/604 joint; 92/20/0/1013 aggregate; 36/36 vitest)."
+    },
+    {
+      "round": "R4",
+      "scope": "Wave C: 2 READ-ONLY verifiers + full slow-gate battery on final bytes.",
+      "outcome": "V-TEST 9/9 PASS zero findings; V-PROD 12/12 PASS + 4 LOW (2 comment fixes + 1 dead export applied inline, 1 email-consistency disclosed); core tsc 0; core lint 0 after unused-import removal; root tsc exactly 11 interim; all neighbor suites green; manifest 14/2 contracted; vitest cache 2 known reds; query-inventory pre-existing failure proven at HEAD via git-archive probe."
+    },
+    {
+      "round": "R5 (owner-decision closure, 2026-09-15)",
+      "scope": "Strictly mechanical owner-decided adaptation of the 2 interim test files: 11 bare .items property-access insertions (pageService.test x6, pageRevisionAutosave.test x5), prettier (both unchanged), airtight pre/post reruns (identical 0/6/0), root tsc re-run to 0, receipt updated (allowlist +2, gates re-baselined, ownerDecision section), independent read-only verification.",
+      "outcome": "Root tsc 0; counts identical; 3 informational LOW from the verifier (none behavioral); admission verdict unchanged -- SINGLE_ADMITTED_GATES_GREEN now holds with zero interim root-tsc errors."
+    }
+  ],
+  "contractDefects": [
+    {
+      "id": "06-L02-M1",
+      "defect": "Interim consumers of the new RevisionPage envelope are broken BY CONTRACT: pageRoutes.ts / detailPageRoutes.ts return the envelope raw; detailPagesClient.ts types the response as DetailPageRevisionSummary[]; DetailTemplateEditorPage.tsx assigns the envelope to array state; pageService.test.ts (x6) and pageRevisionAutosave.test.ts (x5) use .length/index on the envelope (11 root-tsc errors).",
+      "disposition": "Interim by contract: the 11 test-file root-tsc errors were resolved 2026-09-15 by the owner-decision mechanical adaptation (property-access only; see ownerDecision). Routes/client/UI interim consumers remain until TASK-551-03-L02 adopts the envelope (\"No raw-array compatibility overload is permitted\"). Never widened into a compatibility overload."
+    },
+    {
+      "id": "06-L02-M2",
+      "defect": "listRevisions author email field resolves raw users.email while the point-read/restore path resolves via resolveEmailValue (decrypted-email preference). Under encrypted-email deployments the list summary and point read can disagree for the same revision.",
+      "disposition": "DISCLOSED to owner, deliberately NOT fixed in this leaf: aligning the list projection with resolveEmailValue changes the frozen-for-03 envelope shape and per-row decrypt cost; a contract-visible design decision."
+    }
+  ],
+  "inventoryDebt": {
+    "growth": "The reviewed-DML inventory and FK pin set lag the leaf delta by design until the 01-L01:final rebaseline: 4 new untracked DML-bearing production files (revisionAllocation.ts, revisionRetentionService.ts) and the rewritten revisionService.ts/detailPageRevisionService.ts are not in the reviewed list; the FK pin lacks the committed solutionKitRollbackAuthority.ts edge (05-L01). No inventory file was edited in this leaf.",
+    "preExistingFailure": "task-551-query-inventory --check --phase initial fails query_inventory_invalid:initial-inventory-state on the working tree AND identically on a pristine git-archive HEAD checkout (7132f3b6) -- pre-existing, owner-routed (inventory classification review: 64 rows x 17 review-owned fields, 7 drops, codebook letter, toHaveLength(1150) bump).",
+    "rebaseline": "Consumes _docs/_workflows/_smoke/task-551/inventory-rebase-kit/ at 01-L01:final, together with the bunLaneManifest regen (manifest currently 14 pass / 2 fail, contracted)."
+  },
+  "agentDeaths": [],
+  "honestyNotes": [
+    "Envelope interim breakage is contractual, not collateral: routes/clients/tests consuming raw arrays stay red until 03-L02; no compatibility overload was added.",
+    "Prune semantics shift on the request path: pruneRevisionsTx now pins per-page survival to keepNewestPerParent (clamped from the page's retention setting) plus the published anchor and age cutoff -- previously it deleted strictly by count alone. Per-page retained counts change accordingly.",
+    "task551RevisionConcurrency DB legs may hit 55P03 lock_timeout on a high-RTT owner database (50-way contention legs); under the owner map this would surface as leg failure, not silent pass.",
+    "The retention DB legs assert whole-family dry-run matched counts (table-wide by design, shared-DB pollution guard replicating task551AppendHeavyRetention.test.ts's own pattern, documented in the suite header); the perf file scopes its whole-family pass to marker parents via an executor where-wrapper.",
+    "The vitest pure-lane file fails 8 tests if run under bun (fake-timer API mismatch) -- a wrong-form invocation artifact, not a defect; contracted aggregates are recorded per lane.",
+    "The earlier CORE_LINT clean verdict preceded the author agents' final byte states; only the frozen-byte battery is authoritative.",
+    "No gates:coderso* invocation anywhere (owner-routed); stale _docs/_workflows/_smoke/task-551/impl-01-l02.json untouched; _docs/_TASKS/* untouched; changelog untouched.",
+    "The two expect(...).toHaveLength(n) calls on the envelope (pageRevisionAutosave.test.ts:136/:149) were deliberately left untouched: outside the 11 property-access shifts mandated by the owner decision; under the envelope (no .length property) their runtime semantics differ from raw arrays -- full semantic adoption is owned by TASK-551-03-L02, and the DB legs skip under the airtight form so admission counts are unaffected."
+  ],
+  "nextInSpine": "TASK-551-06-L03 (Maintenance Scheduling / Partition Readiness -- consumes the frozen revisionRetentionService export surface), then 07-L01 (owns the 2 vitest cache reds)."
+}

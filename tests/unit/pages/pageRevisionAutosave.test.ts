@@ -134,16 +134,16 @@ testIfDb(
 
     const revisions = await listRevisions(page.id);
     expect(revisions).toHaveLength(1);
-    expect(revisions[0]?.kind).toBe("autosave");
-    expect(revisions[0]?.title).toBe("Landing draft two");
-    expect(revisions[0]?.slug).toBe("/landing-draft-two");
+    expect(revisions.items[0]?.kind).toBe("autosave");
+    expect(revisions.items[0]?.title).toBe("Landing draft two");
+    expect(revisions.items[0]?.slug).toBe("/landing-draft-two");
 
-    const restored = await restoreRevision(page.id, revisions[0]!.id);
+    const restored = await restoreRevision(page.id, revisions.items[0]!.id);
     expect(restored.restored).toBe(true);
     expect(restored.page.title).toBe("Landing draft two");
     expect(restored.page.slug).toBe("/landing-draft-two");
 
-    const discarded = await discardAutosaveRevision(page.id, revisions[0]!.id);
+    const discarded = await discardAutosaveRevision(page.id, revisions.items[0]!.id);
     expect(discarded.kind).toBe("autosave");
     const afterDiscard = await listRevisions(page.id);
     expect(afterDiscard).toHaveLength(0);
