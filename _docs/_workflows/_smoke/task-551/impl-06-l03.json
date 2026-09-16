@@ -1,0 +1,124 @@
+{
+  "task": "TASK-551",
+  "leaf": "06-L03",
+  "leafTitle": "Maintenance scheduling, partition readiness, and recovery (retention scheduler + one-session retention job + readiness inspection + CLI check)",
+  "capturedAt": "2026-09-16",
+  "closedAt": "2026-09-16",
+  "headAtAdmission": "43ca2ed1faa2575e2778be72c58251a3d7ef999b",
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "verdictQualification": "All leaf gates green on the final bytes listed in allowlist (post-audit fix wave included). Disclosed qualifications: (a) bunLaneManifest stays red (contracted until 01-L01:final regen; this leaf adds +4 bun-lane files, deepening the known delta); (b) the 2 known vitest cache reds (server-cache-codec-keys, server-cache-contracts) remain owned by 07-L01; (c) real-DB legs (21 skips airtight) are owner-executed on the shared remote DB per the spine's real-DB barrier -- assertions are real but were not executed against a live database in this environment; (d) two files land above the C9.1 soft target of 950 lines but under the 1,000 hard cap (retentionScheduler.test.ts 998, database-partition-readiness.test.ts 991) -- accepted overage recorded per C9; (e) query-inventory CLI remains query_inventory_invalid:initial-inventory-state (pre-existing red proven at this HEAD family per 06-L02 receipt, owner-routed).",
+  "allowlist": [
+    {
+      "path": "core/services/maintenance/retentionJobService.ts",
+      "lines": 947,
+      "sha256": "2dc125235d2243cd9f94976765e963280a257f41330b73a6e681c4ccafdf3b65",
+      "role": "NEW: runRetentionPlan -- ONE withDedicatedDatabaseSession per run; hand-rolled pg_try_advisory_lock/pg_advisory_unlock via session.execute (constants 551063/3, collision-checked against the landed inventory); post-acquire ownership recheck (pg_locks JOIN pg_stat_activity, ::text compare, l.pid = pg_backend_pid()); publish BEFORE unlock; local RETENTION_JOB_FAMILY_REGISTRY (14 L01-batch + 5 revision-unit rows, module#function source map, import-time order/duplicate validation) with per-family typed enabled gate BEFORE any SQL; one documented drizzle adapter drizzle(tx as unknown as Sql, {schema}) (precedent startupMigrations.ts:123) + solution_kit identity-transaction shim + search_history DbTransaction cast; per-batch session.transaction for L01 families, ONE session.transaction per revision family-unit with now inside policy input; tx-local set_config('statement_timeout','4000',true) as FIRST statement of every transaction callback (C10); statementTimeoutMs passed type-compliance-only (voided client.ts:428); analytics = session-bound TrafficBatchPruners closures forwarding to real trafficRepository primitives, once-per-batch {batchSize, maxBatchesPerRun: 1, dryRun: policy.dryRun} (C1); C8 catch precedence abort-first (signal.aborted -> status aborted even with co-occurring dedicated_database_session_lost; un-aborted session loss or failed recheck -> cancelActiveAndRollback('retention_lock_lost') + retention_lock_lost, summary unpublished; acquire-false -> skipped_locked; recheck-failure -> retention_job_locked; deadline -> retention_job_timeout; family failure -> retention_family_failed + failedFamily, later families skipped, earlier high-water marks kept); JobSummary sanitized aggregates only; zero default-db import (B3 source-guarded)"
+    },
+    {
+      "path": "core/services/maintenance/partitionReadinessService.ts",
+      "lines": 610,
+      "sha256": "fbe20d9872110b35ea2debb83a67696c1073f22a3536ef45f27c68639ffdbae8",
+      "role": "NEW: inspectPartitionReadiness(executor = db, options?) over frozen TABLE_REGISTRY (15 entries, getTableName runtime reads, import-time registry_identifier_drift/duplicate fail-closed); arbitrary-table rejection (partition_readiness_table_unknown, rejected string never reaches a query/report/error); evidence from allowlisted catalog/aggregate reads ONLY (sql.join bound table names, static templates, no sql.raw/eval); observe|plan classification with evidence-backed thresholds; every plan result embeds the full recommendation block; report sanitized (identifiers, aggregates, ISO timestamps, stable reason tokens, static design prose); zero DDL/DML vocabulary (grep-verified, test-pinned on this file AND the CLI)"
+    },
+    {
+      "path": "core/server/jobs/retentionScheduler.ts",
+      "lines": 786,
+      "sha256": "1a087bd616acaa76e45f08b7d29363d036b13e5fb07192d1db0ec0436d1cdeab",
+      "role": "NEW: strict self-contained env parser (exactly RETENTION_SCHEDULER_{ENABLED,INTERVAL_MS,INITIAL_JITTER_MS,MAX_RUN_MS}; defaults 86,400,000/30,000/300,000; bounds 60,000..604,800,000 / 0..300,000 / 1,000..3,600,000; exact-lowercase boolean; jitter<=interval, maxRun<interval; unknown RETENTION_SCHEDULER_* keys fail startup; parse BEFORE any timer/affinity/network activity; never calls assertNoUnsupportedRetentionEnvKeys per C5); createRetentionSchedulerLifecycleParticipant (id 'retention-scheduler', phase 'worker') + startRetentionScheduler sharing one engine: unref'd single timer, jitter then fixed interval, strict non-overlap ticks, sync+async tick failures caught and redacted (exact-allowlist error codes else retention_scheduler_unclassified_error; token sanitizer [a-z0-9_.:-]{1,64}); disabled = zero affinity work; enabled awaits assertMaintenanceSessionAffinity (L02-owned) BEFORE timer install; close = stop ticks -> abort run signal -> cancel/drain within RETENTION_CANCEL_DRAIN_DEADLINE_MS, idempotent, awaited; default job binding = createDefaultRunRetentionPlan(config.maxRunMs) adapter -> runRetentionPlan(now, signal, {maxRunMs}) (post-audit fix: positional-to-object adapter, no cast; C11 budget forwarding); sanitized telemetry includes failedFamily through the token sanitizer (post-audit fix, C11)"
+    },
+    {
+      "path": "scripts/task-551-partition-readiness.ts",
+      "lines": 298,
+      "sha256": "5d1fcb829b54fff85c8cc91e6b289c9adb5811b831389fab870f40dead9db345",
+      "role": "NEW: thin CLI facade over inspectPartitionReadiness; closed argv grammar (--check only; anything else usage + exit 1 BEFORE any database contact); reads service rows keyed `status` (post-audit fix, C10) with row ids pinned to PARTITION_READINESS_TABLE_IDS (registry drift fails closed at the facade); stable JSON envelope to stdout; exit taxonomy per C10: 0 all-observe, 2 any-plan, 3 partition_readiness_unavailable (service typed PartitionReadinessError AND facade shape refusal; reason relayed WHOLE e.g. catalog_read_failed), 4 partition_readiness_unexpected (untyped failures only), 1 argv; no DDL vocabulary; core client import inside the guarded run"
+    },
+    {
+      "path": "tests/vitest/maintenance/partitionReadinessService.test.ts",
+      "lines": 914,
+      "sha256": "c6209ce75e3ec84012725fe16187e0db9bfcbd50b38aad7bb77ac00884f8ee2f",
+      "role": "NEW vitest suite, 33 pass / 0 fail / 0 skip airtight: unknown-table rejection with zero executor calls; hostile-row sanitization; threshold classification below/above with full recommendation block; broad bare-token DDL scan over the service source; rendered-statement allowlist checks; executor seam type-honesty"
+    },
+    {
+      "path": "tests/integration/runtime/retentionScheduler.test.ts",
+      "lines": 998,
+      "sha256": "0a61eb13f20a6ed5f060425f9dbd8166682cddf4544924a9f004529e8253bb20",
+      "role": "NEW bun-lane suite, 13 pass / 3 skip / 0 fail / 191 expect airtight (12->13 after post-audit fix): fake-clock matrix (disabled/enabled, jitter bounds, fixed cadence, non-overlap, unref, sync+async failure redaction); env parser corner matrix incl. cross-field violations; affinity gating (off+primary+pool=1 zero reservations; enabled-capped rejection; txPrimary; outage; verifier re-entry; PID drift; direct pass probe-count 2; session pooling); lifecycle factory close/drain with fixture runner REJECTING on abort (retention_scheduler_run_aborted reachable at info, asserted) + real 5ms drain-budget wait + real-DB abort leg < 4,500ms; lock-key uniqueness vs landed inventory; NEW default-binding leg (post-audit): scheduler started WITHOUT injected runner over the fake client seam drives the REAL runRetentionPlan to status completed with zero SQL (19 disabled families) and NO retention_scheduler_run_failed"
+    },
+    {
+      "path": "tests/integration/server/task551RetentionJobService.test.ts",
+      "lines": 829,
+      "sha256": "9496d86ea23d18db13127e36c24c37d739c8af35e6d31b72fa7a03aa9ce6123c",
+      "role": "NEW bun-lane suite, 3 pass / 9 skip / 0 fail airtight: SOURCE GUARD over prod retentionJobService.ts (comment-stripped; only withDedicatedDatabaseSession/DATABASE_CLIENT_ERROR_CODES/types from db/client; no default db; no realBatches; no withDedicatedDatabaseAdvisoryLock); two-replica lock proof with pg_backend_pid instrumentation through the analytics family; backend-kill leg (retention_lock_lost only, summary unpublished, second replica proceeds after termination, pool baseline); C8 mapping legs incl. abort-first with co-occurring session loss (client.ts:395-400 throws on aborted signal); dry-run propagation + zero-mutation; batch independence + family-failure isolation; hung-query containment via tx-local statement bound"
+    },
+    {
+      "path": "tests/perf/database-retention-jobs.test.ts",
+      "lines": 950,
+      "sha256": "d5081a3305b1c6c25bce415896a42405fc7dce96fd0ab66d448a687d3ab100f0",
+      "role": "NEW bun-lane suite (owner-map gated: fixture map presence AND real select-1 routability probe), 11 pass / 4 skip / 0 fail airtight: large-fixture budgets (statements/deletes/time within family/run budgets, no unbounded DELETE); L01/L02 edge parity against 01-L02 literal values (499/500/501/2000/2001, ten-batch convergence); apply-vs-dry-run same bounded candidates, child-first order, zero dry-run mutation; statement accounting for analytics (apply = candidate SELECT + bounded DELETE per pruner, dry-run = 1 SELECT); advisory-lock key uniqueness pin [551063,3] vs landed inventory"
+    },
+    {
+      "path": "tests/perf/database-partition-readiness.test.ts",
+      "lines": 991,
+      "sha256": "4e8ab9383fe875d218f4542b46d05e9b2db60fbea4efb005482dda4c269fdf18",
+      "role": "NEW bun-lane suite (owner-map gated: presence AND routability probe -- post-audit fix T4 adopting the sibling idiom), 20 pass / 5 skip / 0 fail / 1122 expect airtight: real-catalog aggregation sanity; observe/plan classification; dual-source SQL guard (SERVICE + CLI sources; statement-shaped patterns with extended noun lists + broad bare-token scan over CLI_SOURCE -- post-audit fix T3); CLI pure legs feed the service's REAL status-keyed row shape via inspectPartitionTableReadiness (post-audit fix T1) with refusal vocabulary incl. out-of-registry ids and legacy classification-keyed rows; end-to-end smoke leg (post-audit fix T2, NOTE removed): exit 0/2 observe/plan, dead-URL leg pins exit 3 code partition_readiness_unavailable reason catalog_read_failed relayed whole; source pins of the facade catch mapping (typed -> unavailable; untyped -> unexpected/exit 4)"
+    }
+  ],
+  "gates": {
+    "CORE_TSC": "0 errors (exit 0), rerun after post-audit fix wave",
+    "ROOT_TSC": "0 errors (exit 0), rerun after post-audit fix wave",
+    "CORE_ESLINT": "exit 0 on retentionJobService.ts, partitionReadinessService.ts, retentionScheduler.ts",
+    "SCRIPTS_ESLINT": "exit 0 on scripts/task-551-partition-readiness.ts",
+    "PRETTIER": "11/11 files stable (--check clean): 9 allowlist files + contract md + spina md",
+    "AIRTTIGHT_VITEST": "tests/vitest/maintenance/partitionReadinessService.test.ts: 33 pass / 0 fail / 0 skip",
+    "AIRTIGHT_BUN_LANE": "47 pass / 21 skip / 0 fail / 1415 expect across 4 files (retentionScheduler 13p/3s + task551RetentionJobService 3p/9s + database-retention-jobs 11p/4s + database-partition-readiness 20p/5s) under env DATABASE_URL=postgresql://127.0.0.1:1/none bun --env-file=/dev/null test",
+    "CLI_SMOKE_DEAD_URL": "bun --env-file=/dev/null scripts/task-551-partition-readiness.ts --check under dead URL: exit 3, stderr single JSON line {schema coderso.task551.partition-readiness-check@v1, status failed, code partition_readiness_unavailable, reason catalog_read_failed} -- C10 mapping verified empirically; stdout empty; no URL/host text leaked",
+    "LINE_CAP": "9/9 <= 1000 (max 998); 2 files above the 950 soft target accepted per C9.1",
+    "BUN_LANE_MANIFEST": "RED (contracted; regen 01-L01 final-only)"
+  },
+  "contractCorrections": {
+    "tail": "Dated Contract Corrections - 2026-09-16 (FAZA 0 dispositions; append-only), lines 418-727",
+    "rounds": [
+      "R1: C1-C9 initial dispositions (analytics session-bound pruners; drizzle-over-TransactionSql adapter + dual commit boundaries; local registry + local isDedicatedSessionLoss; batch loop + family table + analytics once-per-batch + set_config containment; self-contained parser; hand-rolled lock, publish-before-unlock; statementTimeoutMs type-compliance-only; C8 abort-first precedence; C9 LOW set)",
+      "R2: A1-A8 amendments after fresh re-audit (A1 tx-local set_config as FIRST statement -- session-level bound is DB_STATEMENT_TIMEOUT_MS 15s, not 4s; A2 search_history DbTransaction cast; A3 analytics {dryRun: policy.dryRun} pinned + registry-level gating; A4 now inside policy input; A5 solution_kit identity-transaction shim; A6 statement accounting; A7 lock-key inventory recording; A8 startupMigrations cite fix)",
+      "R3: round-3 dispositions folded (per-revision-family ONE session.transaction with documented cast; dry-run silent-APPLY hazard caught pre-implementation)",
+      "POST_AUDIT 2026-09-16: C10 (CLI facade shape + exit taxonomy: service `status` rows accepted, row ids pinned to PARTITION_READINESS_TABLE_IDS, unavailable/3 for typed failures with whole-reason relay, unexpected/4 untyped-only, closed five-code set unchanged) and C11 (RETENTION_SCHEDULER_MAX_RUN_MS forwarded into deps.maxRunMs via createDefaultRunRetentionPlan adapter; failedFamily in sanitized telemetry) appended after the three-lens post-audit"
+    ]
+  },
+  "postAudit": {
+    "date": "2026-09-16",
+    "lenses": [
+      "contract conformity (11/11 items CONFORM)",
+      "adversarial test quality (coverage map complete; gates verified by predicate)",
+      "security & sanitization (all clean; closed sets verified)"
+    ],
+    "fixedInLeaf": [
+      "HIGH: CLI facade required `classification` key vs service `status` -> every live --check failed exit 3/report_invalid; contract validation command unreachable. FIXED: facade accepts status-keyed rows (PartitionReadinessServiceTableRow), pins ids to PARTITION_READINESS_TABLE_IDS; pure CLI test legs rebuilt on the real service shape; smoke leg NOTE removed, now a genuine end-to-end pin (C10)",
+      "HIGH: scheduler default binding `runRetentionPlan as unknown as RetentionPlanRunner` invoked the positional job with a single object -> TypeError every production tick, contained as redacted run_failed (retention silently inert). FIXED: createDefaultRunRetentionPlan(maxRunMs) adapter, cast deleted; new pure leg starts the scheduler without an injected runner and asserts the real job completes with zero SQL and no run_failed (C11)",
+      "MEDIUM: RETENTION_SCHEDULER_MAX_RUN_MS parsed/validated/logged but never forwarded (dead knob). FIXED: forwarded as deps.maxRunMs through the default adapter; job's resolveRunBudgetMs still re-bounds (C11)",
+      "MEDIUM: CLI exit taxonomy inverted (service-typed partition_readiness_unavailable surfaced as unexpected/exit 4 with slug-truncated reason; exit 3 spent on shape guard; header doc contradicted behavior). FIXED per C10: typed -> unavailable/exit 3 with whole reason; unexpected/exit 4 untyped-only; header docs aligned"
+    ],
+    "acceptedLow": [
+      "Lock-key uniqueness assertion lives in tests/perf/database-retention-jobs.test.ts:251-265, not the scheduler test named by the C6 letter (content complete; location deviation recorded)",
+      "retentionScheduler.test.ts 998L and database-partition-readiness.test.ts 991L exceed the 950 soft target (hard cap 1,000 respected; C9.1 accepted overage)",
+      "Scheduler rejects ANY unknown RETENTION_SCHEDULER_* key (stricter than contract minimum) -- carry the strict-prefix rule into the TASK-551-10-L02 env table",
+      "SQL-guard bare-token scan over CLI_SOURCE added post-audit (statement-shaped patterns retained; noun lists extended with function/owner/extension/trigger/domain/type)",
+      "'one physical affinity probe total across DB start + scheduler start' proven piecewise (client memoization pinned in L02-owned lifecycle test; leaf pins scheduler-start count 2, idempotent restart 2); a single combined fixture remains optional owner follow-up",
+      "'missing maintenance URL' scheduler-start arm is structurally unreachable through the leaf seam (fails at database-config resolution; pinned at config layer in L01/L02-owned suites)",
+      "One-PID proof samples one batch transaction (analytics family only; only enabled family); unlock proven indirectly (lock absent post-run); stronger two-family variant optional",
+      "tx-local 4,000ms containment proven by mechanism (blocked in-transaction read self-terminates, family fails) without a crisp elapsed assertion (leg budget 90s); hard <4,500ms assertion optional owner follow-up",
+      "Two tautological arithmetic assertions removed post-audit (T5); classification oracle reimplementation retained as documented cross-check (concrete statuses pinned explicitly alongside)",
+      "'no request path invokes the job' has nothing to guard until TASK-551-08-L03 composition lands (guard owed there); RETENTION_DRY_RUN invalid-syntax rejection stays pinned in L01-owned suites (leaf pins propagation only)",
+      "Scheduler telemetry drops nothing else of contract interest; failedFamily added post-audit (C11)"
+    ]
+  },
+  "inventoryDebt": {
+    "note": "Per C9.5 (scanner core-only; CLI script adds zero rows): retentionJobService.ts adds 4 new statement templates -- pg_try_advisory_lock probe (SELECT), pg_advisory_unlock (SELECT), pg_locks JOIN pg_stat_activity ownership recheck (SELECT), tx-local set_config('statement_timeout',...) -- and ZERO new DML rows: every delete remains the already-inventoried L01/L02 pruner functions, reached through 19 new registry call-site rows (14 L01-batch + 5 revision-unit). partitionReadinessService.ts adds 4 new catalog/aggregate read templates (bound name list + relname catalog read + min/max aggregate + stat read), zero DML. query-inventory CLI remains query_inventory_invalid:initial-inventory-state (pre-existing, owner-routed per 06-L02 receipt); this note is the manual quantification of record until the scanner is repaired."
+  },
+  "honestyNotes": [
+    "All DB-gated legs (21 bun-lane skips) execute only under the owner's real-DB run; their assertions were adversarially reviewed (lens 2) but not executed against a live database in this environment. The two-replica, backend-kill, hung-query, and end-to-end CLI legs are therefore reviewed-not-executed by construction of the airtight law.",
+    "The instanceof PartitionReadinessError branch of the CLI catch is exercised only on owner runs (dead-URL smoke leg is DB-gated); it is pinned by source-text assertions in the perf suite and by code reading.",
+    "The perf-suite CLI_SOURCE source-pins (catch mapping) are formatting-sensitive by nature (same style as the suite's existing source guards) -- a prettier reflow of the facade could require updating two string literals; accepted as consistent with the established source-guard idiom.",
+    "Contract md in the MAIN repo (/home/coder/project/Coderso/_docs/_TASKS/...) is a stale 303-line tracked snapshot from commit e73f158a; the canonical 727-line contract lives on this branch and merges with it (main repo untouched this session; append-only diff verified: 273 insertions, 0 deletions vs 43ca2ed1).",
+    "A Bash-cwd reset to the main repo occurred mid-session; verified no main-repo file was modified (git status clean except pre-existing untracked entries). All subsequent commands used absolute paths."
+  ]
+}

@@ -764,3 +764,105 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   na kopercie :136/:149 (semantyka envelope, ślinie skipują pod airtight) —
   pełna adopcja semantyczna zostaje **03-L02**. Commit #6 = 14 ścieżek
   (12 staged + 2 adaptowane). Następne w spine: **06-L03** → **07-L01**.
+
+## 06-L03 — W TOKU (2026-09-16, faza kontraktowa domknięta, Wave A wgrana)
+
+- FAZA 0 (3 obiektywy read-only): READY_WITH_CONTRACT_GAPS — 1 HIGH
+  (analytics rodzinny pruner domyślnie related do global pool → łamie
+  one-PID), 7 MEDIUM (seam executorów drizzle-vs-TransactionSql; brak
+  RETENTION_FAMILY_REGISTRY/isDedicatedSessionLoss; whole-family drain bez
+  sygnału; pułapka sweepa env; withDedicatedDatabaseAdvisoryLock rezerwuje
+  DRUGĄ sesję; per-batch statementTimeoutMs voidowany; abort conflated z
+  lock loss).
+- Pętla kontraktowa (3 rundy, sekcja „Dated Contract Corrections —
+  2026-09-16" append-only po :417, obecnie +237 linii, prettier-stabilna,
+  verify pass:true): R1 autor C1-C9 → re-audyt 2×sonnet: **9 findinek**
+  (HIGH: C2(b) autocommit NIEOSIĄGALNY przez API sesji — jedyny
+  mostkowalny handle to TransactionSql; MEDIUM: ban-clause C4
+  samosprzeczne; solution_kit exec.transaction → runtime TypeError
+  [client.begin nieobecne]; analytics whole-drain w jednej transakcji;
+  mechanika cancel; LOW: C7 pole wymagane typem, C8 precedence
+  abort>session-loss, pełna tabela 14 mapowań, C6 jako amendment 02-L02).
+  R2 autor (R1-R9) → re-audyt: R1-R5,R7-R9 PASS, R6 PARTIAL — **HIGH:
+  session-level statement_timeout to DB_STATEMENT_TIMEOUT_MS default
+  15 000 ms (databaseConfig.ts:293-299, client.ts:71-89), NIE 4 000**.
+  R3 autor (A1-A8): mechanizm containment = `select
+  set_config('statement_timeout','4000',true)` jako PIERWSZA instrukcja
+  każdego run(tx) (tx-local; SET LOCAL nie przyjmuje bindów); analytics
+  pin `{ dryRun: policy.dryRun }` (bez opcji = cichy APPLY w dry-run!);
+  search_history wymaga cast-bridge; solution_kit shim + cast; enabled
+  gate per rodzina w rejestrze (analytics nie ma wewnętrznego gate);
+  inwentarz kluczy advisory: 20260604/400, 20260604/403, 20260628/484,
+  20260818/571, 551551551. Verify R3: **pass:true**, 2 LOW (precyzja
+  cytatów). Uwaga: startupMigrations precedens to :123 (nie :122).
+- **Wave A (wf_43d74c1d-35a)**: 4 autorów równolegle → A1
+  `core/services/maintenance/retentionJobService.ts` 950L
+  (lock pair 551063/3; rejestr 19 rodzin; adapter
+  `drizzle(tx as unknown as Sql,{schema})`; shim solution_kit;
+  analytics per-batch maxBatchesPerRun:1 + dryRun pin; C8 precedence
+  abort-first; publish przed unlock) → moj core tsc: 10 błędów
+  mechanicznych (3× TS2307 ../..-paths, 3× TS2540 Readonly, 3× TS7006,
+  1× TS2322 union w schedulerze) → 2 fixerów → A1 947L sha
+  `2dc125235d2243cd9f94976765e963280a257f41330b73a6e681c4ccafdf3b65`,
+  A3 `core/server/jobs/retentionScheduler.ts` 770L sha
+  `9eb5485097b90e439d197482ec5515e93f5c6287575fb7bf5c66ed7215ac0ba`.
+  **core tsc rerun: EXIT 0, 0 błędów.** A2
+  `partitionReadinessService.ts` 610L sha `fbe20d9872110b35ea2debb83a6
+  7696c1073f22a3536ef45f27c68639ffdbae8`; A4
+  `scripts/task-551-partition-readiness.ts` (sha w wyniku workflow).
+  Prettier+eslint wszystkich 4: clean.
+- **Wave B (wf_b871ce37-127) W TOKU**: 5 autorów testów (B1 vitest
+  partition unit airtight; B2 scheduler runtime; B3 retention job
+  2-replika PID+kill+source guard; B4 perf budgets/ten-batch; B5 perf
+  partition+CLI --check). Owner-map gate wg pool-telemetry idiomu;
+  airtight = skippy, 0 fail.
+- Dalej: moje bramki wolne (core+root tsc, eslint, bateria airtight 5
+  plików + CLI --check smoke airtight), post-audyt 3 obiektywy, receipt
+  `impl-06-l03.json` (inventoryDebt obowiązkowy wg C9.5), commit, mirror
+  spina. Changelog **1310 NIE tutaj** (rezerwa na 10-L02).
+
+## 06-L03 — ZAMKNIĘTY (2026-09-16) — post-audit + fix wave + receipt + commit
+
+- **Post-audyt 3 obiektywy read-only (wf_767664b8-98a)**: zgodność
+  11/11 CONFORM (C1-C8, ownership, line caps, source-guard premise);
+  security czysta (sanityzacja, closed sety, allowlisting, DDL=0,
+  containment, fail-closed config, lock safety); test-quality pełna mapa
+  pokrycia + gates sprawdzone po predykacie. **2 HIGH + 2 MEDIUM + 12 LOW**:
+  (H1) CLI facade wymagał `classification` vs serwis `status` → każde
+  żywe `--check` exit 3/report_invalid, komenda walidacyjna kontraktu
+  nieosiągalna; (H2) default binding schedulera
+  `runRetentionPlan as unknown as RetentionPlanRunner` wołał pozycyjny
+  job obiektem → TypeError w każdym produkcyjnym ticku (retencja martwa,
+  redagowana jako run_failed); (M1) RETENTION_SCHEDULER_MAX_RUN_MS martwy
+  knob; (M2) odwrócona mapa kodów CLI (unavailable → unexpected/exit 4,
+  reason ucinany).
+- **Fix wave (wf_e4c4b543-fe4, 2 łańcuchy prod→test)**: facade przyjmuje
+  wiersze `status` + pinuje ids do PARTITION_READINESS_TABLE_IDS +
+  mapa C10 (typed → unavailable/exit 3 z całym reason, unexpected/4
+  tylko untyped); scheduler: adapter createDefaultRunRetentionPlan(
+  config.maxRunMs) → runRetentionPlan(now, signal, {maxRunMs}), cast
+  usunięty, failedFamily w telemetry (C11). Testy: nogi CLI na realnym
+  kształcie serwisu, smoke leg = prawdziwy e2e pin, nowa noga
+  default-binding (scheduler BEZ wstrzykniętego runnera → realny job
+  kończy się completed, zero SQL, brak run_failed), bare-token skan
+  CLI_SOURCE, gate z routability probe, 2 tautologie usunięte.
+- **Korekty kontraktu**: dopisane **C10** (CLI shape + exit taxonomy) i
+  **C11** (budget forwarding + failedFamily) — append-only potwierdzony
+  (273 insertions, 0 deletions vs 43ca2ed1), prettier-stable.
+- **Bramy finalne**: core tsc 0, root tsc 0, eslint 4/4 (w tym
+  scripts/), prettier 11/11, vitest 33/33, bun lane 47 pass / 21 skip /
+  0 fail / 1415 expect (scheduler 13p/3s po nowej nodze; perf partition
+  20p/5s), CLI smoke na martwym URL: exit 3, code
+  partition_readiness_unavailable, reason catalog_read_failed w całości.
+- **Receipt** `_docs/_workflows/_smoke/task-551/impl-06-l03.json`:
+  verdict SINGLE_ADMITTED_GATES_GREEN, allowlista 9 plików z sha256,
+  inventoryDebt wg C9.5 (4+4 szablony SELECT/lock, 0 nowych DML, 19
+  call-site rows; scanner nadal query_inventory_invalid — pre-existing),
+  postAudit z 4 fixami + 11 accepted-LOW, honestyNotes (m.in. nogi DB
+  reviewed-not-executed wg prawa airtight; snapshot kontraktu 303L w
+  głównym repo = stale, kanon na tej gałęzi).
+- **Stan gita przed commitem**: HEAD `43ca2ed1`, branch
+  `feat/task-551-db-cache`; 9 nowych plików + kontrakt (+273) + spina +
+  receipt. Nic nie pushowane. Changelog **1310 NIE tutaj** (rezerwa
+  10-L02). **Następne w spine: 07-L01** (dziedziczy 2 znane czerwone
+  vitest cache: server-cache-codec-keys, server-cache-contracts).
