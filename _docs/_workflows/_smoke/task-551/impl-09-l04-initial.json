@@ -1,0 +1,69 @@
+{
+  "task": "TASK-551",
+  "leaf": "09-L04",
+  "occurrence": "initial",
+  "leafTitle": "Admin identity and security cache hardening — INITIAL seam: installation-authority primitive + direct contract test",
+  "capturedAt": "2026-09-24",
+  "closedAt": "2026-09-24",
+  "headAtAdmission": "e7ce7d78",
+  "verdict": "INITIAL_ADMITTED_GATES_GREEN",
+  "verdictQualification": "The INITIAL occurrence is admitted: exactly the two contracted new files landed (porcelain receipt taken immediately after W-test: exactly '?? core/admin/utils/adminCacheAuthority.ts' and '?? tests/vitest/admin/admin-cache-authority.test.ts'; no third file). The leaf stays non-releasable and its board Status stays ⏳ To Do until TASK-551-10-L02 closure (I7; family precedent). FINAL is a separate occurrence after 09-L03 plus the 03-L02/04-L01 adoption receipts. Disclosed: (a) the seam is inert until FINAL wires advancement to auth/deployment transitions (contract :26-27); (b) the source guard proves module self-containment and the exact export set, while the two-path scope is proved by this receipt's porcelain line (I3); (c) consumer obligations (03-L02 registers the default prefetcher reset; 04-L01 read-only) live in their own contracts (mirrors landed at e7ce7d78).",
+  "allowlist": [
+    {
+      "path": "core/admin/utils/adminCacheAuthority.ts",
+      "lines": 102,
+      "sha256": "15259ad88ec65e1ef781e771208d6d6bd390be3fa7f7a6793cab392541f17b7e",
+      "role": "NEW (I1/I2): type AdminCacheInstallationToken + five runtime exports (captureAdminCacheInstallationToken, isCurrentAdminCacheInstallationToken, registerAdminModuleCacheReset, advanceAdminCacheInstallationAuthority, createAdminCacheInstallationAuthority test-seam factory); default instance generation 0; safe-integer page-lifetime generation; TypeError 'admin_cache_authority_invalid' for any initialGeneration outside 0..MAX_SAFE_INTEGER (undefined→0, null throws, -0 accepted); one frozen null-prototype token per generation (JSON '{}'); identity isCurrent never throws; advance = disable-or-increment → mint token → snapshot dispatch in registration order with swallowed throws, no console, thenable no-op handlers, re-entrancy safe; overflow at MAX disables permanently (later advances still dispatch, never wrap/re-enable; capture returns fresh never-current sentinels); registration keyed by function reference with per-registration record + single-use handles; zero imports; zero guarded identifiers (window/document/localStorage/sessionStorage/BroadcastChannel/fetch/crypto) incl. comments"
+    },
+    {
+      "path": "tests/vitest/admin/admin-cache-authority.test.ts",
+      "lines": 578,
+      "sha256": "13e5681deec8cc4e41425935297a725025777e1e5d03040fa2525ad93f5bbf23",
+      "role": "NEW (I3): 38 tests — token identity/inequality (toBe/Object.is only), stale/foreign/non-object isCurrent (12 non-object inputs, identical-shape frozen object, cross-instance tokens), advance-before-dispatch, registration order incl. duplicate keeps original position, zero-arg resets, register-during-dispatch runs next pass, duplicate no-op, idempotent/single-use/stale handles, unsubscribe during dispatch, throwing subscriber isolation with console.error/warn/log spies = 0 calls, unhandled-rejection proof (Promise.reject + throwing then-getter; process listener + setTimeout 0; off in finally), plain-thenable handler attachment, nested advance ['A','A','B','B'] + three distinct tokens + MAX-1 nested overflow, overflow per I1, validation vectors (TypeError + exact message; '1'/null via as unknown as number; +Infinity), accepted inputs (omitted, {}, undefined, -0, 0, MAX), default-instance delegation with afterEach unsubscribe, executable source guard (comment-stripped identifier regex + four import/re-export/dynamic-import/require regexes + positive control + export-set of exactly five sorted runtime names)"
+    }
+  ],
+  "gates": {
+    "PORCELAIN_SCOPE_RECEIPT": "git status --porcelain --untracked-files=all after W-test, before any receipt/spina write: exactly '?? core/admin/utils/adminCacheAuthority.ts' and '?? tests/vitest/admin/admin-cache-authority.test.ts'",
+    "PRETTIER": "2/2 --check clean (before gates; shas computed after prettier)",
+    "DIFF_CHECK": "git add -N both paths then git diff --check: clean",
+    "INITIAL_AUTHORITY_TEST": "env DATABASE_URL=postgresql://127.0.0.1:1/none bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/admin-cache-authority.test.ts: Test Files 1 passed, Tests 38 passed (38) (37 before the post-audit LOW strengthening)",
+    "ESLINT_TWO_PATHS": "./node_modules/.bin/eslint --max-warnings=0 <module> <test> from the repo root: exit 0",
+    "CORE_LINT": "bun --cwd core lint: exit 0",
+    "CORE_TSC": "0 errors (exit 0)",
+    "ROOT_TSC": "0 errors (exit 0) on the final bytes; baseline 0 at c9d1e808/e7ce7d78",
+    "GUARDED_IDENTIFIERS": "grep -cE over the module (incl. comments): 0",
+    "EXPORT_SURFACE": "grep ^export: one type + five runtime exports",
+    "LINE_CAP": "102 / 578 (<= 1000; I3 target <= 700 met)"
+  },
+  "contractCorrections": {
+    "checkpointCommit": "e7ce7d78 (docs(task551): 09-L04 INITIAL contract round I1-I8; mirrors 03-L02/04-L01/09/10-L01)",
+    "sections": "## Dated Contract Corrections — 2026-09-24 (INITIAL FAZA-0 dispositions): I1 test-seam factory + overflow assertions (closed the FAZA-0 HIGH: the overflow rule was untestable through the five-symbol API); I2 binding pseudocode + semantics (token model, advance order, swallow/thenable rules, re-entrancy, registration records, per-instance closure rule, catch-comment rule, total resets); I3 restated matrix + executable source guard + orchestrator scope proof; I4 env-free validation law (envelope initial-authority-test argv, final-admin-cache-tests + admin-cache-authority.test.ts, initial occurrence + diff-check, prose block); I5 additive-only seam stability; I6 prefetch reset ownership → 03-L02 (L04 FINAL verifies); I7 Status rule; I8 mirrors; Round-2 record",
+    "mirrors": "TASK-551-03-L02 (M1 manifest clause reworded to registration+advance proof; M2 adminPrefetch.test.ts allowlisted/argv/paths/ownership, seam shape without breaking createAdminPrefetcher's callable, token-guarded inFlight.delete, dynamic import after vi.resetModules; M3 API surface), TASK-551-10-L01 (09-L04 block rebuilt from the envelope; own dated section), TASK-551-04-L01 (forbiddenPaths + adminCacheAuthority.ts/cachePolicy.ts), TASK-551-09 parent (P1 prefetch exception, P2 status wording, P3 API)",
+    "auditRounds": [
+      "FAZA-0 (2 auditors): 1 HIGH (overflow untestable), 6 MEDIUM (no INITIAL pseudocode, subscriber error channel, registration signature, source guard unexecutable, env-sourcing argv/prose, seam stability), consumer/prefetch ownership gaps",
+      "R1 (4: 2 pre + 2 reconcile): 1 HIGH (I2 sketch comment spelled the I3-guarded identifiers), MEDIUMs (default-delegate tests, nested-advance pin, string-case typing, dirty-tree scope proof, 03-L02 proof home, 10-L01 digest block)",
+      "R2 (4): PASS 3/4 + 1 process MEDIUM (prettier before gates/shas — adopted), LOWs closed in a text pass"
+    ]
+  },
+  "postAudit": {
+    "date": "2026-09-24",
+    "lenses": [
+      "scope fidelity & contract conformity (PASS, 1 LOW)",
+      "adversarial test integrity & fail-closed mutation reasoning (PASS, 2 LOW)"
+    ],
+    "fixedInLeaf": [
+      "Test 'does not leak default registrations across tests' over-claimed → renamed 'unsubscribes a default-instance registration' (the describe-level afterEach carries the isolation guarantee)",
+      "No vector pinned that a duplicate registration keeps its original dispatch position → added a,b,a → ['a','b']"
+    ],
+    "acceptedLow": [
+      "Two defensive guards (per-handle active flag; !disabled in isCurrent) are not individually mutation-detectable — retained as belt-and-braces per I2",
+      "'No scheduled rethrow' is enforced by vitest's run-level unhandled-error failure rather than an in-test uncaughtException spy (INFO)"
+    ]
+  },
+  "honestyNotes": [
+    "The vitest lane is Bun-free (environment node); the airtight single-file run is the complete test gate — no DB or owner-executed remainder.",
+    "task-551-implement.mjs does not dispatch 09-L04; the INITIAL scope was enforced by the porcelain receipt and the closed envelope allowlist, and the dispatch preflight (preflightTask551DispatchSnapshot) passed over all 41 TASK-551 task files at e7ce7d78.",
+    "All agents ran on Opus 5.5 with >= 2 independent auditors per scope (owner routing 2026-09-24); every actionable finding was verified against files/command output before a writer was dispatched.",
+    "The module writer sanity-ran the sketch outside the repo (node --experimental-strip-types) and the test writer added four assertions beyond I3 (register-during-dispatch, then-handler arity, post-disable sentinel JSON, +Infinity rejected / MAX and {} accepted) — all consistent with I2, none weakening."
+  ]
+}

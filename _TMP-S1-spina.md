@@ -904,3 +904,27 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   → 03-L02 → 07-L02 → 08-L01 → 08-L02 → 08-L03(final) → 03-L03 → 04-L01 →
   04-L02 → 09-L01 → 09-L02 → 09-L03 → 09-L04(final) → L01(final) → 10-L01
   → 10-L02.
+
+## 09-L04 INITIAL — ZAMKNIĘTY (2026-09-24) — seam installation-authority
+
+- **Preflight** (skill task-preflight): zakres INITIAL = dokładnie 2 nowe
+  pliki (moduł + test); anchory adminPaths OK; wykryte: argv/prose z
+  `.env`, brak pseudokodu INITIAL, niejasna reguła błędów subskrybentów.
+- **FAZA-0 (2 audytorów)**: HIGH — reguła przepełnienia MAX_SAFE_INTEGER
+  nietestowalna przez 5-symbolowe API → fabryka testowa
+  `createAdminCacheInstallationAuthority({ initialGeneration })`; 6 MEDIUM.
+- **Kontrakt: 2 rundy × 4 audytorów** → I1-I8 + Round-2 record (R1 HIGH:
+  komentarz szkicu I2 zawierał identyfikatory z regexu guarda I3 — złapane
+  przez 3 audytorów niezależnie). Lustra: 03-L02 (M1-M3; adminPrefetch.test
+  allowlistowany; reset prefetchera należy do 03-L02, L04 FINAL tylko
+  weryfikuje), 10-L01 (blok przebudowany z envelope), 04-L01, rodzic 09
+  (P1-P3). R2: PASS 3/4 + MEDIUM procesowy (prettier przed bramkami —
+  wdrożony). **Checkpoint `e7ce7d78`** (5 .md, hook zielony).
+- **Implementacja**: W-module (102L) → W-test (560→578L, 38/38);
+  porcelain = dokładnie 2 `??`; prettier OK; add -N + diff-check OK;
+  eslint 0; core lint 0; core tsc 0; root tsc 0; 0 słów guardowanych;
+  5 eksportów runtime + typ. **Post-audyt 2 obiektywy: PASS/PASS**
+  (3 LOW → 2 naprawione, 1 INFO). Receipt `impl-09-l04-initial.json`.
+- Status leafa zostaje ⏳ To Do do 10-L02 (I7). **Następne w spine:
+  03-L02** (konsumuje INITIAL; własna FAZA-0 — m.in. `bunx vitest run`
+  w argv, reset prefetchera per M2).
