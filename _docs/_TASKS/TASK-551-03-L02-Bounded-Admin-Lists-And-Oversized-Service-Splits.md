@@ -128,7 +128,10 @@ paginated lists and therefore receive a list-call-site change):
 `core/admin/utils/adminPrefetchCustomScreens.ts`. `core/admin/utils/adminPrefetch.ts`
 is sole-owned by this leaf for TASK-551 (it consumes six of the eight owned
 clients); TASK-551-09-L04 is read-only on this file and composes its
-cache-identity hardening through `adminCacheAuthority.ts`. Every one of the 78 importers
+cache-identity hardening through `adminCacheAuthority.ts`. Likewise
+`tests/vitest/admin/adminPrefetch.test.ts` (Tests list below) is sole-owned by
+this leaf for TASK-551 to carry the default-prefetcher reset-adoption
+assertions. Every one of the 78 importers
 not listed here is either a non-list-shape consumer (a read-only import whose
 list call site does not change) or outside this leaf's ownership. The
 implementer MUST rerun the exact pinned `rg -l` command above immediately before
@@ -195,6 +198,7 @@ widget-editor extraction paths remain in this leaf's scope.
 `tests/vitest/admin/pagesClient.test.ts`,
 `tests/vitest/admin/pagesClientPagination.test.ts`,
 `tests/vitest/admin/detailPagesClient.test.ts`,
+`tests/vitest/admin/adminPrefetch.test.ts`,
 `tests/vitest/ui/page-revision-drawer.test.tsx`,
 `tests/vitest/ui/pageEditorV2Fixtures.tsx`,
 `tests/vitest/ui/pageEditorV2FlowHarness.tsx`,
@@ -963,11 +967,14 @@ components, while cache identity and mutation state remain in their page owner.
   `matchingTotal:null`, and preserves fixed totals. Mutation tests invalidate
   row-page, fixed-summary and facet cache families and reject any global metric
   derived from `items.length`.
-- Each of the eight owned clients is present in the L04 INITIAL authority
-  manifest. Delay a request across an installation transition and prove its
-  completion may return only to the initiating caller but cannot install; the
-  registered reset clears all old/new maps and promises. L04's exhaustive FINAL
-  matrix must accept this leaf's receipt without reopening these clients.
+- Each of the eight owned clients registers a reset with the L04 INITIAL
+  authority (`registerAdminModuleCacheReset`) and guards every promise
+  completion/cache install with a token captured before the await
+  (`captureAdminCacheInstallationToken` /
+  `isCurrentAdminCacheInstallationToken`); this leaf's suites prove it by
+  calling `advanceAdminCacheInstallationAuthority()` and asserting all module
+  maps/promises are cleared and a delayed pre-transition completion cannot
+  install; L04 FINAL's matrix enrols these receipts later.
 - The two consumer-graph suites directly import and exercise every production
   path in the complete graph above. For every changed call they prove envelope
   consumption, filter forwarding, incremental merge/reset, visible end/loading
@@ -1071,7 +1078,7 @@ components, while cache identity and mutation state remain in their page owner.
 - `set -a && source .env && set +a && bun test tests/integration/server/route-response-headers.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/runtime/paginationCursorLifecycle.test.ts`
 - `set -a && source .env && set +a && bun test tests/unit/forms/submissionExportJob.test.ts` (TASK-571 landed suite; rerun unchanged as the read-only receipt for the export-job adoption above)
-- `bunx vitest run tests/vitest/admin/task551PaginatedClients.test.ts tests/vitest/admin/task551PaginatedListViews.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/bookingClient.test.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/admin/pagesClientPagination.test.ts tests/vitest/admin/detailPagesClient.test.ts tests/vitest/ui/booking-page-wave.test.tsx tests/vitest/ui/booking-page-errors.test.tsx tests/vitest/ui/booking-page-schedule-crud.test.tsx tests/vitest/ui/booking-page-tabs.test.tsx tests/vitest/ui/booking-tabs-interactions-wave.test.tsx tests/vitest/ui/booking-tabs-leaf.test.tsx tests/vitest/ui/booking-helpers.test.ts tests/vitest/ui/booking-helpers-wave.test.ts tests/vitest/ui/form-submissions-page.test.tsx tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-library-load-retry-wave.test.tsx tests/vitest/ui/media-library-mutation-retry-wave.test.tsx tests/vitest/ui/media-library-page-wave.test.tsx tests/vitest/ui/media-card.test.tsx tests/vitest/ui/media-components.test.tsx tests/vitest/ui/media-details.test.tsx tests/vitest/ui/media-details-panel.test.tsx tests/vitest/ui/media-filter-panel.test.tsx tests/vitest/ui/media-folder-rail.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/ui/media-toolbar.test.tsx tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/form-builder-page-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui/use-forms-wave.test.tsx tests/vitest/ui-integration/forms-list-restyle.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui-integration/forms-submissions-restyle.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-v2-flow-loading.test.tsx tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx tests/vitest/ui/page-editor-v2-flow-columns.test.tsx tests/vitest/ui/page-editor-v2-flow-controls.test.tsx tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx tests/vitest/ui/page-editor-v2-flow-panels.test.tsx tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx tests/vitest/ui/page-editor-v2-flow-sections.test.tsx tests/vitest/ui/page-editor-v2-flow-settings.test.tsx tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/validation/task551ListSchemas.test.ts`
+- `bunx vitest run tests/vitest/admin/task551PaginatedClients.test.ts tests/vitest/admin/task551PaginatedListViews.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/bookingClient.test.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/admin/pagesClientPagination.test.ts tests/vitest/admin/detailPagesClient.test.ts tests/vitest/admin/adminPrefetch.test.ts tests/vitest/ui/booking-page-wave.test.tsx tests/vitest/ui/booking-page-errors.test.tsx tests/vitest/ui/booking-page-schedule-crud.test.tsx tests/vitest/ui/booking-page-tabs.test.tsx tests/vitest/ui/booking-tabs-interactions-wave.test.tsx tests/vitest/ui/booking-tabs-leaf.test.tsx tests/vitest/ui/booking-helpers.test.ts tests/vitest/ui/booking-helpers-wave.test.ts tests/vitest/ui/form-submissions-page.test.tsx tests/vitest/ui/media-library.test.tsx tests/vitest/ui/media-library-load-retry-wave.test.tsx tests/vitest/ui/media-library-mutation-retry-wave.test.tsx tests/vitest/ui/media-library-page-wave.test.tsx tests/vitest/ui/media-card.test.tsx tests/vitest/ui/media-components.test.tsx tests/vitest/ui/media-details.test.tsx tests/vitest/ui/media-details-panel.test.tsx tests/vitest/ui/media-filter-panel.test.tsx tests/vitest/ui/media-folder-rail.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/ui/media-toolbar.test.tsx tests/vitest/ui/forms-pages-wave.test.tsx tests/vitest/ui/form-builder-page-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui/use-forms-wave.test.tsx tests/vitest/ui-integration/forms-list-restyle.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui-integration/forms-submissions-restyle.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-v2-flow-loading.test.tsx tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx tests/vitest/ui/page-editor-v2-flow-columns.test.tsx tests/vitest/ui/page-editor-v2-flow-controls.test.tsx tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx tests/vitest/ui/page-editor-v2-flow-panels.test.tsx tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx tests/vitest/ui/page-editor-v2-flow-sections.test.tsx tests/vitest/ui/page-editor-v2-flow-settings.test.tsx tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/validation/task551ListSchemas.test.ts`
 - `set -a && source .env && set +a && bun test tests/perf/database-admin-list-budgets.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
@@ -1265,6 +1272,7 @@ foreign write targets even when a literal validation command reruns them.
     "tests/vitest/admin/pagesClient.test.ts",
     "tests/vitest/admin/pagesClientPagination.test.ts",
     "tests/vitest/admin/detailPagesClient.test.ts",
+    "tests/vitest/admin/adminPrefetch.test.ts",
     "tests/vitest/ui/page-revision-drawer.test.tsx",
     "tests/vitest/ui/pageEditorV2Fixtures.tsx",
     "tests/vitest/ui/pageEditorV2FlowHarness.tsx",
@@ -1389,11 +1397,11 @@ foreign write targets even when a literal validation command reruns them.
     {
       "id": "admin-pagination-vitest",
       "lane": "vitest",
-      "argv": ["bunx", "vitest", "run", "tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedListViews.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx", "tests/vitest/admin/formsClient.test.ts", "tests/vitest/admin/bookingClient.test.ts", "tests/vitest/admin/mediaClient.test.ts", "tests/vitest/admin/mediaUtils.test.ts", "tests/vitest/admin/pagesClient.test.ts", "tests/vitest/admin/pagesClientPagination.test.ts", "tests/vitest/admin/detailPagesClient.test.ts", "tests/vitest/ui/booking-page-wave.test.tsx", "tests/vitest/ui/booking-page-errors.test.tsx", "tests/vitest/ui/booking-page-schedule-crud.test.tsx", "tests/vitest/ui/booking-page-tabs.test.tsx", "tests/vitest/ui/booking-tabs-interactions-wave.test.tsx", "tests/vitest/ui/booking-tabs-leaf.test.tsx", "tests/vitest/ui/booking-helpers.test.ts", "tests/vitest/ui/booking-helpers-wave.test.ts", "tests/vitest/ui/form-submissions-page.test.tsx", "tests/vitest/ui/media-library.test.tsx", "tests/vitest/ui/media-library-load-retry-wave.test.tsx", "tests/vitest/ui/media-library-mutation-retry-wave.test.tsx", "tests/vitest/ui/media-library-page-wave.test.tsx", "tests/vitest/ui/media-card.test.tsx", "tests/vitest/ui/media-components.test.tsx", "tests/vitest/ui/media-details.test.tsx", "tests/vitest/ui/media-details-panel.test.tsx", "tests/vitest/ui/media-filter-panel.test.tsx", "tests/vitest/ui/media-folder-rail.test.tsx", "tests/vitest/ui/media-picker.test.tsx", "tests/vitest/ui/media-toolbar.test.tsx", "tests/vitest/ui/forms-pages-wave.test.tsx", "tests/vitest/ui/form-builder-page-wave.test.tsx", "tests/vitest/ui/forms-component-wave.test.tsx", "tests/vitest/ui/use-forms-wave.test.tsx", "tests/vitest/ui-integration/forms-list-restyle.test.tsx", "tests/vitest/ui-integration/forms.test.tsx", "tests/vitest/ui-integration/forms-submissions-restyle.test.tsx", "tests/vitest/ui/page-revision-drawer.test.tsx", "tests/vitest/ui/page-editor-v2-flow-loading.test.tsx", "tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx", "tests/vitest/ui/page-editor-v2-flow-columns.test.tsx", "tests/vitest/ui/page-editor-v2-flow-controls.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx", "tests/vitest/ui/page-editor-v2-flow-panels.test.tsx", "tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx", "tests/vitest/ui/page-editor-v2-flow-sections.test.tsx", "tests/vitest/ui/page-editor-v2-flow-settings.test.tsx", "tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx", "tests/vitest/ui/detail-template-editor.test.tsx", "tests/vitest/validation/task551ListSchemas.test.ts"],
+      "argv": ["bunx", "vitest", "run", "tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedListViews.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx", "tests/vitest/admin/formsClient.test.ts", "tests/vitest/admin/bookingClient.test.ts", "tests/vitest/admin/mediaClient.test.ts", "tests/vitest/admin/mediaUtils.test.ts", "tests/vitest/admin/pagesClient.test.ts", "tests/vitest/admin/pagesClientPagination.test.ts", "tests/vitest/admin/detailPagesClient.test.ts", "tests/vitest/admin/adminPrefetch.test.ts", "tests/vitest/ui/booking-page-wave.test.tsx", "tests/vitest/ui/booking-page-errors.test.tsx", "tests/vitest/ui/booking-page-schedule-crud.test.tsx", "tests/vitest/ui/booking-page-tabs.test.tsx", "tests/vitest/ui/booking-tabs-interactions-wave.test.tsx", "tests/vitest/ui/booking-tabs-leaf.test.tsx", "tests/vitest/ui/booking-helpers.test.ts", "tests/vitest/ui/booking-helpers-wave.test.ts", "tests/vitest/ui/form-submissions-page.test.tsx", "tests/vitest/ui/media-library.test.tsx", "tests/vitest/ui/media-library-load-retry-wave.test.tsx", "tests/vitest/ui/media-library-mutation-retry-wave.test.tsx", "tests/vitest/ui/media-library-page-wave.test.tsx", "tests/vitest/ui/media-card.test.tsx", "tests/vitest/ui/media-components.test.tsx", "tests/vitest/ui/media-details.test.tsx", "tests/vitest/ui/media-details-panel.test.tsx", "tests/vitest/ui/media-filter-panel.test.tsx", "tests/vitest/ui/media-folder-rail.test.tsx", "tests/vitest/ui/media-picker.test.tsx", "tests/vitest/ui/media-toolbar.test.tsx", "tests/vitest/ui/forms-pages-wave.test.tsx", "tests/vitest/ui/form-builder-page-wave.test.tsx", "tests/vitest/ui/forms-component-wave.test.tsx", "tests/vitest/ui/use-forms-wave.test.tsx", "tests/vitest/ui-integration/forms-list-restyle.test.tsx", "tests/vitest/ui-integration/forms.test.tsx", "tests/vitest/ui-integration/forms-submissions-restyle.test.tsx", "tests/vitest/ui/page-revision-drawer.test.tsx", "tests/vitest/ui/page-editor-v2-flow-loading.test.tsx", "tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx", "tests/vitest/ui/page-editor-v2-flow-columns.test.tsx", "tests/vitest/ui/page-editor-v2-flow-controls.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx", "tests/vitest/ui/page-editor-v2-flow-panels.test.tsx", "tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx", "tests/vitest/ui/page-editor-v2-flow-sections.test.tsx", "tests/vitest/ui/page-editor-v2-flow-settings.test.tsx", "tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx", "tests/vitest/ui/detail-template-editor.test.tsx", "tests/vitest/validation/task551ListSchemas.test.ts"],
       "environmentProfile": "none",
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedListViews.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx", "tests/vitest/admin/formsClient.test.ts", "tests/vitest/admin/bookingClient.test.ts", "tests/vitest/admin/mediaClient.test.ts", "tests/vitest/admin/mediaUtils.test.ts", "tests/vitest/admin/pagesClient.test.ts", "tests/vitest/admin/pagesClientPagination.test.ts", "tests/vitest/admin/detailPagesClient.test.ts", "tests/vitest/ui/booking-page-wave.test.tsx", "tests/vitest/ui/booking-page-errors.test.tsx", "tests/vitest/ui/booking-page-schedule-crud.test.tsx", "tests/vitest/ui/booking-page-tabs.test.tsx", "tests/vitest/ui/booking-tabs-interactions-wave.test.tsx", "tests/vitest/ui/booking-tabs-leaf.test.tsx", "tests/vitest/ui/booking-helpers.test.ts", "tests/vitest/ui/booking-helpers-wave.test.ts", "tests/vitest/ui/form-submissions-page.test.tsx", "tests/vitest/ui/media-library.test.tsx", "tests/vitest/ui/media-library-load-retry-wave.test.tsx", "tests/vitest/ui/media-library-mutation-retry-wave.test.tsx", "tests/vitest/ui/media-library-page-wave.test.tsx", "tests/vitest/ui/media-card.test.tsx", "tests/vitest/ui/media-components.test.tsx", "tests/vitest/ui/media-details.test.tsx", "tests/vitest/ui/media-details-panel.test.tsx", "tests/vitest/ui/media-filter-panel.test.tsx", "tests/vitest/ui/media-folder-rail.test.tsx", "tests/vitest/ui/media-picker.test.tsx", "tests/vitest/ui/media-toolbar.test.tsx", "tests/vitest/ui/forms-pages-wave.test.tsx", "tests/vitest/ui/form-builder-page-wave.test.tsx", "tests/vitest/ui/forms-component-wave.test.tsx", "tests/vitest/ui/use-forms-wave.test.tsx", "tests/vitest/ui-integration/forms-list-restyle.test.tsx", "tests/vitest/ui-integration/forms.test.tsx", "tests/vitest/ui-integration/forms-submissions-restyle.test.tsx", "tests/vitest/ui/page-revision-drawer.test.tsx", "tests/vitest/ui/page-editor-v2-flow-loading.test.tsx", "tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx", "tests/vitest/ui/page-editor-v2-flow-columns.test.tsx", "tests/vitest/ui/page-editor-v2-flow-controls.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx", "tests/vitest/ui/page-editor-v2-flow-panels.test.tsx", "tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx", "tests/vitest/ui/page-editor-v2-flow-sections.test.tsx", "tests/vitest/ui/page-editor-v2-flow-settings.test.tsx", "tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx", "tests/vitest/ui/detail-template-editor.test.tsx", "tests/vitest/validation/task551ListSchemas.test.ts"],
+        "paths": ["tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedListViews.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx", "tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx", "tests/vitest/admin/formsClient.test.ts", "tests/vitest/admin/bookingClient.test.ts", "tests/vitest/admin/mediaClient.test.ts", "tests/vitest/admin/mediaUtils.test.ts", "tests/vitest/admin/pagesClient.test.ts", "tests/vitest/admin/pagesClientPagination.test.ts", "tests/vitest/admin/detailPagesClient.test.ts", "tests/vitest/admin/adminPrefetch.test.ts", "tests/vitest/ui/booking-page-wave.test.tsx", "tests/vitest/ui/booking-page-errors.test.tsx", "tests/vitest/ui/booking-page-schedule-crud.test.tsx", "tests/vitest/ui/booking-page-tabs.test.tsx", "tests/vitest/ui/booking-tabs-interactions-wave.test.tsx", "tests/vitest/ui/booking-tabs-leaf.test.tsx", "tests/vitest/ui/booking-helpers.test.ts", "tests/vitest/ui/booking-helpers-wave.test.ts", "tests/vitest/ui/form-submissions-page.test.tsx", "tests/vitest/ui/media-library.test.tsx", "tests/vitest/ui/media-library-load-retry-wave.test.tsx", "tests/vitest/ui/media-library-mutation-retry-wave.test.tsx", "tests/vitest/ui/media-library-page-wave.test.tsx", "tests/vitest/ui/media-card.test.tsx", "tests/vitest/ui/media-components.test.tsx", "tests/vitest/ui/media-details.test.tsx", "tests/vitest/ui/media-details-panel.test.tsx", "tests/vitest/ui/media-filter-panel.test.tsx", "tests/vitest/ui/media-folder-rail.test.tsx", "tests/vitest/ui/media-picker.test.tsx", "tests/vitest/ui/media-toolbar.test.tsx", "tests/vitest/ui/forms-pages-wave.test.tsx", "tests/vitest/ui/form-builder-page-wave.test.tsx", "tests/vitest/ui/forms-component-wave.test.tsx", "tests/vitest/ui/use-forms-wave.test.tsx", "tests/vitest/ui-integration/forms-list-restyle.test.tsx", "tests/vitest/ui-integration/forms.test.tsx", "tests/vitest/ui-integration/forms-submissions-restyle.test.tsx", "tests/vitest/ui/page-revision-drawer.test.tsx", "tests/vitest/ui/page-editor-v2-flow-loading.test.tsx", "tests/vitest/ui/page-editor-v2-flow-autosave.test.tsx", "tests/vitest/ui/page-editor-v2-flow-columns.test.tsx", "tests/vitest/ui/page-editor-v2-flow-controls.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inline-edit.test.tsx", "tests/vitest/ui/page-editor-v2-flow-inserters.test.tsx", "tests/vitest/ui/page-editor-v2-flow-panels.test.tsx", "tests/vitest/ui/page-editor-v2-flow-responsive.test.tsx", "tests/vitest/ui/page-editor-v2-flow-sections.test.tsx", "tests/vitest/ui/page-editor-v2-flow-settings.test.tsx", "tests/vitest/ui/page-editor-v2-flow-toolbar.test.tsx", "tests/vitest/ui/detail-template-editor.test.tsx", "tests/vitest/validation/task551ListSchemas.test.ts"],
         "minimum": 1
       }
     },
@@ -1460,3 +1468,118 @@ foreign write targets even when a literal validation command reruns them.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-09-L04 INITIAL FAZA-0; append-only)
+
+These corrections mirror the TASK-551-09-L04 INITIAL FAZA-0 contract. Committed
+bytes above are unchanged except for the in-place Testing Requirements edit
+recorded under M1 and the in-place `tests/vitest/admin/adminPrefetch.test.ts`
+additions recorded under M2 (Exact File Ownership prose and Tests list,
+Validation Commands vitest line, envelope `allowlist`, and the
+`admin-pagination-vitest` `argv` plus `positiveDiscovery.paths`). The envelope
+`dependencies`, `occurrences` and `dependsOn` are unchanged.
+
+**M1 — INITIAL-authority receipt is executable at land time (in-place edit,
+Testing Requirements).** The previous wording required each owned client to be
+"present in the L04 INITIAL authority manifest", but that manifest is L04
+FINAL's `admin-cache-client-authority-matrix.test.ts`, which does not exist when
+this leaf lands after `TASK-551-09-L04:initial`. The bullet was reworded in
+place.
+
+Before:
+
+```text
+- Each of the eight owned clients is present in the L04 INITIAL authority
+  manifest. Delay a request across an installation transition and prove its
+  completion may return only to the initiating caller but cannot install; the
+  registered reset clears all old/new maps and promises. L04's exhaustive FINAL
+  matrix must accept this leaf's receipt without reopening these clients.
+```
+
+After:
+
+```text
+- Each of the eight owned clients registers a reset with the L04 INITIAL
+  authority (`registerAdminModuleCacheReset`) and guards every promise
+  completion/cache install with a token captured before the await
+  (`captureAdminCacheInstallationToken` /
+  `isCurrentAdminCacheInstallationToken`); this leaf's suites prove it by
+  calling `advanceAdminCacheInstallationAuthority()` and asserting all module
+  maps/promises are cleared and a delayed pre-transition completion cannot
+  install; L04 FINAL's matrix enrols these receipts later.
+```
+
+The delayed completion may still resolve to its initiating caller; it only must
+not install into any module map. The Exact File Ownership paragraph on
+INITIAL consumption obligations is consistent with this wording and is not
+edited for M1 (its only edit is the M2 prefetch-test ownership addition).
+
+**M2 — `core/admin/utils/adminPrefetch.ts` reset obligation.** This leaf is the
+sole TASK-551 writer of `core/admin/utils/adminPrefetch.ts` (already present in
+Exact File Ownership and in the envelope `allowlist` before this correction).
+`createAdminPrefetcher` keeps per-instance closure state (`inFlight`, `queued`,
+`queue`, `lastAttempt`, `lastSuccess`, plus the `activeCount`/`drainScheduled`
+counters — verified at `adminPrefetch.ts:102-114` on HEAD `c9d1e808`); its
+`drainQueue` completion chain records `lastSuccess.set(next.key, startedAt)` and
+then runs `.finally(() => { inFlight.delete(next.key); ... })` (`:134-141`), and
+the module-level default instance is
+`prefetchAdminRoute = createAdminPrefetcher(defaultEntries)` (`:466`). The
+implementer therefore also:
+
+- adds an internal reset to `createAdminPrefetcher` (a module-private builder
+  returns `{ prefetch, reset }`; the exported
+  `createAdminPrefetcher(entries, options)` keeps returning the unchanged
+  callable `(href, basePath?, request?) => void` — verify the signature at
+  `core/admin/utils/adminPrefetch.ts` ~`:102`/`:156` — and only the default
+  instance at `:466` registers `reset`) that clears `inFlight`,
+  `queued`, `queue`, `lastAttempt` and `lastSuccess`. `activeCount` and
+  `drainScheduled` keep tracking genuinely running work: a stale completion
+  still decrements `activeCount` and re-drains, but installs nothing;
+- registers that reset with `registerAdminModuleCacheReset` ONLY for the
+  module-level default instance at `:466`; non-default prefetchers created
+  through `createAdminPrefetcher` (tests) keep their current contract and do not
+  register;
+- guards every completion side effect with a token captured before the await
+  (`captureAdminCacheInstallationToken` at dispatch; install only while
+  `isCurrentAdminCacheInstallationToken(token)`), or an equivalent identity
+  check against the stored promise: a pre-transition completion must not record
+  `lastSuccess`, and its `.finally` must not `inFlight.delete(next.key)` unless
+  the entry still belongs to that token/promise, so a stale completion cannot
+  delete a new-epoch `inFlight` entry for the same key;
+- proves in `tests/vitest/admin/adminPrefetch.test.ts` that
+  `advanceAdminCacheInstallationAuthority()` clears that state, so a route
+  prefetched before the transition is fetched again immediately afterwards (no
+  stale cooldown/freshness suppression), and that a delayed pre-transition
+  completion neither records `lastSuccess` nor removes the new-epoch in-flight
+  entry. After `vi.resetModules()` in `tests/vitest/admin/adminPrefetch.test.ts`
+  (~`:328-342`), obtain `advanceAdminCacheInstallationAuthority` by dynamic
+  import in the same module graph as the re-imported `adminPrefetch` (a static
+  top-level import would advance a different default instance).
+
+Ownership split (read as in 09-L04 I6, `adminPrefetch.ts:129-131`): L04 supplies
+the seam, this leaf registers the default-prefetcher reset, and L04 FINAL only
+verifies the receipt read-only.
+
+Correction (round-1 audit): the earlier wording said the reset was proved "in
+its prefetch tests" and that no allowlist or ownership edit was needed, but no
+prefetch test was in this leaf's scope. Before: `tests/vitest/admin/adminPrefetch.test.ts`
+was absent from Exact File Ownership, the envelope `allowlist`, the Validation
+Commands vitest line, and the `admin-pagination-vitest` `argv` and
+`positiveDiscovery.paths`. After: it is added in place to all of them,
+immediately after `tests/vitest/admin/detailPagesClient.test.ts`, and this leaf
+becomes its sole TASK-551 writer for the reset-adoption assertions.
+
+Regression inputs run but not edited by this leaf:
+`tests/vitest/admin/admin-prefetch-policy.test.ts` (Vitest lane) and
+`tests/perf/admin-prefetch-budget.test.ts` (Bun lane). They are not in this
+leaf's `allowlist` or command envelope; the orchestrator runs them as group
+gates after this leaf lands.
+
+**M3 — INITIAL API surface.** L04 INITIAL `core/admin/utils/adminCacheAuthority.ts`
+now has six exports (one type plus five runtime functions), including the test-seam factory
+`createAdminCacheInstallationAuthority`. This leaf's production consumers use
+only the four named functions — `registerAdminModuleCacheReset`,
+`captureAdminCacheInstallationToken`, `isCurrentAdminCacheInstallationToken`
+and `advanceAdminCacheInstallationAuthority` (the last one only from tests).
+They must not construct their own authority through the factory. The file
+remains read-only/forbidden for this leaf.

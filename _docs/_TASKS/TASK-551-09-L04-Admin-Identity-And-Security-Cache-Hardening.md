@@ -548,13 +548,13 @@ registration and zero identity bytes in tokens/callback arguments. Its source
 guard proves INITIAL edits only `adminCacheAuthority.ts` plus this test.
 
 ```bash
-set -a && source .env && set +a
 # INITIAL gate, before TASK-551-03-L02 and TASK-551-04-L01:
-bun run test:vitest -- tests/vitest/admin/admin-cache-authority.test.ts
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/admin-cache-authority.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
+git diff --check
 # FINAL gate, after both adoption receipts and TASK-551-09-L03:
-bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/cacheBusHardening.test.ts \
   tests/vitest/admin/readThroughCache.test.ts \
   tests/vitest/admin/cacheBus.test.ts \
@@ -565,7 +565,9 @@ bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/admin-cache-client-authority-matrix.test.ts \
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
-  tests/vitest/ui/admin-auth-identity.test.tsx
+  tests/vitest/ui/admin-auth-identity.test.tsx \
+  tests/vitest/admin/admin-cache-authority.test.ts
+set -a && source .env && set +a
 SERVER_CACHE_BACKEND=memory bun test tests/unit/security/securitySettings.test.ts \
   tests/integration/routes/settings.test.ts \
   tests/integration/routes/securitySettings.test.ts \
@@ -711,7 +713,7 @@ private namespace under `task551-db-redis-test`.
       "id": "initial-authority-test",
       "lane": "vitest",
       "environmentProfile": "none",
-      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/admin/admin-cache-authority.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/admin/admin-cache-authority.test.ts"],
       "positiveDiscovery": {
         "kind": "test-paths",
         "paths": ["tests/vitest/admin/admin-cache-authority.test.ts"],
@@ -722,10 +724,10 @@ private namespace under `task551-db-redis-test`.
       "id": "final-admin-cache-tests",
       "lane": "vitest",
       "environmentProfile": "none",
-      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx", "tests/vitest/admin/admin-cache-authority.test.ts"],
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx"],
+        "paths": ["tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx", "tests/vitest/admin/admin-cache-authority.test.ts"],
         "minimum": 1
       }
     },
@@ -791,7 +793,7 @@ private namespace under `task551-db-redis-test`.
     {
       "id": "initial",
       "dependsOn": ["TASK-551-07-L01:single"],
-      "commandIds": ["initial-authority-test", "core-lint-types", "core-lint"]
+      "commandIds": ["initial-authority-test", "core-lint-types", "core-lint", "diff-check"]
     },
     {
       "id": "final",
@@ -829,3 +831,478 @@ private namespace under `task551-db-redis-test`.
     The list stays unique and disjoint from this leaf's allowlist.
   - The edit was made in place in the envelope JSON fence; no other envelope
     key, command, or phase changed.
+
+## Dated Contract Corrections — 2026-09-24 (INITIAL FAZA-0 dispositions; append-only)
+
+Two independent read-only auditors reviewed the INITIAL occurrence of this leaf.
+These corrections win over the body wherever they differ; I4-I6 also bind the
+FINAL occurrence.
+
+Line references below are to the committed body bytes at HEAD `c9d1e808`. The
+only in-place body edits are the ones recorded in I4 (envelope JSON and the
+Testing Requirements command block). The envelope edits change no line count.
+The command-block edits net two added lines: HEAD lines 552-555 sit one line up,
+HEAD lines 556-568 keep their numbers, and every HEAD line from 569 onward
+(including the whole envelope) sits two lines lower in the working tree.
+
+### I1 — Test seam for the overflow rule (HIGH)
+
+- The INITIAL API at lines 109-118 declares the overflow rule ("At
+  `Number.MAX_SAFE_INTEGER`, the next advance invokes resets and permanently
+  disables cache installation") but exposes no way to reach that generation in a
+  test short of 2^53 advances.
+- Disposition: INITIAL `adminCacheAuthority.ts` exports exactly SIX symbols:
+  one type plus five runtime functions (the dispatch mandate's "six runtime
+  symbols + the type" counted the type among the six; only five names exist at
+  runtime):
+  - `type AdminCacheInstallationToken` (opaque);
+  - `captureAdminCacheInstallationToken()`;
+  - `isCurrentAdminCacheInstallationToken(token)`;
+  - `registerAdminModuleCacheReset(reset)`;
+  - `advanceAdminCacheInstallationAuthority()`;
+  - NEW `createAdminCacheInstallationAuthority(options?: { initialGeneration?: number })`,
+    returning an instance `{ capture, isCurrent, register, advance }` with
+    semantics identical to the four named functions.
+- The module-level default instance is `createAdminCacheInstallationAuthority()`
+  (generation `0`); the four named functions delegate to it.
+- Production consumers, including L04 FINAL, use only the four named runtime
+  functions; `createAdminCacheInstallationAuthority` is used only by
+  `admin-cache-authority.test.ts`.
+- `initialGeneration` must be a safe integer in `0..Number.MAX_SAFE_INTEGER`.
+  Any other value throws a `TypeError` whose message is exactly the stable code
+  `"admin_cache_authority_invalid"`.
+- The overflow test builds an instance with
+  `initialGeneration: Number.MAX_SAFE_INTEGER`, calls `advance()` once and
+  asserts:
+  - every registered reset ran exactly once;
+  - the token captured before the advance, one captured after it and every
+    later capture all return `isCurrent(...) === false`;
+  - a second `advance()` runs the resets again and neither wraps nor re-enables
+    installation.
+
+### I2 — INITIAL semantics (binding pseudocode; AGENTS.md executable-leaf rule)
+
+The body pseudocode (lines 350-445) contains no INITIAL-module shape. This is the
+binding INITIAL implementation contract:
+
+```ts
+// core/admin/utils/adminCacheAuthority.ts
+// Zero value imports (type-only allowed). Touches no host/browser global and no
+// network or hashing API at import or call time — see the I3 source guard.
+
+declare const tokenBrand: unique symbol;
+export type AdminCacheInstallationToken = { readonly [tokenBrand]: never };
+
+const AUTHORITY_INVALID = "admin_cache_authority_invalid";
+
+const mintToken = (): AdminCacheInstallationToken =>
+  Object.freeze(Object.create(null)) as AdminCacheInstallationToken;
+  // frozen, prototype-less, own-key-less: JSON.stringify(token) === "{}"
+
+const swallowThenable = (result: unknown): void => {
+  if (result !== null && (typeof result === "object" || typeof result === "function")) {
+    try {
+      const then = (result as { then?: unknown }).then;
+      if (typeof then === "function") {
+        then.call(result, () => undefined, () => undefined); // never unhandled
+      }
+    } catch {
+      // A throwing `then` getter is swallowed like a throwing reset.
+    }
+  }
+};
+
+export const createAdminCacheInstallationAuthority = (
+  options?: { initialGeneration?: number },
+) => {
+  // `=== undefined`, not `??`: an explicit null must reach validation and throw.
+  const initial = options?.initialGeneration === undefined ? 0 : options.initialGeneration;
+  if (!Number.isSafeInteger(initial) || initial < 0) {
+    throw new TypeError(AUTHORITY_INVALID);
+  }
+  let generation: number = initial;
+  let disabled = false;
+  let currentToken: AdminCacheInstallationToken = mintToken();
+  // Insertion-ordered; each value is the live registration record for that reset.
+  const resets = new Map<() => void, object>();
+
+  const capture = (): AdminCacheInstallationToken =>
+    disabled ? mintToken() : currentToken; // fresh never-current sentinel after disable
+
+  const isCurrent = (token: unknown): boolean =>
+    !disabled && token === currentToken; // never throws
+
+  const register = (reset: () => void): (() => void) => {
+    let record = resets.get(reset); // keyed by reference
+    if (record === undefined) {
+      record = {};
+      resets.set(reset, record); // duplicate registration adds nothing
+    }
+    const bound = record;
+    let active = true; // per-handle: every unsubscribe handle is single-use
+    return () => {
+      if (!active) return;
+      active = false;
+      // A stale handle from an earlier registration of the same function is a
+      // no-op after re-registration, because its record is no longer live.
+      if (resets.get(reset) === bound) resets.delete(reset); // O(1), next dispatch
+    };
+  };
+
+  const advance = (): void => {
+    // Step 1: generation or disable, then a NEW token, before any dispatch.
+    if (generation === Number.MAX_SAFE_INTEGER) disabled = true;
+    else generation += 1;
+    currentToken = mintToken();
+    // Step 2: dispatch over a SNAPSHOT in registration (insertion) order.
+    for (const reset of [...resets.keys()]) {
+      try {
+        swallowThenable((reset as () => unknown)()); // zero arguments
+      } catch {
+        // Swallowed: no rethrow, no scheduled rethrow, no console output.
+      }
+    }
+  };
+
+  return { capture, isCurrent, register, advance };
+};
+
+const defaultAuthority = createAdminCacheInstallationAuthority();
+export const captureAdminCacheInstallationToken = () => defaultAuthority.capture();
+export const isCurrentAdminCacheInstallationToken = (token: unknown) =>
+  defaultAuthority.isCurrent(token);
+export const registerAdminModuleCacheReset = (reset: () => void) =>
+  defaultAuthority.register(reset);
+export const advanceAdminCacheInstallationAuthority = () => defaultAuthority.advance();
+```
+
+Binding rules the sketch encodes:
+
+- **Source spelling:** the module never spells a guarded identifier from the I3
+  source guard, not even in a comment (belt and braces: the guard strips
+  comments before matching, and the prose must not rely on that).
+- **Validation:** `initialGeneration` omitted or `undefined` means `0`; every
+  other value, including `null`, is validated. `-0` is accepted (it is a safe
+  integer and not `< 0`).
+- **State per instance:** `generation`, `disabled = false`, one `currentToken`
+  per generation (`Object.freeze(Object.create(null))`), and
+  `resets = new Map<() => void, object>()` (insertion-ordered; the value is the
+  live registration record).
+- **`capture()`:** returns the current-generation token object. Captures within
+  one non-disabled generation are `Object.is`-equal; after disable each capture
+  is a distinct fresh sentinel that is never current.
+  `JSON.stringify(token) === "{}"` and `Object.keys(token).length === 0`.
+- **`isCurrent(t)`:** `!disabled && t === currentToken`. Any other input
+  (non-object, foreign object, stale token) returns `false`; it never throws.
+- **`advance()`:** step 1 disables at `Number.MAX_SAFE_INTEGER`, otherwise
+  increments; in both cases it mints a NEW `currentToken`. Step 2 dispatches
+  over a snapshot of `resets` in insertion order. Each call is wrapped in
+  `try/catch`; a throw is swallowed (no rethrow, no scheduled rethrow, no console
+  output, because the callback carries no identity and the seam must never fail
+  a page). A returned thenable is otherwise ignored but gets a no-op rejection
+  handler so it never becomes an unhandled rejection. Entries unsubscribed during
+  dispatch that are still in the snapshot are called in this pass. Registrations
+  made during dispatch run from the next advance. A nested `advance()` inside a
+  reset increments again and runs its own full pass, then the outer pass
+  continues its remaining snapshot. `advance()` never throws.
+- **`register(reset: () => void): () => void`:** keyed by function reference in
+  the Map. Registering the same reference again while it is registered adds
+  nothing and returns a new handle bound to that same live registration record.
+  Resets are invoked with zero arguments. Every unsubscribe handle is single-use
+  through its own per-handle `active` flag (a second call is a no-op), and it
+  deletes only while its bound record is still the live one, so a stale handle
+  from an earlier registration of the same function is a no-op after
+  re-registration. The flag alone would not cover a duplicate-registration
+  handle that is still active after its twin unsubscribed and the function was
+  re-registered; the record check is sufficient, and the flag is defensive.
+  Unsubscribe is O(1) and safe
+  during dispatch (removal applies from the next dispatch). Per-instance
+  registrations (hooks) MUST unsubscribe on cleanup.
+  Per-instance registrations (hooks) must pass a closure created for that
+  instance; handles for a shared function reference share one registration,
+  and any live handle removes it for all holders.
+- Each `catch {}` in the module keeps a non-empty explanatory comment (ESLint
+  `no-empty`); the comment must not spell a guarded identifier.
+- **Reset callbacks must be total** (synchronous clear/assignment only, no I/O).
+  The seam swallows throws and rejections only as a last line of defense.
+- **Annotation of lines 396-415:** `advanceKeyInstallationGeneration(key)` and
+  `isCurrentKeyGeneration(key, generation)` in the pseudocode are FINAL
+  `readThroughCache.ts`-private helpers, not `adminCacheAuthority` exports.
+
+### I3 — Test matrix restated (replaces lines 543-548 for INITIAL)
+
+`tests/vitest/admin/admin-cache-authority.test.ts` covers:
+
+- token identity within a generation and inequality across `advance()`;
+- `isCurrent` for stale, foreign and non-object inputs;
+- advance order: generation/disable happens before dispatch, so a reset that
+  captures inside dispatch sees the NEW token;
+- registration (insertion) order of dispatch;
+- duplicate registration is a no-op, unsubscribe is idempotent, and unsubscribe
+  during dispatch still lets the snapshot entry run in the current pass only;
+- single-use handles: `register(f)` → `h1`; `h1()`; `register(f)` → `h2`;
+  calling `h1()` again leaves `f` registered (the next `advance()` calls `f`
+  once), and `h2()` then removes it; a duplicate-registration handle obtained
+  before `h1()` is likewise a no-op after re-registration;
+- default-instance delegation: `registerAdminModuleCacheReset(spy)` then
+  `advanceAdminCacheInstallationAuthority()` calls `spy` exactly once with zero
+  arguments; a token captured through `captureAdminCacheInstallationToken()`
+  before the advance is stale and one captured after it is current under
+  `isCurrentAdminCacheInstallationToken`; every default-instance registration
+  made by the suite is unsubscribed in `afterEach` so module state cannot leak
+  across tests;
+- throwing-subscriber isolation: spy resets registered before and after the
+  thrower are still called and `advance()` returns normally; `console.error`,
+  `console.warn` and `console.log` are spied and each has zero calls;
+- unhandled-rejection proof: install `process.on("unhandledRejection", spy)`;
+  register one reset returning `Promise.reject(new Error("x"))` and one
+  returning an object whose `then` getter throws; call `advance()`; then
+  `await new Promise((r) => setTimeout(r, 0))`; assert
+  `expect(spy).not.toHaveBeenCalled()`; remove the listener with `process.off`
+  in `finally`/`afterEach`. `vi.waitFor` is not used (it cannot prove absence).
+  Vitest also fails the run on an unhandled rejection by default, which is a
+  second, independent signal;
+- nested `advance()` pin: register `A` (logs `"A"`, then on its first call only,
+  guarded by a flag, sets the re-entrancy flag BEFORE calling `advance()`, then
+  calls `advance()` once) and `B` (logs `"B"`); one outer
+  `advance()` yields a log equal to `["A","A","B","B"]`. Tokens captured before
+  the outer advance, inside `A` before the nested call, and after the outer
+  advance are three distinct objects (`not.toBe` pairwise) and only the last is
+  current. An instance with `initialGeneration: Number.MAX_SAFE_INTEGER - 1`
+  whose single nested advance reaches the overflow step disables: every capture
+  after that nested advance is non-current, including after the outer pass
+  returns;
+- overflow per I1;
+- `initialGeneration` validation: negative, non-integer, greater than
+  `Number.MAX_SAFE_INTEGER`, `NaN`, `null` (cast
+  `null as unknown as number`) and a string
+  (`createAdminCacheInstallationAuthority({ initialGeneration: "1" as unknown as number })`)
+  each throw; every invalid case asserts both `toThrowError(TypeError)` and a
+  caught error whose `message === "admin_cache_authority_invalid"`. No
+  `@ts-expect-error` or `@ts-ignore` is used. `-0`, `0`, omitted options and
+  `{ initialGeneration: undefined }` are accepted;
+- zero identity bytes: `reset.mock.calls[i].length === 0` and
+  `JSON.stringify(token) === "{}"`;
+- token equality is asserted only with `toBe`/`not.toBe`/`Object.is`; structural
+  `toEqual`/`toStrictEqual` is never used on tokens, because every token is a
+  structurally identical empty frozen object;
+- SOURCE GUARD (executable): `readFileSync` the module source `src`, strip
+  comments first with
+  `const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");`
+  and assert zero matches in `code` of each of:
+  - `/\b(window|document|localStorage|sessionStorage|BroadcastChannel|fetch|crypto)\b/`;
+  - `/^\s*import\s+(?!type\s)/m` (value import; `import type` allowed);
+  - `/^\s*export\s[^;]*\sfrom\s*["']/m` (re-export);
+  - `/\bimport\s*\(/` (dynamic import);
+  - `/\brequire\s*\(/`.
+
+  Positive control: `expect(code).toMatch(/createAdminCacheInstallationAuthority/);`
+  proves the stripped source is non-empty and the guard reads the real module.
+
+  The export-set assertion is
+  `Object.keys(await import("../../../core/admin/utils/adminCacheAuthority")).sort()`
+  (relative import path, house style) equal to exactly the five runtime export
+  names from I1 (`advanceAdminCacheInstallationAuthority`,
+  `captureAdminCacheInstallationToken`, `createAdminCacheInstallationAuthority`,
+  `isCurrentAdminCacheInstallationToken`, `registerAdminModuleCacheReset`); the
+  type export has no runtime key. The module must not spell the guarded
+  identifiers even in comments (I2 source-spelling rule).
+
+The body sentence at lines 547-548 ("Its source guard proves INITIAL edits only
+`adminCacheAuthority.ts` plus this test") is superseded: the two-path INITIAL
+scope is proved by the ORCHESTRATOR receipt, not by the test. The orchestrator
+COMMITS this contract round before INITIAL dispatch (the owner authorized
+worktree commits on this branch; otherwise the receipt is the pre-dispatch
+porcelain baseline plus exactly the two `??` lines). The porcelain receipt is
+taken immediately after W-test returns, before any spina/receipt write. After
+the writer returns,
+`git status --porcelain --untracked-files=all` must list exactly these two lines
+and nothing else:
+
+- `?? core/admin/utils/adminCacheAuthority.ts`
+- `?? tests/vitest/admin/admin-cache-authority.test.ts`
+
+Because both paths are untracked, the orchestrator then runs
+`git add -N core/admin/utils/adminCacheAuthority.ts tests/vitest/admin/admin-cache-authority.test.ts`
+so the envelope `diff-check` command (`git diff --check`) inspects their bytes.
+The status receipt is taken before `git add -N`. The orchestrator runs
+`prettier --check` on both new files BEFORE the gates and computes the receipt
+sha256 after prettier.
+
+### I4 — Validation law (in-place edits, recorded)
+
+Following the TASK-551-07-L01 C7/R2 law (`bun run test:vitest` sources `.env`
+through the root `package.json` script), the INITIAL gate is env-free. In-place
+edits made in this round:
+
+- Envelope `initial-authority-test` argv (line 714):
+  - Before: `["bun", "run", "test:vitest", "--", "tests/vitest/admin/admin-cache-authority.test.ts"]`
+  - After: `["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/admin/admin-cache-authority.test.ts"]`
+  - `environmentProfile` stays `"none"`.
+- Envelope `final-admin-cache-tests` (lines 725 and 728):
+  - Before: argv prefix `["bun", "run", "test:vitest", "--", ...]` with the
+    twelve existing test paths; `positiveDiscovery.paths` the same twelve paths.
+  - After: argv prefix `["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", ...]`
+    with the same twelve paths in the same order plus
+    `tests/vitest/admin/admin-cache-authority.test.ts` appended; the same path
+    appended to `positiveDiscovery.paths`. `environmentProfile` stays `"none"`.
+- Envelope `occurrences[initial].commandIds` (line 794):
+  - Before: `["initial-authority-test", "core-lint-types", "core-lint"]`
+  - After: `["initial-authority-test", "core-lint-types", "core-lint", "diff-check"]`
+  - The occurrence `id`s and `dependsOn` values, and the envelope
+    `dependencies`, are unchanged.
+- Testing Requirements command block (HEAD lines 550-598; round 1 and round 2
+  edits, both in place):
+  - Before (HEAD): line 551 `set -a && source .env && set +a` opened the block;
+    line 553 was `bun run test:vitest -- tests/vitest/admin/admin-cache-authority.test.ts`;
+    the INITIAL gate ended at line 555 `bun --cwd core lint` with no
+    `git diff --check`; lines 557-568 were the FINAL
+    `bun run test:vitest -- <12 paths>` invocation, which sourced `.env` through
+    the root `package.json` script and omitted the authority suite.
+  - After (round 1): the leading sourcing line is removed; the INITIAL vitest
+    line is
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/admin-cache-authority.test.ts`;
+    `set -a && source .env && set +a` sits immediately before the FINAL
+    `SERVER_CACHE_BACKEND=memory bun test ...` DB lane.
+  - After (round 2): the INITIAL gate gains `git diff --check` after
+    `bun --cwd core lint`, mirroring `occurrences[initial].commandIds`. The FINAL
+    vitest invocation becomes the env-free direct runner
+    `bun --env-file=/dev/null node_modules/vitest/vitest.mjs run <13 paths>`,
+    with the thirteen paths in exactly the order of the envelope
+    `final-admin-cache-tests` argv (the twelve HEAD paths, then
+    `tests/vitest/admin/admin-cache-authority.test.ts`). `.env` sourcing stays
+    only immediately before the FINAL Bun DB lanes. The vitest invocations
+    agree with the envelope argv; the envelope stays authoritative.
+  - Round 3 (in place): the FINAL vitest prose line is prefixed with
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none'` to match the INITIAL line
+    and 10-L01. Before:
+    `bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/storageCache.test.ts \`.
+    After:
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/storageCache.test.ts \`.
+- Orchestrator INITIAL gates outside the envelope (run by the orchestrator
+  between phases, not by the writer agent):
+  - root `tsc -p tsconfig.json --noEmit` compared against the recorded baseline
+    (`bun --cwd core lint:types` does not cover `tests/`);
+  - `eslint --max-warnings=0` over the two INITIAL paths;
+  - `wc -l` over the two INITIAL paths (1,000-line gate);
+  - the I3 scope receipt (`git status --porcelain --untracked-files=all`),
+    followed by `git add -N` on the two INITIAL paths before the envelope
+    `diff-check` command runs. `git diff --check` itself is the envelope
+    `diff-check` command and is not repeated here.
+
+### I5 — Seam stability after INITIAL
+
+- FINAL may only extend `adminCacheAuthority.ts` ADDITIVELY. The six INITIAL
+  exports (one type plus five runtime functions) keep byte-compatible signatures
+  and semantics, because 03-L02
+  and 04-L01 import them between phases.
+- Any FINAL edit to `adminCacheAuthority.ts` re-runs the direct suite, which I4
+  now includes in `final-admin-cache-tests`. Any FINAL export addition updates
+  the I3 export-set assertion in the same change.
+- Line 75 is overridden (body bytes unchanged):
+  `tests/vitest/admin/admin-cache-authority.test.ts` is "created in INITIAL;
+  FINAL may extend additively" instead of "(INITIAL only)".
+
+### I6 — Prefetch reset ownership
+
+- Verified: `core/admin/utils/adminPrefetch.ts` keeps its prefetcher state in
+  closure variables of `createAdminPrefetcher` (`inFlight`, `queued`, `queue`,
+  `lastAttempt`, `lastSuccess` at lines 108-112), and the default prefetcher is
+  the module-level `prefetchAdminRoute = createAdminPrefetcher(defaultEntries)`
+  at line 466. No other module can reach that state, so the reset must be
+  registered INSIDE that file. Its sole TASK-551 writer is 03-L02 (lines 99-102).
+- Disposition for the matrix (lines 125-127):
+  - The 03-L02 adoption row at line 125 gains: "`adminPrefetch.ts` default
+    prefetcher (`inFlight`/`queued`/`queue`/`lastAttempt`/`lastSuccess`) reset
+    via `registerAdminModuleCacheReset`".
+  - Line 127 is amended: L04 FINAL only VERIFIES that 03-L02 receipt read-only
+    (registry/semantics assertion through the matrix test). It neither edits
+    `adminPrefetch.ts` nor claims ownership of its reset registration. The
+    phrase at lines 101-102 ("L04 composes its cache-identity
+    epoch/registration through `adminCacheAuthority.ts`") is read the same way:
+    L04 supplies the seam, and 03-L02 registers the reset.
+- 03-L02 carries the mirrored obligation; its writer edits that task file in
+  this round.
+
+### I7 — Status field
+
+- The board `**Status:**` (line 11) stays `⏳ To Do` until TASK-551-10-L02
+  closure (family precedent: 06-L02, 06-L03, 07-L01).
+- The sentence at lines 26-27 ("remains `🚧 In Progress`/non-releasable between
+  them") describes the non-releasable state between the INITIAL and FINAL
+  phases, not the board field.
+
+### I8 — Downstream mirrors recorded
+
+- **TASK-551-03-L02:** the "L04 INITIAL authority manifest" clause (its HEAD
+  lines 966-967) is reworded to a registration-plus-advance proof, because INITIAL
+  exports no manifest. That leaf also gains the `adminPrefetch.ts` default-
+  prefetcher reset obligation from I6 and names
+  `tests/vitest/admin/adminPrefetch.test.ts` as its proof home (that path joins
+  its allowlist and its owning Vitest argv; the edit is made in 03-L02).
+- **TASK-551-10-L01:** its mirrored TASK-551-09-L04 command block (lines
+  991-994) is rebuilt from this leaf's envelope: INITIAL is the direct env-free
+  vitest runner, `bun --cwd core lint:types`, `bun --cwd core lint` and
+  `git diff --check`; `.env` is sourced only immediately before the FINAL Bun DB
+  lanes; FINAL uses the 13-path direct runner of `final-admin-cache-tests`.
+- **TASK-551-04-L01:** its envelope `forbiddenPaths` gains
+  `core/admin/utils/adminCacheAuthority.ts` and
+  `core/admin/services/cachePolicy.ts` for explicitness; its `dependencies` are
+  unchanged.
+- Each mirror is edited by that task file's own writer in this round; this leaf
+  only records them.
+
+### Round-2 record (2026-09-24)
+
+Four independent read-only auditors reviewed the round-1 corrections. Verified
+findings were applied in place in the sections above (no duplicate headings):
+
+- **I2/I3 contradiction (HIGH):** the I2 sketch header comment spelled the
+  guarded identifiers that the I3 source guard forbids. The comment now names
+  none of them; I3 pins the comment-stripping guard, the four import/re-export/
+  dynamic-import/require patterns, and the relative-path export-set assertion;
+  I2 adds the source-spelling rule.
+- **I3 additions:** default-instance delegation with `afterEach` unsubscribe;
+  the nested-advance log/token pin plus the `MAX_SAFE_INTEGER - 1` nested
+  overflow; validation forms (string via `as unknown as number`, `null` throws,
+  `-0` accepted, `TypeError` plus exact message, no TS suppression comments);
+  the `process` unhandled-rejection proof replacing `vi.waitFor`; zero console
+  output from a throwing subscriber; identity-only token equality.
+- **I2 registration:** single-use handles through a per-handle `active` flag,
+  plus a per-registration record check so a stale handle (including a
+  duplicate-registration handle) cannot remove a later re-registration; the
+  sketch uses `Map<() => void, object>` for that record. `??` became an explicit
+  `=== undefined` check so `null` is validated. Reset callbacks must be total.
+- **Scope proof:** the orchestrator commits this contract round before INITIAL
+  dispatch; the two-line `??` status receipt precedes `git add -N` and the
+  envelope `diff-check`; the duplicate outside-envelope `git diff --check` is
+  removed from I4.
+- **Precedence and anchors:** corrections bind the body wherever they differ,
+  with I4-I6 also binding FINAL; the pseudocode anchor is lines 350-445 and the
+  superseded source-guard sentence is lines 547-548; I5 records line 75 as
+  overridden with body bytes unchanged and ties FINAL export additions to the I3
+  export-set assertion.
+- **Command block (in place):** INITIAL gains `git diff --check`; FINAL uses the
+  env-free 13-path direct runner in envelope order. Before/after is in I4.
+- **Mirrors:** I6 adds `queue`; I8 records the 03-L02 `adminPrefetch.test.ts`
+  proof home and the 10-L01 rebuild of its 09-L04 block from the envelope.
+- The envelope JSON, its `dependencies`, occurrence ids and `dependsOn` are
+  byte-unchanged in round 2.
+- **Round-2 LOW wording fixes (four auditors, verified):**
+  - I1: production consumers (including L04 FINAL) use only the four named
+    runtime functions; the factory is test-only.
+  - I2: per-instance hook registrations pass a per-instance closure (shared
+    references share one registration); every `catch {}` keeps a non-empty
+    comment that spells no guarded identifier; the flag is defensive, the
+    record check sufficient.
+  - I3: source-guard positive control
+    (`expect(code).toMatch(/createAdminCacheInstallationAuthority/)`); the
+    nested-advance re-entrancy flag is set BEFORE calling `advance()`; scope
+    proof notes the owner-authorized commit (or baseline-plus-two-lines
+    fallback), receipt timing right after W-test, and `prettier --check` before
+    gates with the receipt sha256 computed after prettier.
+  - I4: "prose and envelope agree" narrowed to the vitest invocations versus the
+    envelope argv; the FINAL vitest prose line gains the
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none'` prefix (before/after in I4).
+  - I8: the 03-L02 "lines 966-967" reference is marked as HEAD numbering.
+  - The envelope JSON stays byte-unchanged.

@@ -491,7 +491,9 @@ caller-provided endpoint.
     "core/services/cache/serverCache.ts",
     "_docs/_TASKS/README.md",
     "_docs/_CHANGELOG/README.md",
-    "_docs/_workflows/task-551-implement.mjs"
+    "_docs/_workflows/task-551-implement.mjs",
+    "core/admin/utils/adminCacheAuthority.ts",
+    "core/admin/services/cachePolicy.ts"
   ],
   "dependencies": ["TASK-551-03-L03:single"],
   "commands": [
@@ -577,3 +579,17 @@ caller-provided endpoint.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-09-L04 INITIAL FAZA-0; append-only)
+
+- Envelope `forbiddenPaths` edited in place (single-writer explicitness).
+  Before: the array ended with `"_docs/_workflows/task-551-implement.mjs"` and
+  named neither `core/admin/utils/adminCacheAuthority.ts` nor
+  `core/admin/services/cachePolicy.ts` (both were also absent from
+  `allowlist`). After: both paths are appended to `forbiddenPaths`. This leaf
+  consumes them read-only per `## Exact File Ownership`; TASK-551-09-L04 remains
+  their sole writer. `dependencies` and `occurrences` are unchanged.
+- The INITIAL `adminCacheAuthority.ts` API consumed here has six exports (one type plus five runtime functions):
+  four named functions, the `createAdminCacheInstallationAuthority`
+  test-seam factory, and one exported type. This leaf imports only the named
+  functions/type it needs and never edits the module.

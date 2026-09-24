@@ -344,3 +344,23 @@ clients/hooks that returned receipts.
 ## Documentation Updates Required
 
 Full perf/fault/smoke/docs/closure and changelog 1310 remain with TASK-551-10.
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-09-L04 INITIAL FAZA-0; append-only)
+
+- **P1 — `adminPrefetch.ts` exception.** The sole TASK-551 writer of
+  `adminPrefetch.ts` is TASK-551-03-L02, which registers the default
+  prefetcher's reset with the L04 INITIAL installation/reset authority.
+  L04 FINAL only verifies that 03-L02 receipt read-only and never edits the
+  file. The Collision Guards clause "L04 FINAL owns every other current Admin
+  module cache" is narrowed accordingly: it excludes `adminPrefetch.ts` in
+  addition to the ten 03/04-owned clients/hooks.
+- **P2 — phased-order clarification.** "L04 stays `🚧 In Progress` and the
+  program is non-releasable between its phases" describes the non-releasable
+  program state between the INITIAL and FINAL phases. The board `**Status:**`
+  field of TASK-551-09-L04 stays `⏳ To Do` until TASK-551-10-L02 closure,
+  following the family precedent.
+- **P3 — INITIAL API surface.** `adminCacheAuthority.ts` exports one type plus
+  five runtime functions, including the test-seam factory
+  `createAdminCacheInstallationAuthority`. Consumers (03-L02, 04-L01 and L04
+  FINAL) use only the four named runtime functions; the factory is reserved for
+  the direct contract test.

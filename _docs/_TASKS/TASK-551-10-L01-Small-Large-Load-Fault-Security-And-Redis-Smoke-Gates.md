@@ -989,13 +989,13 @@ wc -l core/services/{menus/menuService,pages/pageTemplateLibraryService,pages/pu
 TASK-551-09-L04:
 
 ```bash
-set -a && source .env && set +a
 # INITIAL gate, before TASK-551-03-L02 and TASK-551-04-L01:
-bun run test:vitest -- tests/vitest/admin/admin-cache-authority.test.ts
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/admin-cache-authority.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
+git diff --check
 # FINAL gate, after both adoption receipts and TASK-551-09-L03:
-bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/cacheBusHardening.test.ts \
   tests/vitest/admin/readThroughCache.test.ts \
   tests/vitest/admin/cacheBus.test.ts \
@@ -1006,7 +1006,9 @@ bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/admin-cache-client-authority-matrix.test.ts \
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
-  tests/vitest/ui/admin-auth-identity.test.tsx
+  tests/vitest/ui/admin-auth-identity.test.tsx \
+  tests/vitest/admin/admin-cache-authority.test.ts
+set -a && source .env && set +a
 SERVER_CACHE_BACKEND=memory bun test tests/unit/security/securitySettings.test.ts \
   tests/integration/routes/settings.test.ts \
   tests/integration/routes/securitySettings.test.ts \
@@ -1464,3 +1466,57 @@ round 2 converged on
 `tests/vitest/cache/server-cache-coherence-conditional-write.test.ts`
 everywhere (rename record in TASK-551-07-L01; split in correction C1(e)), which
 is the name this leaf uses at every receipt site.
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-09-L04 INITIAL FAZA-0; append-only)
+
+This entry mirrors TASK-551-09-L04 correction I4 (validation law) into the
+literal `TASK-551-09-L04:` block under "Exact TASK-551-09 Owner Command
+Manifests". That block was edited in place, because it is the literal whose
+canonical argv SHA-256 digest is compared with the 09-L04 owner receipt; this
+section records the before/after. No Workflow Dispatch Envelope in this file
+was changed, and no envelope in this file runs any 09-L04 command.
+
+**Source of truth.** The 09-L04 Workflow Dispatch Envelope: command
+`initial-authority-test`, command `final-admin-cache-tests` (thirteen paths),
+and `occurrences[initial].commandIds` =
+`["initial-authority-test", "core-lint-types", "core-lint", "diff-check"]` and
+`occurrences[final].commandIds` =
+`["final-admin-cache-tests", "memory-security-settings-tests", "redis-security-settings-tests", "admin-boundary-check", "core-lint-types", "core-lint", "diff-check", "line-count"]`.
+
+**Round 1 (first in-place edit).**
+
+- Before: the block opened with `set -a && source .env && set +a`, followed by
+  `bun run test:vitest -- tests/vitest/admin/admin-cache-authority.test.ts`,
+  `bun --cwd core lint:types` and `bun --cwd core lint` as the INITIAL gate.
+- After: `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/admin-cache-authority.test.ts`
+  first, with the `source .env` line moved after it for the remaining INITIAL
+  commands. This left `.env` sourced before the INITIAL lint commands, the
+  INITIAL `git diff --check` missing, and the FINAL vitest line on the
+  `.env`-sourcing `bun run test:vitest` script with twelve paths.
+
+**Round 2 (this correction).**
+
+- INITIAL: `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/admin-cache-authority.test.ts`,
+  `bun --cwd core lint:types`, `bun --cwd core lint`, `git diff --check`, in
+  the envelope's `initial` order, with NO `.env` sourcing before them.
+- FINAL vitest: before, `bun run test:vitest -- <twelve paths>`; after,
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run`
+  followed by the thirteen `final-admin-cache-tests` paths in the envelope's
+  exact order (the twelve previous paths, then
+  `tests/vitest/admin/admin-cache-authority.test.ts`).
+- `set -a && source .env && set +a` now sits only immediately before the FINAL
+  Bun DB lanes (`SERVER_CACHE_BACKEND=memory bun test ...`, then
+  `SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l04 bun test ...`).
+  The remaining FINAL commands (`check:admin-boundary`, `lint:types`, `lint`,
+  `git diff --check`, `wc -l`) are unchanged.
+
+**Digest canonicalization.** Per "Exact TASK-551-09 Owner Command Manifests"
+(lines 783-784), the blocks are canonicalized to argv arrays and environment
+values are never included in the digest or evidence. The `env` launcher and
+its `NAME=value` prefixes (`DATABASE_URL=...`, `SERVER_CACHE_BACKEND=...`,
+`SERVER_CACHE_NAMESPACE=...`) are therefore stripped during argv
+canonicalization, so the INITIAL and FINAL vitest lines canonicalize to the
+09-L04 envelope argv
+`["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", ...]`.
+The 09-L04 owner receipt SHA-256 digest must be re-derived at closure from
+this corrected block.
