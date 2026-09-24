@@ -281,10 +281,13 @@ async function getOrLoad<TCached, TResult>(
     ? generationRead.generations
     : null;
   const finalPathKey = generations
-    ? await buildServerCacheKey({
-        policy: normalized.policy,
-        input: normalized.input,
-        generations: projectGenerations(generations, normalized.policy.tags),
+    ? buildServerCacheKey({
+        // synchronous; exact BuildKeyInput (serverCacheKeys.ts:286-292)
+        namespace: config.namespace,
+        family: normalized.policy.family,
+        schemaVersion: normalized.policy.schemaVersion,
+        generationDigest: digestGenerations(generations, normalized.policy.tags),
+        inputDigest: normalized.inputDigest, // digestServerCacheInput(input)
       })
     : await buildCanonicalNonStoreBypassFinalKey({
         namespace: config.namespace,
@@ -306,8 +309,9 @@ async function getOrLoad<TCached, TResult>(
       : "generation_unavailable",
   };
   if (generations) {
-    const expectedGenerationDigest = await digestGenerations(
-      projectGenerations(generations, normalized.policy.tags),
+    const expectedGenerationDigest = digestGenerations(
+      generations,
+      normalized.policy.tags,
     );
     const hit = await safeReadDecode(
       finalPathKey,
@@ -580,9 +584,14 @@ pin idempotent close. Assert store health is the deterministic controller/backen
 composition and immediate post-commit failure fences before the caller resumes.
 
 ```bash
-bun run test:vitest -- tests/vitest/cache/memory-server-cache-store.test.ts \
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null \
+  node_modules/vitest/vitest.mjs run \
+  tests/vitest/cache/memory-server-cache-store.test.ts \
   tests/vitest/cache/server-cache-coordinator.test.ts
-bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null \
+  node_modules/vitest/vitest.mjs run \
+  tests/vitest/cache/server-cache-contracts.test.ts \
+  tests/vitest/cache/server-cache-coherence-conditional-write.test.ts \
   tests/vitest/cache/server-cache-codec-keys.test.ts \
   tests/vitest/cache/server-cache-eligibility.test.ts
 bun --cwd core lint:types
@@ -626,8 +635,16 @@ line-count gate is represented by the same finite owned path set.
     "core/db/schema.ts",
     "core/server/httpServer.ts",
     "tests/vitest/cache/server-cache-contracts.test.ts",
+    "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts",
     "tests/vitest/cache/server-cache-codec-keys.test.ts",
     "tests/vitest/cache/server-cache-eligibility.test.ts",
+    "core/services/cache/serverCacheCoherence.ts",
+    "core/services/cache/serverCacheConditionalWrite.ts",
+    "core/services/cache/serverCacheContracts.ts",
+    "core/services/cache/serverCacheCodec.ts",
+    "core/services/cache/serverCacheKeys.ts",
+    "core/services/cache/serverCacheEligibility.ts",
+    "core/services/cache/serverCacheConfig.ts",
     "_docs/_TASKS/README.md",
     "_docs/_CHANGELOG/README.md",
     "_docs/_workflows/task-551-implement.mjs"
@@ -637,7 +654,7 @@ line-count gate is represented by the same finite owned path set.
     {
       "id": "memory-cache-vitest",
       "lane": "vitest",
-      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
       "environmentProfile": "none",
       "positiveDiscovery": {
         "kind": "test-paths",
@@ -648,11 +665,11 @@ line-count gate is represented by the same finite owned path set.
     {
       "id": "l01-contract-vitest",
       "lane": "vitest",
-      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
       "environmentProfile": "none",
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
+        "paths": ["tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"],
         "minimum": 1
       }
     },
@@ -694,3 +711,150 @@ line-count gate is represented by the same finite owned path set.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-07-L01 round-2; append-only)
+
+This entry mirrors the TASK-551-07-L01 round-2 dispositions that change what
+this leaf consumes and executes. TASK-551-07-L01 owns those contracts; where
+this mirror and the L01 file disagree, L01 wins and this entry must be
+re-synced. Line anchors below were re-read against this file after the
+in-place edits described here, and against the live source at HEAD
+`8f73a0f8`. Status stays `⏳ To Do` and the Changelog pin stays `1310`
+(TASK-551-10-L02 closure only).
+
+### M1 — L01 module split under the 1,000-line gate (HIGH, consumer imports)
+
+`core/services/cache/serverCacheContracts.ts` exceeds the AGENTS.md
+1,000-line cap, so L01 splits it into two new L01-owned modules. The FULL
+relocated export sets are the ones enumerated in TASK-551-07-L01 C1(a)
+(coherence module) and C1(b) (conditional-write module); the summary below is
+not a substitute for those lists:
+
+- `core/services/cache/serverCacheCoherence.ts` owns the coherence, health and
+  invalidation-attempt seams plus the bounded invalidation event keys:
+  `ServerCacheHealth`, the `ServerCacheCoherence*` family (including
+  `ServerCacheCoherenceController` and `ServerCacheCoherenceSignal`), the
+  `CacheInvalidationAttempt*` family and `isServerCacheEventKey`, and also
+  `CacheCoherenceAffectedTags`, `CacheCoherenceGlobalSource`,
+  `CacheCoherenceObservationToken`, `ServerCacheForcedBypassReason` and
+  `ServerCacheBackendHealthInput`, plus every other name listed in L01 C1(a)
+  (for example `CACHE_EVENT_KEY_PREFIX`, the `normalizeServerCache*`
+  coherence normalizers, `validateServerCacheCoherenceSignal` and the two
+  brand consts). `ProcessCacheCoherenceEpoch` stays in
+  `serverCacheContracts.ts`.
+- `core/services/cache/serverCacheConditionalWrite.ts` owns
+  `CacheConditionalWriteEntry`, `createCacheConditionalWriteEntry`,
+  `validateCacheInvalidationPlan`, `CacheInvalidationPlan`,
+  `ServerCacheStoreDescription`, and also the `ServerCacheStore` interface,
+  `CacheConditionalWrite` and `CacheConditionalWriteResult` (the full set is
+  L01 C1(b)). `ServerCacheEnvelopeV1` stays in
+  `serverCacheContracts.ts`.
+
+Binding consumer rule: `serverCache.ts`, `memoryServerCacheStore.ts`,
+`serverCacheTelemetry.ts` and both owned test files import every relocated
+name from its owning module. `serverCacheContracts.ts` never re-exports them,
+so an import of a relocated name through `serverCacheContracts.ts` is a type
+error, not a compatibility path. The pseudocode references to the
+`ServerCacheCoherenceController` (lines 178-193) and to
+`createCacheConditionalWriteEntry` (line 142) resolve to these modules. The
+Exclusive Ownership section at lines 25-37 is unchanged: this leaf writes neither
+new module.
+
+### M2 — New L01 test file in the l01-contract-vitest receipt (MEDIUM, body edited in place)
+
+L01 adds `tests/vitest/cache/server-cache-coherence-conditional-write.test.ts`.
+The Workflow Dispatch Envelope is the machine authority, so the body was
+edited in place (not only amended here):
+
+- `l01-contract-vitest` `argv` (line 668) and `positiveDiscovery.paths`
+  (line 672): the new path is inserted after
+  `tests/vitest/cache/server-cache-contracts.test.ts`.
+  - before: `[..., "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"]`
+  - after: `[..., "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts"]`
+- `forbiddenPaths` (lines 630-651): gains the new test path (line 638) and,
+  as a single-writer guard, `core/services/cache/serverCacheCoherence.ts`
+  (line 641) and `core/services/cache/serverCacheConditionalWrite.ts`
+  (line 642). It also gains the five remaining L01-owned modules
+  `core/services/cache/serverCacheContracts.ts`, `serverCacheCodec.ts`,
+  `serverCacheKeys.ts`, `serverCacheEligibility.ts` and `serverCacheConfig.ts`
+  (all under `core/services/cache/`, lines 643-647), which this leaf only
+  imports. Before, the list held 12 entries ending the L01 group at
+  `tests/vitest/cache/server-cache-eligibility.test.ts`; after, it holds 20
+  unique entries, disjoint from the allowlist.
+- Prose receipt bash block (lines 591-596): the new path is added (line 594);
+  see M3 for the command form.
+
+Both vitest commands' `argv` were also edited in place to the env-free,
+validator-legal form, because `bun run test:vitest` resolves to the root
+`package.json` script that sources `.env`. Their test paths are unchanged:
+
+- `memory-cache-vitest` `argv` (line 657):
+  - before: `["bun", "run", "test:vitest", "--", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"]`
+  - after: `["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"]`
+- `l01-contract-vitest` `argv` (line 668):
+  - before: `["bun", "run", "test:vitest", "--", <the four L01 test paths>]`
+  - after: `["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", <the same four L01 test paths>]`
+
+### M3 — Env-free command form for the L01 receipt prose (MEDIUM, body edited in place)
+
+L01 repair R2 (2026-08-27) (L01 "R2 - validation gate made env-source-free") retired the
+`bun run test:vitest` wrapper because the root `package.json` script sources
+`.env`. The L01 receipt prose in Testing Requirements was edited in place.
+
+Before:
+
+```text
+bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \
+  tests/vitest/cache/server-cache-codec-keys.test.ts \
+  tests/vitest/cache/server-cache-eligibility.test.ts
+```
+
+After (lines 591-596):
+
+```text
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null \
+  node_modules/vitest/vitest.mjs run \
+  tests/vitest/cache/server-cache-contracts.test.ts \
+  tests/vitest/cache/server-cache-coherence-conditional-write.test.ts \
+  tests/vitest/cache/server-cache-codec-keys.test.ts \
+  tests/vitest/cache/server-cache-eligibility.test.ts
+```
+
+The same env-free form,
+`env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run <files>`,
+applies to this leaf's own `memory-cache-vitest` receipt, edited in place
+(prose lines 587-590). Before: `bun run test:vitest --
+tests/vitest/cache/memory-server-cache-store.test.ts
+tests/vitest/cache/server-cache-coordinator.test.ts`. After: the env-free form
+above over the same two files.
+
+### M4 — Call-shape corrections (LOW, recorded; fenced pseudocode edited in place)
+
+1. `createCacheConditionalWriteEntry` takes one 7-field object
+   `{ policy, namespace, key, encodedEnvelope, fillKind, ttlMs,
+   storeMaxEntryBytes }`. It is not a positional `(policy, ...)` call. Live
+   source: `CreateConditionalWriteEntryInput` at
+   `serverCacheContracts.ts:859-867` today, which moves to
+   `serverCacheConditionalWrite.ts` under M1; see L01 C2. The prose at
+   line 142 (`createCacheConditionalWriteEntry(policy,...)`) is outside a
+   fence and is superseded by this shape. `namespace` is the active
+   deployment namespace from `normalizeServerCacheConfig(env).namespace`.
+2. `buildServerCacheKey` is synchronous: `buildServerCacheKey(input:
+   BuildKeyInput): CacheKey` at `serverCacheKeys.ts:324`. `BuildKeyInput` is
+   `{ namespace, family, schemaVersion, generationDigest, inputDigest }` at
+   `serverCacheKeys.ts:286-292`. The fenced pseudocode was edited in place
+   at lines 284-291.
+   - before: `await buildServerCacheKey({ policy, input, generations:
+     projectGenerations(generations, normalized.policy.tags) })`
+   - after: a synchronous `buildServerCacheKey({ namespace: config.namespace,
+     family, schemaVersion, generationDigest: digestGenerations(generations,
+     normalized.policy.tags), inputDigest })`. `digestGenerations`
+     (`serverCacheKeys.ts:433`) projects the snapshot onto the policy tags
+     itself. `inputDigest` is `digestServerCacheInput(input)`
+     (`serverCacheKeys.ts:238`), computed once during request normalization.
+     The `buildCanonicalNonStoreBypassFinalKey` branch is unchanged.
+   - The hit-path `expectedGenerationDigest` (fenced pseudocode lines
+     312-315) follows the same shape. before: `await digestGenerations(
+     projectGenerations(generations, normalized.policy.tags))`; after: the
+     synchronous `digestGenerations(generations, normalized.policy.tags)`,
+     byte-equal to the `generationDigest` used in the key above.

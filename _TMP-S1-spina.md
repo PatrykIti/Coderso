@@ -850,14 +850,15 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   **C11** (budget forwarding + failedFamily) — append-only potwierdzony
   (273 insertions, 0 deletions vs 43ca2ed1), prettier-stable.
 - **Bramy finalne**: core tsc 0, root tsc 0, eslint 4/4 (w tym
-  scripts/), prettier 11/11, vitest 33/33, bun lane 47 pass / 21 skip /
+  scripts/), prettier 9/9 (md ignorowane), vitest 33/33, bun lane 47 pass / 21 skip /
   0 fail / 1415 expect (scheduler 13p/3s po nowej nodze; perf partition
   20p/5s), CLI smoke na martwym URL: exit 3, code
   partition_readiness_unavailable, reason catalog_read_failed w całości.
 - **Receipt** `_docs/_workflows/_smoke/task-551/impl-06-l03.json`:
   verdict SINGLE_ADMITTED_GATES_GREEN, allowlista 9 plików z sha256,
-  inventoryDebt wg C9.5 (4+4 szablony SELECT/lock, 0 nowych DML, 19
-  call-site rows; scanner nadal query_inventory_invalid — pre-existing),
+  inventoryDebt wg C9.5 (4+2 szablony SELECT/lock (drift 2026-09-24:
+  partition 4->2), 0 nowych DML, 19 call-site rows; scanner nadal
+  query_inventory_invalid — pre-existing),
   postAudit z 4 fixami + 11 accepted-LOW, honestyNotes (m.in. nogi DB
   reviewed-not-executed wg prawa airtight; snapshot kontraktu 303L w
   głównym repo = stale, kanon na tej gałęzi).

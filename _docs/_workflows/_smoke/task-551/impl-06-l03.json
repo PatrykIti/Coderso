@@ -68,8 +68,8 @@
     "ROOT_TSC": "0 errors (exit 0), rerun after post-audit fix wave",
     "CORE_ESLINT": "exit 0 on retentionJobService.ts, partitionReadinessService.ts, retentionScheduler.ts",
     "SCRIPTS_ESLINT": "exit 0 on scripts/task-551-partition-readiness.ts",
-    "PRETTIER": "11/11 files stable (--check clean): 9 allowlist files + contract md + spina md",
-    "AIRTTIGHT_VITEST": "tests/vitest/maintenance/partitionReadinessService.test.ts: 33 pass / 0 fail / 0 skip",
+    "PRETTIER": "9/9 source files stable (--check clean); the contract md and spina md are prettier-ignored (.prettierignore:15) and were not checked",
+    "AIRTIGHT_VITEST": "tests/vitest/maintenance/partitionReadinessService.test.ts: 33 pass / 0 fail / 0 skip",
     "AIRTIGHT_BUN_LANE": "47 pass / 21 skip / 0 fail / 1415 expect across 4 files (retentionScheduler 13p/3s + task551RetentionJobService 3p/9s + database-retention-jobs 11p/4s + database-partition-readiness 20p/5s) under env DATABASE_URL=postgresql://127.0.0.1:1/none bun --env-file=/dev/null test",
     "CLI_SMOKE_DEAD_URL": "bun --env-file=/dev/null scripts/task-551-partition-readiness.ts --check under dead URL: exit 3, stderr single JSON line {schema coderso.task551.partition-readiness-check@v1, status failed, code partition_readiness_unavailable, reason catalog_read_failed} -- C10 mapping verified empirically; stdout empty; no URL/host text leaked",
     "LINE_CAP": "9/9 <= 1000 (max 998); 2 files above the 950 soft target accepted per C9.1",
@@ -112,13 +112,15 @@
     ]
   },
   "inventoryDebt": {
-    "note": "Per C9.5 (scanner core-only; CLI script adds zero rows): retentionJobService.ts adds 4 new statement templates -- pg_try_advisory_lock probe (SELECT), pg_advisory_unlock (SELECT), pg_locks JOIN pg_stat_activity ownership recheck (SELECT), tx-local set_config('statement_timeout',...) -- and ZERO new DML rows: every delete remains the already-inventoried L01/L02 pruner functions, reached through 19 new registry call-site rows (14 L01-batch + 5 revision-unit). partitionReadinessService.ts adds 4 new catalog/aggregate read templates (bound name list + relname catalog read + min/max aggregate + stat read), zero DML. query-inventory CLI remains query_inventory_invalid:initial-inventory-state (pre-existing, owner-routed per 06-L02 receipt); this note is the manual quantification of record until the scanner is repaired."
+    "note": "Per C9.5 (scanner core-only; CLI script adds zero rows): retentionJobService.ts adds 4 new statement templates -- pg_try_advisory_lock probe (SELECT), pg_advisory_unlock (SELECT), pg_locks JOIN pg_stat_activity ownership recheck (SELECT), tx-local set_config('statement_timeout',...) -- and ZERO new DML rows: every delete remains the already-inventoried L01/L02 pruner functions, reached through 19 new registry call-site rows (14 L01-batch + 5 revision-unit). partitionReadinessService.ts adds exactly 2 new catalog/aggregate read templates -- readCatalog (one statement; the bound name list via sql.join and the LEFT JOIN pg_stat_user_tables are components of that same statement, not separate templates) and readAggregate -- zero DML. The earlier count of 4 double-counted those components as standalone templates; corrected here after drift-pass verification against the file. query-inventory CLI remains query_inventory_invalid:initial-inventory-state (pre-existing, owner-routed per 06-L02 receipt); this note is the manual quantification of record until the scanner is repaired."
   },
   "honestyNotes": [
+    "2026-09-24 correction: gates.PRETTIER previously claimed 11/11 files incl. the contract md and spina md; *.md is prettier-ignored (.prettierignore:15) so those two were silently skipped. Reworded to 9/9 source files.",
     "All DB-gated legs (21 bun-lane skips) execute only under the owner's real-DB run; their assertions were adversarially reviewed (lens 2) but not executed against a live database in this environment. The two-replica, backend-kill, hung-query, and end-to-end CLI legs are therefore reviewed-not-executed by construction of the airtight law.",
     "The instanceof PartitionReadinessError branch of the CLI catch is exercised only on owner runs (dead-URL smoke leg is DB-gated); it is pinned by source-text assertions in the perf suite and by code reading.",
     "The perf-suite CLI_SOURCE source-pins (catch mapping) are formatting-sensitive by nature (same style as the suite's existing source guards) -- a prettier reflow of the facade could require updating two string literals; accepted as consistent with the established source-guard idiom.",
     "Contract md in the MAIN repo (/home/coder/project/Coderso/_docs/_TASKS/...) is a stale 303-line tracked snapshot from commit e73f158a; the canonical 727-line contract lives on this branch and merges with it (main repo untouched this session; append-only diff verified: 273 insertions, 0 deletions vs 43ca2ed1).",
-    "A Bash-cwd reset to the main repo occurred mid-session; verified no main-repo file was modified (git status clean except pre-existing untracked entries). All subsequent commands used absolute paths."
+    "A Bash-cwd reset to the main repo occurred mid-session; verified no main-repo file was modified (git status clean except pre-existing untracked entries). All subsequent commands used absolute paths.",
+    "Drift pass 2026-09-24 on committed HEAD 8f73a0f8: allowlist sha256/lines verified 9/9, inventoryDebt corrected (partition templates 4->2), gates key typo fixed; no code change."
   ]
 }

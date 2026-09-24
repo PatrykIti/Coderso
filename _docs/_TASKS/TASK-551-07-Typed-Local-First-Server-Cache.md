@@ -194,7 +194,10 @@ cache data is a measured miss/bypass, never a substitute value.
 ## Testing Requirements
 
 ```bash
-bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null \
+  node_modules/vitest/vitest.mjs run \
+  tests/vitest/cache/server-cache-contracts.test.ts \
+  tests/vitest/cache/server-cache-coherence-conditional-write.test.ts \
   tests/vitest/cache/server-cache-codec-keys.test.ts \
   tests/vitest/cache/server-cache-eligibility.test.ts \
   tests/vitest/cache/memory-server-cache-store.test.ts \
@@ -208,3 +211,48 @@ wc -l core/services/cache/*.ts tests/vitest/cache/*.test.ts
 ## Documentation Updates Required
 
 Documentation and changelog 1310 are handed to TASK-551-10-L02.
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-07-L01 round-2; append-only)
+
+This entry mirrors the binding 2026-09-24 dispositions recorded in
+TASK-551-07-L01 so the parent contract does not drift from its leaf. Where
+they disagree, the leaf's dated corrections win.
+
+- **L01 module split (File Size gate).** `core/services/cache/serverCacheContracts.ts`
+  exceeded the 1,000-line cap and splits into two new sibling modules:
+  `core/services/cache/serverCacheCoherence.ts` (coherence, health and
+  invalidation seams plus bounded invalidation event keys) and
+  `core/services/cache/serverCacheConditionalWrite.ts` (conditional-write
+  handoff, `ServerCacheStore` and the invalidation plan). The envelope record
+  type `ServerCacheEnvelopeV1` STAYS in `serverCacheContracts.ts` per 07-L01
+  R4/C1(b) and is type-imported by `serverCacheCodec.ts`.
+  Sole-writer ownership of both new modules stays with TASK-551-07-L01.
+- **Export surface.** Every relocated name is exported only from its new
+  owning module and is imported from that module by 07-L02 and every later
+  consumer. `serverCacheContracts.ts` never re-exports a relocated name; its
+  only back-reference is a type-only import of `CacheConditionalWrite`, which
+  keeps the runtime import graph acyclic.
+- **New test file.** `tests/vitest/cache/server-cache-coherence-conditional-write.test.ts`
+  receives the coherence and conditional-write suites split out of
+  `tests/vitest/cache/server-cache-contracts.test.ts` and runs independently
+  in the Vitest lane. The three verbatim-moved describe blocks (invalidation
+  event keys, health normalization bounds, coherence signal normalization)
+  stay byte-identical; the `createCacheConditionalWriteEntry` and
+  invalidation-plan suites are STRENGTHENED per 07-L01 C2/C8 (names may
+  change); C3 corrects one retained vector and one codec-keys vector; C9 makes
+  the codec's policy-scalar re-normalization fully fail-closed (source change
+  + control + 12 it.each rows); C10 brands digestServerCacheInput's return
+  inside keys.ts; C11 fixes the 11-writer land order (orchestrator-run group
+  gates).
+- **In-place Testing Requirements edit.** The first command under Testing
+  Requirements was edited in place to add the new test file and to use the
+  env-free Vitest form.
+  - Before:
+    `bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts tests/vitest/cache/server-cache-codec-keys.test.ts tests/vitest/cache/server-cache-eligibility.test.ts tests/vitest/cache/memory-server-cache-store.test.ts tests/vitest/cache/server-cache-coordinator.test.ts`
+  - After:
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/cache/server-cache-contracts.test.ts tests/vitest/cache/server-cache-coherence-conditional-write.test.ts tests/vitest/cache/server-cache-codec-keys.test.ts tests/vitest/cache/server-cache-eligibility.test.ts tests/vitest/cache/memory-server-cache-store.test.ts tests/vitest/cache/server-cache-coordinator.test.ts`
+  - The `wc -l core/services/cache/*.ts tests/vitest/cache/*.test.ts` glob is
+    unchanged because it already covers both new modules and the new test
+    file.
+- **Unchanged.** Changelog 1310 (TASK-551-10-L02 closure only) and the land
+  order 07-L01 -> 07-L02 are not affected.

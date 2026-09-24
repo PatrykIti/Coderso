@@ -1098,8 +1098,9 @@ bun test --timeout 120000 tests/security/task551ServerCacheSecurityGate.test.ts
 bun test --timeout 180000 tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts
 SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-test REDIS_URL="$REDIS_URL" bun scripts/task551-redis-smoke.ts
 playwright-cli -s=wf55103l02
-bun run test:vitest -- \
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run \
   tests/vitest/cache/server-cache-contracts.test.ts \
+  tests/vitest/cache/server-cache-coherence-conditional-write.test.ts \
   tests/vitest/cache/server-cache-codec-keys.test.ts \
   tests/vitest/cache/server-cache-eligibility.test.ts \
   tests/vitest/cache/memory-server-cache-store.test.ts \
@@ -1360,9 +1361,9 @@ Playwright client environment.
     {
       "id": "cache-contract-vitest",
       "lane": "vitest",
-      "argv": ["bun", "run", "test:vitest", "--", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"],
       "environmentProfile": "none",
-      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"], "minimum": 1 }
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/cache/server-cache-contracts.test.ts", "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts", "tests/vitest/cache/server-cache-codec-keys.test.ts", "tests/vitest/cache/server-cache-eligibility.test.ts", "tests/vitest/cache/memory-server-cache-store.test.ts", "tests/vitest/cache/server-cache-coordinator.test.ts"], "minimum": 1 }
     },
     {
       "id": "full-bun-test",
@@ -1416,3 +1417,50 @@ Playwright client environment.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-07-L01 round-2; append-only)
+
+This entry mirrors the TASK-551-07-L01 file-size split into this leaf's
+cache-contract receipt. Unlike the other append-only corrections, the three
+receipt sites below were edited in place so that the Workflow Dispatch
+Envelope stays a single strictly parseable JSON document for the TASK-551
+dispatch preflight; this section records the before/after.
+
+**Reason.** `tests/vitest/cache/server-cache-contracts.test.ts` exceeds the
+AGENTS.md > File Size and Modularity 1,000-line gate. TASK-551-07-L01 splits it
+and relocates five `describe` blocks (`"invalidation event keys"`,
+`"health normalization bounds"`, `"coherence signal normalization"`,
+`"createCacheConditionalWriteEntry"`, `"invalidation plan strictness"`) into
+the new file `tests/vitest/cache/server-cache-coherence-conditional-write.test.ts`.
+Without this mirror the `cache-contract-vitest` receipt would stop executing
+those five blocks, silently narrowing this leaf's cache-contract evidence.
+
+**Before.**
+
+- Validation Commands prose: `bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts tests/vitest/cache/server-cache-codec-keys.test.ts tests/vitest/cache/server-cache-eligibility.test.ts tests/vitest/cache/memory-server-cache-store.test.ts tests/vitest/cache/server-cache-coordinator.test.ts`.
+- Envelope `cache-contract-vitest.argv`: `["bun", "run", "test:vitest", "--", <the same five paths>]`.
+- Envelope `cache-contract-vitest.positiveDiscovery.paths`: the same five paths.
+
+**After.**
+
+- Validation Commands prose: `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run` followed by the five paths above with `tests/vitest/cache/server-cache-coherence-conditional-write.test.ts` inserted directly after `server-cache-contracts.test.ts`.
+- Envelope `cache-contract-vitest.argv`: `["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", <the six paths>]`.
+- Envelope `cache-contract-vitest.positiveDiscovery.paths`: the same six paths
+  (`minimum` stays `1`; every path is also present in `argv`, as the dispatch
+  contract requires).
+
+**Env-free form.** The `test:vitest` package script sources `.env`, which
+contradicts the command's `"environmentProfile": "none"` and would point the
+Bun-free lane at the shared remote Postgres. The prose uses the repository's
+DB-free proof form. The envelope `argv` omits the `DATABASE_URL=` assignment
+because the dispatch contract's literal-argv validator rejects `NAME=value`
+tokens; the `environmentProfile: "none"` runner owns the clean environment and
+`--env-file=/dev/null` prevents `.env` loading.
+
+**Name reconciliation (resolved 2026-09-24).** Kept as a record: an earlier
+on-disk TASK-551-07-L01 revision named the new test file
+`tests/vitest/cache/server-cache-contracts-coherence.test.ts`. TASK-551-07-L01
+round 2 converged on
+`tests/vitest/cache/server-cache-coherence-conditional-write.test.ts`
+everywhere (rename record in TASK-551-07-L01; split in correction C1(e)), which
+is the name this leaf uses at every receipt site.

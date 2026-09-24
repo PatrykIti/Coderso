@@ -691,6 +691,16 @@ private namespace under `task551-db-redis-test`.
     "core/admin/utils/adminPrefetch.ts",
     "core/server/publicSite.tsx",
     "core/services/cache/serverCacheContracts.ts",
+    "core/services/cache/serverCacheCoherence.ts",
+    "core/services/cache/serverCacheConditionalWrite.ts",
+    "core/services/cache/serverCacheCodec.ts",
+    "core/services/cache/serverCacheKeys.ts",
+    "core/services/cache/serverCacheEligibility.ts",
+    "core/services/cache/serverCacheConfig.ts",
+    "tests/vitest/cache/server-cache-contracts.test.ts",
+    "tests/vitest/cache/server-cache-codec-keys.test.ts",
+    "tests/vitest/cache/server-cache-eligibility.test.ts",
+    "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts",
     "core/services/cache/serverCacheRuntime.ts",
     "core/db/schema.ts",
     "core/db/migrations/meta/_journal.json"
@@ -791,3 +801,31 @@ private namespace under `task551-db-redis-test`.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-07-L01 round-2; append-only)
+
+- **C1 — envelope `forbiddenPaths` single-writer parity.** TASK-551-07-L01
+  owns eleven server-cache paths (seven modules under `core/services/cache/`
+  including the split-out coherence and conditional-write modules, plus four
+  Vitest suites under `tests/vitest/cache/`). Because 09-L04 `initial` lands
+  immediately after 07-L01, the envelope must forbid all eleven 07-L01
+  allowlist paths (full parity with 07-L01's allowlist).
+  - Before: `forbiddenPaths` listed only three of those paths:
+    `core/services/cache/serverCacheContracts.ts`,
+    `core/services/cache/serverCacheCoherence.ts`, and
+    `core/services/cache/serverCacheConditionalWrite.ts`.
+  - After: `forbiddenPaths` lists all eleven:
+    `core/services/cache/serverCacheContracts.ts`,
+    `core/services/cache/serverCacheCodec.ts`,
+    `core/services/cache/serverCacheKeys.ts`,
+    `core/services/cache/serverCacheEligibility.ts`,
+    `core/services/cache/serverCacheConfig.ts`,
+    `core/services/cache/serverCacheCoherence.ts`,
+    `core/services/cache/serverCacheConditionalWrite.ts`,
+    `tests/vitest/cache/server-cache-contracts.test.ts`,
+    `tests/vitest/cache/server-cache-codec-keys.test.ts`,
+    `tests/vitest/cache/server-cache-eligibility.test.ts`, and
+    `tests/vitest/cache/server-cache-coherence-conditional-write.test.ts`.
+    The list stays unique and disjoint from this leaf's allowlist.
+  - The edit was made in place in the envelope JSON fence; no other envelope
+    key, command, or phase changed.
