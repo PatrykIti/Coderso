@@ -1,0 +1,127 @@
+{
+  "task": "TASK-551",
+  "leaf": "07-L01",
+  "leafTitle": "Typed cache contract, envelope, keys and eligibility (Bun-free boundary for the memory/Redis stores)",
+  "capturedAt": "2026-09-24",
+  "closedAt": "2026-09-24",
+  "headAtAdmission": "f6dd0ace",
+  "sourceBaseline": "8f73a0f8",
+  "verdict": "SINGLE_ADMITTED_GATES_GREEN",
+  "verdictQualification": "All leaf gates green on the final bytes listed in allowlist. The 8 pre-existing files came from the unadmitted snapshot commit 62438e4e (never gated); this leaf audited them against the contract (FAZA-0), repaired the contract in four fresh-auditor rounds (C1-C11, every round >= 2 independent auditors per scope, round 4 clean 4/4), landed the 11-writer group per C11 in strict order, and closed the post-implementation audit (2 lenses, 0 HIGH/MEDIUM, LOWs fixed in-leaf). Disclosed: (a) the leaf's Status/Changelog fields stay as-is (changelog 1310 reserved for TASK-551-10-L02 closure; sibling precedent 06-L02/06-L03); (b) three verbatim-moved test suites carry pre-existing tautological data-pin assertions (byte-identity rule forbade touching them here) — owed to a TASK-9999 leaf at 10-L02 closure, evidence below; (c) the 33-tag over-limit vector cannot isolate the length guard from the duplicate guard while only 13 CACHE_TAGS exist (recorded in C8 and in the test comment); (d) bunLaneManifest untouched (vitest lane; 0 server-cache rows).",
+  "allowlist": [
+    {
+      "path": "core/services/cache/serverCacheContracts.ts",
+      "lines": 525,
+      "sha256": "da29393b6ca722d817696695990bdbf08411e6f8f42fb634bc4b5d62740f815b",
+      "role": "SPLIT (was 1160L): retained failures, finite family/tag unions, brands, normalized scalars, SERVER_CACHE_LIMITS, normalizers, eligibility types, generations, ServerCacheEnvelopeV1 (R4 honored), typed loader seam, distributed-load contracts; deletion set :42/:146-148/:152-157/:388-775/:789-1030 per C11(5); no value import from any sibling; single type-only back-import of CacheConditionalWrite; never re-exports relocated names (C1 export-surface rule)"
+    },
+    {
+      "path": "core/services/cache/serverCacheCoherence.ts",
+      "lines": 443,
+      "sha256": "577033c0c2945ccfe4264b762b59df13279cfd1caf5a0d6e92dec78cb589e40a",
+      "role": "NEW (C1(a)): coherence/health/invalidation-attempt seams + bounded invalidation event keys + the two brand consts, extracted verbatim from git show 8f73a0f8 (:388-775, :152-157; subsequence diff 387/387 + 6/6 identical); imports only serverCacheContracts values/types; local fail/CODES aliasing the exported code table"
+    },
+    {
+      "path": "core/services/cache/serverCacheConditionalWrite.ts",
+      "lines": 320,
+      "sha256": "80a5cf3ac6747986a632ea8464ce22288a560286671740547ecd3b896adb2133",
+      "role": "NEW (C1(b)): CacheConditionalWriteEntry/CacheConditionalWrite/CacheConditionalWriteResult/ServerCacheStoreDescription/ServerCacheStore/createCacheConditionalWriteEntry (7-field input incl. namespace, C2)/CacheInvalidationPlan/validateCacheInvalidationPlan, extracted from :789-1030 (+ private brand :146-148); C5 half: namespace rule imported from serverCacheKeys (pattern/max-bytes/separators, behavior-identical); value imports codec+coherence+contracts+keys — acyclic runtime graph"
+    },
+    {
+      "path": "core/services/cache/serverCacheCodec.ts",
+      "lines": 458,
+      "sha256": "3785f654efbff9fd756219cb90ca0b6840a37c146f41c69987c8d5d3a2fe6828",
+      "role": "C9: normalizePolicyCeilings fail-closed for every consumed policy scalar (ttlMs window, negativeTtlMs null-or-5_000..15_000 — undefined/NaN/out-of-range/non-number malformed, maxValueBytes) → decode { ok:false, reason:'invalid' }, encode throws encodeInvalid; `as number` cast removed; docstrings updated (value-import leaf rationale replaces the retired cycle claim)"
+    },
+    {
+      "path": "core/services/cache/serverCacheKeys.ts",
+      "lines": 469,
+      "sha256": "379984ce80c262ee93abc09e08371212038b3c7da2b8c798e0c73779ddb85946",
+      "role": "C6: local ServerCacheGenerationEntry replaced by type import CacheGenerationEntry; C10: digestServerCacheInput returns the CacheEligibilityFieldDigest brand via one documented cast (mirrors the digestGenerations cast); comment repoints to serverCacheCoherence"
+    },
+    {
+      "path": "core/services/cache/serverCacheEligibility.ts",
+      "lines": 285,
+      "sha256": "a8156c12489d6bc18f85604be1dd296405ddd90d3137ad05dc659cdc1cd3f82e",
+      "role": "C4: hasExactFields uses Object.hasOwn (prototype-inherited required fields no longer satisfy the exact-field gate); keys.length check retained; RED 1 → GREEN 31/31 recorded"
+    },
+    {
+      "path": "core/services/cache/serverCacheConfig.ts",
+      "lines": 495,
+      "sha256": "b909c3c1cca493a30c8a744a1365219b28579a143d6aead14db39f6c97a4c49d",
+      "role": "C5: NAMESPACE_PATTERN/SEPARATOR_CHARS/128 literal replaced by SERVER_CACHE_NAMESPACE_* imports from serverCacheKeys (readonly-tuple cast form); DEFAULT_MEMORY_NAMESPACE kept; C1(d): type ServerCacheStoreDescription now from serverCacheConditionalWrite"
+    },
+    {
+      "path": "tests/vitest/cache/server-cache-contracts.test.ts",
+      "lines": 804,
+      "sha256": "05b776737e70ae03a1578d497e8a90f904c7793593d739a5db4e7fcdb08d5dca",
+      "role": "SPLIT (was 1458L): moved sections removed with their banners, retained banners kept, header/import block narrowed, fixtures classified per C1(e); C3 fix 1 — undefined negativeTtlMs now expects brandInvalid (source docstring + parent 07:42); 30 it()"
+    },
+    {
+      "path": "tests/vitest/cache/server-cache-coherence-conditional-write.test.ts",
+      "lines": 895,
+      "sha256": "08b4937b0604b0fa3a24ed467de9bae8225f4da65278482f4841518b74c30e6e",
+      "role": "NEW (C1(e)): the five moved describe blocks (event keys, health bounds, coherence signals, createCacheConditionalWriteEntry, invalidation plan) — three verbatim (subsequence diff 393/393, 47/47), two STRENGTHENED: C2 (namespace on happy + byte-ceiling inputs, positive control, foreign namespace/family/schemaVersion vectors, per-vector rejecting-gate assertions incl. direct decoder reasons 'oversized'/'invalid', n=16/267B and n=256/507B sizes, post-audit isolating fillKind vector under negativeTtlMs 8_000), C8 (validateCacheInvalidationPlan called: 13-tag accept + table-driven rejections incl. inherited-only field); 45 it()"
+    },
+    {
+      "path": "tests/vitest/cache/server-cache-codec-keys.test.ts",
+      "lines": 752,
+      "sha256": "6113b1bf7004749e3fc25c64c7ab4af88d4ded2df89798abe97d05bdad13576e",
+      "role": "C1(e) repoint (isServerCacheEventKey from serverCacheCoherence); C3 fix 2 — astral vector Math.floor(...)+'kk' lands exactly on 65,536 (old 16,383.5 repeat truncated to 65,534); C9 nested describe: control + 12 it.each rows (6 malformed classes × decode/encode); RED 12 → GREEN 38/38 recorded"
+    },
+    {
+      "path": "tests/vitest/cache/server-cache-eligibility.test.ts",
+      "lines": 442,
+      "sha256": "a0f2d1edecada86835e346eee8d252c32436222bbe5a5a821ac7b6a000f39ec8",
+      "role": "C4: it('rejects inherited-only context and query-variant fields') — 6 own keys + inherited mutableVisibilityGate, nested queryVariant with inherited digest → proof null; RED 1 → GREEN 31/31"
+    }
+  ],
+  "gates": {
+    "AIRTIGHT_VITEST_FOUR_FILES": "env DATABASE_URL=postgresql://127.0.0.1:1/none bun --env-file=/dev/null node_modules/vitest/vitest.mjs run <4 files>: Test Files 4 passed, Tests 144 passed (144) — baseline 107 tests with 2 red (test-vector bugs, C3) → 144/0",
+    "CORE_ESLINT_CACHE": "eslint --max-warnings=0 services/cache/**/*.ts from core/: exit 0",
+    "CORE_TSC": "0 errors (exit 0)",
+    "ROOT_TSC": "0 errors (exit 0); baseline at 8f73a0f8 also 0 (precommit hook) — no new errors in the 11 files",
+    "PRETTIER": "11/11 source/test files --check clean",
+    "LINE_CAP": "11/11 <= 1000 (max 895); C1 target <= 900 met for every file",
+    "DIFF_CHECK": "clean",
+    "ALLOWLIST": "git status = exactly the 11 envelope paths (8 modified, 3 new); forbiddenPaths untouched; verified by the orchestrator (task-551-implement.mjs does not dispatch this leaf)",
+    "BYTE_IDENTITY": "orchestrator subsequence diff vs git show 8f73a0f8: coherence :388-774 387/387, brands :152-157 6/6, test :373-765 393/393, brand test :1188-1234 47/47, banners 3/3+3/3 identical; conditional-write :789-1030 differs in exactly the 14 C5 docstring/pattern lines; C8 block rewritten by design",
+    "C11_PRECONDITION": "git diff --quiet 8f73a0f8 -- <8 existing paths> exit 0 before writer 1"
+  },
+  "contractCorrections": {
+    "checkpointCommit": "f6dd0ace (docs(task551): 07-L01 contract round C1-C11 + 06-L03 receipt corrections; hook precommit:check green)",
+    "sections": "### Dated Contract Corrections — 2026-09-24: C1 split (+ export-surface rule, import map, fixture classification, banners), C2 7-field factory input + vacuous-suite repair, C3 two red vectors = test bugs, C4 Object.hasOwn, C5 DRY namespace rule, C6 type reuse, C7 validation law (env-free vitest argv in the body envelope), C8 validateCacheInvalidationPlan vectors, C9 codec fail-closed policy scalars, C10 input-digest brand, C11 dispatch/sequencing (11 writers, git-show extraction, RED/GREEN ownership, no intermediate commit); in-place body edits: Exclusive Ownership + dispatch envelope (11 paths, cache-contract-tests argv/paths, line-count argv); Round-2/3/4 records",
+    "mirrors": "TASK-551-07-L02 (argv env-free for both vitest commands, forbiddenPaths 20 incl. all 11 L01 paths, 7-field factory + sync buildServerCacheKey shapes), TASK-551-07 parent (test list + env-free form; ServerCacheEnvelopeV1 stays in contracts; strengthened-suites wording), TASK-551-09-L04 (forbiddenPaths parity 11), TASK-551-10-L01 (new test file in prose/argv/paths; name reconciliation resolved)",
+    "auditRounds": [
+      "FAZA-0 (3 lenses): 1000-line gate breach ×2, hasExactFields `in` (HIGH), namespace missing from factory handoff, DRY constants, 2 reds = test bugs, split plan",
+      "R1 (4 auditors: 2 pre + 2 reconcile): HIGH bad json fragment fence breaking the family-wide dispatch preflight; envelope authority must be in-place; import map/fixture/scope gaps; vacuous conditional-write suite (HIGH); loose C4 vector (HIGH); C5 DEFAULT_MEMORY_NAMESPACE; validateCacheInvalidationPlan never called",
+      "R2 (4): 0 HIGH; C2 gate reachability, CACHE_TAGS import, mirrors (07-L02 argv/forbiddenPaths/claim, parent placement/wording, 09-L04 parity, 10-L01 stale open note)",
+      "R3 (4): 0 HIGH; C9 out-of-range completeness, C11 dispatch/sequencing clause, RED/GREEN ownership",
+      "R4 (4): PASS 4/4 (0 HIGH/MEDIUM; LOWs closed in a text-only pass)"
+    ]
+  },
+  "postAudit": {
+    "date": "2026-09-24",
+    "lenses": [
+      "scope fidelity & contract conformity (PASS, 1 LOW)",
+      "test integrity & fail-closed correctness, adversarial (PASS, 4 LOW)"
+    ],
+    "fixedInLeaf": [
+      "Two comments carried baseline line numbers into sibling modules (codec.ts:160, keys.ts:245) → names only (comment-only)",
+      "fillKind-mismatch vector did not isolate the factory's fillKind comparison → second vector under negativeTtlMs 8_000 with matching-fillKind accept control",
+      "Over-claiming test title 'pins the over-limit vector to the length guard' → renamed to what it checks; comment records the 13-tag limitation"
+    ],
+    "acceptedLow": [
+      "Tautological data-pin assertions inside the three verbatim-moved suites (e.g. expect({kind:'saturated'}).toEqual({kind:'saturated'})) — pre-existing snapshot content; byte-identity rule of C1(e) forbade edits here; owed: a TASK-9999 leaf (or rewrite against the 07-L02 controller) at TASK-551-10-L02 closure — evidence: server-cache-coherence-conditional-write.test.ts:380-382, :392, :409, :487-496",
+      "The 33-tag over-limit vector cannot isolate the length guard while only 13 CACHE_TAGS exist (C8 + test comment)",
+      "Config header does not mention the new type-only import from serverCacheConditionalWrite (wording only)"
+    ]
+  },
+  "honestyNotes": [
+    "The vitest lane is Bun-free; no real-DB legs exist in this leaf, so the airtight run is the full gate (no owner-executed remainder).",
+    "The 8 pre-existing files had never been gated (snapshot commit 62438e4e); this receipt is their first admission. Their prior 2 red tests were test-vector bugs (C3), not source defects; the source was extended only where the contract demanded (C4, C5, C6, C9, C10).",
+    "task-551-implement.mjs does not dispatch 07-L01 (phase provenance covers 01/05/11 only); the closed 11-path allowlist and forbiddenPaths were enforced by the orchestrator via git status, and the dispatch preflight (preflightTask551DispatchSnapshot) was run over all 41 TASK-551 task files: OK.",
+    "Every auditor mandate carried the READ-ONLY clause; every actionable finding was verified against files/command output by the orchestrator before a writer was dispatched. All agents ran on Opus 5.5 (owner routing 2026-09-24).",
+    "The 07-L01 task file grew to 2,608 lines (docs; AGENTS.md line gate covers production modules and test files only; dispatch tooling cap 512 KiB per task file — well under)."
+  ]
+}

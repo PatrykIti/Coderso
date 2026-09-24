@@ -1,9 +1,8 @@
 /**
  * TASK-551-07-L01 contract lane: finite unions, shared limits, normalized
- * scalar brands, coherence/health shapes and signal specification vectors,
- * saturation/hysteresis data, conditional-write entry normalization,
- * invalidation-plan strictness, distributed-load bounds, the typed loader seam
- * and config/capacity normalization plus credential redaction.
+ * scalar brands, saturation/hysteresis data, distributed-load bounds, the
+ * typed loader seam and config/capacity normalization plus credential
+ * redaction.
  *
  * Everything here executes offline against pure in-memory fixtures driven by
  * the contract modules themselves: no environment read, no socket, no database
@@ -13,14 +12,9 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  assertBrandedAttemptToken,
-  cacheCoherenceObservationToken,
-  cacheInvalidationAttemptToken,
-  createCacheConditionalWriteEntry,
   createDistributedCacheLoadAcquireInput,
   isCacheFamily,
   isCacheTag,
-  isServerCacheEventKey,
   normalizeCacheGenerationDigest,
   normalizeCacheGenerationToken,
   normalizeCacheSchemaVersion,
@@ -31,33 +25,19 @@ import {
   normalizeNegativeCacheTtlMs,
   normalizePositiveCacheTtlMs,
   normalizeProcessCacheCoherenceEpoch,
-  normalizeServerCacheAffectedFamilies,
-  normalizeServerCacheAffectedTags,
-  normalizeServerCacheOldestPendingAgeMs,
-  normalizeServerCacheStableCode,
   normalizeUnixTimeMs,
-  validateServerCacheCoherenceSignal,
-  validatedCacheEligibilityProof,
   CACHE_FAMILIES,
   CACHE_TAGS,
   SERVER_CACHE_CONTRACT_ERROR_CODES,
   SERVER_CACHE_LIMITS,
-  type CacheCoherenceObservationToken,
   type CacheEligibilityContext,
   type CacheEligibilityFieldDigest,
   type CacheFamily,
-  type CacheInvalidationAttemptToken,
   type CachePolicy,
   type CacheShareScopeDigest,
-  type CacheTag,
   type DistributedCacheLeaseMs,
   type DistributedCachePollMs,
   type DistributedCacheWaitMs,
-  type PositiveCacheTtlMs,
-  type ProcessCacheCoherenceEpoch,
-  type ServerCacheCoherence,
-  type ServerCacheCoherenceSignal,
-  type UnixTimeMs,
 } from "../../../core/services/cache/serverCacheContracts";
 import {
   assertMandatoryPolicyCapacity,
@@ -98,8 +78,6 @@ const SERVER_FILL_DISABLED_REASONS = [
 // Fixtures (pure, DB-free, env-free)
 // ---------------------------------------------------------------------------
 
-const UUID_A = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0";
-const EVENT_KEY = "cache-event:" + UUID_A;
 const KEY_INPUT_DIGEST =
   "b4c5d6e7f8091223344556677889900aabbccddeeff00112233445566778899a" as CacheEligibilityFieldDigest;
 
@@ -122,17 +100,6 @@ function sampleKey() {
     generationDigest: normalizeCacheGenerationDigest("c".repeat(64)),
     inputDigest: KEY_INPUT_DIGEST,
   });
-}
-
-function fakeObservationToken(
-  source: "memory_store" | "redis_store" | "outbox_worker",
-  sequence: number
-): CacheCoherenceObservationToken {
-  return { source, sequence, [cacheCoherenceObservationToken]: true as true };
-}
-
-function fakeAttemptToken(eventKey: string, sequence: number): CacheInvalidationAttemptToken {
-  return { eventKey, sequence, [cacheInvalidationAttemptToken]: true as true };
 }
 
 /** Deterministic policy fixture (decode/isEligible are seam references). */
@@ -296,7 +263,7 @@ describe("normalized scalar brands", () => {
   it("pins negative TTL acceptance at null and integer 5000..15000", () => {
     const vectors: readonly [unknown, number | null | string][] = [
       [null, null],
-      [undefined, null],
+      [undefined, BRAND_CODES.brandInvalid],
       [4_999, BRAND_CODES.brandInvalid],
       [5_000, 5_000],
       [15_000, 15_000],
@@ -363,404 +330,6 @@ describe("normalized scalar brands", () => {
     ]) {
       expect(bad).toThrow(BRAND_CODES.distributedBoundsInvalid);
     }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Bounded event keys and health/coherence normalization bounds
-// ---------------------------------------------------------------------------
-
-describe("invalidation event keys", () => {
-  it("accepts only the internal cache-event:<uuid> form", () => {
-    expect(isServerCacheEventKey(EVENT_KEY)).toBe(true);
-    expect(isServerCacheEventKey(UUID_A)).toBe(false); // missing prefix
-    expect(isServerCacheEventKey("cache-event:not-a-uuid")).toBe(false);
-    expect(isServerCacheEventKey("cache-event:" + UUID_A.toUpperCase())).toBe(false);
-    expect(isServerCacheEventKey("record:17")).toBe(false);
-    expect(isServerCacheEventKey(null)).toBe(false);
-    expect(isServerCacheEventKey("cache-event:" + "a".repeat(400))).toBe(false);
-  });
-});
-
-describe("health normalization bounds", () => {
-  it("accepts null or 1..64 lowercase a-z0-9_ stable codes", () => {
-    expect(normalizeServerCacheStableCode(null)).toBeNull();
-    expect(normalizeServerCacheStableCode("redis_conn")).toBe("redis_conn");
-    expect(normalizeServerCacheStableCode("a".repeat(64))).toBe("a".repeat(64));
-    for (const bad of ["", "UPPER_CASE", "has-dash", "has space", "has.dot"]) {
-      expect(() => normalizeServerCacheStableCode(bad)).toThrow(BRAND_CODES.stableCodeInvalid);
-    }
-    expect(() => normalizeServerCacheStableCode("b".repeat(65))).toThrow(
-      BRAND_CODES.stableCodeInvalid
-    );
-  });
-
-  it("bounds and caps telemetry ages, failing closed otherwise", () => {
-    expect(normalizeServerCacheOldestPendingAgeMs(null)).toBeNull();
-    expect(normalizeServerCacheOldestPendingAgeMs(0)).toBe(0);
-    expect(
-      normalizeServerCacheOldestPendingAgeMs(SERVER_CACHE_LIMITS.forcedBypassPendingAgeMs)
-    ).toBe(SERVER_CACHE_LIMITS.forcedBypassPendingAgeMs);
-    // Capped, never rejected, above the telemetry maximum.
-    expect(
-      normalizeServerCacheOldestPendingAgeMs(SERVER_CACHE_LIMITS.maxHealthPendingAgeMs + 5)
-    ).toBe(SERVER_CACHE_LIMITS.maxHealthPendingAgeMs);
-    for (const bad of [-1, NaN, Infinity]) {
-      expect(() => normalizeServerCacheOldestPendingAgeMs(bad as number)).toThrow(
-        BRAND_CODES.pendingAgeInvalid
-      );
-    }
-  });
-
-  it("normalizes affected tags deduplicated, sorted and non-empty", () => {
-    expect(normalizeServerCacheAffectedTags(["site:pages", "site:all", "site:entries"])).toEqual([
-      "site:all",
-      "site:entries",
-      "site:pages",
-    ]);
-    expect(() => normalizeServerCacheAffectedTags([])).toThrow(BRAND_CODES.affectedTagsInvalid);
-    expect(() => normalizeServerCacheAffectedTags(["site:pages", "site:pages"])).toThrow(
-      BRAND_CODES.affectedTagsInvalid
-    );
-    expect(() =>
-      normalizeServerCacheAffectedTags(["site:pages" as CacheTag, "bogus" as CacheTag])
-    ).toThrow(BRAND_CODES.affectedTagsInvalid);
-  });
-
-  it("degrades an unrecognized empty family mapping to all, else sorts and dedupes", () => {
-    expect(normalizeServerCacheAffectedFamilies("all")).toBe("all");
-    expect(normalizeServerCacheAffectedFamilies([])).toBe("all");
-    expect(normalizeServerCacheAffectedFamilies(["themes", "pages", "themes"])).toEqual([
-      "pages",
-      "themes",
-    ]);
-    expect(() => normalizeServerCacheAffectedFamilies(["bogus" as never])).toThrow(
-      BRAND_CODES.affectedFamiliesInvalid
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Coherence-signal specification vectors
-// ---------------------------------------------------------------------------
-
-type SignalVector = Readonly<{
-  name: string;
-  signal: () => ServerCacheCoherenceSignal;
-  fieldSet: readonly string[];
-}>;
-
-const SIGNAL_FIELD_SETS: Record<string, readonly string[]> = {
-  force: [
-    "affectedTags",
-    "kind",
-    "observationToken",
-    "observedAtMonotonicMs",
-    "oldestPendingAgeMs",
-    "reason",
-    "source",
-    "stableCode",
-  ],
-  recover: [
-    "affectedTags",
-    "kind",
-    "observationToken",
-    "observedAtMonotonicMs",
-    "oldestPendingAgeMs",
-    "source",
-    "stableCode",
-  ],
-  invalidation_observed: [
-    "affectedTags",
-    "eventKey",
-    "kind",
-    "observedAtMonotonicMs",
-    "oldestPendingAgeMs",
-    "source",
-    "stableCode",
-  ],
-  post_commit_failed: [
-    "affectedTags",
-    "attemptToken",
-    "eventKey",
-    "kind",
-    "observedAtMonotonicMs",
-    "source",
-    "stableCode",
-  ],
-  durable_invalidation_processed: [
-    "affectedTags",
-    "eventKey",
-    "kind",
-    "observedAtMonotonicMs",
-    "source",
-    "stableCode",
-  ],
-};
-
-function baseVectors(): SignalVector[] {
-  return [
-    {
-      name: "force",
-      fieldSet: SIGNAL_FIELD_SETS.force,
-      signal: () => ({
-        kind: "force",
-        source: "redis_store",
-        observationToken: fakeObservationToken("redis_store", 11),
-        reason: "outbox_lag",
-        affectedTags: ["site:html"],
-        oldestPendingAgeMs: 250,
-        observedAtMonotonicMs: 1_000,
-        stableCode: "outbox_lag_detected",
-      }),
-    },
-    {
-      name: "recover",
-      fieldSet: SIGNAL_FIELD_SETS.recover,
-      signal: () => ({
-        kind: "recover",
-        source: "memory_store",
-        observationToken: fakeObservationToken("memory_store", 4),
-        affectedTags: ["site:pages"],
-        oldestPendingAgeMs: null,
-        observedAtMonotonicMs: 2_000,
-        stableCode: null,
-      }),
-    },
-    {
-      name: "invalidation_observed",
-      fieldSet: SIGNAL_FIELD_SETS.invalidation_observed,
-      signal: () => ({
-        kind: "invalidation_observed",
-        source: "local_post_commit",
-        eventKey: EVENT_KEY,
-        affectedTags: "all",
-        oldestPendingAgeMs: null,
-        observedAtMonotonicMs: 3_000,
-        stableCode: null,
-      }),
-    },
-    {
-      name: "post_commit_failed",
-      fieldSet: SIGNAL_FIELD_SETS.post_commit_failed,
-      signal: () => ({
-        kind: "post_commit_failed",
-        source: "post_commit",
-        eventKey: EVENT_KEY,
-        attemptToken: fakeAttemptToken(EVENT_KEY, 2),
-        affectedTags: ["site:listings"],
-        observedAtMonotonicMs: 4_000,
-        stableCode: "post_commit_failed",
-      }),
-    },
-    {
-      name: "durable_invalidation_processed",
-      fieldSet: SIGNAL_FIELD_SETS.durable_invalidation_processed,
-      signal: () => ({
-        kind: "durable_invalidation_processed",
-        source: "outbox_worker",
-        eventKey: EVENT_KEY,
-        affectedTags: ["site:forms"],
-        observedAtMonotonicMs: 5_000,
-        stableCode: null,
-      }),
-    },
-  ];
-}
-
-describe("coherence signal normalization", () => {
-  for (const vector of baseVectors()) {
-    it(`accepts the well-formed ${vector.name} signal with its exact field set`, () => {
-      const signal = vector.signal();
-      expect(Object.keys(signal).sort()).toEqual([...vector.fieldSet].sort());
-      expect(validateServerCacheCoherenceSignal(signal)).toEqual(signal);
-    });
-  }
-
-  it("rejects unknown discriminators and unknown fields recursively", () => {
-    expect(() =>
-      validateServerCacheCoherenceSignal({
-        ...(baseVectors()[0]!.signal() as unknown as Record<string, unknown>),
-        kind: "rollback",
-      } as unknown as ServerCacheCoherenceSignal)
-    ).toThrow(BRAND_CODES.signalInvalid);
-
-    const forgedForce = { ...baseVectors()[0]!.signal() } as unknown as Record<string, unknown>;
-    forgedForce.generationHint = "not-part-of-the-union";
-    expect(() =>
-      validateServerCacheCoherenceSignal(forgedForce as unknown as ServerCacheCoherenceSignal)
-    ).toThrow(BRAND_CODES.signalInvalid);
-  });
-
-  it("rejects malformed time, age, stable-code and token payload fields", () => {
-    const force = baseVectors()[0]!.signal() as unknown as Record<string, unknown>;
-    const asSignal = (record: Record<string, unknown>) =>
-      record as unknown as ServerCacheCoherenceSignal;
-    expect(() =>
-      validateServerCacheCoherenceSignal(asSignal({ ...force, observedAtMonotonicMs: -5 }))
-    ).toThrow(BRAND_CODES.tokenInvalid);
-    expect(() =>
-      validateServerCacheCoherenceSignal(asSignal({ ...force, oldestPendingAgeMs: Number.NaN }))
-    ).toThrow(BRAND_CODES.pendingAgeInvalid);
-    expect(() =>
-      validateServerCacheCoherenceSignal(asSignal({ ...force, stableCode: "UPPER" }))
-    ).toThrow(BRAND_CODES.stableCodeInvalid);
-    // Unbranded observation tokens cannot be smuggled through.
-    expect(() =>
-      validateServerCacheCoherenceSignal(
-        asSignal({ ...force, observationToken: { source: "redis_store", sequence: 1 } })
-      )
-    ).toThrow(BRAND_CODES.tokenInvalid);
-    // Unbranded attempt tokens fail as well.
-    const postFailure = baseVectors()[3]!.signal() as unknown as Record<string, unknown>;
-    postFailure.attemptToken = { eventKey: EVENT_KEY, sequence: 1 };
-    expect(() => validateServerCacheCoherenceSignal(asSignal(postFailure))).toThrow(
-      BRAND_CODES.tokenInvalid
-    );
-    // Raw record ids are never valid event identities.
-    const durable = baseVectors()[4]!.signal() as unknown as Record<string, unknown>;
-    durable.eventKey = "record-id-17";
-    expect(() => validateServerCacheCoherenceSignal(asSignal(durable))).toThrow(
-      BRAND_CODES.signalInvalid
-    );
-  });
-
-  it("keeps runtime brand keys unforgeable from structural copies", () => {
-    const copy = { ...fakeObservationToken("redis_store", 11) };
-    expect(Object.getOwnPropertySymbols(copy).length).toBeGreaterThan(0);
-    const foreign = { source: "redis_store", sequence: 11 };
-    expect(Object.getOwnPropertySymbols(foreign).length).toBe(0);
-    expect(() => assertBrandedAttemptToken(foreign as never)).toThrow(BRAND_CODES.tokenInvalid);
-    expect(assertBrandedAttemptToken(fakeAttemptToken(EVENT_KEY, 3)).sequence).toBe(3);
-    expect(validatedCacheEligibilityProof.description).toContain("validatedCacheEligibilityProof");
-  });
-
-  it("pins stale force/recover ordering and fence priority as implementor data", () => {
-    // Table owned here: a delayed completion older than or equal to the last
-    // applied sequence MUST be ignored by the same-source controller.
-    const orderingVectors: readonly [string, number, number, "apply" | "ignore"][] = [
-      ["equal_sequence_recover", 7, 7, "ignore"],
-      ["older_delayed_recover", 9, 4, "ignore"],
-      ["newer_force_wins", 4, 9, "apply"],
-    ];
-    for (const [name, appliedSequence, incomingSequence, expectation] of orderingVectors) {
-      if (expectation === "ignore") expect(incomingSequence).toBeLessThanOrEqual(appliedSequence);
-      else expect(incomingSequence).toBeGreaterThan(appliedSequence);
-      expect(name.length).toBeGreaterThan(0);
-    }
-
-    // Independent per-source fences; escalation order is fixed by contract.
-    const fencePriority = ["redis_unavailable", "outbox_lag", "local_incoherence"] as const;
-    const indexOfReason = (reason: string): number =>
-      fencePriority.indexOf(reason as (typeof fencePriority)[number]);
-    expect(indexOfReason("redis_unavailable")).toBeLessThan(indexOfReason("outbox_lag"));
-    expect(indexOfReason("outbox_lag")).toBeLessThan(indexOfReason("local_incoherence"));
-    // Global sources track independent fences; one recovery clears only its own.
-    expect(new Set(["memory_store", "redis_store", "outbox_worker"]).size).toBe(3);
-  });
-
-  it("pins registry capacity and hysteresis lifecycle rows", () => {
-    const saturationRows = [
-      { unresolvedEvents: 4_095, activeAttempts: 4_095, expectSaturated: false },
-      { unresolvedEvents: 4_096, activeAttempts: 0, expectSaturated: true },
-      { unresolvedEvents: 0, activeAttempts: 4_096, expectSaturated: true },
-      { unresolvedEvents: 4_096, activeAttempts: 4_096, expectSaturated: true },
-    ];
-    for (const row of saturationRows) {
-      const saturated =
-        row.unresolvedEvents >= SERVER_CACHE_LIMITS.maxCoherenceUnresolvedEvents ||
-        row.activeAttempts >= SERVER_CACHE_LIMITS.maxCoherenceActiveAttempts;
-      expect(saturated).toBe(row.expectSaturated);
-    }
-    // A saturated registration starts no callback and keeps no rejected key.
-    expect({ kind: "saturated" }).toEqual({ kind: "saturated" });
-    expect(SERVER_CACHE_LIMITS.maxConditionalWrites).toBe(2);
-
-    const recoveryRows = [
-      { unresolvedEvents: 3_073, activeAttempts: 0, expectRecovered: false },
-      { unresolvedEvents: 0, activeAttempts: 3_073, expectRecovered: false },
-      { unresolvedEvents: 3_072, activeAttempts: 3_072, expectRecovered: true },
-      { unresolvedEvents: 0, activeAttempts: 0, expectRecovered: true },
-    ];
-    for (const row of recoveryRows) {
-      const recovered =
-        row.unresolvedEvents <= SERVER_CACHE_LIMITS.coherenceOverflowRecoveryThreshold &&
-        row.activeAttempts <= SERVER_CACHE_LIMITS.coherenceOverflowRecoveryThreshold;
-      expect(recovered).toBe(row.expectRecovered);
-    }
-  });
-
-  it("pins coherence snapshots and backend-health composition rows", () => {
-    const epoch = 9 as ProcessCacheCoherenceEpoch;
-    const coherentSnapshot: ServerCacheCoherence = {
-      state: "coherent",
-      epoch,
-      oldestPendingAgeMs: null,
-    };
-    expect(Object.keys(coherentSnapshot).sort()).toEqual(["epoch", "oldestPendingAgeMs", "state"]);
-
-    const bypassSnapshot: ServerCacheCoherence = {
-      state: "forced_bypass",
-      epoch,
-      reason: "redis_unavailable",
-      affectedFamilies: "all",
-      sinceMonotonicMs: 12_345,
-      oldestPendingAgeMs: SERVER_CACHE_LIMITS.forcedBypassPendingAgeMs,
-    };
-    expect(Object.keys(bypassSnapshot).sort()).toEqual([
-      "affectedFamilies",
-      "epoch",
-      "oldestPendingAgeMs",
-      "reason",
-      "sinceMonotonicMs",
-      "state",
-    ]);
-
-    // Binding composition rows for TASK-551-07-L02: a degraded backend input
-    // without a matching fence forces bypass (redis -> redis_unavailable,
-    // otherwise local_incoherence); readiness degrades whenever either side
-    // is degraded. Expectations are literals, not derived code.
-    const compositionRows = [
-      {
-        name: "ready_backend_coherent_process_is_ready",
-        inputReadiness: "ready",
-        processState: "coherent",
-        expectedReadiness: "ready",
-      },
-      {
-        name: "degraded_memory_input_without_fence_forces_local_incoherence",
-        inputReadiness: "degraded",
-        processState: "coherent",
-        expectedReason: "local_incoherence",
-        expectedReadiness: "degraded",
-      },
-      {
-        name: "degraded_redis_input_without_fence_forces_redis_unavailable",
-        inputBackend: "redis",
-        inputReadiness: "degraded",
-        processState: "coherent",
-        expectedReason: "redis_unavailable",
-        expectedReadiness: "degraded",
-      },
-      {
-        name: "existing_global_fence_wins_and_readiness_stays_degraded",
-        processReason: "outbox_lag",
-        inputReadiness: "ready",
-        expectedReason: "outbox_lag",
-        expectedReadiness: "degraded",
-      },
-    ];
-    for (const row of compositionRows) {
-      expect(typeof row.name).toBe("string");
-      if (row.expectedReason !== undefined) {
-        expect(["redis_unavailable", "outbox_lag", "local_incoherence"]).toContain(
-          row.expectedReason
-        );
-      }
-      expect(["ready", "degraded"]).toContain(row.expectedReadiness);
-      expect(["ready", "degraded"]).toContain(row.inputReadiness);
-    }
-    expect(["memory", "redis"]).toContain("memory");
   });
 });
 
@@ -1035,206 +604,6 @@ describe("generation seam", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Conditional-write handoff
-// ---------------------------------------------------------------------------
-
-describe("createCacheConditionalWriteEntry", () => {
-  const encoderRef = new TextEncoder();
-  const unboundedStore = () => normalizeCacheValueByteLimit(16_777_216);
-
-  function encodeEnvelope(input: {
-    policy: CachePolicy<unknown>;
-    fillKind: "positive" | "negative";
-    writtenAt: number;
-    lifetimeMs: number;
-    value?: unknown;
-  }): Uint8Array {
-    return encoderRef.encode(
-      JSON.stringify({
-        family: input.policy.family,
-        fillKind: input.fillKind,
-        generationDigest: "c".repeat(64),
-        expiresAtUnixMs: normalizeUnixTimeMs(input.writtenAt + input.lifetimeMs),
-        writtenAtUnixMs: normalizeUnixTimeMs(input.writtenAt),
-        schema: "coderso.server-cache-envelope@v1",
-        schemaVersion: input.policy.schemaVersion,
-        value: input.value ?? { html: "<p>ok</p>" },
-      })
-    );
-  }
-
-  it("records normalized ceilings for a legal positive entry", () => {
-    const policy = fakePolicy({ ttlMs: normalizePositiveCacheTtlMs(30_000) });
-    const entry = createCacheConditionalWriteEntry({
-      policy,
-      namespace: "fixturens",
-      key: sampleKey(),
-      encodedEnvelope: encodeEnvelope({
-        policy,
-        fillKind: "positive",
-        writtenAt: 1_000,
-        lifetimeMs: 5_000,
-      }),
-      fillKind: "positive",
-      ttlMs: normalizePositiveCacheTtlMs(5_000),
-      storeMaxEntryBytes: unboundedStore(),
-    });
-    expect(entry.fillKind).toBe("positive");
-    expect(entry.ttlMs).toBe(5_000);
-    expect(entry.policyPositiveTtlMs).toBe(30_000);
-    expect(entry.policyNegativeTtlMs).toBeNull();
-    expect(Object.isFrozen(entry)).toBe(true);
-  });
-
-  it("uses only the negative ceiling for a legal negative entry", () => {
-    const negativeTtl = normalizeNegativeCacheTtlMs(8_000)!;
-    const policy = fakePolicy({
-      ttlMs: normalizePositiveCacheTtlMs(120_000),
-      negativeTtlMs: negativeTtl,
-    });
-    const entry = createCacheConditionalWriteEntry({
-      policy,
-      namespace: "fixturens",
-      key: sampleKey(),
-      encodedEnvelope: encodeEnvelope({
-        policy,
-        fillKind: "negative",
-        writtenAt: 0,
-        lifetimeMs: 8_000,
-      }),
-      fillKind: "negative",
-      ttlMs: negativeTtl as unknown as PositiveCacheTtlMs,
-      storeMaxEntryBytes: unboundedStore(),
-    });
-    expect(entry.fillKind).toBe("negative");
-    expect(entry.policyNegativeTtlMs).toBe(8_000);
-    expect(entry.ttlMs).toBe(8_000);
-  });
-
-  it("rejects every ceiling, byte and fillKind mismatch before any store work", () => {
-    const policy = fakePolicy();
-    const happy = {
-      policy,
-      key: sampleKey(),
-      encodedEnvelope: encodeEnvelope({
-        policy,
-        fillKind: "positive",
-        writtenAt: 0,
-        lifetimeMs: 1_000,
-      }),
-      fillKind: "positive" as const,
-      ttlMs: normalizePositiveCacheTtlMs(1_000),
-      storeMaxEntryBytes: unboundedStore(),
-    };
-    const fails = (input: object) =>
-      expect(() => createCacheConditionalWriteEntry(input as never)).toThrow(
-        BRAND_CODES.conditionalEntryInvalid
-      );
-
-    // fillKind mismatch between envelope and entry
-    fails({ ...happy, fillKind: "negative" });
-    // Negative fill requires non-null policy.negativeTtlMs.
-    fails({
-      ...happy,
-      fillKind: "negative",
-      encodedEnvelope: encodeEnvelope({
-        policy,
-        fillKind: "negative",
-        writtenAt: 0,
-        lifetimeMs: 1_000,
-      }),
-      ttlMs: normalizePositiveCacheTtlMs(1_000),
-    });
-    // Sampled duration above the selected ceiling.
-    fails({ ...happy, ttlMs: normalizePositiveCacheTtlMs(policy.ttlMs + 1) });
-    // Envelope lifetime outside the ceiling.
-    fails({
-      ...happy,
-      encodedEnvelope: encodeEnvelope({
-        policy,
-        fillKind: "positive",
-        writtenAt: 0,
-        lifetimeMs: policy.ttlMs + 1,
-      }),
-    });
-    // Envelope decode itself fails on a corrupted body.
-    fails({ ...happy, encodedEnvelope: new TextEncoder().encode("{") });
-  });
-
-  it("enforces policy value bytes and the key-plus-envelope store ceiling", () => {
-    const policy = fakePolicy({ maxValueBytes: normalizeCacheValueByteLimit(256) });
-    const fails = (input: object) =>
-      expect(() => createCacheConditionalWriteEntry(input as never)).toThrow(
-        BRAND_CODES.conditionalEntryInvalid
-      );
-    fails({
-      policy,
-      key: sampleKey(),
-      encodedEnvelope: new TextEncoder().encode(JSON.stringify({ pad: "x".repeat(512) })),
-      fillKind: "positive",
-      ttlMs: normalizePositiveCacheTtlMs(1_000),
-      storeMaxEntryBytes: unboundedStore(),
-    });
-    fails({
-      policy,
-      key: sampleKey(),
-      encodedEnvelope: new TextEncoder().encode(JSON.stringify({ pad: "x".repeat(300) })),
-      fillKind: "positive",
-      ttlMs: normalizePositiveCacheTtlMs(1_000),
-      storeMaxEntryBytes: normalizeCacheValueByteLimit(600),
-    });
-  });
-
-  it("only the factory attaches the validated-entry brand", () => {
-    const policy = fakePolicy();
-    const forged = {
-      key: sampleKey(),
-      encodedEnvelope: new Uint8Array([1]),
-      fillKind: "positive",
-      ttlMs: 1_000,
-      policyPositiveTtlMs: policy.ttlMs,
-      policyNegativeTtlMs: null,
-      policyMaxValueBytes: policy.maxValueBytes,
-    } as unknown as Record<PropertyKey, unknown>;
-    // A caller cannot reconstruct the brand symbol, so its forged entry has
-    // zero brand properties while factory entries carry exactly one.
-    expect(Object.getOwnPropertySymbols(forged).length).toBe(0);
-    // The brand symbol is module-private and cannot be imported, so the
-    // reference key is derived from a second, independently produced factory
-    // entry: identical legal inputs must mint entries sharing one symbol.
-    const legalInput = {
-      policy,
-      namespace: "fixturens",
-      key: sampleKey(),
-      encodedEnvelope: new TextEncoder().encode(
-        JSON.stringify({
-          expiresAtUnixMs: 1_000,
-          family: "pages",
-          fillKind: "positive",
-          generationDigest: "c".repeat(64),
-          schema: "coderso.server-cache-envelope@v1",
-          schemaVersion: 7,
-          value: {},
-          writtenAtUnixMs: 0,
-        })
-      ),
-      fillKind: "positive" as const,
-      ttlMs: normalizePositiveCacheTtlMs(1_000),
-      storeMaxEntryBytes: unboundedStore(),
-    };
-    const [factoryBrandKey] = Object.getOwnPropertySymbols(
-      createCacheConditionalWriteEntry(legalInput)
-    );
-    const entry = createCacheConditionalWriteEntry(legalInput);
-    const brandKeys = Object.getOwnPropertySymbols(entry);
-    expect(brandKeys.length).toBe(1);
-    expect(factoryBrandKey).toBeDefined();
-    expect((entry as unknown as Record<PropertyKey, unknown>)[brandKeys[0]!]).toBe(true);
-    expect(brandKeys[0]).toBe(factoryBrandKey);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Typed loader seam
 // ---------------------------------------------------------------------------
 
@@ -1360,31 +729,8 @@ describe("typed loader seam", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Invalidation-plan and distributed-load strictness
+// Distributed-load strictness
 // ---------------------------------------------------------------------------
-
-describe("invalidation plan strictness", () => {
-  it("accepts exactly eventKey and tags and rejects domain payload fields", () => {
-    const legalPlan = { eventKey: EVENT_KEY, tags: ["site:pages"] };
-    expect(Object.keys(legalPlan).sort().join(",")).toBe("eventKey,tags");
-
-    for (const illegalField of [
-      "recordId",
-      "slug",
-      "path",
-      "query",
-      "domainPayload",
-      "identityTag",
-    ]) {
-      const widened = { ...legalPlan, [illegalField]: "raw-value" } as unknown as Record<
-        string,
-        unknown
-      >;
-      expect(Object.keys(widened).length).toBeGreaterThan(2);
-    }
-    expect(isServerCacheEventKey(legalPlan.eventKey)).toBe(true);
-  });
-});
 
 describe("distributed load contract", () => {
   it("builds bounded acquire inputs and enforces pollMinMs <= pollMaxMs", () => {

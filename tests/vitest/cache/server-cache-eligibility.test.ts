@@ -110,6 +110,35 @@ describe("fail-closed eligibility matrix", () => {
     }
   });
 
+  it("rejects inherited-only context and query-variant fields", () => {
+    // Positive control: the same values as own fields are eligible.
+    expect(deriveCacheEligibilityProof({ family: "pages", context: context() })).not.toBeNull();
+
+    // 6 own keys (= CONTEXT_FIELD_ORDER.length); the required
+    // mutableVisibilityGate is only inherited, and "smuggled" fills the count.
+    const inheritedGate = Object.assign(Object.create({ mutableVisibilityGate: "not_required" }), {
+      access: "public_anonymous",
+      renderMode: "public",
+      sensitiveDependency: "absent",
+      queryVariant: { kind: "known_bounded", digest: QUERY_DIGEST },
+      responseDisposition: "positive_candidate",
+      smuggled: "x",
+    }) as CacheEligibilityContext;
+    expect(deriveCacheEligibilityProof({ family: "pages", context: inheritedGate })).toBeNull();
+
+    // Nested: 2 own keys (= ["kind", "digest"].length); digest only inherited.
+    const inheritedDigest = Object.assign(Object.create({ digest: QUERY_DIGEST }), {
+      kind: "known_bounded",
+      smuggled: 1,
+    });
+    expect(
+      deriveCacheEligibilityProof({
+        family: "pages",
+        context: { ...context(), queryVariant: inheritedDigest } as CacheEligibilityContext,
+      })
+    ).toBeNull();
+  });
+
   it("never proves the security-settings-generation family", () => {
     expect(
       deriveCacheEligibilityProof({

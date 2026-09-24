@@ -40,9 +40,14 @@ import {
   type CacheValueByteLimit,
   type PositiveCacheTtlMs,
   type ServerCacheBackend,
-  type ServerCacheStoreDescription,
 } from "./serverCacheContracts";
-import { maxServerCacheKeyBytes } from "./serverCacheKeys";
+import type { ServerCacheStoreDescription } from "./serverCacheConditionalWrite";
+import {
+  SERVER_CACHE_NAMESPACE_MAX_BYTES,
+  SERVER_CACHE_NAMESPACE_PATTERN,
+  SERVER_CACHE_NAMESPACE_SEPARATORS,
+  maxServerCacheKeyBytes,
+} from "./serverCacheKeys";
 
 // ---------------------------------------------------------------------------
 // Errors
@@ -154,8 +159,6 @@ export type NormalizedServerCacheConfig = Readonly<{
   redisUrlRedacted: null | string;
 }>;
 
-const NAMESPACE_PATTERN = /^[A-Za-z0-9._-]+$/;
-const SEPARATOR_CHARS = [".", "_", "-"];
 const DEFAULT_MEMORY_NAMESPACE = "local";
 
 // ---------------------------------------------------------------------------
@@ -265,10 +268,14 @@ function normalizeNamespace(raw: string | undefined, backend: ServerCacheBackend
     return DEFAULT_MEMORY_NAMESPACE;
   }
   if (
-    !NAMESPACE_PATTERN.test(raw) ||
-    raw.length > 128 ||
-    SEPARATOR_CHARS.includes(raw.charAt(0)) ||
-    SEPARATOR_CHARS.includes(raw.charAt(raw.length - 1))
+    !SERVER_CACHE_NAMESPACE_PATTERN.test(raw) ||
+    raw.length > SERVER_CACHE_NAMESPACE_MAX_BYTES ||
+    SERVER_CACHE_NAMESPACE_SEPARATORS.includes(
+      raw.charAt(0) as (typeof SERVER_CACHE_NAMESPACE_SEPARATORS)[number]
+    ) ||
+    SERVER_CACHE_NAMESPACE_SEPARATORS.includes(
+      raw.charAt(raw.length - 1) as (typeof SERVER_CACHE_NAMESPACE_SEPARATORS)[number]
+    )
   ) {
     fail(SERVER_CACHE_CONFIG_ERROR_CODES.namespaceInvalid);
   }

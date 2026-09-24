@@ -867,3 +867,40 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   receipt. Nic nie pushowane. Changelog **1310 NIE tutaj** (rezerwa
   10-L02). **Następne w spine: 07-L01** (dziedziczy 2 znane czerwone
   vitest cache: server-cache-codec-keys, server-cache-contracts).
+
+## 07-L01 — ZAMKNIĘTY (2026-09-24) — FAZA-0 + 4 rundy kontraktu + 11 pisarzy + post-audyt
+
+- **Nowe zasady ownera (2026-09-24)**: wszyscy agenci `.claude/agents/*` na
+  Opus 5.5 (effort high: auditor/implementer; medium: smoke/closure; nigdy
+  xhigh/max); **≥2 audytorów na zakres, 1 implementator na plik, ≥2
+  post-audytorów**. Zgoda ownera na merge `feat/task-551-db-cache` →
+  `feat/implementations` (root repo) po domknięciu całego 551; push =
+  osobna decyzja.
+- **Drift 06-L03 na `8f73a0f8`** (2 audytorów): fix-wave PASS; 1 LOW w
+  receipcie (inventoryDebt partition 4→2, literówka klucza, prettier na
+  .md ignorowane) — naprawione, zacommitowane razem z checkpointem.
+- **FAZA-0 07-L01** (3 obiektywy): 8 plików allowlisty istniało ze
+  snapshotu `62438e4e` (nigdy niegate'owane); 1160L/1458L ponad limit
+  1000; `hasExactFields` z `in` (HIGH); brak `namespace` w handoffie
+  fabryki; DRY stałych namespace; 2 redy = błędy wektorów testowych.
+- **Kontrakt: 4 rundy × 4 audytorów (2 pre + 2 reconcile)** → C1-C11
+  (split na serverCacheCoherence.ts + serverCacheConditionalWrite.ts +
+  server-cache-coherence-conditional-write.test.ts; reguła export-surface
+  bez re-eksportów; C9 fail-closed skalarów polityki w kodeku; C11
+  dispatch 11 pisarzy z ekstrakcją z `git show 8f73a0f8:`). R1 złapał
+  HIGH: fragment JSON w ogrodzeniu ```json wywalał preflight dispatchu
+  całej rodziny 551 (envelope poprawiony in-place). Lustra: 07-L02, 07,
+  09-L04, 10-L01. R4 PASS 4/4. **Checkpoint `f6dd0ace`** (hook zielony).
+- **Implementacja**: 11 pisarzy sekwencyjnie wg C11 (implementer, Opus 5.5
+  @ high); RED→GREEN zapisane (C9: 12 fail → 38/38; C4: 1 → 31/31).
+  Byte-identity ruchów vs baseline: 387/387, 6/6, 393/393, 47/47.
+- **Bramki grupowe**: vitest 4 pliki **144/144** (było 105/107 z 2 redami),
+  core eslint 0, core tsc 0, root tsc 0 (baseline 0), prettier 11/11,
+  linie max 895/1000. **Post-audyt 2 obiektywy: PASS/PASS** (0 H/M; 5 LOW
+  → 3 naprawione in-leaf, 2 zaakceptowane: tautologie w verbatim-moved
+  suite'ach = TASK-9999 na 10-L02; 33-tag nie izoluje length guard).
+- **Receipt** `impl-07-l01.json` (SINGLE_ADMITTED_GATES_GREEN, 11 sha256).
+  Changelog 1310 = rezerwa 10-L02. **Następne w spine: 09-L04(initial)**
+  → 03-L02 → 07-L02 → 08-L01 → 08-L02 → 08-L03(final) → 03-L03 → 04-L01 →
+  04-L02 → 09-L01 → 09-L02 → 09-L03 → 09-L04(final) → L01(final) → 10-L01
+  → 10-L02.

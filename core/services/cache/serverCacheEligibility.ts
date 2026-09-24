@@ -108,10 +108,15 @@ function isIn(value: unknown, allowed: readonly string[]): boolean {
   return typeof value === "string" && (allowed as readonly string[]).includes(value);
 }
 
+/**
+ * Exact-field membership uses `Object.hasOwn`, never `in`: an inherited
+ * (prototype-chain) property would otherwise satisfy a missing own field and
+ * turn an exact-field gate into a pass-through that accepts smuggled payload.
+ */
 function hasExactFields(record: Record<string, unknown>, fields: readonly string[]): boolean {
   const keys = Object.keys(record);
   if (keys.length !== fields.length) return false;
-  return fields.every((field) => field in record);
+  return fields.every((field) => Object.hasOwn(record, field));
 }
 
 function isValidFieldDigest(value: unknown): value is CacheEligibilityFieldDigest {

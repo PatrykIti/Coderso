@@ -9,10 +9,12 @@
  * allocation. The bounded debug label is metadata only: it never reaches key
  * identity.
  *
- * Dependency direction: this module consumes contract values (limit table,
- * finite unions, tag/family predicates) and is consumed by the eligibility
- * proof factory. Nothing imports this module from `serverCacheContracts.ts`,
- * so the chain `eligibility -> keys -> contracts -> codec` stays acyclic.
+ * Dependency direction: this module value-imports only
+ * `serverCacheContracts.ts` (limit table, finite unions, tag/family
+ * predicates) and is value-imported by the eligibility proof factory, the
+ * config loader and `serverCacheConditionalWrite.ts`. `serverCacheContracts.ts`
+ * imports nothing at value level from any sibling (the codec only type-imports
+ * it), so the runtime import graph stays acyclic.
  */
 
 import { createHash } from "node:crypto";
@@ -24,6 +26,7 @@ import {
   type CacheEligibilityFieldDigest,
   type CacheFamily,
   type CacheGenerationDigest,
+  type CacheGenerationEntry,
   type CacheGenerationToken,
   type CacheKey,
   type CacheSchemaVersion,
@@ -117,7 +120,7 @@ function sortKeysByUtf8Bytes(keys: readonly string[]): readonly string[] {
 
 /**
  * Canonical tag ordering, shared with `normalizeServerCacheAffectedTags` and
- * `normalizeServerCacheAffectedFamilies` in `serverCacheContracts.ts`: tags
+ * `normalizeServerCacheAffectedFamilies` in `serverCacheCoherence.ts`: tags
  * sort by their byte-identical ASCII form, so every canonical projection of a
  * tag set agrees.
  */
@@ -231,12 +234,16 @@ export function encodeCanonicalInput(value: unknown): Uint8Array {
 export const MAX_CANONICAL_DEPTH = 32;
 
 /**
- * Lowercase 64-hex SHA-256 over any canonicalized bounded payload. The plain
- * string return keeps each consumer free to apply its own brand (share scope,
- * field digest, flight identity) at its own boundary.
+ * Lowercase 64-hex SHA-256 over any canonicalized bounded payload, branded as
+ * the eligibility field digest that `buildServerCacheKey` consumes as
+ * `inputDigest`. A consumer that needs a different brand of the same wire
+ * form (the share scope in `serverCacheEligibility.ts`) re-brands at its own
+ * boundary.
  */
-export function digestServerCacheInput(input: unknown): string {
-  return sha256Hex(encodeCanonicalInput(input));
+export function digestServerCacheInput(input: unknown): CacheEligibilityFieldDigest {
+  // Single documented cast site: `sha256Hex` always emits lowercase 64-hex,
+  // the brand's exact wire form (`isValidLowercaseSha256Hex`, contracts.ts).
+  return sha256Hex(encodeCanonicalInput(input)) as CacheEligibilityFieldDigest;
 }
 
 /**
@@ -371,11 +378,6 @@ export function isWellFormedServerCacheKey(value: unknown, namespace: string): b
 // Generations
 // ---------------------------------------------------------------------------
 
-export type ServerCacheGenerationEntry = Readonly<{
-  tag: CacheTag;
-  token: CacheGenerationToken;
-}>;
-
 function isGenerationToken(value: unknown): value is CacheGenerationToken {
   return typeof value === "string" && LOWERCASE_HEX_32_PATTERN.test(value);
 }
@@ -385,8 +387,8 @@ function isGenerationToken(value: unknown): value is CacheGenerationToken {
  * tokens fail closed, entries deduplicate per tag and sort by tag bytes.
  */
 export function normalizeGenerations(
-  entries: readonly ServerCacheGenerationEntry[]
-): readonly ServerCacheGenerationEntry[] {
+  entries: readonly CacheGenerationEntry[]
+): readonly CacheGenerationEntry[] {
   if (!Array.isArray(entries) || entries.length < 1) {
     fail(SERVER_CACHE_KEY_ERROR_CODES.generationMissing);
   }
@@ -409,15 +411,15 @@ export function normalizeGenerations(
  * forces the `generation_unavailable` bypass instead of an unpinned read.
  */
 export function projectGenerations(
-  generations: readonly ServerCacheGenerationEntry[],
+  generations: readonly CacheGenerationEntry[],
   tags: readonly CacheTag[]
-): readonly ServerCacheGenerationEntry[] {
+): readonly CacheGenerationEntry[] {
   if (!Array.isArray(tags) || tags.length < 1 || tags.length > SERVER_CACHE_LIMITS.maxTags) {
     fail(SERVER_CACHE_KEY_ERROR_CODES.componentInvalid);
   }
-  const byTag = new Map<string, ServerCacheGenerationEntry>();
+  const byTag = new Map<string, CacheGenerationEntry>();
   for (const entry of generations) byTag.set(entry.tag, entry);
-  const projected: ServerCacheGenerationEntry[] = [];
+  const projected: CacheGenerationEntry[] = [];
   for (const tag of [...tags].sort()) {
     const entry = byTag.get(tag);
     if (entry === undefined) fail(SERVER_CACHE_KEY_ERROR_CODES.generationMissing);
@@ -431,7 +433,7 @@ export function projectGenerations(
  * sorted by tag), giving the envelope-bound generation digest.
  */
 export function digestGenerations(
-  generations: readonly ServerCacheGenerationEntry[],
+  generations: readonly CacheGenerationEntry[],
   tags?: readonly CacheTag[]
 ): CacheGenerationDigest {
   const source = tags === undefined ? generations : projectGenerations(generations, tags);

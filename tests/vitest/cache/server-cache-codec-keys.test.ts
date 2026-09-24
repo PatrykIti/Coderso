@@ -19,13 +19,13 @@ import {
   normalizeNegativeCacheTtlMs,
   normalizePositiveCacheTtlMs,
   normalizeUnixTimeMs,
-  isServerCacheEventKey,
   type CacheEligibilityContext,
   type CacheEligibilityFieldDigest,
   type CachePolicy,
   type CacheTag,
   type UnixTimeMs,
 } from "../../../core/services/cache/serverCacheContracts";
+import { isServerCacheEventKey } from "../../../core/services/cache/serverCacheCoherence";
 import {
   SERVER_CACHE_ENVELOPE_ERROR_CODES,
   SERVER_CACHE_ENVELOPE_SCHEMA_V1,
@@ -188,7 +188,8 @@ describe("canonical input encoding", () => {
     // Astral code points are charged once at their real four-byte UTF-8 size,
     // so the documented budget is measured in emitted bytes, not code units.
     const astral = "\u{10348}";
-    const astralAtLimit = astral.repeat((SERVER_CACHE_LIMITS.maxCanonicalInputBytes - 2) / 4);
+    const astralAtLimit =
+      astral.repeat(Math.floor((SERVER_CACHE_LIMITS.maxCanonicalInputBytes - 2) / 4)) + "kk";
     const astralEncoded = Buffer.from(encodeCanonicalInput(astralAtLimit));
     expect(astralEncoded.byteLength).toBe(SERVER_CACHE_LIMITS.maxCanonicalInputBytes);
     expect(() => encodeCanonicalInput(astralAtLimit + astral)).toThrow(KEY_CODES.inputTooLarge);
@@ -612,6 +613,78 @@ describe("envelope decoding", () => {
     expect(
       decodeServerCacheEnvelope(overNegative, policy, { nowUnixMs: normalizeUnixTimeMs(0) })
     ).toEqual({ ok: false, reason: "invalid" });
+  });
+
+  describe("malformed policy scalars fail closed", () => {
+    const now = { nowUnixMs: normalizeUnixTimeMs(2_000) };
+    const positiveBytes = encodePositive(); // written 1_000, expires 31_000
+    const negativeBody = {
+      expiresAtUnixMs: 9_000,
+      family: "public-html",
+      fillKind: "negative",
+      generationDigest: "b".repeat(64),
+      schema: SERVER_CACHE_ENVELOPE_SCHEMA_V1,
+      schemaVersion: 2,
+      value: { absent: true },
+      writtenAtUnixMs: 1_000,
+    };
+    const negativeBytes = new TextEncoder().encode(JSON.stringify(negativeBody));
+    const encodeNegative = (policy: CachePolicy<unknown>): Uint8Array =>
+      encodeServerCacheEnvelope(
+        {
+          family: policy.family,
+          schemaVersion: policy.schemaVersion,
+          fillKind: "negative",
+          writtenAtUnixMs: normalizeUnixTimeMs(1_000),
+          expiresAtUnixMs: normalizeUnixTimeMs(9_000),
+          generationDigest: normalizeCacheGenerationDigest("b".repeat(64)),
+          value: { absent: true },
+        },
+        policy
+      );
+    const withScalar = (field: string, value: unknown): CachePolicy<unknown> =>
+      ({ ...fakePolicy(), [field]: value }) as unknown as CachePolicy<unknown>;
+    const withoutNegativeTtl = (): CachePolicy<unknown> => {
+      const policy = { ...fakePolicy() } as Record<string, unknown>;
+      delete policy.negativeTtlMs;
+      expect(Object.hasOwn(policy, "negativeTtlMs")).toBe(false);
+      return policy as unknown as CachePolicy<unknown>;
+    };
+    type FillKind = "positive" | "negative";
+    const MALFORMED: ReadonlyArray<readonly [string, () => CachePolicy<unknown>, FillKind]> = [
+      ["negativeTtlMs missing", withoutNegativeTtl, "positive"],
+      ["negativeTtlMs undefined", () => withScalar("negativeTtlMs", undefined), "positive"],
+      ["negativeTtlMs 4_999", () => withScalar("negativeTtlMs", 4_999), "positive"],
+      ["negativeTtlMs NaN", () => withScalar("negativeTtlMs", Number.NaN), "positive"],
+      ["negativeTtlMs string", () => withScalar("negativeTtlMs", "10000"), "positive"],
+      ["ttlMs NaN", () => withScalar("ttlMs", Number.NaN), "negative"],
+    ];
+
+    it("control: the well-formed policy decodes and encodes both fill kinds", () => {
+      expect(decodeServerCacheEnvelope(positiveBytes, fakePolicy(), now).ok).toBe(true);
+      expect(decodeServerCacheEnvelope(negativeBytes, fakePolicy(), now).ok).toBe(true);
+      expect(() => encodePositive({ policy: fakePolicy() })).not.toThrow();
+      expect(() => encodeNegative(fakePolicy())).not.toThrow();
+    });
+
+    it.each(MALFORMED)("decode rejects a policy with %s as invalid", (_name, policy, fillKind) => {
+      const bytes = fillKind === "positive" ? positiveBytes : negativeBytes;
+      expect(decodeServerCacheEnvelope(bytes, policy(), now)).toEqual({
+        ok: false,
+        reason: "invalid",
+      });
+    });
+
+    it.each(MALFORMED)(
+      "encode throws encodeInvalid for a policy with %s",
+      (_name, policy, fillKind) => {
+        const encode =
+          fillKind === "positive"
+            ? () => encodePositive({ policy: policy() })
+            : () => encodeNegative(policy());
+        expect(encode).toThrow(SERVER_CACHE_ENVELOPE_ERROR_CODES.encodeInvalid);
+      }
+    );
   });
 
   it("classifies expiry as expired only when the wall clock passed the envelope", () => {

@@ -8,10 +8,11 @@
  * fills, `policy.negativeTtlMs` for negative fills).
  *
  * Runtime dependency discipline: this module deliberately imports contract
- * TYPES only. `serverCacheContracts.ts` re-imports `decodeServerCacheEnvelope`
- * for entry creation, so any value import back into the contracts module would
- * close a dependency cycle; the small local constants below exist to keep the
- * graph acyclic and are kept byte-identical to the pinned contract literals.
+ * TYPES only and stays a sink of the value-import graph.
+ * `serverCacheConditionalWrite.ts` value-imports `decodeServerCacheEnvelope`
+ * for entry creation, and the codec imports no sibling value in return; the
+ * small local constants below are that leaf discipline, kept byte-identical to
+ * the pinned contract literals.
  */
 
 import type {
@@ -44,10 +45,10 @@ const ENVELOPE_FIELD_ORDER = Object.freeze([
  * Lifetime ceilings come from the supplied policy, so no limit table is
  * duplicated here. The absolute ceilings below are byte-identical to the
  * contract limits (owned by `serverCacheContracts.ts`); they are restated
- * locally because this module may only import contract TYPES without closing
- * the value cycle described in the header. Drift is a suite failure, not a
- * silent divergence: every mirror is pinned to its owner by the leaf's
- * codec/keys suite.
+ * locally because this module keeps the leaf discipline described in the
+ * header (contract TYPES only, no sibling value import). Drift is a suite
+ * failure, not a silent divergence: every mirror is pinned to its owner by the
+ * leaf's codec/keys suite.
  */
 const LOWERCASE_SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
@@ -57,7 +58,10 @@ export const SERVER_CACHE_CODEC_LIMIT_MIRRORS = Object.freeze({
   /** Mirrors `SERVER_CACHE_LIMITS.minPolicyTtlMs` / `maxPolicyTtlMs`. */
   minPolicyTtlMs: 1,
   maxPolicyTtlMs: 3_600_000,
-  /** Mirrors the `normalizeNegativeCacheTtlMs` window (integer 5_000..15_000). */
+  /**
+   * Mirrors the `normalizeNegativeCacheTtlMs` window (explicit `null` or
+   * integer 5_000..15_000; a missing field is malformed).
+   */
   minNegativeTtlMs: 5_000,
   maxNegativeTtlMs: 15_000,
 } as const);
@@ -78,10 +82,11 @@ const {
 // must fail closed, never void the ceiling it is compared against. The owning
 // authorities are `normalizePositiveCacheTtlMs` (integer
 // `SERVER_CACHE_LIMITS.minPolicyTtlMs..maxPolicyTtlMs`),
-// `normalizeNegativeCacheTtlMs` (null or integer 5_000..15_000) and
-// `normalizeCacheValueByteLimit` (integer 1..maxPolicyValueBytes); they cannot
-// be imported here without the value cycle, so the bounds are mirrored and
-// cite their owner.
+// `normalizeNegativeCacheTtlMs` (explicit `null` or integer 5_000..15_000;
+// `undefined` is malformed) and `normalizeCacheValueByteLimit` (integer
+// 1..maxPolicyValueBytes). The codec stays a value-import leaf (type-only
+// imports), so the bounds are mirrored rather than imported, cite their owner
+// and stay pinned to it by the codec/keys suite.
 // ---------------------------------------------------------------------------
 
 /** `null` when the positive ceiling is outside its normalized brand range. */
@@ -97,7 +102,10 @@ function normalizePositiveTtlCeilingMs(value: unknown): number | null {
   return value;
 }
 
-/** `null` when absent or outside the normalized negative brand range. */
+/**
+ * `null` when the value is `null` OR outside the normalized negative brand
+ * range; the caller (`normalizePolicyCeilings`) tells the two apart.
+ */
 function normalizeNegativeTtlCeilingMs(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (
@@ -125,27 +133,41 @@ function normalizeValueByteLimitBytes(value: unknown): number | null {
 }
 
 /**
- * Re-normalizes every consumed policy scalar. `null` members mean the policy
- * itself is malformed, and every path that consumes a member fails closed.
+ * Re-normalized policy ceilings. Every member is in its owning brand range;
+ * `negativeTtlMs === null` means the policy explicitly declared no negative
+ * fill. A malformed policy never produces this record (see below).
  */
 type NormalizedPolicyCeilings = Readonly<{
-  positiveTtlMs: number | null;
+  positiveTtlMs: number;
   negativeTtlMs: number | null;
-  maxValueBytes: number | null;
+  maxValueBytes: number;
 }>;
 
-function normalizePolicyCeilings(policy: CachePolicy<unknown>): NormalizedPolicyCeilings {
-  return {
-    positiveTtlMs: normalizePositiveTtlCeilingMs(policy.ttlMs),
-    negativeTtlMs: normalizeNegativeTtlCeilingMs(policy.negativeTtlMs),
-    maxValueBytes: normalizeValueByteLimitBytes(policy.maxValueBytes),
-  };
+/**
+ * Re-normalizes every consumed policy scalar against its owning window
+ * (`normalizePositiveCacheTtlMs`, `normalizeNegativeCacheTtlMs`,
+ * `normalizeCacheValueByteLimit`). `null` means the policy ITSELF is
+ * malformed, and every consumer fails closed on it; a single invalid scalar
+ * makes the whole policy malformed, whichever fill kind is being processed.
+ */
+function normalizePolicyCeilings(policy: CachePolicy<unknown>): NormalizedPolicyCeilings | null {
+  const positiveTtlMs = normalizePositiveTtlCeilingMs(policy.ttlMs);
+  const maxValueBytes = normalizeValueByteLimitBytes(policy.maxValueBytes);
+  const negativeTtlMs = normalizeNegativeTtlCeilingMs(policy.negativeTtlMs);
+  // Only an explicit `null` is negative-free. Anything else that normalizes to
+  // `null` is declared but invalid (missing/`undefined`, NaN, out of range or
+  // a non-number) and is malformed, mirroring `normalizeNegativeCacheTtlMs`
+  // in serverCacheContracts.ts.
+  const negativeMalformed = policy.negativeTtlMs !== null && negativeTtlMs === null;
+  if (positiveTtlMs === null || maxValueBytes === null || negativeMalformed) return null;
+  return { positiveTtlMs, negativeTtlMs, maxValueBytes };
 }
 
 /**
  * Positive fills sample from `policy.ttlMs`; negative fills require non-null
- * `negativeTtlMs` and never fall back to the positive TTL. `null` means the
- * selected ceiling is missing or outside its normalized range.
+ * `negativeTtlMs` and never fall back to the positive TTL. `null` now only
+ * means the policy explicitly declared no negative fill; a malformed policy
+ * never reaches this function.
  */
 function selectLifetimeCeilingMs(
   fillKind: ServerCacheEnvelopeFillKind,
@@ -224,9 +246,7 @@ export function encodeServerCacheEnvelope(
   // The policy's own branded scalars are re-normalized before any of them is
   // enforced, so a NaN or out-of-range ceiling cannot void the bounds below.
   const ceilings = normalizePolicyCeilings(policy);
-  if (ceilings.maxValueBytes === null) {
-    failEncode(SERVER_CACHE_ENVELOPE_ERROR_CODES.encodeInvalid);
-  }
+  if (ceilings === null) failEncode(SERVER_CACHE_ENVELOPE_ERROR_CODES.encodeInvalid);
   if (input.fillKind !== "positive" && input.fillKind !== "negative") {
     failEncode(SERVER_CACHE_ENVELOPE_ERROR_CODES.encodeInvalid);
   }
@@ -282,7 +302,7 @@ export function encodeServerCacheEnvelope(
   }
   const bytes = encoder.encode(json);
   if (
-    bytes.byteLength > (ceilings.maxValueBytes as number) ||
+    bytes.byteLength > ceilings.maxValueBytes ||
     bytes.byteLength > MAX_JSON_VALUE_BYTES_UPPER_BOUND
   ) {
     failEncode(SERVER_CACHE_ENVELOPE_ERROR_CODES.valueTooLarge);
@@ -308,7 +328,7 @@ export function decodeServerCacheEnvelope(
   // enforced, so a NaN or out-of-range ceiling fails closed instead of
   // voiding the bounds below.
   const ceilings = normalizePolicyCeilings(policy);
-  if (ceilings.maxValueBytes === null || !(bytes instanceof Uint8Array)) {
+  if (ceilings === null || !(bytes instanceof Uint8Array)) {
     return { ok: false, reason: "invalid" };
   }
   // A zero-byte read must have surfaced as a backend null (store_absent);
@@ -407,8 +427,8 @@ export function decodeServerCacheEnvelope(
 // The per-operation chunk bound IS enforced here, not merely by caller
 // discipline: `SERVER_CACHE_SWEEP_CHUNK_LIMIT` restates
 // `SERVER_CACHE_LIMITS.maxExpirySweepEntriesPerOperation` (64) byte-identically
-// because importing the contract VALUE would close the acyclic graph described
-// in the header, and the leaf suite pins the mirror to its owner so drift fails
+// because the codec stays a value-import leaf (type-only imports, see the
+// header), and the codec/keys suite pins the mirror to its owner so drift fails
 // a test instead of a runtime bound. Callers may pass a smaller chunk, never a
 // larger one.
 // ---------------------------------------------------------------------------
