@@ -101,7 +101,8 @@ export type PaginationCursorKeyring = Readonly<{
 const FIELD_NAME_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 const COLUMN_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+// UTC ISO-8601 with exactly 3 (milliseconds) or 6 (microseconds) fractional digits.
+const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}(?:\d{3})?Z$/;
 const INTEGER_PATTERN = /^-?(0|[1-9]\d*)$/;
 const CANONICAL_UINT_PATTERN = /^(0|[1-9]\d*)$/;
 const INT64_MIN = -9_223_372_036_854_775_808n;
@@ -126,7 +127,10 @@ const encoder = new TextEncoder();
  * Validates and freezes a code-owned spec. Rejects unknown shapes, duplicate
  * names/columns, more than five fields, identifier-unsafe columns, and any
  * final field other than the stable unique tie-breaker
- * `{name:"id",type:"uuid",order:"asc",nulls:"last",nullable:false}`.
+ * `{name:"id",type:"uuid",nullable:false}` whose `order` is `"asc"` with
+ * `nulls:"last"` or `"desc"` with `nulls:"first"` (the PostgreSQL-native null
+ * placement of a plain ASC/DESC B-tree column). The tie-breaker direction is
+ * chosen by the caller to match its index and is independent of earlier fields.
  */
 export function normalizeKeysetSpec(
   input: Readonly<{
@@ -187,13 +191,10 @@ export function normalizeKeysetSpec(
     });
   });
   const last = fields[fields.length - 1]!;
-  if (
-    last.name !== "id" ||
-    last.type !== "uuid" ||
-    last.order !== "asc" ||
-    last.nulls !== "last" ||
-    last.nullable
-  ) {
+  const tieOk =
+    (last.order === "asc" && last.nulls === "last") ||
+    (last.order === "desc" && last.nulls === "first");
+  if (last.name !== "id" || last.type !== "uuid" || last.nullable || !tieOk) {
     fail(PAGINATION_CURSOR_ERROR_CODES.configInvalid);
   }
   return Object.freeze({
@@ -237,11 +238,18 @@ export function isValidUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
 
+/**
+ * Accepts `YYYY-MM-DDTHH:mm:ss.sssZ` or `YYYY-MM-DDTHH:mm:ss.ssssssZ`. Calendar
+ * validity is checked on the millisecond prefix only; the value is never
+ * reparsed into output, so encode/decode carry the wire string byte-identically.
+ */
 export function isValidTimestamp(value: string): boolean {
   if (!TIMESTAMP_PATTERN.test(value)) return false;
-  const parsed = Date.parse(value);
+  // Calendar validity on the millisecond prefix; microseconds are opaque digits.
+  const millisecondForm = `${value.slice(0, 23)}Z`;
+  const parsed = Date.parse(millisecondForm);
   if (!Number.isFinite(parsed)) return false;
-  return new Date(parsed).toISOString() === value;
+  return new Date(parsed).toISOString() === millisecondForm;
 }
 
 export function isValidIntegerWire(value: string): boolean {

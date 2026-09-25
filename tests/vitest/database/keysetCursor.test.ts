@@ -4,7 +4,8 @@
  * Pure-lane coverage: scalar round trips, tamper/truncation fail-closed,
  * alternate encodings, duplicate JSON keys/field names, unknown properties,
  * spec mismatch, scope mismatch, version unsupported, retired keys, expiry
- * window, verification-order evidence, and keyring loader rejection matrix.
+ * window, verification-order evidence, keyring loader rejection matrix, the
+ * K1 tie-breaker direction rule, and K8 microsecond timestamp wire forms.
  */
 
 import { createHmac } from "node:crypto";
@@ -750,5 +751,174 @@ describe("loadPaginationCursorKeyring fails closed", () => {
     expect(() =>
       normalizeKeysetSpec({ scope: "s", fields: [{ ...fields[0]!, nullable: true }] })
     ).toThrowError();
+  });
+});
+
+describe("tie-breaker direction rule (K1)", () => {
+  const ts = {
+    name: "updated_at",
+    type: "timestamp",
+    column: "updated_at",
+    order: "desc",
+    nulls: "first",
+    nullable: false,
+  } as const;
+  const idDescFirst = {
+    name: "id",
+    type: "uuid",
+    column: "id",
+    order: "desc",
+    nulls: "first",
+    nullable: false,
+  } as const;
+
+  it("accepts (updated_at DESC NULLS FIRST, id DESC NULLS FIRST) and round trips both directions", () => {
+    const spec = normalizeKeysetSpec({ scope: "admin_pages_dd", fields: [ts, idDescFirst] });
+    expect(spec.fields.map((f) => `${f.name}:${f.order}:${f.nulls}`)).toEqual([
+      "updated_at:desc:first",
+      "id:desc:first",
+    ]);
+    const values = ["2026-01-02T00:00:00.000Z", UUID];
+    for (const direction of ["next", "previous"] as const) {
+      const cursor = encodeKeysetCursor(
+        { scope: "admin_pages_dd", direction, values, nowUnixSeconds: NOW },
+        spec,
+        baseKeyring()
+      );
+      const payload = decodeKeysetCursor(cursor, spec, baseKeyring(), { nowUnixSeconds: NOW });
+      expect(payload.direction).toBe(direction);
+      expect(payload.fields).toEqual([
+        { name: "updated_at", type: "timestamp", value: values[0] },
+        { name: "id", type: "uuid", value: UUID },
+      ]);
+    }
+  });
+
+  it("rejects a final id DESC NULLS LAST after a valid leading DESC NULLS FIRST field", () => {
+    expect(
+      codeOf(() =>
+        normalizeKeysetSpec({
+          scope: "admin_pages_dd",
+          fields: [ts, { ...idDescFirst, nulls: "last" }],
+        })
+      )
+    ).toBe(PAGINATION_CURSOR_ERROR_CODES.configInvalid);
+  });
+
+  it("rejects a final id ASC NULLS FIRST", () => {
+    expect(
+      codeOf(() =>
+        normalizeKeysetSpec({
+          scope: "s",
+          fields: [
+            { name: "t", type: "text", column: "t", order: "asc", nulls: "last", nullable: false },
+            {
+              name: "id",
+              type: "uuid",
+              column: "id",
+              order: "asc",
+              nulls: "first",
+              nullable: false,
+            },
+          ],
+        })
+      )
+    ).toBe(PAGINATION_CURSOR_ERROR_CODES.configInvalid);
+  });
+
+  it("accepts a single-field id DESC NULLS FIRST spec", () => {
+    const single = normalizeKeysetSpec({ scope: "one_desc", fields: [idDescFirst] });
+    const cursor = encodeKeysetCursor(
+      { scope: "one_desc", direction: "next", values: [UUID], nowUnixSeconds: NOW },
+      single,
+      baseKeyring()
+    );
+    expect(
+      decodeKeysetCursor(cursor, single, baseKeyring(), { nowUnixSeconds: NOW }).fields
+    ).toEqual([{ name: "id", type: "uuid", value: UUID }]);
+  });
+});
+
+describe("microsecond timestamp wire forms (K8)", () => {
+  const tsSpec = normalizeKeysetSpec({
+    scope: SCOPE,
+    fields: [
+      {
+        name: "ts",
+        type: "timestamp",
+        column: "ts",
+        order: "desc",
+        nulls: "first",
+        nullable: false,
+      },
+      { name: "id", type: "uuid", column: "id", order: "desc", nulls: "first", nullable: false },
+    ],
+  });
+
+  function encodeTs(value: string): string {
+    return encodeKeysetCursor(
+      { scope: SCOPE, direction: "next", values: [value, UUID], nowUnixSeconds: NOW },
+      tsSpec,
+      baseKeyring()
+    );
+  }
+
+  it("accepts 6-digit values and carries them byte-identically through decode", () => {
+    const micro = "2024-03-04T05:06:07.089123Z";
+    const cursor = encodeTs(micro);
+    expect(encodeTs(micro)).toBe(cursor);
+    const payload = decodeKeysetCursor(cursor, tsSpec, baseKeyring(), { nowUnixSeconds: NOW });
+    const field = payload.fields[0]!;
+    expect("value" in field ? field.value : null).toBe(micro);
+  });
+
+  it("still accepts 3-digit values", () => {
+    const milli = "2024-03-04T05:06:07.089Z";
+    const payload = decodeKeysetCursor(encodeTs(milli), tsSpec, baseKeyring(), {
+      nowUnixSeconds: NOW,
+    });
+    const field = payload.fields[0]!;
+    expect("value" in field ? field.value : null).toBe(milli);
+  });
+
+  it("rejects 5-, 7-, 8- and 9-digit fractions and a 6-digit invalid calendar date on encode", () => {
+    const bad = [
+      "2024-03-04T05:06:07.08912Z",
+      "2024-03-04T05:06:07.0891234Z",
+      "2024-03-04T05:06:07.08912345Z",
+      "2024-03-04T05:06:07.089123456Z",
+      "2024-02-30T00:00:00.000000Z",
+    ];
+    for (const value of bad) {
+      expect(codeOf(() => encodeTs(value))).toBe(PAGINATION_CURSOR_ERROR_CODES.value);
+    }
+  });
+
+  it("rejects a signed 7-digit payload on decode", () => {
+    const payloadJson = JSON.stringify({
+      formatVersion: 1,
+      keyVersion: 1,
+      issuedAtUnixSeconds: NOW,
+      scope: SCOPE,
+      direction: "next",
+      fields: [
+        { name: "ts", type: "timestamp", value: "2024-03-04T05:06:07.0891234Z" },
+        { name: "id", type: "uuid", value: UUID },
+      ],
+    });
+    // The same payload with a 6-digit value decodes, so the rejection is the fraction width.
+    const sixDigit = payloadJson.replace(".0891234Z", ".089123Z");
+    expect(
+      decodeKeysetCursor(signRaw(sixDigit, SECRET_A), tsSpec, baseKeyring(), {
+        nowUnixSeconds: NOW,
+      }).fields
+    ).toHaveLength(2);
+    expect(
+      codeOf(() =>
+        decodeKeysetCursor(signRaw(payloadJson, SECRET_A), tsSpec, baseKeyring(), {
+          nowUnixSeconds: NOW,
+        })
+      )
+    ).toBe(PAGINATION_CURSOR_ERROR_CODES.value);
   });
 });

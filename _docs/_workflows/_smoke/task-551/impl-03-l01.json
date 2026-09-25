@@ -100,5 +100,65 @@
     "Recon's 'PG arm skips' was WRONG under the mandated airtight form (presence guard + dead URL = dial-and-fail); caught by the orchestrator's own baseline before authoring and fixed as part of R1 - recorded here because the recon report alone would have admitted a red suite.",
     "Verification-order signals are Buffer.from(secret) + keyVersion Proxy (createHmac unspyable); strength proven by the mutant check, not by a spy."
   ],
-  "nextInSpine": "TASK-551-06-L01 per the spine order in _TMP-S1-spina.md (then 06-L02, 06-L03, 07-L01 - the 07-L01 leaf owns the 2 vitest cache reds)."
+  "nextInSpine": "TASK-551-06-L01 per the spine order in _TMP-S1-spina.md (then 06-L02, 06-L03, 07-L01 - the 07-L01 leaf owns the 2 vitest cache reds).",
+  "reopen_2026-09-25_K1_K8": {
+    "reason": "TASK-551-03-L02 FAZA-0 (2026-09-24) found the landed KeysetSpec tie-breaker pinned to id ASC NULLS LAST while the 03-L02 family matrix and the landed (… DESC, id DESC) indexes require a DESC tie-breaker; the re-open (dated corrections K1..K8 in TASK-551-03-L01, four auditor rounds R1-R3 + post-audit) also closed three latent L01 defects the audits surfaced.",
+    "corrections": [
+      "K1 flexible tie-breaker: last field id/uuid/non-nullable with order asc|desc and nulls last↔asc / first↔desc (zero production consumers outside the two owner modules)",
+      "K6 index-seekable predicate: redundant implied range bound on a nullable:false first field so PostgreSQL uses an Index Cond instead of filtering from the top of the index (OFFSET-like rows-read growth) — output provably identical",
+      "K7 previous-direction boundary: toBoundedPage took items[0] in fetch order (next previous page repeated a row); now slice(0,limit) → reverse → items[0] of display order; callers pass fetch order",
+      "K8 microsecond-exact timestamp wire: pattern accepts 3 or 6 fractional digits (superset, no scope bump); calendar check on the ms prefix; obligations for 03-L02: to_char('YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') boundary text, Drizzle-wrapped client only (postgres.js re-serializes OID 1114/1184 via new Date().toISOString() — truncates to ms; drizzle installs identity serializers), notNull spec-vs-schema test, scope-version bump on any field order/nulls change",
+      "K2 facets: non-cursor bounded reads with cap + truncated flag (03-L02)",
+      "K3 test obligations incl. DD tie-group walks, exact text/params pins, interpreter extension; K4 land order W1..W4; K5 downstream list"
+    ],
+    "headAtReopen": "ae6bea8a",
+    "deliverables": [
+      {
+        "path": "core/services/database/keysetCursor.ts",
+        "lines": 823,
+        "sha256": "06edd1c74570a6784b9dac9054a34e7bc947f5822c8c7973f15acf04d7aa01e9",
+        "role": "K1 + K8"
+      },
+      {
+        "path": "core/services/database/boundedReadContract.ts",
+        "lines": 306,
+        "sha256": "4eb4e3e26e54303f336d1bc122df9c83d96073dc88728ce07768975b325eeb4b",
+        "role": "K6 + K7"
+      },
+      {
+        "path": "tests/vitest/database/keysetCursor.test.ts",
+        "lines": 924,
+        "sha256": "869d5ca001adff4ed58fec8aa805dddc75c4441e02bd1f51382d9af2b5f2dd8d",
+        "role": "K3 (a)-(e), K8 (h) incl. 5/7/8/9-digit rejections; 41 tests"
+      },
+      {
+        "path": "tests/vitest/database/boundedReadContract.test.ts",
+        "lines": 865,
+        "sha256": "150c07b47fa0d4077e8002cde4ae0c50a1b33525bb4bc3f40101d4ca2faee7d1",
+        "role": "compareRowsBySpec (order for all types), interpreter <=/>= + parenthesized recursion, K3(f) exact pins (DD post-K6, single-field, no-bound, non-native null placement, integer params), K6 equivalence S1-S4, K3(g) G walks, K7 boundary/not-mutated/traversal, real-output frozen-fields test (replaced a vacuous pre-existing one — K3 amendment, Round-5); 30 pass + 1 owner-map skip"
+      }
+    ],
+    "gates": {
+      "AIRTIGHT_VITEST_TWO_SUITES": "71 passed | 1 skipped (owner-map PostgreSQL arm) of 72",
+      "LIFECYCLE_AIRTIGHT": "tests/integration/runtime/paginationCursorLifecycle.test.ts 4 pass / 0 fail",
+      "ESLINT": "0 (core files from core/, tests from root)",
+      "PRETTIER": "4/4 clean",
+      "CORE_TSC": "0",
+      "ROOT_TSC": "0 (baseline 0)",
+      "LINE_CAP": "max 924 <= 1000",
+      "DIFF_CHECK": "clean"
+    },
+    "audits": [
+      "FAZA-0 dependency finding (03-L02 S1-A/S1-B HIGH)",
+      "R1 2 auditors (MEDIUM: tie-navigation vector; MEDIUMs: index-seekable predicate K6, previous boundary K7)",
+      "R2 2 auditors (MEDIUM: microsecond wire K8; MEDIUM: land order K4)",
+      "R3 2 auditors (MEDIUM: postgres.js serializer dependency; PASS + LOWs)",
+      "post-implementation 2 lenses PASS/PASS (LOWs closed in-leaf)"
+    ],
+    "honestyNotes": [
+      "The owner-map PostgreSQL arm still uses a nullable first field, so real-PostgreSQL proof of the K6 bound (param typing + Index Cond plan) is deferred to 03-L02 EXPLAIN on DATABASE_URL3 (K6 rationale).",
+      "A pre-existing unused Array.from callback parameter (HEAD :314 of boundedReadContract.test.ts) was removed as a lint-only repair; no assertion changed.",
+      "All agents on Opus 5.5 with >= 2 auditors per scope; every finding verified by the orchestrator before dispatch."
+    ]
+  }
 }

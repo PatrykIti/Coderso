@@ -139,6 +139,16 @@ function strictComparison(
  * column fragments. Never interpolates a payload name or value: columns come
  * only from the spec and values become numbered bind parameters. The final
  * UUID `id` field makes the relation unique.
+ *
+ * Index-seekable bound (K6): when the first spec field is `nullable: false`
+ * and the cursor's first value is non-null, the OR-of-prefixes body is
+ * wrapped as `<col> <op> $1 AND (<body>)`, where `<op>` is `<=` for `after`
+ * on DESC / `before` on ASC and `>=` for `after` on ASC / `before` on DESC.
+ * The bound is logically implied by every disjunct, so results are
+ * unchanged; it lets PostgreSQL start the ordered index scan at the cursor.
+ * Precondition: `nullable: false` MUST describe a NOT NULL column, otherwise
+ * NULL rows beyond the bound would be lost. A nullable first field or a null
+ * boundary renders the unwrapped OR-of-prefixes.
  */
 export function buildKeysetPredicate(
   spec: KeysetSpec,
@@ -155,7 +165,11 @@ export function buildKeysetPredicate(
  * Single-pass predicate assembly kept separate for clarity: for each tuple
  * position i it emits `(p0 = v0 AND ... AND p{i-1} = v{i-1} AND strict_i)`,
  * then ORs all positions together. `FALSE` terms collapse away naturally
- * because their conjunction can never match.
+ * because their conjunction can never match. For a NOT NULL first field
+ * (`nullable: false`) with a non-null cursor value, a redundant range bound
+ * on that column takes its own fresh `$1` (same `sqlParam` conversion as the
+ * strict comparison), every other placeholder shifts by one, and the OR body
+ * is wrapped as `<bound> AND (<body>)`. Each `$N` occurs exactly once.
  */
 function assemblePredicate(
   spec: KeysetSpec,
@@ -163,6 +177,19 @@ function assemblePredicate(
   relation: "after" | "before"
 ): SqlFragment {
   const params: unknown[] = [];
+  const first = spec.fields[0];
+  const firstValue = cursor.fields[0];
+  let bound: string | null = null;
+  if (
+    first !== undefined &&
+    firstValue !== undefined &&
+    !first.nullable &&
+    firstValue.type !== "null"
+  ) {
+    params.push(sqlParam(first.type, firstValue.value as string | boolean));
+    const op = (relation === "after") === (first.order === "desc") ? "<=" : ">=";
+    bound = `${first.column} ${op} $${params.length}`;
+  }
   const disjuncts: string[] = [];
   for (let i = 0; i < spec.fields.length; i += 1) {
     const conjuncts: string[] = [];
@@ -198,13 +225,19 @@ function assemblePredicate(
   if (disjuncts.length === 0) {
     return Object.freeze({ text: "FALSE", params: Object.freeze([]) });
   }
-  return Object.freeze({ text: disjuncts.join(" OR "), params: Object.freeze(params) });
+  const body = disjuncts.join(" OR ");
+  return Object.freeze({
+    text: bound === null ? body : `${bound} AND (${body})`,
+    params: Object.freeze(params),
+  });
 }
 
 /**
  * Declared ORDER BY for `next`; fully reversed (directions and null
- * placement) for the bounded `previous` fetch, which reverses rows in memory
- * afterwards and never uses OFFSET.
+ * placement) for the bounded `previous` fetch, which never uses OFFSET. Rows
+ * fetched with either ORDER BY are passed to `toBoundedPage` in that fetch
+ * order; `toBoundedPage` itself reverses a `previous` window into display
+ * order, so callers never pre-reverse.
  */
 export function buildKeysetOrderBy(spec: KeysetSpec, direction: "next" | "previous"): string {
   const parts = spec.fields.map((field) => {
@@ -229,9 +262,16 @@ type BoundedPageInput<T> = Readonly<{
 }>;
 
 /**
- * Emits a bounded page from at most `limit + 1` fetched rows. The boundary
- * cursor derives only from the last returned row for `next` and the first
- * returned row for `previous`.
+ * Emits a bounded page from at most `limit + 1` rows passed in FETCH order,
+ * exactly as returned by the SQL built with `buildKeysetOrderBy(spec,
+ * direction)`, for both directions; callers never pre-reverse. For `next`,
+ * the first `limit` rows are the items and the boundary cursor derives from
+ * the last item. For `previous`, the first `limit` rows (nearest the old
+ * cursor first) are reversed into display order and, when more rows exist,
+ * the boundary cursor derives from `items[0]`: the row furthest from the old
+ * cursor, i.e. the new backward boundary. For `previous`, `nextCursor` means
+ * "continue backward" and `hasMore` means rows exist before `items[0]`. The
+ * caller's `rows` array is never mutated.
  */
 export function toBoundedPage<T>(input: BoundedPageInput<T>): BoundedPage<T> {
   if (
@@ -250,7 +290,9 @@ export function toBoundedPage<T>(input: BoundedPageInput<T>): BoundedPage<T> {
     fail(BOUNDED_READ_ERROR_CODES.windowOverflow);
   }
   const hasMore = input.rows.length > input.limit;
-  const items = hasMore ? input.rows.slice(0, input.limit) : input.rows.slice();
+  // `window` is a fresh copy, so the in-place reverse never mutates `rows`.
+  const window = hasMore ? input.rows.slice(0, input.limit) : input.rows.slice();
+  const items = input.direction === "previous" ? window.reverse() : window;
   let nextCursor: string | null = null;
   if (hasMore) {
     const boundaryRow = input.direction === "next" ? items[items.length - 1]! : items[0]!;

@@ -928,3 +928,48 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
 - Status leafa zostaje ⏳ To Do do 10-L02 (I7). **Następne w spine:
   03-L02** (konsumuje INITIAL; własna FAZA-0 — m.in. `bunx vitest run`
   w argv, reset prefetchera per M2).
+
+## 03-L02 — FAZA-0 W TOKU (2026-09-24)
+
+- **Preflight**: leaf Extra Large, 163 ścieżek allowlisty, 28 nowych,
+  **7 plików > 1000L** (bookingService 1163, PostEditorCanvas 1526,
+  UsersRolesPage 1026, MediaLibraryPage 1421, BookingPage 1138,
+  MenuEditorPage 1081, bookingPageFixtures 1123) + 13 w 800-1000.
+- **FAZA-0 (6 audytorów, 3 zakresy × 2)**: 31 HIGH / 46 MEDIUM surowych →
+  **60 po dedupie (16 H / 26 M / 12 L / 6 I)**; kontrakt niewykonalny w
+  obecnym kształcie. Dyspozycje:
+  `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-faza0-dispositions.md`.
+- **Decyzje ownera (2026-09-24)**: D1 legacy export route zostaje, job
+  create/status teraz, binarny download + usunięcie → 08-L03 FINAL; D2
+  handoff TASK-554 (adaptacja kształtu mocków, asercje wyścigów 1:1); D3
+  custom screens = ograniczona projekcja serwerowa kolumn; D4 sekret
+  cursorów dopisany do .env, DB-lane'y/perf/smoke na **DATABASE_URL3 /
+  DATABASE_URL** (owner: oba wolne, nieużywane — bariera „real-DB = owner"
+  zniesiona dla 551; memory `task551-db-lanes-allowed`).
+- **WU-B rozpoznanie**: promocja freeze `candidate→reviewed` fail-closed
+  bez ścieżki produkcyjnej (owner-approval channel = tylko fixture testowa;
+  stan w .tmp; archiwum byte-pinowane) → 03-L02 gate'uje na dużym
+  `reviewed` profilu; small=candidate zostaje; brama SQL-bytes →
+  deskryptorowa.
+- **WU-A (03-L01 amendment K1-K5)**: reguła elastyczna tie-breakera (`id`
+  ASC NULLS LAST | DESC NULLS FIRST; 0 konsumentów produkcyjnych); facety =
+  bounded non-cursor (K2). Re-audyt 2 audytorów w toku → implementacja
+  keysetCursor.ts + 2 testy → receipt addendum → commit.
+- Dalej: WU-C rewrite kontraktu 03-L02 (jedna datowana sekcja, edycje
+  envelope in-place), WU-D lustra (09-L01, 10-L01, TASK-554, 08-L03),
+  WU-E re-audyt ≥2/zakres, WU-F implementacja falami W0-W4.
+
+## 03-L01 RE-OPEN (K1-K8) — ZAMKNIĘTY (2026-09-25)
+
+- Powód: FAZA-0 03-L02 (HIGH) — `KeysetSpec` pinował tie-breaker `id ASC`,
+  a macierz 03-L02 i indeksy `(… DESC, id DESC)` wymagają DESC. Cztery rundy
+  audytu (2 audytorów każda) ujawniły przy okazji 3 utajone wady L01: K6
+  predykat prefiksu `IS NOT DISTINCT FROM` bez seek'u indeksu (OFFSET-like
+  rows-read), K7 błędna granica `previous` w `toBoundedPage`, K8 kursor
+  z precyzją ms vs kolumny µs (luki w grupach remisów) + zależność od
+  serializera postgres.js (µs tylko przez klienta drizzle).
+- Implementacja W1→W4 (implementer ×4) + LOW-pass: keysetCursor.ts 823L,
+  boundedReadContract.ts 306L, testy 924L/865L. Bramki: vitest **71/1 skip**,
+  lifecycle 4/4, eslint 0, prettier, core+root tsc 0. Post-audyt 2
+  obiektywy PASS/PASS. Addendum w `impl-03-l01.json`
+  (`reopen_2026-09-25_K1_K8`). Obowiązki dla 03-L02 zapisane w K5.

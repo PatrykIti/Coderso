@@ -4,7 +4,9 @@
  * Pure-lane coverage: page-limit boundaries, the full 16-row comparator truth
  * table via a small grammar interpreter proving ordering semantics without
  * gaps or duplicates, prefix ties from two through five fields, ORDER BY
- * reversal, bounded page envelope behavior, and an import-purity scan over
+ * reversal, bounded page envelope behavior, the index-seekable first-field
+ * bound (K6), DESC/DESC two-way traversal over tied timestamps (K3), the
+ * previous-direction page boundary (K7), and an import-purity scan over
  * the pure production modules. Real-PostgreSQL execution of the same table is
  * gated below on TASK-551-11's owner-injected `task551-db-test` map and skips
  * without it, mirroring tests/perf/database-pool-telemetry.test.ts.
@@ -144,6 +146,33 @@ function compareValues(a: string | number | boolean | null, b: unknown): number 
   return sa < sb ? -1 : sa > sb ? 1 : 0;
 }
 
+/**
+ * Display-order comparator honoring `order` for every field type. Datasets
+ * sorted by it are non-null; null placement is covered by `sortedDataset`.
+ */
+function compareRowsBySpec(spec: KeysetSpec, a: Cell[], b: Cell[]): number {
+  for (let i = 0; i < spec.fields.length; i += 1) {
+    const field = spec.fields[i]!;
+    let delta =
+      field.type === "integer"
+        ? compareValues(Number(a[i]), Number(b[i]))
+        : compareValues(a[i]!, b[i]);
+    if (field.order === "desc") delta = -delta;
+    if (delta !== 0) return delta;
+  }
+  return 0;
+}
+
+/** Strips every enclosing parenthesis pair that wraps the whole text. */
+function stripAllOuterParens(text: string): string {
+  let current = text.trim();
+  for (;;) {
+    const next = stripOuterParens(current).trim();
+    if (next === current) return current;
+    current = next;
+  }
+}
+
 function evalConjunct(
   rawSql: string,
   params: readonly unknown[],
@@ -151,7 +180,13 @@ function evalConjunct(
   columns: string[]
 ): boolean {
   if (rawSql === "FALSE") return false;
-  // Parentheses carry no semantics for this grammar; flatten them.
+  // A parenthesized OR/AND group (for example the K6 bound's body) is a
+  // nested fragment: recurse before any paren flattening.
+  const inner = stripAllOuterParens(rawSql);
+  if (splitTopLevel(inner, " OR ").length > 1 || splitTopLevel(inner, " AND ").length > 1) {
+    return evalFragment({ text: inner, params }, tuple, columns);
+  }
+  // Atomic terms: remaining parentheses carry no semantics; flatten them.
   const sql = rawSql.replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
   const columnMatch = /^([a-z0-9_]+)/.exec(sql);
   const columnIndex = columnMatch ? columns.indexOf(columnMatch[1]!) : -1;
@@ -179,6 +214,16 @@ function evalConjunct(
   if (ltMatch) {
     const bound = params[Number(ltMatch[2]) - 1];
     return value !== null && compareValues(value, bound) < 0;
+  }
+  const geMatch = /^([a-z0-9_]+) >= \$(\d+)$/.exec(sql);
+  if (geMatch) {
+    const bound = params[Number(geMatch[2]) - 1];
+    return value !== null && compareValues(value, bound) >= 0;
+  }
+  const leMatch = /^([a-z0-9_]+) <= \$(\d+)$/.exec(sql);
+  if (leMatch) {
+    const bound = params[Number(leMatch[2]) - 1];
+    return value !== null && compareValues(value, bound) <= 0;
   }
   throw new Error(`unhandled conjunct grammar: ${rawSql}`);
 }
@@ -295,23 +340,10 @@ describe("prefix ties across two through five fields", () => {
         ],
       });
       const columns = spec.fields.map((f) => f.column);
-      const compareBySpec = (a: Cell[], b: Cell[]): number => {
-        for (let i = 0; i < spec.fields.length; i += 1) {
-          const field = spec.fields[i]!;
-          let delta: number;
-          if (field.type === "integer") {
-            delta = compareValues(Number(a[i]), Number(b[i]));
-            if (field.order === "desc") delta = -delta;
-          } else {
-            delta = compareValues(a[i], b[i]);
-          }
-          if (delta !== 0) return delta;
-        }
-        return 0;
-      };
+      const compareBySpec = (a: Cell[], b: Cell[]): number => compareRowsBySpec(spec, a, b);
       const dataset: Cell[][] = [];
       for (let id = 1; id <= 6; id += 1) {
-        dataset.push([...Array.from({ length: width - 1 }, (_, i) => String(id % 2)), UUID(id)]);
+        dataset.push([...Array.from({ length: width - 1 }, () => String(id % 2)), UUID(id)]);
       }
       dataset.sort(compareBySpec);
       const visited: string[] = [];
@@ -386,8 +418,21 @@ describe("order-by reversal and bounded pages", () => {
     const exhausted = page(["a", "b"], "next");
     expect(exhausted.hasMore).toBe(false);
     expect(exhausted.nextCursor).toBeNull();
-    const previousBoundary = page(["a", "b", "c"], "previous");
-    expect(previousBoundary.nextCursor).toBe("cursor(a)");
+    // Previous rows arrive in fetch order (nearest the cursor first); the page
+    // is reversed into display order and continues backward from items[0].
+    const previousRows = ["a", "b", "c"];
+    const previousBoundary = page(previousRows, "previous");
+    expect(previousBoundary.items).toEqual(["b", "a"]);
+    expect(previousBoundary.hasMore).toBe(true);
+    expect(previousBoundary.nextCursor).toBe("cursor(b)");
+    expect(previousRows).toEqual(["a", "b", "c"]);
+    const previousRowsExhausted = ["b", "a"];
+    const previousExhausted = page(previousRowsExhausted, "previous");
+    expect(previousExhausted.items).toEqual(["a", "b"]);
+    expect(previousExhausted.hasMore).toBe(false);
+    expect(previousExhausted.nextCursor).toBeNull();
+    // The caller's input array is never mutated by the in-page reversal.
+    expect(previousRowsExhausted).toEqual(["b", "a"]);
   });
 
   it("rejects window overflow and invalid limits fail closed", () => {
@@ -402,6 +447,309 @@ describe("order-by reversal and bounded pages", () => {
         encodeBoundary: () => "",
       })
     ).toThrowError(BOUNDED_READ_ERROR_CODES.pageLimitInvalid);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Timestamp specs: K6 bound, K3 DESC/DESC traversal, K7 previous boundary
+// ---------------------------------------------------------------------------
+
+/** Non-null `updated_at` plus the `id` tie-breaker, each with native null placement. */
+function timestampSpec(tsOrder: "asc" | "desc", idOrder: "asc" | "desc"): KeysetSpec {
+  const nullsFor = (order: "asc" | "desc"): "first" | "last" =>
+    order === "asc" ? "last" : "first";
+  return normalizeKeysetSpec({
+    scope: SCOPE,
+    fields: [
+      {
+        name: "updated_at",
+        type: "timestamp",
+        column: "updated_at",
+        order: tsOrder,
+        nulls: nullsFor(tsOrder),
+        nullable: false,
+      },
+      {
+        name: "id",
+        type: "uuid",
+        column: "id",
+        order: idOrder,
+        nulls: nullsFor(idOrder),
+        nullable: false,
+      },
+    ],
+  });
+}
+
+/** DD = (updated_at DESC NULLS FIRST nullable:false, id DESC NULLS FIRST). */
+const DD = timestampSpec("desc", "desc");
+const G_COLUMNS = ["updated_at", "id"];
+/** Dataset G: six non-null rows with a tied `updated_at` group, all `.000Z`. */
+const G: readonly Cell[][] = [
+  ["2026-01-03T00:00:00.000Z", UUID(1)],
+  ["2026-01-02T00:00:00.000Z", UUID(2)],
+  ["2026-01-02T00:00:00.000Z", UUID(3)],
+  ["2026-01-02T00:00:00.000Z", UUID(4)],
+  ["2026-01-01T00:00:00.000Z", UUID(5)],
+  ["2026-01-01T00:00:00.000Z", UUID(6)],
+];
+const GD_DISPLAY_IDS = [1, 4, 3, 2, 6, 5].map(UUID);
+
+function encodeRow(spec: KeysetSpec, row: Cell[], direction: "next" | "previous"): string {
+  return encodeKeysetCursor(
+    { scope: SCOPE, direction, values: [...row], nowUnixSeconds: NOW },
+    spec,
+    KEYS
+  );
+}
+
+function decodeToken(spec: KeysetSpec, token: string): CursorPayload {
+  return decodeKeysetCursor(token, spec, KEYS, { nowUnixSeconds: NOW });
+}
+
+function displayOrder(spec: KeysetSpec): Cell[][] {
+  return [...G].sort((a, b) => compareRowsBySpec(spec, a, b));
+}
+
+describe("index-seekable first-field bound (K6)", () => {
+  const TS = "2026-01-02T00:00:00.000Z";
+  const ID = UUID(3);
+
+  it("pins the DESC/DESC order and bounded predicate text with fresh placeholders", () => {
+    expect(buildKeysetOrderBy(DD, "next")).toBe("updated_at DESC NULLS FIRST, id DESC NULLS FIRST");
+    expect(buildKeysetOrderBy(DD, "previous")).toBe("updated_at ASC NULLS LAST, id ASC NULLS LAST");
+    const after = buildKeysetPredicate(
+      DD,
+      decodeToken(DD, encodeRow(DD, [TS, ID], "next")),
+      "after"
+    );
+    expect(after.text).toBe(
+      "updated_at <= $1 AND ((updated_at < $2) OR (updated_at IS NOT DISTINCT FROM $3 AND (id < $4)))"
+    );
+    expect(after.params).toEqual([TS, TS, TS, ID]);
+    const before = buildKeysetPredicate(
+      DD,
+      decodeToken(DD, encodeRow(DD, [TS, ID], "previous")),
+      "before"
+    );
+    expect(before.text).toBe(
+      "updated_at >= $1 AND (((updated_at > $2) OR updated_at IS NULL) OR (updated_at IS NOT DISTINCT FROM $3 AND ((id > $4) OR id IS NULL)))"
+    );
+    expect(before.params).toEqual([TS, TS, TS, ID]);
+  });
+
+  it("bounds a single-field spec and leaves a nullable first field unbounded", () => {
+    const idOnly = normalizeKeysetSpec({
+      scope: SCOPE,
+      fields: [
+        { name: "id", type: "uuid", column: "id", order: "desc", nulls: "first", nullable: false },
+      ],
+    });
+    const single = buildKeysetPredicate(idOnly, cursorFor(idOnly, [ID]), "after");
+    expect(single.text).toBe("id <= $1 AND ((id < $2))");
+    expect(single.params).toEqual([ID, ID]);
+    const spec = twoFieldSpec("desc", "first");
+    const unbounded = buildKeysetPredicate(spec, cursorFor(spec, ["10", UUID(1)]), "after");
+    expect(unbounded.text).toBe(
+      "(score < $1) OR (score IS NOT DISTINCT FROM $2 AND ((id > $3) OR id IS NULL))"
+    );
+    expect(unbounded.params).toEqual([10, 10, UUID(1)]);
+  });
+
+  /** K6 table: the bound operator keys on (relation, first-field order) only. */
+  const K6_BOUND_OPERATOR = {
+    after: { desc: "<=", asc: ">=" },
+    before: { desc: ">=", asc: "<=" },
+  } as const;
+
+  /** (updated_at DESC NULLS LAST nullable:false, id DESC NULLS FIRST): non-native nulls. */
+  const DESC_NULLS_LAST_SPEC = normalizeKeysetSpec({
+    scope: SCOPE,
+    fields: [
+      {
+        name: "updated_at",
+        type: "timestamp",
+        column: "updated_at",
+        order: "desc",
+        nulls: "last",
+        nullable: false,
+      },
+      { name: "id", type: "uuid", column: "id", order: "desc", nulls: "first", nullable: false },
+    ],
+  });
+
+  it("keys the bound operator on order, not on non-native null placement", () => {
+    const after = buildKeysetPredicate(
+      DESC_NULLS_LAST_SPEC,
+      decodeToken(DESC_NULLS_LAST_SPEC, encodeRow(DESC_NULLS_LAST_SPEC, [TS, ID], "next")),
+      "after"
+    );
+    expect(after.text).toBe(
+      "updated_at <= $1 AND (((updated_at < $2) OR updated_at IS NULL) OR (updated_at IS NOT DISTINCT FROM $3 AND (id < $4)))"
+    );
+    expect(after.params).toEqual([TS, TS, TS, ID]);
+    const before = buildKeysetPredicate(
+      DESC_NULLS_LAST_SPEC,
+      decodeToken(DESC_NULLS_LAST_SPEC, encodeRow(DESC_NULLS_LAST_SPEC, [TS, ID], "previous")),
+      "before"
+    );
+    expect(before.text).toBe(
+      "updated_at >= $1 AND ((updated_at > $2) OR (updated_at IS NOT DISTINCT FROM $3 AND ((id > $4) OR id IS NULL)))"
+    );
+    expect(before.params).toEqual([TS, TS, TS, ID]);
+  });
+
+  it("binds a non-null integer first field as a Number in every position", () => {
+    const scoreSpec = normalizeKeysetSpec({
+      scope: SCOPE,
+      fields: [
+        {
+          name: "score",
+          type: "integer",
+          column: "score",
+          order: "asc",
+          nulls: "last",
+          nullable: false,
+        },
+        { name: "id", type: "uuid", column: "id", order: "asc", nulls: "last", nullable: false },
+      ],
+    });
+    const predicate = buildKeysetPredicate(
+      scoreSpec,
+      cursorFor(scoreSpec, ["10", UUID(1)]),
+      "after"
+    );
+    expect(predicate.text).toBe(
+      "score >= $1 AND (((score > $2) OR score IS NULL) OR (score IS NOT DISTINCT FROM $3 AND ((id > $4) OR id IS NULL)))"
+    );
+    expect(predicate.params).toEqual([10, 10, 10, UUID(1)]);
+    expect(predicate.params.slice(0, -1).every((param) => typeof param === "number")).toBe(true);
+  });
+
+  const equivalenceSpecs: readonly [string, KeysetSpec][] = [
+    ["S1 DD", DD],
+    ["S2 (updated_at ASC, id ASC)", timestampSpec("asc", "asc")],
+    ["S3 (updated_at DESC, id ASC)", timestampSpec("desc", "asc")],
+    ["S4 (updated_at DESC NULLS LAST, id DESC)", DESC_NULLS_LAST_SPEC],
+  ];
+  for (const [label, spec] of equivalenceSpecs) {
+    it(`matches the same rows with and without the bound for ${label}`, () => {
+      const display = displayOrder(spec);
+      for (let boundaryIndex = 0; boundaryIndex < display.length; boundaryIndex += 1) {
+        for (const relation of ["after", "before"] as const) {
+          const direction = relation === "after" ? "next" : "previous";
+          const cursor = decodeToken(spec, encodeRow(spec, display[boundaryIndex]!, direction));
+          const bounded = buildKeysetPredicate(spec, cursor, relation);
+          const expectedOp = K6_BOUND_OPERATOR[relation][spec.fields[0].order];
+          const match = /^updated_at (<=|>=) \$1 AND \((.*)\)$/s.exec(bounded.text);
+          expect(match).not.toBeNull();
+          expect(match![1]).toBe(expectedOp);
+          const unbounded: SqlFragment = { text: match![2]!, params: bounded.params };
+          const expectedSide =
+            relation === "after"
+              ? display.slice(boundaryIndex + 1)
+              : display.slice(0, boundaryIndex);
+          const withBound = display.filter((row) => evalFragment(bounded, row, G_COLUMNS));
+          const withoutBound = display.filter((row) => evalFragment(unbounded, row, G_COLUMNS));
+          expect(withBound).toEqual(expectedSide);
+          expect(withoutBound).toEqual(expectedSide);
+        }
+      }
+    });
+  }
+});
+
+describe("DESC/DESC two-way traversal over tied timestamps (K3 g)", () => {
+  it("pins the display order of dataset G", () => {
+    expect(displayOrder(DD).map((row) => row[1])).toEqual(GD_DISPLAY_IDS);
+  });
+
+  it("walks forward and backward visiting every row exactly once in order", () => {
+    const display = displayOrder(DD);
+    const walks = [
+      { direction: "next", relation: "after", start: display[0]!, expected: display },
+      {
+        direction: "previous",
+        relation: "before",
+        start: display[5]!,
+        expected: [...display].reverse(),
+      },
+    ] as const;
+    for (const walk of walks) {
+      const visited: Cell[][] = [walk.start];
+      for (let step = 0; step < 12; step += 1) {
+        const boundaryRow = visited[visited.length - 1]!;
+        const cursor = decodeToken(DD, encodeRow(DD, boundaryRow, walk.direction));
+        const predicate = buildKeysetPredicate(DD, cursor, walk.relation);
+        // The boundary row is never matched by its own predicate.
+        expect(evalFragment(predicate, boundaryRow, G_COLUMNS)).toBe(false);
+        const remaining = G.filter((row) => evalFragment(predicate, row, G_COLUMNS)).sort((a, b) =>
+          compareRowsBySpec(DD, a, b)
+        );
+        if (remaining.length === 0) break;
+        visited.push(walk.direction === "next" ? remaining[0]! : remaining[remaining.length - 1]!);
+      }
+      expect(visited).toEqual(walk.expected);
+      expect(new Set(visited.map((row) => row[1])).size).toBe(6);
+    }
+  });
+});
+
+describe("previous-direction page boundary over G (K7)", () => {
+  const limit = parsePageLimit(2);
+
+  function fetchPage(token: string | null, direction: "next" | "previous") {
+    const payload = token === null ? null : decodeToken(DD, token);
+    const relation = direction === "next" ? "after" : "before";
+    const matched =
+      payload === null
+        ? [...G]
+        : G.filter((row) =>
+            evalFragment(buildKeysetPredicate(DD, payload, relation), row, G_COLUMNS)
+          );
+    // Negated comparator = non-null equivalent of buildKeysetOrderBy(DD, "previous").
+    const sign = direction === "next" ? 1 : -1;
+    matched.sort((a, b) => sign * compareRowsBySpec(DD, a, b));
+    return toBoundedPage<Cell[]>({
+      rows: matched.slice(0, limit + 1),
+      limit,
+      direction,
+      encodeBoundary: (row) => encodeRow(DD, row, direction),
+    });
+  }
+
+  const ids = (items: readonly Cell[][]): Cell[] => items.map((row) => row[1]!);
+
+  it("walks forward then backward without gaps or duplicates", () => {
+    const forward: Cell[][] = [];
+    let current = fetchPage(null, "next");
+    forward.push(ids(current.items));
+    for (let step = 0; step < 10 && current.nextCursor !== null; step += 1) {
+      current = fetchPage(current.nextCursor, "next");
+      forward.push(ids(current.items));
+    }
+    expect(current.hasMore).toBe(false);
+    expect(forward).toEqual([
+      [UUID(1), UUID(4)],
+      [UUID(3), UUID(2)],
+      [UUID(6), UUID(5)],
+    ]);
+    expect(forward.flat()).toEqual(GD_DISPLAY_IDS);
+
+    const finalForward = current.items;
+    const backward: Cell[][] = [];
+    let previous = fetchPage(encodeRow(DD, finalForward[0]!, "previous"), "previous");
+    backward.push(ids(previous.items));
+    for (let step = 0; step < 10 && previous.nextCursor !== null; step += 1) {
+      previous = fetchPage(previous.nextCursor, "previous");
+      backward.push(ids(previous.items));
+    }
+    expect(previous.hasMore).toBe(false);
+    expect(backward).toEqual([
+      [UUID(3), UUID(2)],
+      [UUID(1), UUID(4)],
+    ]);
+    expect([...[...backward].reverse().flat(), ...ids(finalForward)]).toEqual(GD_DISPLAY_IDS);
   });
 });
 
@@ -505,8 +853,13 @@ describe("import purity of the Bun-free modules", () => {
     }
   });
 
-  it("keeps cursor fields immutable API state", () => {
-    const fields: readonly CursorField[] = Object.freeze([]);
+  it("freezes the decoded cursor fields array and every field object", () => {
+    const payload = decodeToken(DD, encodeRow(DD, [...G[0]!], "next"));
+    const fields: readonly CursorField[] = payload.fields;
+    expect(fields).toHaveLength(2);
+    expect(Object.isFrozen(payload)).toBe(true);
     expect(Object.isFrozen(fields)).toBe(true);
+    for (const field of fields) expect(Object.isFrozen(field)).toBe(true);
+    expect(() => (fields as CursorField[]).push(fields[0]!)).toThrow(TypeError);
   });
 });
