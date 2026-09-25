@@ -603,3 +603,161 @@ envelope, argv, evidence, or logs.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-24 (handoff from TASK-551-03-L02; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-faza0-dispositions.md`
+(TASK-551-03-L02 FAZA-0, HEAD `ae6bea8a`), owner decision **D1** and findings
+**F-11** and **F-12** (WU-D handoff). This section amends only the FINAL
+occurrence. INITIAL (landed) is unchanged. Earlier sections are not rewritten.
+
+Verified anchors at HEAD `ae6bea8a`:
+
+- `core/server/httpServer.ts:137-145`: `jsonResponse` always calls `JSON.stringify` and forces
+  `Content-Type: application/json`. Every router-lane result is JSON-serialized,
+  so there is no binary lane today (F-12).
+- `core/server/router.ts:36-46`: `RouteResponseHeaderContractV1` is a closed
+  contract with exactly `Cache-Control`/`Pragma`/`Expires`. It has no
+  `Content-Type`, `Content-Disposition` or `Content-Length` (F-12).
+- `core/server/routes/formsRoutes.ts:708-717`: this is the legacy synchronous `GET /forms/:id/submissions/export`
+  route (F-11).
+- `tests/integration/routes/forms.test.ts:136` (inventory), `:209`, and
+  `:221-330` (behavior tests at :221, :237, :265, :298) pin the legacy route.
+- `core/services/forms/submissionExportJob.ts:166` `verifySubmissionExportToken`
+  (returns a boolean, with no named error code) and `:191`
+  `readSubmissionExportArtifact` (TASK-571).
+
+Corrections for the FINAL occurrence:
+
+- **C1 — Binary download response lane (D1, F-12).** FINAL adds a binary response
+  lane to `core/server/httpServer.ts`. It is a typed router-lane result
+  that the dispatcher recognizes before `jsonResponse` and that streams an
+  artifact body without JSON serialization. The lane emits `Content-Type`,
+  `Content-Disposition` (an `attachment` with a sanitized, quoted filename) and
+  `Content-Length` (the exact artifact size).
+  It is a closed extension. The router header contract (`router.ts:36-46`)
+  gains a separately versioned closed shape for these three binary headers.
+  Values are validated fail-closed (`route_response_header_invalid`), the
+  content type comes from a fixed allowlist (CSV/JSON export types), and
+  CR/LF/non-ASCII bytes are rejected. The existing v1 no-store triple and the
+  R4 set-if-absent merge precedence stay byte-identical for JSON responses.
+  The artifact may reach 256 MiB, so the body must be streamed and never
+  buffered or stringified. R3 lane scope is unchanged.
+  FINAL tests extend `tests/integration/server/route-response-headers.test.ts`
+  with binary-lane cases: the exact headers, a streamed body, rejection of
+  invalid headers, and JSON-lane byte-identity.
+- **C2 — Download route wiring (D1, F-12): route-file ownership.** The
+  envelope `forbiddenPaths` (`:488-494`, entry `:493`) FORBIDS
+  `core/server/routes/formsRoutes.ts` to this leaf. 08-L03 FINAL therefore does
+  NOT wire the token-guarded `GET /forms/:id/export-jobs/:jobId/download`.
+  That route (consuming `readSubmissionExportArtifact` /
+  `verifySubmissionExportToken`, plus the named token-verification error code
+  and its `mapFormError` row with map*Error tests) is owned by the
+  TASK-551-03-L02 FINAL occurrence, the single owner of `formsRoutes.ts`.
+  In the parent graph, the `TASK-551-03-L02:final` node depends on
+  `TASK-551-08-L03:final`, so it dispatches only after this leaf's C1 binary
+  lane has landed and passed its FINAL gates. 08-L03 FINAL provides only the
+  lane and its typed result contract.
+- **C3 — Legacy export route removal (D1, F-11): owned by 03-L02 FINAL.**
+  The following are all owned by TASK-551-03-L02 FINAL, in the same
+  occurrence as the C2 download route, so export capability never goes missing:
+  - removing the legacy `GET /forms/:id/submissions/export` (`formsRoutes.ts:708-717`);
+  - its `tests/integration/routes/forms.test.ts` assertions (`:136`
+    inventory, the `:196-219` registration test including `:209`, and the
+    `:221-331` behavior tests, anchors at HEAD `9c5b6666`);
+  - the `formsClient`/`FormSubmissionsPage` switch to the job download.
+
+  Ownership of `forms.test.ts` transfers from TASK-551-09-L01 to TASK-551-03-L02,
+  and 09-L01 keeps executing it read-only. None of this runs under this
+  envelope: both files are outside this leaf's allowlist and `formsRoutes.ts`
+  is forbidden here. 03-L02 INITIAL keeps the legacy route and its tests
+  untouched (D1).
+- **C4 — Envelope amendment owed.** The Workflow Dispatch Envelope above is
+  NOT edited by this correction. The FINAL FAZA-0 pre-implementation audit owes
+  one envelope update: add FINAL commands for the binary-lane test cases (the
+  `httpServer.ts`/`router.ts`/`route-response-headers.test.ts` allowlist entries
+  already exist). The `dependencies`, `occurrences` ids and `dependsOn` stay
+  unchanged. `formsRoutes.ts` stays in `forbiddenPaths` unless that audit rules
+  otherwise.
+
+### Round-2 amendment — 2026-09-25 (mirror of TASK-551-03-L02 R2-06; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`
+(R2-06, HEAD `9c5b6666`). C2 and C3 above were amended in place, because that
+dated section had not yet landed. Changes made:
+
+- the download path spelling is unified to `/forms/:id/export-jobs/:jobId/download`;
+- the "BLOCKED" and "handed to 09-L01" wording is removed;
+- TASK-551-03-L02 FINAL (graph node `TASK-551-03-L02:final`, `dependsOn:
+  ["TASK-551-08-L03:final"]`) is named as the single owner of the download route,
+  the legacy route removal, the `forms.test.ts` edits and the client/UI switch;
+- the `forms.test.ts` anchors are refreshed.
+
+This leaf's envelope (`allowlist`, `forbiddenPaths` including
+`core/server/routes/formsRoutes.ts`, `dependencies`, occurrences) is unchanged.
+
+### Round-3 addendum — 2026-09-25 (mirror of TASK-551-03-L02 R3-08; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round3-dispositions.md`
+item R3-08 (orchestrator decision, HEAD `9c5b6666`; the cross-leaf part of
+R3-32 is cited below). Anchors were re-grounded on 2026-09-25 at HEAD
+`9c5b6666`. This amends only the FINAL occurrence; INITIAL (landed) and
+earlier sections are not rewritten. The envelope (`allowlist`,
+`forbiddenPaths` including `core/server/routes/formsRoutes.ts`,
+`dependencies`, occurrences and command ids), `**Status:**` and
+`**Changelog:**` are unchanged.
+
+**C5 — the binary lane carries the no-store triple for the 03-L02 FINAL
+download route.** Supersedes, in C1 (`:642-643`), the scope of "The existing
+v1 no-store triple and the R4 set-if-absent merge precedence stay
+byte-identical for JSON responses." The JSON-lane byte-identity still holds.
+The triple is no longer JSON-only: for the TASK-551-03-L02 FINAL route
+`GET /forms/:id/export-jobs/:jobId/download` (C2), every response carries
+the v1 triple. That covers the 200 binary response and the 403/404/409
+error responses. The triple values are `Cache-Control: private, no-store, max-age=0`,
+`Pragma: no-cache` and `Expires: 0` (`core/server/router.ts:36-46`). FINAL
+therefore requires:
+
+- **Binary success branch.** It applies the matched route's
+  response-header bag (created per matched route at
+  `core/server/httpServer.ts:465`, populated through
+  `ctx.setResponseHeader`, `router.ts:17-20`). It uses the same
+  set-if-absent `applyRouteResponseHeaderBag` (`httpServer.ts:153-158`)
+  before the response is returned, exactly as the JSON success branch does
+  (`:545-546`). This keeps the R4 precedence.
+- **Error outcomes.** The route's 403/404/409 error outcomes keep the existing
+  catch path (`httpServer.ts:558-561`), which already applies the bag. The
+  binary lane adds no bypass around it: any failure raised before the body
+  starts streaming (including an artifact open or read-setup failure) still
+  goes through `errorResponse` plus the bag.
+- **Header names.** The closed binary header shape (C1: `Content-Type`,
+  `Content-Disposition`, `Content-Length`) and the triple are disjoint
+  names. The binary shape never carries `Cache-Control`, `Pragma` or
+  `Expires`, so nothing in the lane can override or duplicate the triple.
+- **Present-only.** A binary result from a route that installed no triple
+  carries none.
+- **Route ownership.** Installing the triple is owned by TASK-551-03-L02
+  FINAL, because `formsRoutes.ts` stays forbidden here (C2). That includes
+  doing it before any handler step that can return 403/404/409, and the FINAL
+  route test that asserts all three headers on 200 and on 403/404/409. This
+  leaf guarantees only that the lane and the error path emit whatever the
+  route installed. A 403 raised by a permission middleware that runs before
+  the route's installing handler carries no triple; that handler ordering is
+  03-L02's to pin.
+
+Tests: the FINAL binary-lane cases of C1 in
+`tests/integration/server/route-response-headers.test.ts` (already in the
+allowlist) add three cases:
+
+1. a synthetic route that sets the triple and returns a binary result
+   answers 200 with the three triple headers byte-exact plus the three binary
+   headers;
+2. the same route throwing `ApiError` 403, 404 and 409 answers each status
+   with the triple;
+3. a binary result from a route that set no triple carries no triple header.
+
+These cases join the C4 owed envelope amendment (FINAL commands for the
+binary-lane cases); no file is added. Per R3-32, the TASK-551-03-L02 FINAL
+pre-dispatch check names the exact exported binary-lane result type/helper.
+This leaf's FINAL FAZA-0 amendment pins that name, and dispatch fails if it
+is absent.

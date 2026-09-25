@@ -50,8 +50,6 @@ Sole writer of:
   runtime cache-invalidation assertions, plus new additive
   `tests/integration/runtime/pages-runtime-cache-invalidation.test.ts` where no
   existing suite is a cohesive home;
-- existing `tests/unit/pages/pageService.test.ts` for exact page mutation and
-  invalidation adoption assertions;
 - existing `tests/unit/content/entryService.test.ts` (core CRUD) plus its
   already-split siblings `entryServiceMetadataWrites.test.ts`,
   `entryServiceVisibility.test.ts`, `entryServiceConcurrency.test.ts`,
@@ -251,7 +249,6 @@ SERVER_CACHE_BACKEND=memory bun test \
   tests/integration/runtime/pages-runtime-listings.test.ts \
   tests/integration/runtime/pages-runtime-responsive.test.ts \
   tests/integration/runtime/pages-runtime-cache-invalidation.test.ts \
-  tests/unit/pages/pageService.test.ts \
   tests/unit/content/entryService.test.ts \
   tests/unit/content/entryServiceMetadataWrites.test.ts \
   tests/unit/content/entryServiceVisibility.test.ts \
@@ -286,7 +283,6 @@ git diff --check
 wc -l core/services/pages/pageService.ts \
   core/services/content/{entryService,entryServiceContract,entryPersistence,entryMutationService,entryRevisionService,postsService,postDocumentContract,postMutationService,postRevisionService}.ts \
   core/services/seo/seoService.ts core/services/cache/contentMutationInvalidation.ts \
-  tests/unit/pages/pageService.test.ts \
   tests/unit/content/{entryService,entryServiceMetadataWrites,entryServiceVisibility,entryServiceConcurrency,entryServiceSourceAudit,entryServiceFacadeFence,entryServiceCacheInvalidation}.test.ts \
   tests/unit/content/postsService.test.ts \
   tests/unit/seo/{seoService,seoServicePersistence}.test.ts \
@@ -349,7 +345,6 @@ Redis bindings, fixed Redis backend, and derived namespace.
     "tests/integration/runtime/pages-runtime-listings.test.ts",
     "tests/integration/runtime/pages-runtime-responsive.test.ts",
     "tests/integration/runtime/pages-runtime-cache-invalidation.test.ts",
-    "tests/unit/pages/pageService.test.ts",
     "tests/unit/content/entryService.test.ts",
     "tests/unit/content/entryServiceMetadataWrites.test.ts",
     "tests/unit/content/entryServiceVisibility.test.ts",
@@ -383,7 +378,8 @@ Redis bindings, fixed Redis backend, and derived namespace.
     "core/services/cache/serverCacheRuntime.ts",
     "core/services/backups/backupService.ts",
     "core/db/schema.ts",
-    "core/db/migrations/meta/_journal.json"
+    "core/db/migrations/meta/_journal.json",
+    "tests/unit/pages/pageService.test.ts"
   ],
   "dependencies": ["TASK-551-09-L01:single"],
   "commands": [
@@ -397,9 +393,9 @@ Redis bindings, fixed Redis backend, and derived namespace.
     {
       "id": "content-memory-db-tests",
       "lane": "bun-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/site-cache-page-entry-invalidation.test.ts", "tests/integration/runtime/site-cache-post-seo-invalidation.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/pages-runtime.test.ts", "tests/integration/runtime/pages-runtime-blocks.test.ts", "tests/integration/runtime/pages-runtime-listings.test.ts", "tests/integration/runtime/pages-runtime-responsive.test.ts", "tests/integration/runtime/pages-runtime-cache-invalidation.test.ts", "tests/unit/pages/pageService.test.ts", "tests/unit/content/entryService.test.ts", "tests/unit/content/entryServiceMetadataWrites.test.ts", "tests/unit/content/entryServiceVisibility.test.ts", "tests/unit/content/entryServiceConcurrency.test.ts", "tests/unit/content/entryServiceSourceAudit.test.ts", "tests/unit/content/entryServiceFacadeFence.test.ts", "tests/unit/content/entryServiceCacheInvalidation.test.ts", "tests/unit/content/postsService.test.ts", "tests/unit/seo/seoService.test.ts", "tests/unit/seo/seoServicePersistence.test.ts", "tests/integration/posts/posts-revisions-flow.test.ts", "tests/integration/integrations/gscClient.test.ts", "tests/integration/routes/sitemap.test.ts", "tests/integration/seo/gscSyncService.test.ts", "tests/integration/routes/seo-performance.test.ts", "tests/integration/routes/seo-pipeline.test.ts", "tests/integration/routes/seo.test.ts", "tests/security/gsc-credential.test.ts", "tests/security/seo-sitemap-submission.test.ts", "tests/security/seo-sync-service.test.ts", "tests/security/seo-pipeline.test.ts", "tests/perf/seo-sitemap.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/site-cache-page-entry-invalidation.test.ts", "tests/integration/runtime/site-cache-post-seo-invalidation.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/pages-runtime.test.ts", "tests/integration/runtime/pages-runtime-blocks.test.ts", "tests/integration/runtime/pages-runtime-listings.test.ts", "tests/integration/runtime/pages-runtime-responsive.test.ts", "tests/integration/runtime/pages-runtime-cache-invalidation.test.ts", "tests/unit/content/entryService.test.ts", "tests/unit/content/entryServiceMetadataWrites.test.ts", "tests/unit/content/entryServiceVisibility.test.ts", "tests/unit/content/entryServiceConcurrency.test.ts", "tests/unit/content/entryServiceSourceAudit.test.ts", "tests/unit/content/entryServiceFacadeFence.test.ts", "tests/unit/content/entryServiceCacheInvalidation.test.ts", "tests/unit/content/postsService.test.ts", "tests/unit/seo/seoService.test.ts", "tests/unit/seo/seoServicePersistence.test.ts", "tests/integration/posts/posts-revisions-flow.test.ts", "tests/integration/integrations/gscClient.test.ts", "tests/integration/routes/sitemap.test.ts", "tests/integration/seo/gscSyncService.test.ts", "tests/integration/routes/seo-performance.test.ts", "tests/integration/routes/seo-pipeline.test.ts", "tests/integration/routes/seo.test.ts", "tests/security/gsc-credential.test.ts", "tests/security/seo-sitemap-submission.test.ts", "tests/security/seo-sync-service.test.ts", "tests/security/seo-pipeline.test.ts", "tests/perf/seo-sitemap.test.ts"],
       "environmentProfile": "task551-db-test",
-      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/runtime/site-cache-page-entry-invalidation.test.ts", "tests/integration/runtime/site-cache-post-seo-invalidation.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/pages-runtime.test.ts", "tests/integration/runtime/pages-runtime-blocks.test.ts", "tests/integration/runtime/pages-runtime-listings.test.ts", "tests/integration/runtime/pages-runtime-responsive.test.ts", "tests/integration/runtime/pages-runtime-cache-invalidation.test.ts", "tests/unit/pages/pageService.test.ts", "tests/unit/content/entryService.test.ts", "tests/unit/content/entryServiceMetadataWrites.test.ts", "tests/unit/content/entryServiceVisibility.test.ts", "tests/unit/content/entryServiceConcurrency.test.ts", "tests/unit/content/entryServiceSourceAudit.test.ts", "tests/unit/content/entryServiceFacadeFence.test.ts", "tests/unit/content/entryServiceCacheInvalidation.test.ts", "tests/unit/content/postsService.test.ts", "tests/unit/seo/seoService.test.ts", "tests/unit/seo/seoServicePersistence.test.ts", "tests/integration/posts/posts-revisions-flow.test.ts", "tests/integration/integrations/gscClient.test.ts", "tests/integration/routes/sitemap.test.ts", "tests/integration/seo/gscSyncService.test.ts", "tests/integration/routes/seo-performance.test.ts", "tests/integration/routes/seo-pipeline.test.ts", "tests/integration/routes/seo.test.ts", "tests/security/gsc-credential.test.ts", "tests/security/seo-sitemap-submission.test.ts", "tests/security/seo-sync-service.test.ts", "tests/security/seo-pipeline.test.ts", "tests/perf/seo-sitemap.test.ts"], "minimum": 1 }
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/runtime/site-cache-page-entry-invalidation.test.ts", "tests/integration/runtime/site-cache-post-seo-invalidation.test.ts", "tests/integration/runtime/public-site-cache-query-budget.test.ts", "tests/integration/runtime/public-content-visibility-cache-gate.test.ts", "tests/integration/runtime/public-content-list-membership-cache-gate.test.ts", "tests/integration/runtime/pages-runtime.test.ts", "tests/integration/runtime/pages-runtime-blocks.test.ts", "tests/integration/runtime/pages-runtime-listings.test.ts", "tests/integration/runtime/pages-runtime-responsive.test.ts", "tests/integration/runtime/pages-runtime-cache-invalidation.test.ts", "tests/unit/content/entryService.test.ts", "tests/unit/content/entryServiceMetadataWrites.test.ts", "tests/unit/content/entryServiceVisibility.test.ts", "tests/unit/content/entryServiceConcurrency.test.ts", "tests/unit/content/entryServiceSourceAudit.test.ts", "tests/unit/content/entryServiceFacadeFence.test.ts", "tests/unit/content/entryServiceCacheInvalidation.test.ts", "tests/unit/content/postsService.test.ts", "tests/unit/seo/seoService.test.ts", "tests/unit/seo/seoServicePersistence.test.ts", "tests/integration/posts/posts-revisions-flow.test.ts", "tests/integration/integrations/gscClient.test.ts", "tests/integration/routes/sitemap.test.ts", "tests/integration/seo/gscSyncService.test.ts", "tests/integration/routes/seo-performance.test.ts", "tests/integration/routes/seo-pipeline.test.ts", "tests/integration/routes/seo.test.ts", "tests/security/gsc-credential.test.ts", "tests/security/seo-sitemap-submission.test.ts", "tests/security/seo-sync-service.test.ts", "tests/security/seo-pipeline.test.ts", "tests/perf/seo-sitemap.test.ts"], "minimum": 1 }
     },
     {
       "id": "content-redis-db-tests",
@@ -432,7 +428,7 @@ Redis bindings, fixed Redis backend, and derived namespace.
     {
       "id": "line-count",
       "lane": "tooling",
-      "argv": ["wc", "-l", "core/services/pages/pageService.ts", "core/services/content/entryService.ts", "core/services/content/entryServiceContract.ts", "core/services/content/entryPersistence.ts", "core/services/content/entryMutationService.ts", "core/services/content/entryRevisionService.ts", "core/services/content/postsService.ts", "core/services/content/postDocumentContract.ts", "core/services/content/postMutationService.ts", "core/services/content/postRevisionService.ts", "core/services/seo/seoService.ts", "core/services/cache/contentMutationInvalidation.ts", "tests/integration/runtime/site-cache-page-entry-invalidation.test.ts", "tests/integration/runtime/site-cache-post-seo-invalidation.test.ts", "tests/vitest/cache/content-mutation-invalidation.test.ts", "tests/integration/runtime/pages-runtime.test.ts", "tests/integration/runtime/pages-runtime-blocks.test.ts", "tests/integration/runtime/pages-runtime-listings.test.ts", "tests/integration/runtime/pages-runtime-responsive.test.ts", "tests/integration/runtime/pages-runtime-cache-invalidation.test.ts", "tests/unit/pages/pageService.test.ts", "tests/unit/content/entryService.test.ts", "tests/unit/content/entryServiceMetadataWrites.test.ts", "tests/unit/content/entryServiceVisibility.test.ts", "tests/unit/content/entryServiceConcurrency.test.ts", "tests/unit/content/entryServiceSourceAudit.test.ts", "tests/unit/content/entryServiceFacadeFence.test.ts", "tests/unit/content/entryServiceCacheInvalidation.test.ts", "tests/unit/content/postsService.test.ts", "tests/unit/seo/seoService.test.ts", "tests/unit/seo/seoServicePersistence.test.ts", "tests/integration/posts/posts-revisions-flow.test.ts", "tests/vitest/seo/seoSearchPerformanceTypes.test.ts", "tests/vitest/seo/sitemapBuilder.test.ts", "tests/vitest/seo/seoPerformanceAggregation.test.ts", "tests/integration/integrations/gscClient.test.ts", "tests/integration/routes/sitemap.test.ts", "tests/integration/seo/gscSyncService.test.ts", "tests/integration/routes/seo-performance.test.ts", "tests/integration/routes/seo-pipeline.test.ts", "tests/integration/routes/seo.test.ts", "tests/security/gsc-credential.test.ts", "tests/security/seo-sitemap-submission.test.ts", "tests/security/seo-sync-service.test.ts", "tests/security/seo-pipeline.test.ts", "tests/perf/seo-sitemap.test.ts"],
+      "argv": ["wc", "-l", "core/services/pages/pageService.ts", "core/services/content/entryService.ts", "core/services/content/entryServiceContract.ts", "core/services/content/entryPersistence.ts", "core/services/content/entryMutationService.ts", "core/services/content/entryRevisionService.ts", "core/services/content/postsService.ts", "core/services/content/postDocumentContract.ts", "core/services/content/postMutationService.ts", "core/services/content/postRevisionService.ts", "core/services/seo/seoService.ts", "core/services/cache/contentMutationInvalidation.ts", "tests/integration/runtime/site-cache-page-entry-invalidation.test.ts", "tests/integration/runtime/site-cache-post-seo-invalidation.test.ts", "tests/vitest/cache/content-mutation-invalidation.test.ts", "tests/integration/runtime/pages-runtime.test.ts", "tests/integration/runtime/pages-runtime-blocks.test.ts", "tests/integration/runtime/pages-runtime-listings.test.ts", "tests/integration/runtime/pages-runtime-responsive.test.ts", "tests/integration/runtime/pages-runtime-cache-invalidation.test.ts", "tests/unit/content/entryService.test.ts", "tests/unit/content/entryServiceMetadataWrites.test.ts", "tests/unit/content/entryServiceVisibility.test.ts", "tests/unit/content/entryServiceConcurrency.test.ts", "tests/unit/content/entryServiceSourceAudit.test.ts", "tests/unit/content/entryServiceFacadeFence.test.ts", "tests/unit/content/entryServiceCacheInvalidation.test.ts", "tests/unit/content/postsService.test.ts", "tests/unit/seo/seoService.test.ts", "tests/unit/seo/seoServicePersistence.test.ts", "tests/integration/posts/posts-revisions-flow.test.ts", "tests/vitest/seo/seoSearchPerformanceTypes.test.ts", "tests/vitest/seo/sitemapBuilder.test.ts", "tests/vitest/seo/seoPerformanceAggregation.test.ts", "tests/integration/integrations/gscClient.test.ts", "tests/integration/routes/sitemap.test.ts", "tests/integration/seo/gscSyncService.test.ts", "tests/integration/routes/seo-performance.test.ts", "tests/integration/routes/seo-pipeline.test.ts", "tests/integration/routes/seo.test.ts", "tests/security/gsc-credential.test.ts", "tests/security/seo-sitemap-submission.test.ts", "tests/security/seo-sync-service.test.ts", "tests/security/seo-pipeline.test.ts", "tests/perf/seo-sitemap.test.ts"],
       "environmentProfile": "none",
       "positiveDiscovery": { "kind": "not-applicable" }
     }
@@ -446,3 +442,142 @@ Redis bindings, fixed Redis backend, and derived namespace.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-25 (mirror of TASK-551-03-L02 FAZA-0; append-only)
+
+- **Correction:** single-writer ownership of
+  `tests/unit/pages/pageService.test.ts` transfers from TASK-551-09-L02 to
+  TASK-551-03-L02.
+- **Before:** this leaf listed the suite under Exclusive Ownership ("existing
+  `tests/unit/pages/pageService.test.ts` for exact page mutation and
+  invalidation adoption assertions"), in the envelope `allowlist`, in the
+  `content-memory-db-tests` `argv` and `positiveDiscovery.paths`, in the
+  `line-count` `argv`, and in both prose `bun test` / `wc -l` command blocks.
+- **After:** the path is removed in place from Exclusive Ownership, the envelope
+  `allowlist`, the `content-memory-db-tests` `argv` and
+  `positiveDiscovery.paths`, the `line-count` `argv`, and both prose command
+  blocks, and is added to the envelope `forbiddenPaths` as the single-writer
+  guard. Every command stays in place and non-empty; envelope `dependencies`,
+  `occurrences` ids and `dependsOn` are unchanged.
+- **Reason:** the TASK-551-06-L02 receipt
+  (`_docs/_workflows/_smoke/task-551/impl-06-l02.json`) hands the full semantic
+  envelope adoption of `tests/unit/pages/pageService.test.ts` and
+  `tests/unit/pages/pageRevisionAutosave.test.ts` to TASK-551-03-L02, and the
+  dispatch contract (`_docs/_workflows/lib/task-551-dispatch-contract.mjs`,
+  `allowlist_cross_owner` check) forbids one path in two leaves' allowlists, so
+  03-L02 can own the suite only after this leaf releases it.
+- **Consumption:** this leaf consumes the 03-L02-adopted suite read-only. Its
+  page mutation/invalidation assertions land in the page runtime suites it still
+  owns (or the additive `pages-runtime-cache-invalidation.test.ts`); if it needs
+  evidence from `pageService.test.ts`, it performs an execution-only rerun of
+  that exact file without editing it.
+
+## Dated Contract Corrections — 2026-09-25 (mirror of TASK-551-03-L02 round 3 R3-34; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round3-dispositions.md`
+item R3-34 (orchestrator decision, HEAD `9c5b6666`) and the TASK-551-06-L02
+dated section "R7 amendments (round 4, 2026-09-25)", item I1. Anchors were
+re-grounded on 2026-09-25 at HEAD `9c5b6666` plus the uncommitted TASK-551
+edits. This section adds scope inside the existing allowlist. No earlier
+sentence of this file is superseded. It supersedes the ownership sentence of
+TASK-551-06-L02 (`:696-698`, "`pageService.ts` is owned by TASK-551-03-L02;
+this is recorded as a handoff to TASK-551-03-L02, whose wave W1 may align it
+under the same rule."), which 06-L02 I1 corrects. The Workflow Dispatch
+Envelope, `**Status:**` and `**Changelog:**` stay unchanged.
+
+**M1 — the legacy `listPages` author follows the hash-only email rule
+(taken).** `core/services/pages/pageService.ts` is in this leaf's envelope
+`allowlist` (`:328`), so this leaf is its single writer. Today `listPages`
+(`pageService.ts:140-175`; author mapping `:163-173`) emits
+`author: { id, name, email: resolveEmailValue({ emailEncrypted, email }) ?? "" }`
+whenever `pages.author_id` is set. For a hash-only author (the keyed hash in
+`users.email`, null `email_encrypted`), `resolveEmailValue` returns `null`
+(`core/services/security/piiEmail.ts:118`), so the list ships `email: ""`
+labelled as an email. The rule is the TASK-551-06-L02 R6 rule for
+`PageRevisionSummary.createdBy`: `author` is non-null only when the author id
+AND a resolved email both exist.
+
+```ts
+// core/services/pages/pageService.ts — listPages mapper (projection unchanged)
+return rows.map((row) => {
+  const email = row.authorId
+    ? resolveEmailValue({ emailEncrypted: row.authorEmailEncrypted, email: row.authorEmail })
+    : null;
+  return {
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    status: row.status as PageStatus,
+    updatedAt: row.updatedAt,
+    author: row.authorId && email
+      ? { id: row.authorId, name: row.authorName ?? null, email }
+      : null,
+  };
+});
+```
+
+The following stay unchanged:
+
+- the 9-column projection (`:142-152`), the left join, the ordering, and the
+  `PageSummary`/`PageAuthor` types (`PageAuthor.email: string`, `:34-38`);
+- the import at `:27`;
+- decrypt errors, which propagate with no new catch or fallback (R6 A4
+  parity).
+
+The disclosure only narrows: `content:read` on `GET /pages`
+(`core/server/routes/pageRoutes.ts:109-111`) never receives the raw column.
+
+Consumers and the visible effect: `PageTable` falls back to "No author" with
+the hint "Previous author is no longer available." for a `null` author
+(`core/admin/ui/pages/PageTable.tsx:58-62`, `:111-112`), and `PageListPage`
+drops it from the author filter options (`core/admin/ui/pages/PageListPage.tsx:164-168`).
+Today a nameless hash-only author renders an empty label, because `""` passes
+`??`. This matches the R6 A6 accepted edge case: it occurs only for
+non-canonical rows, because canonical writers (`buildEmailFields`,
+`piiEmail.ts:138-147`) always store the encrypted payload. The assistant
+catalogs call `listPages` (`core/services/assistant/adminContextCatalogs.ts:231`;
+`actionExecutorService.ts:49`/`:144` into `actionExecutorCatalogReads.ts:124`)
+and read no `author` field. That was verified on 2026-09-25: there are zero
+`author` matches in those modules, so they are unaffected.
+
+**Test ownership.** `tests/unit/pages/pageService.test.ts` was released to
+TASK-551-03-L02 (first dated section above, `:446-473`; `forbiddenPaths`
+`:381`). It has zero `listPages` references (verified `grep -c` = 0), so M1
+re-baselines nothing there, and this leaf only reruns it execution-only.
+TASK-551-03-L02 C10 v3 pins the same rule for its new `pageReadService` DTO
+with a route-suite assertion (R3-34). It cannot pin the legacy `listPages`
+path, because 03-L02 INITIAL lands before this leaf (see land order). A legacy
+pin there would assert the pre-M1 `""`. The M1 behaviour assertion therefore
+lands in this leaf's owned DB suite `tests/integration/runtime/pages-runtime.test.ts`
+(allowlist `:343`; `content-memory-db-tests` argv `:396`; 427 lines at HEAD).
+It uses owned fixtures only:
+
+```ts
+// tests/integration/runtime/pages-runtime.test.ts — one testIfDb leg
+// seed: marker user A with email = 64-hex keyed-hash shape, emailEncrypted null;
+//       marker user B with a legacy plaintext email (e.g. `m1-${token}@example.com`);
+//       one marker page authored by A, one by B, one with authorId null (trackPage)
+const byId = new Map((await listPages()).map((page) => [page.id, page]));
+expect(byId.get(pageA.id)?.author).toBeNull();                 // hash-only -> null, never ""
+expect(byId.get(pageB.id)?.author).toEqual({ id: userB.id, name: userB.name, email: userB.email });
+expect(byId.get(pageNone.id)?.author).toBeNull();
+// finally: delete only the three marker pages and the two marker users by id
+```
+
+The leg adds about 45 lines (427 → about 472), and `pageService.ts` grows from
+810 to about 816. Both stay under 1,000.
+
+**Land order.** In the parent graph, `TASK-551-09-L02:single` (parent `:1002`)
+follows `TASK-551-03-L02:initial` (parent `:992`) transitively, through 07-L02,
+08-L01, 08-L02, 08-L03 FINAL, 03-L03, 04-L01, 04-L02 and 09-L01. Wave W1 is
+part of 03-L02 INITIAL (03-L02 wave table, "W1 services/routes/races").
+03-L02 W1 therefore lands first and never edits `pageService.ts`. M1 lands in
+this leaf's single occurrence, together with its other `pageService.ts`
+invalidation edits. `TASK-551-03-L02:final` (parent `:997`) is not an ancestor
+of this leaf and does not touch `pageService.ts`.
+
+**Scope after M1.** Both edited paths (`core/services/pages/pageService.ts`,
+`tests/integration/runtime/pages-runtime.test.ts`) are already in the
+envelope `allowlist`, and their commands already exist. The envelope
+`allowlist`, `forbiddenPaths`, `dependencies`, occurrence ids and command ids
+are unchanged.

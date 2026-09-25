@@ -324,7 +324,7 @@ describe("research grounding and audit scopes", () => {
       taskFileCount: 41,
       childTaskCount: 11,
       leafTaskCount: 29,
-      occurrenceCount: 32,
+      occurrenceCount: 33,
     });
     expect(plan.dispatchOrder.slice(0, 4).map((entry) => entry.id)).toEqual([
       "TASK-551-01-L01:initial",
@@ -333,7 +333,7 @@ describe("research grounding and audit scopes", () => {
       "TASK-551-01-L02:single",
     ]);
     expect(plan.dispatchOrder.at(-1)?.id).toBe("TASK-551-10-L02:single");
-    expect(new Set(plan.dispatchOrder.map((entry) => entry.id)).size).toBe(32);
+    expect(new Set(plan.dispatchOrder.map((entry) => entry.id)).size).toBe(33);
     expect(plan.dispatchOrder[1]?.dependsOn).toEqual(["TASK-551-01-L01:initial"]);
     const l02 = plan.dispatchOrder.find((entry) => entry.id === "TASK-551-01-L02:single");
     expect(l02?.workflowPrerequisites).toEqual([TASK551_WORKFLOW_COMPATIBILITY_PREREQUISITE]);
@@ -739,7 +739,7 @@ describe("drift-round orchestration", () => {
     await withTask551GitRepo(undefined, null, async (fixture) => {
       const outcome = await runTask551AuthorAuditWorkflowForTests({ ...agents, ...fixture });
       expect(outcome.pass).toBe(true);
-      expect(outcome.dispatch.inventory.occurrenceCount).toBe(32);
+      expect(outcome.dispatch.inventory.occurrenceCount).toBe(33);
       expect(JSON.stringify(outcome.dispatch)).not.toContain("Workflow Dispatch Envelope");
     });
   });
@@ -988,7 +988,7 @@ describe("drift-round orchestration", () => {
       });
       expect(outcome.rounds).toBe(2);
       expect(outcome.pass).toBe(true);
-      expect(outcome.dispatch.inventory.occurrenceCount).toBe(32);
+      expect(outcome.dispatch.inventory.occurrenceCount).toBe(33);
       expect(Object.isFrozen(outcome.dispatch)).toBe(true);
     });
   });

@@ -289,3 +289,149 @@ categories described in the file-ownership contract.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-25 (maintenance pool bounds for the 02-L02 R6 guard; append-only)
+
+This section is append-only. It amends the contract above; where they disagree, this section wins.
+The workflow dispatch envelope is unchanged (see C5).
+
+### C1 — Verified current state (HEAD `9c5b6666`)
+
+- `core/db/databaseConfig.ts:326` parses
+  `parseBoundedInteger(env, "DB_MAINTENANCE_POOL_MAX", 2, 2, 4)`: default 2, minimum 2, maximum 4.
+- `core/db/databaseConfig.ts:363-366` sets `sessionAffineMaintenanceCandidate` to
+  `pgbouncerMode === "off" && poolMax >= 2` (`:365`) in `primary` mode, else to the maintenance-URL
+  policy result.
+- The field's doc comment at `core/db/databaseConfig.ts:79-80` says "pool capacity >= 2".
+- `sessionAffineMaintenanceCandidate` has no consumer outside `core/db/databaseConfig.ts` and
+  `tests/vitest/db/databaseConfig.test.ts`.
+- The fleet budget (`core/db/databaseConfig.ts:334-338`) prices
+  `maintenancePoolMax × totalProcessCount` only in `direct|session` mode. Primary mode prices no
+  maintenance pool, so the default configuration (planned 13, available 82) is unchanged by C2.
+
+### C2 — Decision (binding)
+
+TASK-551-02-L02 re-open amendment R6 (R6.2, R6.5) needs three sessions in the active maintenance
+channel: the probe owner, the independent verifier, and one control slot for
+`pg_cancel_backend`/`pg_terminate_backend`. The control slot is additive; it never shares ordinary
+headroom.
+
+- `DB_MAINTENANCE_POOL_MAX`: default `3`, accepted bound integer `3..4`. The maximum stays 4.
+- In `primary` mode, `sessionAffineMaintenanceCandidate` becomes
+  `pgbouncerMode === "off" && poolMax >= 3`. The doc comment at `:79-80` says ">= 3".
+- `off + primary + DB_POOL_MAX=1` stays a valid ordinary configuration. `DB_POOL_MAX` accepted bounds
+  (`1..50`) do not change. `DB_POOL_MAX=2` stays valid for ordinary traffic, but it is no longer a
+  session-affine candidate.
+- The overflow ceiling comment at `core/db/databaseConfig.ts:182` (512 × 50 + 512 × 4 + 8 = 27,656)
+  stays correct because the maximum is unchanged.
+- No new error code. A value of `2` fails with the existing `database_env_value_out_of_range` code
+  and key `DB_MAINTENANCE_POOL_MAX`.
+
+Corrected environment row (replaces line 109):
+
+| Key | Default | Accepted bound |
+|---|---:|---:|
+| `DB_MAINTENANCE_POOL_MAX` | `3` | integer `3..4`; budgeted only when maintenance mode is `direct|session`; three sessions = probe owner + verifier + one control slot (02-L02 R6) |
+
+### C3 — Re-derived fleet connection budget
+
+The formula at lines 146-156 is unchanged:
+`planned = N × poolMax + (maintenanceMode === "primary" ? 0 : N × maintenancePoolMax) + migrationReserve`
+with `N = runtimeProcessCount + workerProcessCount`, and strictly `planned < available`.
+
+| Configuration | Before | After |
+|---|---:|---:|
+| Defaults (primary; pool 10; N 1; reserve 21 of 103) | planned 13 < 82 | planned 13 < 82 (unchanged) |
+| `direct|session`, default maintenance pool, pool 10, N 1, 103/21 | 10 + 2 + 3 = 15 < 82 | 10 + 3 + 3 = 16 < 82 |
+| `direct|session`, default maintenance pool, pool 10, 103/21, largest passing N | N 6: 75 < 82; N 7: 87 fails | N 6: 6 × 13 + 3 = 81 < 82 passes; N 7: 94 fails |
+| Test fixture: `direct`, pool 4, server 14, reserve 3 (available 11), N 1 | 4 + 2 + 3 = 9 < 11 | 4 + 3 + 3 = 10 < 11 |
+| Same fixture + one worker (N 2) | 8 + 4 + 3 = 15, fails | 8 + 6 + 3 = 17, fails |
+| Test fixture: `session`, pool 4, server 14, reserve 3, N 1 | 9 < 11 | 10 < 11 |
+| Same fixture + one worker (N 2) | 15, fails | 17, fails |
+
+Per-process maintenance cost in `direct|session` mode rises from 2 to 3 connections by default.
+Deployments that set `DB_MAINTENANCE_POOL_MAX` explicitly to 3 or 4 have an unchanged budget.
+Deployments that set it explicitly to `2` now fail at parse time with the out-of-range code. Before
+this correction, they would have failed closed later at the R6 startup probe with
+`database_maintenance_session_unavailable`.
+
+### C4 — Every pin and its new value
+
+In the allowlist (this leaf edits them):
+
+| Pin | Current | New |
+|---|---|---|
+| `core/db/databaseConfig.ts:326` default/minimum | `2, 2, 4` | `3, 3, 4` |
+| `core/db/databaseConfig.ts:365` primary candidate | `poolMax >= 2` | `poolMax >= 3` |
+| `core/db/databaseConfig.ts:79-80` doc comment | "pool capacity >= 2" | "pool capacity >= 3" |
+| `tests/vitest/db/databaseConfig.test.ts:199` default | `toBe(2)` | `toBe(3)` |
+| `:536` accepted loop | `[2, 3, 4]` | `[3, 4]` |
+| `:550` below-minimum rejection | `"1"` | `"2"` (a `"1"` row may stay as an extra rejection) |
+| `:560` above-maximum rejection | `"5"` | unchanged |
+| `:679`, `:684`, `:685` direct single | `"2"`, "planned = 4 + 2*1 + 3 = 9 < 11", `toBe(2)` | `"3"`, "planned = 4 + 3*1 + 3 = 10 < 11", `toBe(3)` |
+| `:690` direct + worker comment | "8 + 4 + 3 = 15 >= 11" | "8 + 6 + 3 = 17 >= 11" (still rejects) |
+| `:707`, `:715`, `:720` session single | `"2"`, "1*4 + 1*2 + 3 = 9", `toBe(9)` | `"3"`, "1*4 + 1*3 + 3 = 10", `toBe(10)` |
+| `:727` session + worker comment | "2*4 + 2*2 + 3 = 15 >= 11" | "2*4 + 2*3 + 3 = 17 >= 11" (still rejects) |
+| `:849` test name | "capacity>=2" | "capacity>=3" |
+
+New pins required in `tests/vitest/db/databaseConfig.test.ts`:
+
+- Omitting `DB_MAINTENANCE_POOL_MAX` in `direct` mode (and in `session` mode) resolves to 3.
+- Primary candidate boundary: `off + primary` with `DB_POOL_MAX=2` gives `false`; with
+  `DB_POOL_MAX=3` it gives `true`. `DB_POOL_MAX=1` stays `false` (`:861-866` unchanged).
+- Default-budget boundary in `direct` mode (pool 10, reserve 21 of 103, maintenance default 3):
+  `CODERSO_RUNTIME_REPLICA_COUNT=6` passes at planned 81; `=7` fails with
+  `database_connection_budget_invalid`.
+
+Source-of-truth docs: `_docs/DATA_MODEL.md`, `_docs/ARCHITECTURE.md` and `docs/` have no
+`DB_MAINTENANCE_POOL_MAX` or maintenance-pool row today. There is nothing to re-baseline there.
+TASK-551-10-L02 owns the future env documentation.
+
+Out of the allowlist (handoffs; this leaf does not edit them):
+
+- `_docs/_TASKS/TASK-551_Scalable_Database_Query_And_Cache_Optimization.md:721` and
+  `_docs/_TASKS/TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md:218` say "pool max
+  `2..4`". Both become `3..4` (orchestrator/owning-leaf correction).
+- `tests/integration/server/task551DatabaseLifecycle.test.ts:551` (02-L02 owner) uses fixture
+  `maintenancePoolMax: 2` and expects `assertDedicatedDatabaseSessionBudget({ lockOwners: 1,
+  workSessions: 1, ordinaryHeadroom: 0 })` not to throw. Under R6.5 (`>= lockOwners + workSessions +
+  1`) that requires 3. 02-L02 R6.6 does not list this re-baseline today, so 02-L02 must add it
+  (fixture → 3).
+- `tests/integration/runtime/retentionScheduler.test.ts:251` (`CHANNEL.direct`) and `:682`
+  (`session`) (06-L03 owner) use fake configs with `maintenancePoolMax: 2`. Under R6.2 the affinity
+  gate fails closed below 3, so both fixtures become `3` in the 06-L03 R1 re-baseline.
+
+### C5 — TASK-548 handoff, land order, gates, envelope
+
+- **TASK-548 handoff** (`_docs/_TASKS/TASK-548-01-L03-Assistant-Ingest-V2-And-Compatibility-Migration.md:1064-1067`,
+  `:2040-2043`). Guide ingest uses two dedicated sessions (lock owner + one work/reconcile session)
+  plus the R6 control slot. It requires `DB_MAINTENANCE_POOL_MAX >= 3` in `direct|session` mode
+  (the new default and minimum satisfy it) and `DB_POOL_MAX >= 4` in `off + primary` mode.
+  TASK-548 still validates only through `assertDedicatedDatabaseSessionBudget` and never
+  re-implements the matrix.
+- **Land order:** this correction (source + test pins in C4) lands BEFORE the 02-L02 R6 code in
+  `core/db/client.ts` / `core/db/dedicatedDatabaseSession.ts`. Until it lands, 02-L02's fail-closed
+  check is the only guard.
+- **Gates (implementer, FAST):**
+  - `./node_modules/.bin/eslint --max-warnings=0 core/db/databaseConfig.ts tests/vitest/db/databaseConfig.test.ts`;
+  - airtight
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/db/databaseConfig.test.ts tests/vitest/db/databaseApplicationIdentity.test.ts`
+    (the identity suite consumes `parseDatabaseFleetConfig` and must stay green);
+  - `wc -l` on both files (the test file is 914 lines today and must stay at or under 1,000);
+  - `git diff --check`.
+  - The orchestrator runs `bun --cwd core lint:types`.
+- **Envelope:** `core/db/databaseConfig.ts` and `tests/vitest/db/databaseConfig.test.ts` are already
+  the complete `allowlist`. The `database-config-test` command already names the owning suite.
+  The `json` fence is not edited.
+
+### C6 — Superseded sentences (quoted)
+
+- Line 109 (env table): "| `DB_MAINTENANCE_POOL_MAX` | `2` | integer `2..4`; budgeted only when
+  maintenance mode is `direct|session` |"
+  - Now default `3`, bound `3..4` (C2).
+- Line 130 (compatibility matrix, `off + primary`): "session-affine maintenance is only a candidate
+  when pool capacity is at least 2 and L02's live probe passes"
+  - Now at least 3.
+- Lines 143-145: "Explicit `direct|session` selection may still be probed during DB startup because
+  it declares dedicated infrastructure and always budgets at least two maintenance sessions."
+  - Now at least three maintenance sessions per process.

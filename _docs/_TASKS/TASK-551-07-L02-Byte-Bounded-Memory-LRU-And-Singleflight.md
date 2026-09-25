@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Cache / Performance / Reliability
 **Estimated Effort:** Medium
-**Dependencies:** TASK-551-07-L01; TASK-551-03-L02 lands first (board land order step 8 precedes step 9; sequencing constraint is parent-owned)
+**Dependencies:** TASK-551-07-L01; TASK-551-03-L02 INITIAL lands first (board land order step 8 precedes step 9; sequencing constraint is parent-owned)
 **Status:** ⏳ To Do
 **Changelog:** 1310 (pinned; closure only)
 
@@ -649,7 +649,7 @@ line-count gate is represented by the same finite owned path set.
     "_docs/_CHANGELOG/README.md",
     "_docs/_workflows/task-551-implement.mjs"
   ],
-  "dependencies": ["TASK-551-03-L02:single"],
+  "dependencies": ["TASK-551-03-L02:initial"],
   "commands": [
     {
       "id": "memory-cache-vitest",
@@ -705,7 +705,7 @@ line-count gate is represented by the same finite owned path set.
   "occurrences": [
     {
       "id": "single",
-      "dependsOn": ["TASK-551-03-L02:single"],
+      "dependsOn": ["TASK-551-03-L02:initial"],
       "commandIds": ["memory-cache-vitest", "l01-contract-vitest", "core-lint-types", "core-lint", "diff-check", "line-count"]
     }
   ]
@@ -858,3 +858,17 @@ above over the same two files.
      projectGenerations(generations, normalized.policy.tags))`; after: the
      synchronous `digestGenerations(generations, normalized.policy.tags)`,
      byte-equal to the `generationDigest` used in the key above.
+
+## Dated Contract Corrections — 2026-09-25 (mirror of TASK-551-03-L02 round 2, disposition R2-06; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`
+(R2-06, HEAD `9c5b6666`). TASK-551-03-L02 is now phased (`initial` + `final`;
+its FINAL token-guarded export download lands after TASK-551-08-L03 FINAL), so
+its former graph node `TASK-551-03-L02:single` is renamed
+`TASK-551-03-L02:initial` in the parent Canonical Workflow Dispatch Graph. This
+leaf still depends only on the unchanged 03-L02 scope that was previously declared
+as `single`: the envelope `dependencies` and the `single` occurrence
+`dependsOn` were edited in place from `TASK-551-03-L02:single` to
+`TASK-551-03-L02:initial`. No command, allowlist, forbidden path, or land-order
+position of this leaf changes, and it does not wait for 03-L02 FINAL. The
+header **Dependencies:** line now names TASK-551-03-L02 INITIAL (edited in place).

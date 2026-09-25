@@ -62,15 +62,19 @@ Sole writer of:
   their final visibility/unlock/access/password/cache assertions during adoption.
 - existing dispatcher regressions `tests/unit/server/publicBookingApi.test.ts`,
   `tests/integration/routes/bookingRoutes.test.ts`,
-  `tests/integration/routes/forms.test.ts`,
   `tests/integration/routes/publicAnalytics.test.ts`, and
   `tests/security/analyticsBeacon.test.ts`, only for preserving the complete
   pre-cache API-surface dispatch and each handler-owned security flow.
 
-  TASK-551-03-L02 may extend these two files only for bounded list/pagination
-  behavior per the dual-writer handoff in TASK-551-03-L02; this leaf preserves
-  every dispatcher regression and coordinates any wider change through the
-  TASK-551-09 contract.
+  TASK-551-03-L02 does not edit `bookingRoutes.test.ts`: it is EXECUTION-ONLY
+  for TASK-551-03-L02 (owner decision D1; its new list/pagination and export-job
+  route assertions live in `task551BoundedAdminLists.test.ts`). This leaf is its
+  sole writer, preserves every dispatcher regression and coordinates any wider
+  change through the TASK-551-09 contract.
+  `tests/integration/routes/forms.test.ts` is owned by TASK-551-03-L02, whose
+  FINAL occurrence edits it (R2-06, 2026-09-25). It is forbidden to this leaf
+  and stays EXECUTION-ONLY here in `public-dispatcher-regression-tests` and
+  `line-count`.
 - delete legacy 2,038-line `tests/unit/server/publicFormsApi.test.ts` after
   moving shared builders/mocks only to
   `tests/unit/server/publicFormsApiTestFixtures.ts` and assertions exactly to
@@ -816,7 +820,6 @@ assignment is present in argv.
     "tests/integration/runtime/entry-visibility-cache.test.ts",
     "tests/unit/server/publicBookingApi.test.ts",
     "tests/integration/routes/bookingRoutes.test.ts",
-    "tests/integration/routes/forms.test.ts",
     "tests/integration/routes/publicAnalytics.test.ts",
     "tests/security/analyticsBeacon.test.ts",
     "tests/unit/server/publicFormsApi.test.ts",
@@ -840,7 +843,8 @@ assignment is present in argv.
     "core/services/settings/settingsService.ts",
     "core/services/cache/serverCacheRuntime.ts",
     "core/db/schema.ts",
-    "core/db/migrations/meta/_journal.json"
+    "core/db/migrations/meta/_journal.json",
+    "tests/integration/routes/forms.test.ts"
   ],
   "dependencies": ["TASK-551-04-L02:single"],
   "commands": [
@@ -926,3 +930,54 @@ assignment is present in argv.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-24 (mirror of TASK-551-03-L02 FAZA-0; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-faza0-dispositions.md` (HEAD `ae6bea8a`).
+
+1. **F-11 / D1 (applied; amended 2026-09-25 by R2-06).** The Exclusive Ownership note on
+   `tests/integration/routes/bookingRoutes.test.ts` (formerly ":70",
+   "TASK-551-03-L02 may extend these two files") was reworded in place: that file
+   is EXECUTION-ONLY for TASK-551-03-L02, which makes no edits to it, and this leaf
+   remains its sole writer. `tests/integration/routes/forms.test.ts` is no longer
+   owned here (see item 4).
+2. **F-12 / D1 (superseded 2026-09-25 by R2-06).** This leaf owes no
+   `forms.test.ts` edit. TASK-551-08-L03 FINAL lands only the binary download
+   lane and does not remove the legacy `GET /forms/:id/submissions/export`
+   route. TASK-551-03-L02 FINAL does all of the following in one occurrence:
+   - wires the token-guarded `GET /forms/:id/export-jobs/:jobId/download`;
+   - removes the legacy route;
+   - removes its `forms.test.ts` assertions (`:136`, the `:196-219`
+     registration test incl. `:209`, and `:221-331`; anchors at `9c5b6666`).
+3. **O9 / D4 (owed to this leaf's own FAZA-0).** The Workflow Dispatch Envelope
+   command `public-read-model-vitest` still uses
+   `["bun", "run", "test:vitest", ...]`, which resolves to the package script
+   and sources `.env`. The envelope is intentionally unchanged here; this
+   leaf's own FAZA-0 must replace it with a DB-free builtin form. Envelope
+   dependency/occurrence ids and `dependsOn` are unchanged.
+4. **R2-06 (2026-09-25; source
+   `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`,
+   HEAD `9c5b6666`).** Ownership of `tests/integration/routes/forms.test.ts`
+   transfers from this leaf to TASK-551-03-L02, whose FINAL occurrence
+   (`TASK-551-03-L02:final`, `dependsOn: ["TASK-551-08-L03:final"]`) lands before
+   this leaf in the parent graph.
+   - **Edits made in place.** The path left this envelope's `allowlist` and joined
+     its `forbiddenPaths`. It stays in the
+     `public-dispatcher-regression-tests` argv and `positiveDiscovery.paths`, in
+     the `line-count` argv, and in the prose Validation commands.
+   - **Why the argv may keep it.** The dispatch parser
+     (`_docs/_workflows/lib/task-551-dispatch-contract.mjs`) forbids only an
+     allowlist/forbiddenPaths overlap inside one envelope
+     (`envelope_self_collision`) and one allowlist path claimed by two envelopes
+     (`allowlist_cross_owner`). It checks that each `positiveDiscovery.paths`
+     entry is a `tests/**.test.ts(x)` path present in the argv
+     (`normalizePositiveDiscovery`). It never requires a command argv path, a
+     discovery path or a `wc -l` path to be allowlisted.
+   - **This leaf never edited the file.** Its scope named the file "only for
+     preserving" dispatcher regressions and scheduled no concrete edit. The file
+     exercises the Admin `registerFormsRoutes` surface, while this leaf's
+     dispatcher work lives in `publicSite.tsx`. The only owed edit, the
+     legacy-export assertion removal in item 2, moves to 03-L02 FINAL.
+   - **Graph and dependencies unchanged.** The parent graph adds no
+     `TASK-551-09-L01:single` edge to 03-L02 FINAL, and this leaf's
+     `dependencies`/occurrence `dependsOn` are unchanged.

@@ -1,0 +1,1720 @@
+{
+  "task": "TASK-551-06-L02",
+  "step": "R7 H2 — sanitized EXPLAIN (ANALYZE, BUFFERS) of the fixed page whole-family candidate read",
+  "generatedAt": "2026-09-25T07:57:18.558Z",
+  "database": {
+    "name": "coderso02",
+    "serverMajor": 18
+  },
+  "run": "5a60dbac",
+  "markerPrefix": "task551-r7-explain-<run>",
+  "statementSource": {
+    "method": "production builder: runRevisionFamilyRetention('page', captureExecutor, {env:{}, policy:{now, dryRun}}) -> runRetentionBatch -> selectCandidateIds; capture proxy records builder.toSQL() on await and returns [] (no DB round trip, zero deletes)",
+    "reconstructed": false,
+    "sourceAnchors": {
+      "selectCandidateIdsLine": 485,
+      "ageOrderLine": 500,
+      "runRevisionFamilyRetentionLine": 631
+    },
+    "sqlChecks": {
+      "ordersByRetentionKey": true,
+      "fromPageRevisions": true,
+      "noParentFilter": true,
+      "keepNewestProbeLimit100Twice": true,
+      "batchLimit500": true,
+      "cutoffIs180Days": true,
+      "dryRunHasNoLock": true,
+      "applyVariantAddsOnlySkipLocked": true
+    },
+    "policy": {
+      "family": "page",
+      "effectiveKeepNewestPerParent": 100,
+      "maxAgeDays": 180,
+      "batchSize": 500,
+      "order": "created_at ASC, id ASC",
+      "parentId": null
+    },
+    "measuredVariant": "dry-run read (no FOR UPDATE); apply variant = identical SQL + ' for update skip locked' (plan captured without ANALYZE so no foreign rows are locked)",
+    "compiledSql": "select \"id\" from \"page_revisions\" where (\"page_revisions\".\"created_at\" < $1 and (select count(*) from (\n        select 1 from \"page_revisions\" newer\n        where newer.page_id = \"page_revisions\".\"page_id\"\n          and (newer.version, newer.id) > (\"page_revisions\".\"version\", \"page_revisions\".\"id\")\n        limit $2\n      ) newer_rows) = $3 and not (\"page_revisions\".\"kind\" = 'publish' and not exists (\n        select 1 from \"page_revisions\" published\n        where published.page_id = \"page_revisions\".\"page_id\"\n          and published.kind = 'publish'\n          and (published.version, published.id) > (\"page_revisions\".\"version\", \"page_revisions\".\"id\")\n        limit 1))) order by \"page_revisions\".\"created_at\" asc, \"page_revisions\".\"id\" asc limit $4",
+    "compiledSqlSha256": "41948b686f8cee245b82bbb7e5dbea68473f2b53a747e879e2b0e41c22a67fa1",
+    "paramShape": ["<cutoff timestamp = now - 180 days>", 100, 100, 500]
+  },
+  "statementTimeoutMs": 15000,
+  "budgetMs": 5000,
+  "cases": [
+    {
+      "case": "small",
+      "note": "1 parent x 600 aged publish rows; 500 eligible (floor 100)",
+      "seeded": {
+        "parents": 1,
+        "rowsPerParent": 600,
+        "rows": 600,
+        "seedMs": 339
+      },
+      "tableCountsBeforeExplain": {
+        "marker_pages": 1,
+        "marker_revisions": 600,
+        "foreign_revisions": 0,
+        "foreign_aged_revisions": 0
+      },
+      "expectReturned": 500,
+      "runs": [
+        {
+          "label": "as_is_stats",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 500,
+          "rowsScannedOuterRetentionScan": null,
+          "sharedHitBlocks": 6503,
+          "sharedReadBlocks": 0,
+          "planningMs": 0.517,
+          "executionMs": 463.824,
+          "usesRetentionIdx": false,
+          "seqScanOnPageRevisions": true,
+          "nodeTypes": [
+            "Limit rows=500 loops=1 removed=0",
+            "Sort rows=500 loops=1 removed=0",
+            "Seq Scan[page_revisions] rows=500 loops=1 removed=100",
+            "Index Scan[page_revisions_page_kind_idx](SubPlan 2) rows=1 loops=600 removed=300",
+            "Aggregate(SubPlan 1) rows=1 loops=599 removed=0",
+            "Limit rows=91.74 loops=599 removed=0",
+            "Index Scan[page_revisions_page_kind_idx] rows=91.74 loops=599 removed=300"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Actual Rows": 500,
+            "Actual Loops": 1,
+            "Actual Total Time": 463.737,
+            "Shared Hit Blocks": 6503,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Parent Relationship": "Outer",
+                "Plan Rows": 1,
+                "Actual Rows": 500,
+                "Actual Loops": 1,
+                "Actual Total Time": 463.705,
+                "Shared Hit Blocks": 6503,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Seq Scan",
+                    "Parent Relationship": "Outer",
+                    "Relation Name": "page_revisions",
+                    "Alias": "page_revisions",
+                    "Plan Rows": 1,
+                    "Actual Rows": 500,
+                    "Actual Loops": 1,
+                    "Actual Total Time": 373.208,
+                    "Rows Removed by Filter": 100,
+                    "Shared Hit Blocks": 6497,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Filter": "((created_at < '<redacted>'::timestamp without time zone) AND ((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                    "Plans": [
+                      {
+                        "Node Type": "Index Scan",
+                        "Parent Relationship": "SubPlan",
+                        "Subplan Name": "SubPlan 2",
+                        "Relation Name": "page_revisions",
+                        "Index Name": "page_revisions_page_kind_idx",
+                        "Alias": "published",
+                        "Scan Direction": "Forward",
+                        "Plan Rows": 1,
+                        "Actual Rows": 1,
+                        "Actual Loops": 600,
+                        "Actual Total Time": 0.033,
+                        "Rows Removed by Filter": 300,
+                        "Rows Removed by Index Recheck": 0,
+                        "Shared Hit Blocks": 2958,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Index Cond": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text))",
+                        "Filter": "(ROW(version, id) > ROW(page_revisions.version, page_revisions.id))"
+                      },
+                      {
+                        "Node Type": "Aggregate",
+                        "Parent Relationship": "SubPlan",
+                        "Subplan Name": "SubPlan 1",
+                        "Strategy": "Plain",
+                        "Plan Rows": 1,
+                        "Actual Rows": 1,
+                        "Actual Loops": 599,
+                        "Actual Total Time": 0.438,
+                        "Shared Hit Blocks": 3532,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Limit",
+                            "Parent Relationship": "Outer",
+                            "Plan Rows": 1,
+                            "Actual Rows": 91.74,
+                            "Actual Loops": 599,
+                            "Actual Total Time": 0.286,
+                            "Shared Hit Blocks": 3532,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Plans": [
+                              {
+                                "Node Type": "Index Scan",
+                                "Parent Relationship": "Outer",
+                                "Relation Name": "page_revisions",
+                                "Index Name": "page_revisions_page_kind_idx",
+                                "Alias": "newer",
+                                "Scan Direction": "Forward",
+                                "Plan Rows": 1,
+                                "Actual Rows": 91.74,
+                                "Actual Loops": 599,
+                                "Actual Total Time": 0.197,
+                                "Rows Removed by Filter": 300,
+                                "Rows Removed by Index Recheck": 0,
+                                "Shared Hit Blocks": 3532,
+                                "Shared Read Blocks": 0,
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0,
+                                "Index Cond": "(page_id = page_revisions.page_id)",
+                                "Filter": "(ROW(version, id) > ROW(page_revisions.version, page_revisions.id))"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "label": "after_analyze",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 500,
+          "rowsScannedOuterRetentionScan": null,
+          "sharedHitBlocks": 6253,
+          "sharedReadBlocks": 0,
+          "planningMs": 0.62,
+          "executionMs": 427.212,
+          "usesRetentionIdx": false,
+          "seqScanOnPageRevisions": true,
+          "nodeTypes": [
+            "Limit rows=500 loops=1 removed=0",
+            "Sort rows=500 loops=1 removed=0",
+            "Seq Scan[page_revisions] rows=500 loops=1 removed=100",
+            "Seq Scan[page_revisions](SubPlan 2) rows=1 loops=600 removed=300",
+            "Aggregate(SubPlan 1) rows=1 loops=599 removed=0",
+            "Limit rows=91.74 loops=599 removed=0",
+            "Seq Scan[page_revisions] rows=91.74 loops=599 removed=300"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 2,
+            "Actual Rows": 500,
+            "Actual Loops": 1,
+            "Actual Total Time": 427.145,
+            "Shared Hit Blocks": 6253,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Parent Relationship": "Outer",
+                "Plan Rows": 2,
+                "Actual Rows": 500,
+                "Actual Loops": 1,
+                "Actual Total Time": 427.104,
+                "Shared Hit Blocks": 6253,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Seq Scan",
+                    "Parent Relationship": "Outer",
+                    "Relation Name": "page_revisions",
+                    "Alias": "page_revisions",
+                    "Plan Rows": 2,
+                    "Actual Rows": 500,
+                    "Actual Loops": 1,
+                    "Actual Total Time": 426.914,
+                    "Rows Removed by Filter": 100,
+                    "Shared Hit Blocks": 6253,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Filter": "((created_at < '<redacted>'::timestamp without time zone) AND ((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                    "Plans": [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Parent Relationship": "SubPlan",
+                        "Subplan Name": "SubPlan 2",
+                        "Relation Name": "page_revisions",
+                        "Alias": "published",
+                        "Plan Rows": 200,
+                        "Actual Rows": 1,
+                        "Actual Loops": 600,
+                        "Actual Total Time": 0.183,
+                        "Rows Removed by Filter": 300,
+                        "Shared Hit Blocks": 2885,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Filter": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                      },
+                      {
+                        "Node Type": "Aggregate",
+                        "Parent Relationship": "SubPlan",
+                        "Subplan Name": "SubPlan 1",
+                        "Strategy": "Plain",
+                        "Plan Rows": 1,
+                        "Actual Rows": 1,
+                        "Actual Loops": 599,
+                        "Actual Total Time": 0.378,
+                        "Shared Hit Blocks": 3361,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Limit",
+                            "Parent Relationship": "Outer",
+                            "Plan Rows": 100,
+                            "Actual Rows": 91.74,
+                            "Actual Loops": 599,
+                            "Actual Total Time": 0.347,
+                            "Shared Hit Blocks": 3361,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Plans": [
+                              {
+                                "Node Type": "Seq Scan",
+                                "Parent Relationship": "Outer",
+                                "Relation Name": "page_revisions",
+                                "Alias": "newer",
+                                "Plan Rows": 200,
+                                "Actual Rows": 91.74,
+                                "Actual Loops": 599,
+                                "Actual Total Time": 0.187,
+                                "Rows Removed by Filter": 300,
+                                "Shared Hit Blocks": 3361,
+                                "Shared Read Blocks": 0,
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0,
+                                "Filter": "((page_id = page_revisions.page_id) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "label": "after_analyze_warm",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 500,
+          "rowsScannedOuterRetentionScan": null,
+          "sharedHitBlocks": 6253,
+          "sharedReadBlocks": 0,
+          "planningMs": 0.302,
+          "executionMs": 384.964,
+          "usesRetentionIdx": false,
+          "seqScanOnPageRevisions": true,
+          "nodeTypes": [
+            "Limit rows=500 loops=1 removed=0",
+            "Sort rows=500 loops=1 removed=0",
+            "Seq Scan[page_revisions] rows=500 loops=1 removed=100",
+            "Seq Scan[page_revisions](SubPlan 2) rows=1 loops=600 removed=300",
+            "Aggregate(SubPlan 1) rows=1 loops=599 removed=0",
+            "Limit rows=91.74 loops=599 removed=0",
+            "Seq Scan[page_revisions] rows=91.74 loops=599 removed=300"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 2,
+            "Actual Rows": 500,
+            "Actual Loops": 1,
+            "Actual Total Time": 384.904,
+            "Shared Hit Blocks": 6253,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Sort",
+                "Parent Relationship": "Outer",
+                "Plan Rows": 2,
+                "Actual Rows": 500,
+                "Actual Loops": 1,
+                "Actual Total Time": 384.873,
+                "Shared Hit Blocks": 6253,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Plans": [
+                  {
+                    "Node Type": "Seq Scan",
+                    "Parent Relationship": "Outer",
+                    "Relation Name": "page_revisions",
+                    "Alias": "page_revisions",
+                    "Plan Rows": 2,
+                    "Actual Rows": 500,
+                    "Actual Loops": 1,
+                    "Actual Total Time": 384.757,
+                    "Rows Removed by Filter": 100,
+                    "Shared Hit Blocks": 6253,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Filter": "((created_at < '<redacted>'::timestamp without time zone) AND ((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                    "Plans": [
+                      {
+                        "Node Type": "Seq Scan",
+                        "Parent Relationship": "SubPlan",
+                        "Subplan Name": "SubPlan 2",
+                        "Relation Name": "page_revisions",
+                        "Alias": "published",
+                        "Plan Rows": 200,
+                        "Actual Rows": 1,
+                        "Actual Loops": 600,
+                        "Actual Total Time": 0.149,
+                        "Rows Removed by Filter": 300,
+                        "Shared Hit Blocks": 2885,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Filter": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                      },
+                      {
+                        "Node Type": "Aggregate",
+                        "Parent Relationship": "SubPlan",
+                        "Subplan Name": "SubPlan 1",
+                        "Strategy": "Plain",
+                        "Plan Rows": 1,
+                        "Actual Rows": 1,
+                        "Actual Loops": 599,
+                        "Actual Total Time": 0.491,
+                        "Shared Hit Blocks": 3361,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Limit",
+                            "Parent Relationship": "Outer",
+                            "Plan Rows": 100,
+                            "Actual Rows": 91.74,
+                            "Actual Loops": 599,
+                            "Actual Total Time": 0.337,
+                            "Shared Hit Blocks": 3361,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Plans": [
+                              {
+                                "Node Type": "Seq Scan",
+                                "Parent Relationship": "Outer",
+                                "Relation Name": "page_revisions",
+                                "Alias": "newer",
+                                "Plan Rows": 200,
+                                "Actual Rows": 91.74,
+                                "Actual Loops": 599,
+                                "Actual Total Time": 0.33,
+                                "Rows Removed by Filter": 300,
+                                "Shared Hit Blocks": 3361,
+                                "Shared Read Blocks": 0,
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0,
+                                "Filter": "((page_id = page_revisions.page_id) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "informationalRuns": [],
+      "applyVariantPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "LockRows",
+          "Sort",
+          "Seq Scan[page_revisions]",
+          "Seq Scan[page_revisions](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Seq Scan[page_revisions]"
+        ],
+        "seqScanOnPageRevisions": true,
+        "usesRetentionIdx": false
+      },
+      "genericPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "Index Scan[page_revisions_retention_idx]",
+          "Seq Scan[page_revisions](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Seq Scan[page_revisions]"
+        ],
+        "seqScanOnPageRevisions": true,
+        "usesRetentionIdx": true
+      },
+      "verdict": {
+        "worstExecutionMs": 463.824,
+        "statementTimeoutHit": false,
+        "underBudget5s": true,
+        "underStatementTimeout15s": true,
+        "underRetentionJobTimeout4s_info": true,
+        "noSeqScanOnPageRevisionsInMeasuredRuns": false,
+        "retentionIdxUsedEveryCompletedRun": false,
+        "pass": true
+      },
+      "cleanup": {
+        "revisionsDeleted": 600,
+        "pagesDeleted": 1
+      }
+    },
+    {
+      "case": "large",
+      "note": "100 parents x 1,000 aged publish rows = 100k; 90k eligible, LIMIT 500",
+      "seeded": {
+        "parents": 100,
+        "rowsPerParent": 1000,
+        "rows": 100000,
+        "seedMs": 48498
+      },
+      "tableCountsBeforeExplain": {
+        "marker_pages": 100,
+        "marker_revisions": 100000,
+        "foreign_revisions": 0,
+        "foreign_aged_revisions": 0
+      },
+      "expectReturned": 500,
+      "runs": [
+        {
+          "label": "as_is_stats",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 500,
+          "rowsScannedOuterRetentionScan": 500,
+          "sharedHitBlocks": 4620,
+          "sharedReadBlocks": 40,
+          "planningMs": 59.687,
+          "executionMs": 904.311,
+          "usesRetentionIdx": true,
+          "seqScanOnPageRevisions": false,
+          "nodeTypes": [
+            "Limit rows=500 loops=1 removed=0",
+            "Index Scan[page_revisions_retention_idx] rows=500 loops=1 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2) rows=1 loops=500 removed=0",
+            "Aggregate(SubPlan 1) rows=1 loops=500 removed=0",
+            "Limit rows=100 loops=500 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx] rows=100 loops=500 removed=0"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 243,
+            "Actual Rows": 500,
+            "Actual Loops": 1,
+            "Actual Total Time": 904.179,
+            "Shared Hit Blocks": 4620,
+            "Shared Read Blocks": 40,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Relation Name": "page_revisions",
+                "Index Name": "page_revisions_retention_idx",
+                "Alias": "page_revisions",
+                "Scan Direction": "Forward",
+                "Plan Rows": 243,
+                "Actual Rows": 500,
+                "Actual Loops": 1,
+                "Actual Total Time": 904.131,
+                "Rows Removed by Filter": 0,
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 4620,
+                "Shared Read Blocks": 40,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Index Cond": "(created_at < '<redacted>'::timestamp without time zone)",
+                "Filter": "(((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                "Plans": [
+                  {
+                    "Node Type": "Index Only Scan",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 2",
+                    "Relation Name": "page_revisions",
+                    "Index Name": "page_revisions_page_kind_version_id_idx",
+                    "Alias": "published",
+                    "Scan Direction": "Forward",
+                    "Plan Rows": 360,
+                    "Actual Rows": 1,
+                    "Actual Loops": 500,
+                    "Actual Total Time": 0.404,
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 1597,
+                    "Shared Read Blocks": 9,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Index Cond": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                  },
+                  {
+                    "Node Type": "Aggregate",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 1",
+                    "Strategy": "Plain",
+                    "Plan Rows": 1,
+                    "Actual Rows": 1,
+                    "Actual Loops": 500,
+                    "Actual Total Time": 1.401,
+                    "Shared Hit Blocks": 2132,
+                    "Shared Read Blocks": 31,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 100,
+                        "Actual Rows": 100,
+                        "Actual Loops": 500,
+                        "Actual Total Time": 1.389,
+                        "Shared Hit Blocks": 2132,
+                        "Shared Read Blocks": 31,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Index Only Scan",
+                            "Parent Relationship": "Outer",
+                            "Relation Name": "page_revisions",
+                            "Index Name": "page_revisions_page_kind_version_id_idx",
+                            "Alias": "newer",
+                            "Scan Direction": "Forward",
+                            "Plan Rows": 360,
+                            "Actual Rows": 100,
+                            "Actual Loops": 500,
+                            "Actual Total Time": 1.19,
+                            "Rows Removed by Index Recheck": 0,
+                            "Shared Hit Blocks": 2132,
+                            "Shared Read Blocks": 31,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Index Cond": "((page_id = page_revisions.page_id) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "label": "after_analyze",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 500,
+          "rowsScannedOuterRetentionScan": 500,
+          "sharedHitBlocks": 4276,
+          "sharedReadBlocks": 0,
+          "planningMs": 0.634,
+          "executionMs": 162.374,
+          "usesRetentionIdx": true,
+          "seqScanOnPageRevisions": false,
+          "nodeTypes": [
+            "Limit rows=500 loops=1 removed=0",
+            "Index Scan[page_revisions_retention_idx] rows=500 loops=1 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2) rows=1 loops=500 removed=0",
+            "Aggregate(SubPlan 1) rows=1 loops=500 removed=0",
+            "Limit rows=100 loops=500 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx] rows=100 loops=500 removed=0"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 250,
+            "Actual Rows": 500,
+            "Actual Loops": 1,
+            "Actual Total Time": 162.284,
+            "Shared Hit Blocks": 4276,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Relation Name": "page_revisions",
+                "Index Name": "page_revisions_retention_idx",
+                "Alias": "page_revisions",
+                "Scan Direction": "Forward",
+                "Plan Rows": 250,
+                "Actual Rows": 500,
+                "Actual Loops": 1,
+                "Actual Total Time": 162.221,
+                "Rows Removed by Filter": 0,
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 4276,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Index Cond": "(created_at < '<redacted>'::timestamp without time zone)",
+                "Filter": "(((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                "Plans": [
+                  {
+                    "Node Type": "Index Only Scan",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 2",
+                    "Relation Name": "page_revisions",
+                    "Index Name": "page_revisions_page_kind_version_id_idx",
+                    "Alias": "published",
+                    "Scan Direction": "Forward",
+                    "Plan Rows": 333,
+                    "Actual Rows": 1,
+                    "Actual Loops": 500,
+                    "Actual Total Time": 0.188,
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 1606,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Index Cond": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                  },
+                  {
+                    "Node Type": "Aggregate",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 1",
+                    "Strategy": "Plain",
+                    "Plan Rows": 1,
+                    "Actual Rows": 1,
+                    "Actual Loops": 500,
+                    "Actual Total Time": 0.134,
+                    "Shared Hit Blocks": 2161,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 100,
+                        "Actual Rows": 100,
+                        "Actual Loops": 500,
+                        "Actual Total Time": 0.129,
+                        "Shared Hit Blocks": 2161,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Index Only Scan",
+                            "Parent Relationship": "Outer",
+                            "Relation Name": "page_revisions",
+                            "Index Name": "page_revisions_page_kind_version_id_idx",
+                            "Alias": "newer",
+                            "Scan Direction": "Forward",
+                            "Plan Rows": 333,
+                            "Actual Rows": 100,
+                            "Actual Loops": 500,
+                            "Actual Total Time": 0.121,
+                            "Rows Removed by Index Recheck": 0,
+                            "Shared Hit Blocks": 2161,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Index Cond": "((page_id = page_revisions.page_id) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "label": "after_analyze_warm",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 500,
+          "rowsScannedOuterRetentionScan": 500,
+          "sharedHitBlocks": 4276,
+          "sharedReadBlocks": 0,
+          "planningMs": 0.264,
+          "executionMs": 87.59,
+          "usesRetentionIdx": true,
+          "seqScanOnPageRevisions": false,
+          "nodeTypes": [
+            "Limit rows=500 loops=1 removed=0",
+            "Index Scan[page_revisions_retention_idx] rows=500 loops=1 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2) rows=1 loops=500 removed=0",
+            "Aggregate(SubPlan 1) rows=1 loops=500 removed=0",
+            "Limit rows=100 loops=500 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx] rows=100 loops=500 removed=0"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 250,
+            "Actual Rows": 500,
+            "Actual Loops": 1,
+            "Actual Total Time": 87.517,
+            "Shared Hit Blocks": 4276,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Relation Name": "page_revisions",
+                "Index Name": "page_revisions_retention_idx",
+                "Alias": "page_revisions",
+                "Scan Direction": "Forward",
+                "Plan Rows": 250,
+                "Actual Rows": 500,
+                "Actual Loops": 1,
+                "Actual Total Time": 87.479,
+                "Rows Removed by Filter": 0,
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 4276,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Index Cond": "(created_at < '<redacted>'::timestamp without time zone)",
+                "Filter": "(((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                "Plans": [
+                  {
+                    "Node Type": "Index Only Scan",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 2",
+                    "Relation Name": "page_revisions",
+                    "Index Name": "page_revisions_page_kind_version_id_idx",
+                    "Alias": "published",
+                    "Scan Direction": "Forward",
+                    "Plan Rows": 333,
+                    "Actual Rows": 1,
+                    "Actual Loops": 500,
+                    "Actual Total Time": 0.007,
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 1606,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Index Cond": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                  },
+                  {
+                    "Node Type": "Aggregate",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 1",
+                    "Strategy": "Plain",
+                    "Plan Rows": 1,
+                    "Actual Rows": 1,
+                    "Actual Loops": 500,
+                    "Actual Total Time": 0.166,
+                    "Shared Hit Blocks": 2161,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 100,
+                        "Actual Rows": 100,
+                        "Actual Loops": 500,
+                        "Actual Total Time": 0.161,
+                        "Shared Hit Blocks": 2161,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Index Only Scan",
+                            "Parent Relationship": "Outer",
+                            "Relation Name": "page_revisions",
+                            "Index Name": "page_revisions_page_kind_version_id_idx",
+                            "Alias": "newer",
+                            "Scan Direction": "Forward",
+                            "Plan Rows": 333,
+                            "Actual Rows": 100,
+                            "Actual Loops": 500,
+                            "Actual Total Time": 0.154,
+                            "Rows Removed by Index Recheck": 0,
+                            "Shared Hit Blocks": 2161,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Index Cond": "((page_id = page_revisions.page_id) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "informationalRuns": [],
+      "applyVariantPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "LockRows",
+          "Index Scan[page_revisions_retention_idx]",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx]"
+        ],
+        "seqScanOnPageRevisions": false,
+        "usesRetentionIdx": true
+      },
+      "genericPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "Index Scan[page_revisions_retention_idx]",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx]"
+        ],
+        "seqScanOnPageRevisions": false,
+        "usesRetentionIdx": true
+      },
+      "verdict": {
+        "worstExecutionMs": 904.311,
+        "statementTimeoutHit": false,
+        "underBudget5s": true,
+        "underStatementTimeout15s": true,
+        "underRetentionJobTimeout4s_info": true,
+        "noSeqScanOnPageRevisionsInMeasuredRuns": true,
+        "retentionIdxUsedEveryCompletedRun": true,
+        "pass": true
+      },
+      "cleanup": {
+        "revisionsDeleted": 100000,
+        "pagesDeleted": 100
+      }
+    },
+    {
+      "case": "sparse",
+      "note": "100 parents x 100 aged rows = 10k; 0 eligible under floor 100 (mandate shape)",
+      "seeded": {
+        "parents": 100,
+        "rowsPerParent": 100,
+        "rows": 10000,
+        "seedMs": 2850
+      },
+      "tableCountsBeforeExplain": {
+        "marker_pages": 100,
+        "marker_revisions": 10000,
+        "foreign_revisions": 0,
+        "foreign_aged_revisions": 0
+      },
+      "expectReturned": 0,
+      "runs": [
+        {
+          "label": "as_is_stats",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 0,
+          "rowsScannedOuterRetentionScan": 10000,
+          "sharedHitBlocks": 213515,
+          "sharedReadBlocks": 0,
+          "planningMs": 0.338,
+          "executionMs": 3857.83,
+          "usesRetentionIdx": true,
+          "seqScanOnPageRevisions": false,
+          "nodeTypes": [
+            "Limit rows=0 loops=1 removed=0",
+            "Index Scan[page_revisions_retention_idx] rows=0 loops=1 removed=10000",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2) rows=0.99 loops=10000 removed=0",
+            "Aggregate(SubPlan 1) rows=1 loops=9900 removed=0",
+            "Limit rows=50 loops=9900 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx] rows=50 loops=9900 removed=0"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 275,
+            "Actual Rows": 0,
+            "Actual Loops": 1,
+            "Actual Total Time": 3857.783,
+            "Shared Hit Blocks": 213515,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Relation Name": "page_revisions",
+                "Index Name": "page_revisions_retention_idx",
+                "Alias": "page_revisions",
+                "Scan Direction": "Forward",
+                "Plan Rows": 275,
+                "Actual Rows": 0,
+                "Actual Loops": 1,
+                "Actual Total Time": 3857.773,
+                "Rows Removed by Filter": 10000,
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 213515,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Index Cond": "(created_at < '<redacted>'::timestamp without time zone)",
+                "Filter": "(((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                "Plans": [
+                  {
+                    "Node Type": "Index Only Scan",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 2",
+                    "Relation Name": "page_revisions",
+                    "Index Name": "page_revisions_page_kind_version_id_idx",
+                    "Alias": "published",
+                    "Scan Direction": "Forward",
+                    "Plan Rows": 366,
+                    "Actual Rows": 0.99,
+                    "Actual Loops": 10000,
+                    "Actual Total Time": 0.08,
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 39901,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Index Cond": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                  },
+                  {
+                    "Node Type": "Aggregate",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 1",
+                    "Strategy": "Plain",
+                    "Plan Rows": 1,
+                    "Actual Rows": 1,
+                    "Actual Loops": 9900,
+                    "Actual Total Time": 0.268,
+                    "Shared Hit Blocks": 62540,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 100,
+                        "Actual Rows": 50,
+                        "Actual Loops": 9900,
+                        "Actual Total Time": 0.237,
+                        "Shared Hit Blocks": 62540,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Index Only Scan",
+                            "Parent Relationship": "Outer",
+                            "Relation Name": "page_revisions",
+                            "Index Name": "page_revisions_page_kind_version_id_idx",
+                            "Alias": "newer",
+                            "Scan Direction": "Forward",
+                            "Plan Rows": 366,
+                            "Actual Rows": 50,
+                            "Actual Loops": 9900,
+                            "Actual Total Time": 0.206,
+                            "Rows Removed by Index Recheck": 0,
+                            "Shared Hit Blocks": 62540,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Index Cond": "((page_id = page_revisions.page_id) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "label": "after_analyze",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 0,
+          "rowsScannedOuterRetentionScan": 10000,
+          "sharedHitBlocks": 97684,
+          "sharedReadBlocks": 0,
+          "planningMs": 1.525,
+          "executionMs": 2565.434,
+          "usesRetentionIdx": true,
+          "seqScanOnPageRevisions": false,
+          "nodeTypes": [
+            "Limit rows=0 loops=1 removed=0",
+            "Index Scan[page_revisions_retention_idx] rows=0 loops=1 removed=10000",
+            "Index Scan[page_revisions_page_version_idx](SubPlan 2) rows=0.99 loops=10000 removed=1",
+            "Aggregate(SubPlan 1) rows=1 loops=9900 removed=0",
+            "Limit rows=50 loops=9900 removed=0",
+            "Index Scan[page_revisions_page_version_idx] rows=50 loops=9900 removed=1"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 25,
+            "Actual Rows": 0,
+            "Actual Loops": 1,
+            "Actual Total Time": 2565.379,
+            "Shared Hit Blocks": 97684,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Relation Name": "page_revisions",
+                "Index Name": "page_revisions_retention_idx",
+                "Alias": "page_revisions",
+                "Scan Direction": "Forward",
+                "Plan Rows": 25,
+                "Actual Rows": 0,
+                "Actual Loops": 1,
+                "Actual Total Time": 2565.377,
+                "Rows Removed by Filter": 10000,
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 97684,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Index Cond": "(created_at < '<redacted>'::timestamp without time zone)",
+                "Filter": "(((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 2",
+                    "Relation Name": "page_revisions",
+                    "Index Name": "page_revisions_page_version_idx",
+                    "Alias": "published",
+                    "Scan Direction": "Forward",
+                    "Plan Rows": 33,
+                    "Actual Rows": 0.99,
+                    "Actual Loops": 10000,
+                    "Actual Total Time": 0.033,
+                    "Rows Removed by Filter": 1,
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 40144,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Index Cond": "((page_id = page_revisions.page_id) AND (version >= page_revisions.version))",
+                    "Filter": "((kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                  },
+                  {
+                    "Node Type": "Aggregate",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 1",
+                    "Strategy": "Plain",
+                    "Plan Rows": 1,
+                    "Actual Rows": 1,
+                    "Actual Loops": 9900,
+                    "Actual Total Time": 0.206,
+                    "Shared Hit Blocks": 46900,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 33,
+                        "Actual Rows": 50,
+                        "Actual Loops": 9900,
+                        "Actual Total Time": 0.177,
+                        "Shared Hit Blocks": 46900,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Index Scan",
+                            "Parent Relationship": "Outer",
+                            "Relation Name": "page_revisions",
+                            "Index Name": "page_revisions_page_version_idx",
+                            "Alias": "newer",
+                            "Scan Direction": "Forward",
+                            "Plan Rows": 33,
+                            "Actual Rows": 50,
+                            "Actual Loops": 9900,
+                            "Actual Total Time": 0.153,
+                            "Rows Removed by Filter": 1,
+                            "Rows Removed by Index Recheck": 0,
+                            "Shared Hit Blocks": 46900,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Index Cond": "((page_id = page_revisions.page_id) AND (version >= page_revisions.version))",
+                            "Filter": "(ROW(version, id) > ROW(page_revisions.version, page_revisions.id))"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "label": "after_analyze_warm",
+          "statementTimeoutMs": 15000,
+          "timedOut": false,
+          "rowsReturned": 0,
+          "rowsScannedOuterRetentionScan": 10000,
+          "sharedHitBlocks": 97684,
+          "sharedReadBlocks": 0,
+          "planningMs": 1.248,
+          "executionMs": 2598.224,
+          "usesRetentionIdx": true,
+          "seqScanOnPageRevisions": false,
+          "nodeTypes": [
+            "Limit rows=0 loops=1 removed=0",
+            "Index Scan[page_revisions_retention_idx] rows=0 loops=1 removed=10000",
+            "Index Scan[page_revisions_page_version_idx](SubPlan 2) rows=0.99 loops=10000 removed=1",
+            "Aggregate(SubPlan 1) rows=1 loops=9900 removed=0",
+            "Limit rows=50 loops=9900 removed=0",
+            "Index Scan[page_revisions_page_version_idx] rows=50 loops=9900 removed=1"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 25,
+            "Actual Rows": 0,
+            "Actual Loops": 1,
+            "Actual Total Time": 2598.152,
+            "Shared Hit Blocks": 97684,
+            "Shared Read Blocks": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Relation Name": "page_revisions",
+                "Index Name": "page_revisions_retention_idx",
+                "Alias": "page_revisions",
+                "Scan Direction": "Forward",
+                "Plan Rows": 25,
+                "Actual Rows": 0,
+                "Actual Loops": 1,
+                "Actual Total Time": 2598.151,
+                "Rows Removed by Filter": 10000,
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 97684,
+                "Shared Read Blocks": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Index Cond": "(created_at < '<redacted>'::timestamp without time zone)",
+                "Filter": "(((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                "Plans": [
+                  {
+                    "Node Type": "Index Scan",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 2",
+                    "Relation Name": "page_revisions",
+                    "Index Name": "page_revisions_page_version_idx",
+                    "Alias": "published",
+                    "Scan Direction": "Forward",
+                    "Plan Rows": 33,
+                    "Actual Rows": 0.99,
+                    "Actual Loops": 10000,
+                    "Actual Total Time": 0.058,
+                    "Rows Removed by Filter": 1,
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 40144,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Index Cond": "((page_id = page_revisions.page_id) AND (version >= page_revisions.version))",
+                    "Filter": "((kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                  },
+                  {
+                    "Node Type": "Aggregate",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 1",
+                    "Strategy": "Plain",
+                    "Plan Rows": 1,
+                    "Actual Rows": 1,
+                    "Actual Loops": 9900,
+                    "Actual Total Time": 0.193,
+                    "Shared Hit Blocks": 46900,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 33,
+                        "Actual Rows": 50,
+                        "Actual Loops": 9900,
+                        "Actual Total Time": 0.162,
+                        "Shared Hit Blocks": 46900,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Index Scan",
+                            "Parent Relationship": "Outer",
+                            "Relation Name": "page_revisions",
+                            "Index Name": "page_revisions_page_version_idx",
+                            "Alias": "newer",
+                            "Scan Direction": "Forward",
+                            "Plan Rows": 33,
+                            "Actual Rows": 50,
+                            "Actual Loops": 9900,
+                            "Actual Total Time": 0.122,
+                            "Rows Removed by Filter": 1,
+                            "Rows Removed by Index Recheck": 0,
+                            "Shared Hit Blocks": 46900,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Index Cond": "((page_id = page_revisions.page_id) AND (version >= page_revisions.version))",
+                            "Filter": "(ROW(version, id) > ROW(page_revisions.version, page_revisions.id))"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "informationalRuns": [],
+      "applyVariantPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "LockRows",
+          "Index Scan[page_revisions_retention_idx]",
+          "Index Scan[page_revisions_page_version_idx](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Index Scan[page_revisions_page_version_idx]"
+        ],
+        "seqScanOnPageRevisions": false,
+        "usesRetentionIdx": true
+      },
+      "genericPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "Index Scan[page_revisions_retention_idx]",
+          "Index Scan[page_revisions_page_version_idx](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Index Scan[page_revisions_page_version_idx]"
+        ],
+        "seqScanOnPageRevisions": false,
+        "usesRetentionIdx": true
+      },
+      "verdict": {
+        "worstExecutionMs": 3857.83,
+        "statementTimeoutHit": false,
+        "underBudget5s": true,
+        "underStatementTimeout15s": true,
+        "underRetentionJobTimeout4s_info": true,
+        "noSeqScanOnPageRevisionsInMeasuredRuns": true,
+        "retentionIdxUsedEveryCompletedRun": true,
+        "pass": true
+      },
+      "cleanup": {
+        "revisionsDeleted": 10000,
+        "pagesDeleted": 100
+      }
+    },
+    {
+      "case": "sparse_large",
+      "note": "1,000 parents x 100 aged rows = 100k; 0 eligible, walks the whole aged range at 100k (H2 'on the large fixture')",
+      "seeded": {
+        "parents": 1000,
+        "rowsPerParent": 100,
+        "rows": 100000,
+        "seedMs": 59846
+      },
+      "tableCountsBeforeExplain": {
+        "marker_pages": 1000,
+        "marker_revisions": 100000,
+        "foreign_revisions": 0,
+        "foreign_aged_revisions": 0
+      },
+      "expectReturned": 0,
+      "runs": [
+        {
+          "label": "as_is_stats",
+          "statementTimeoutMs": 15000,
+          "timedOut": true,
+          "wallMsUntilCancel": 15252
+        },
+        {
+          "label": "after_analyze",
+          "statementTimeoutMs": 15000,
+          "timedOut": true,
+          "wallMsUntilCancel": 15254
+        },
+        {
+          "label": "after_analyze_warm",
+          "statementTimeoutMs": 15000,
+          "timedOut": true,
+          "wallMsUntilCancel": 15326
+        }
+      ],
+      "informationalRuns": [
+        {
+          "label": "info_extended_timeout_120s",
+          "statementTimeoutMs": 120000,
+          "timedOut": false,
+          "rowsReturned": 0,
+          "rowsScannedOuterRetentionScan": 100000,
+          "sharedHitBlocks": 834137,
+          "sharedReadBlocks": 12,
+          "planningMs": 0.302,
+          "executionMs": 34051.036,
+          "usesRetentionIdx": true,
+          "seqScanOnPageRevisions": false,
+          "nodeTypes": [
+            "Limit rows=0 loops=1 removed=0",
+            "Index Scan[page_revisions_retention_idx] rows=0 loops=1 removed=100000",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2) rows=0.99 loops=100000 removed=0",
+            "Aggregate(SubPlan 1) rows=1 loops=99000 removed=0",
+            "Limit rows=50 loops=99000 removed=0",
+            "Index Only Scan[page_revisions_page_kind_version_id_idx] rows=50 loops=99000 removed=0"
+          ],
+          "sanitizedPlan": {
+            "Node Type": "Limit",
+            "Plan Rows": 306,
+            "Actual Rows": 0,
+            "Actual Loops": 1,
+            "Actual Total Time": 34050.983,
+            "Shared Hit Blocks": 834137,
+            "Shared Read Blocks": 12,
+            "Shared Dirtied Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Plans": [
+              {
+                "Node Type": "Index Scan",
+                "Parent Relationship": "Outer",
+                "Relation Name": "page_revisions",
+                "Index Name": "page_revisions_retention_idx",
+                "Alias": "page_revisions",
+                "Scan Direction": "Forward",
+                "Plan Rows": 306,
+                "Actual Rows": 0,
+                "Actual Loops": 1,
+                "Actual Total Time": 34050.982,
+                "Rows Removed by Filter": 100000,
+                "Rows Removed by Index Recheck": 0,
+                "Shared Hit Blocks": 834137,
+                "Shared Read Blocks": 12,
+                "Shared Dirtied Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Index Cond": "(created_at < '<redacted>'::timestamp without time zone)",
+                "Filter": "(((kind <> '<redacted>'::text) OR EXISTS(SubPlan 2)) AND ((SubPlan 1) = '<redacted>'::bigint))",
+                "Plans": [
+                  {
+                    "Node Type": "Index Only Scan",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 2",
+                    "Relation Name": "page_revisions",
+                    "Index Name": "page_revisions_page_kind_version_id_idx",
+                    "Alias": "published",
+                    "Scan Direction": "Forward",
+                    "Plan Rows": 41,
+                    "Actual Rows": 0.99,
+                    "Actual Loops": 100000,
+                    "Actual Total Time": 0.081,
+                    "Rows Removed by Index Recheck": 0,
+                    "Shared Hit Blocks": 300001,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Index Cond": "((page_id = page_revisions.page_id) AND (kind = '<redacted>'::text) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                  },
+                  {
+                    "Node Type": "Aggregate",
+                    "Parent Relationship": "SubPlan",
+                    "Subplan Name": "SubPlan 1",
+                    "Strategy": "Plain",
+                    "Plan Rows": 1,
+                    "Actual Rows": 1,
+                    "Actual Loops": 99000,
+                    "Actual Total Time": 0.246,
+                    "Shared Hit Blocks": 472663,
+                    "Shared Read Blocks": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Plans": [
+                      {
+                        "Node Type": "Limit",
+                        "Parent Relationship": "Outer",
+                        "Plan Rows": 41,
+                        "Actual Rows": 50,
+                        "Actual Loops": 99000,
+                        "Actual Total Time": 0.209,
+                        "Shared Hit Blocks": 472663,
+                        "Shared Read Blocks": 0,
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Plans": [
+                          {
+                            "Node Type": "Index Only Scan",
+                            "Parent Relationship": "Outer",
+                            "Relation Name": "page_revisions",
+                            "Index Name": "page_revisions_page_kind_version_id_idx",
+                            "Alias": "newer",
+                            "Scan Direction": "Forward",
+                            "Plan Rows": 41,
+                            "Actual Rows": 50,
+                            "Actual Loops": 99000,
+                            "Actual Total Time": 0.15,
+                            "Rows Removed by Index Recheck": 0,
+                            "Shared Hit Blocks": 472663,
+                            "Shared Read Blocks": 0,
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Index Cond": "((page_id = page_revisions.page_id) AND (ROW(version, id) > ROW(page_revisions.version, page_revisions.id)))"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "applyVariantPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "LockRows",
+          "Index Scan[page_revisions_retention_idx]",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx]"
+        ],
+        "seqScanOnPageRevisions": false,
+        "usesRetentionIdx": true
+      },
+      "genericPlanNoAnalyze": {
+        "nodeTypes": [
+          "Limit",
+          "Index Scan[page_revisions_retention_idx]",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx](SubPlan 2)",
+          "Aggregate(SubPlan 1)",
+          "Limit",
+          "Index Only Scan[page_revisions_page_kind_version_id_idx]"
+        ],
+        "seqScanOnPageRevisions": false,
+        "usesRetentionIdx": true
+      },
+      "verdict": {
+        "worstExecutionMs": null,
+        "statementTimeoutHit": true,
+        "underBudget5s": false,
+        "underStatementTimeout15s": false,
+        "underRetentionJobTimeout4s_info": false,
+        "noSeqScanOnPageRevisionsInMeasuredRuns": true,
+        "retentionIdxUsedEveryCompletedRun": true,
+        "pass": false
+      },
+      "cleanup": {
+        "revisionsDeleted": 100000,
+        "pagesDeleted": 1000
+      }
+    }
+  ],
+  "budgetVerdict": {
+    "pass": false,
+    "breaches": ["sparse_large"]
+  },
+  "knownLimitationHandoff": {
+    "to": "TASK-551-06-L03",
+    "finding": "The whole-family candidate read walks page_revisions_retention_idx in (created_at, id) order and evaluates the correlated keep-newest floor probe (LIMIT keepNewest=100 over the per-parent indexes) for every aged row until 500 candidates match. When most parents hold <= 100 rows (sparse candidates), no row qualifies, so one statement walks the whole aged range with one probe per row: cost ~ aged_rows x min(newer_rows, 100) index entries. The index is used and no Seq Scan appears, but latency scales linearly with the aged range and breaches the 5 s budget / 15 s statement timeout at 100k sparse rows.",
+    "proposedMitigation": [
+      "Bound rows EXAMINED, not only rows returned: read a keyset window over page_revisions_retention_idx (inner ORDER BY created_at, id LIMIT <scan window, e.g. 2,000>) and apply the floor/anchor probes to that window only; persist the (created_at, id) high-water mark per family so the next batch/run resumes after it (restart from the beginning once the aged range is exhausted).",
+      "Alternatively/additionally semi-join parents that can hold candidates at all (page_id IN (SELECT page_id ... GROUP BY page_id HAVING count(*) > keepNewest), bounded) so sparse parents are skipped without per-row probes.",
+      "L03 must treat a statement-timeout cancel of the candidate read as a bounded batch failure (retention_batch_failed) and must not retry-spin; the L01 retention job's tx-local statement_timeout is 4 s (RETENTION_STATEMENT_TIMEOUT_MS), below the 10k-row sparse latency measured here."
+    ]
+  },
+  "residue": {
+    "finalSweep": {
+      "revisionsDeleted": 0,
+      "pagesDeleted": 0
+    },
+    "markerPages": 0,
+    "markerRevisions": 0,
+    "zero": true
+  },
+  "sanitization": "plan nodes whitelisted to structure/counters/timings; condition strings keep column names only, every quoted literal replaced by '<redacted>'; no row data, no ids, no connection strings",
+  "pass": false,
+  "errors": ["sparse_large:budget_breach"]
+}

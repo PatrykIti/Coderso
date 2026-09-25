@@ -752,8 +752,10 @@ environment files may not change. After the gate:
   only the register helper at module evaluation, and solely owns page/detail
   revision route/schema/client/UI envelope adoption, the eight-client consumer
   graph, bounded picker/search/load-more behavior, every cohesive split for
-  touched files above 1,000 lines, its direct tests, and the five-scenario UI
-  smoke. L02 extracts `formReadService` (exact `FormListItem` projection) and
+  touched files above 1,000 lines, its direct tests, and the eight-scenario UI
+  smoke. L02 lands its INITIAL scope and, per Land Order, a FINAL token-guarded
+  binary export download plus legacy synchronous export removal. L02 extracts
+  `formReadService` (exact `FormListItem` projection) and
   `bookingReadService` (all bounded booking lists, capped service-resource/
   schedule arrays, 31-day/500-slot preview) as the sole SQL owners; submission
   payloads use one authorized parent-bound point query, stay
@@ -927,16 +929,18 @@ L04 has closed. Product work then lands strictly in this compile-green order
    readiness.
 6. [ ] **TASK-551-07-L01** — typed cache contracts required by Admin authority.
 7. [ ] **TASK-551-09-L04 INITIAL** — installation-authority module/test only.
-8. [ ] **TASK-551-03-L02** — bounded Admin/revision route, schema, client, UI,
-   consumer-graph and concurrency adoption after 06.
+8. [ ] **TASK-551-03-L02 INITIAL** — bounded Admin/revision route, schema,
+   client, UI, consumer-graph and concurrency adoption after 06.
 9. [ ] **TASK-551-07-L02** — byte-bounded memory LRU/single-flight.
 10. [ ] **TASK-551-08-L01 → L02 → L03 FINAL** — Redis, durable invalidation,
     distributed coalescing and runtime composition after 03-L02's header receipt.
-11. [ ] **TASK-551-03-L03** — aggregate, webhook, and solution-kit batching;
+11. [ ] **TASK-551-03-L02 FINAL** — token-guarded binary export download +
+    legacy sync export removal (after 08-L03 FINAL).
+12. [ ] **TASK-551-03-L03** — aggregate, webhook, and solution-kit batching;
     legacy mutation/invalidation adoption consumes the terminal 08-L03 runtime.
-12. [ ] **TASK-551-04** — exact indexed full-text/trigram search and bounded
+13. [ ] **TASK-551-04** — exact indexed full-text/trigram search and bounded
     assistant candidates (2 leaves).
-13. [ ] **TASK-551-09-L01 → L02 → L03 → L04 FINAL** — hot-path adoption,
+14. [ ] **TASK-551-09-L01 → L02 → L03 → L04 FINAL** — hot-path adoption,
     final Admin/security cache hardening after the 03/04 authority receipts,
     one-query safe whole requests, two-query mutable page/home/post/entry whole
     requests, complete post-commit invalidation, and Admin/security cache
@@ -946,7 +950,7 @@ L04 has closed. Product work then lands strictly in this compile-green order
    validated post-09 production tree; the same sole artifact writer refreshes
    exact set equality and emits a `phase: "final"` receipt with zero planned
    deltas before TASK-551-10-L01 may start.
-14. [ ] **TASK-551-10** — small/large load and fault matrix, documentation,
+15. [ ] **TASK-551-10** — small/large load and fault matrix, documentation,
     operational runbooks, and family closure (2 leaves).
 **TASK-551-11** remains the author/audit/implementation/post-audit evidence
 sidecar with no product leaf or numbered product slot. Its bootstrap receipt is
@@ -985,11 +989,12 @@ L11 graph node.
     { "id": "TASK-551-06-L03:single", "taskId": "TASK-551-06-L03", "occurrenceId": "single", "dependsOn": ["TASK-551-06-L02:single"] },
     { "id": "TASK-551-07-L01:single", "taskId": "TASK-551-07-L01", "occurrenceId": "single", "dependsOn": ["TASK-551-06-L03:single"] },
     { "id": "TASK-551-09-L04:initial", "taskId": "TASK-551-09-L04", "occurrenceId": "initial", "dependsOn": ["TASK-551-07-L01:single"] },
-    { "id": "TASK-551-03-L02:single", "taskId": "TASK-551-03-L02", "occurrenceId": "single", "dependsOn": ["TASK-551-09-L04:initial"] },
-    { "id": "TASK-551-07-L02:single", "taskId": "TASK-551-07-L02", "occurrenceId": "single", "dependsOn": ["TASK-551-03-L02:single"] },
+    { "id": "TASK-551-03-L02:initial", "taskId": "TASK-551-03-L02", "occurrenceId": "initial", "dependsOn": ["TASK-551-09-L04:initial"] },
+    { "id": "TASK-551-07-L02:single", "taskId": "TASK-551-07-L02", "occurrenceId": "single", "dependsOn": ["TASK-551-03-L02:initial"] },
     { "id": "TASK-551-08-L01:single", "taskId": "TASK-551-08-L01", "occurrenceId": "single", "dependsOn": ["TASK-551-07-L02:single"] },
     { "id": "TASK-551-08-L02:single", "taskId": "TASK-551-08-L02", "occurrenceId": "single", "dependsOn": ["TASK-551-08-L01:single"] },
     { "id": "TASK-551-08-L03:final", "taskId": "TASK-551-08-L03", "occurrenceId": "final", "dependsOn": ["TASK-551-08-L02:single"] },
+    { "id": "TASK-551-03-L02:final", "taskId": "TASK-551-03-L02", "occurrenceId": "final", "dependsOn": ["TASK-551-08-L03:final"] },
     { "id": "TASK-551-03-L03:single", "taskId": "TASK-551-03-L03", "occurrenceId": "single", "dependsOn": ["TASK-551-08-L03:final"] },
     { "id": "TASK-551-04-L01:single", "taskId": "TASK-551-04-L01", "occurrenceId": "single", "dependsOn": ["TASK-551-03-L03:single"] },
     { "id": "TASK-551-04-L02:single", "taskId": "TASK-551-04-L02", "occurrenceId": "single", "dependsOn": ["TASK-551-04-L01:single"] },
@@ -1168,7 +1173,7 @@ output fails, and only that verified single path enters the closure.
   `bun run gates:coderso`, the required strict security scan, exact
   performance and reliability suites, migration-from-clean plus
   migration-from-prior snapshots, at least five distinct two-process/Redis
-  real-flow smokes, and the TASK-551-03-L02 five-scenario Admin-list Playwright
+  real-flow smokes, and the TASK-551-03-L02 eight-scenario Admin-list Playwright
   smoke in both light and dark modes with screenshots, visible-effect
   assertions, and zero console errors.
 - TASK-551-01-L01 runs in `initial` phase before 02 and is re-dispatched
@@ -1214,3 +1219,92 @@ return result.value;
 Public reads execute security first, validate mutable manifests before value
 GET, and render authoritatively without fill when proof fails; tests cover all
 branches.
+
+## Dated Contract Corrections — 2026-09-25 (mirror of TASK-551-03-L02 round 2, disposition R2-06; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`
+(R2-06, HEAD `9c5b6666`). The graph, land-order list and ownership summary
+above were edited in place; this section records why.
+
+1. **TASK-551-03-L02 becomes phased.** The token-guarded binary export download
+   needs the 08-L03 FINAL binary response lane, and `core/server/routes/formsRoutes.ts`
+   stays forbidden to 08-L03, so 03-L02 (sole `formsRoutes.ts` owner) gains a
+   FINAL occurrence. The dispatch parser accepts a lone `single` or exactly
+   `initial` + `final` per task (`task-551-dispatch-contract.mjs`
+   `normalizeGraph`), so the former node `TASK-551-03-L02:single` is now
+   `TASK-551-03-L02:initial` (same `dependsOn`), and the new node
+   `TASK-551-03-L02:final` sits immediately after `TASK-551-08-L03:final` with
+   `dependsOn: ["TASK-551-08-L03:final"]`. The occurrence count grows from 32 to 33.
+2. **`TASK-551-07-L02:single`** now depends on `TASK-551-03-L02:initial`
+   (its envelope is mirrored in TASK-551-07-L02). No other graph node referenced
+   `TASK-551-03-L02:single`.
+3. **No `TASK-551-09-L01:single` edge.** TASK-551-09-L01 allowlisted
+   `tests/integration/routes/forms.test.ts` only "for preserving" the dispatcher
+   regressions and never scheduled a concrete edit to it (its public dispatcher
+   work lives in `publicSite.tsx`; `forms.test.ts` exercises the Admin
+   `registerFormsRoutes` surface). Its only owed edit was the 2026-09-24
+   legacy-export removal handoff, which now moves to 03-L02 FINAL, and ownership
+   of `forms.test.ts` transfers 09-L01 → 03-L02 (09-L01 keeps executing it
+   read-only). 03-L02 FINAL therefore lands before 09-L01 and needs no edge from it.
+4. **Unchanged neighbours.** `TASK-551-03-L03:single` keeps
+   `dependsOn: ["TASK-551-08-L03:final"]` (its envelope is not touched). The
+   total product order still comes from node order, which places 03-L02 FINAL
+   between 08-L03 FINAL and 03-L03.
+5. **FINAL scope** (owned by the 03-L02 envelope): token-guarded
+   `GET /forms/:id/export-jobs/:jobId/download`, removal of the legacy synchronous
+   `GET /forms/:id/submissions/export` route, the matching
+   `tests/integration/routes/forms.test.ts` edits, the `formsClient` +
+   `FormSubmissionsPage` switch, and the Security Contract rows. The Admin-list
+   smoke count in Family Testing Requirements and the TASK-551-03 ownership
+   summary now reads eight scenarios, matching 03-L02 C15.
+
+## Dated Contract Corrections — 2026-09-25 (mirror of TASK-551-03-L02 round 3, dispositions R3-33 and R3-37; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round3-dispositions.md`
+(R3-33, R3-37; HEAD `9c5b6666`). This section extends the R2-06 section
+directly above and edits nothing in place. Quoted text is authoritative when a
+line anchor drifts.
+
+1. **R3-33: occurrence-count handoff to TASK-551-11.** The R2-06 sentence at
+   :1237, "The occurrence count grows from 32 to 33.", stays true. The family
+   preflight (`preflightTask551DispatchSnapshot`, source head `9c5b6666`)
+   now reports 41 task files, 11 children, 29 leaves and 33 occurrences.
+   `tests/unit/workflows/task551AuthorAudit.test.ts` is owned by TASK-551-11
+   (its allowlist `ownedTests` at TASK-551-11 :86), and it pinned
+   `occurrenceCount: 32` at four sites: :327 and :336 in "author-audit
+   preflight derives the current graph without returning source text" (:321),
+   plus :742 and :991. Before the re-pin, the orchestrator verified this as
+   RED with three failing tests. TASK-551-11's dated 2026-09-25 correction owns
+   the mechanical re-pin of all four sites to 33. The re-pin changes only
+   those four numeric literals. It changes no test name, control flow,
+   fixture, or other assertion, and no envelope. The DB-free gate is
+   `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/unit/workflows/task551AuthorAudit.test.ts`,
+   and it passes 40/40.
+2. **R3-37: open `tests/bun-lane-manifest.json` regeneration handoff.**
+   TASK-551-01-L01 owns `tests/bun-lane-manifest.json` (01-L01 allowlist :73)
+   and regenerates it only through the classifier
+   (`bun scripts/bun-lane-classify.ts`; its mutation scope allows only that
+   file, 01-L01 :1369-1372). 03-L02 records that the manifest "is stale at HEAD
+   (475 vs 454), and this leaf's new Bun suites widen the gap, so the rebaseline
+   is 01-L01's, not ours" (03-L02 :4201-4203). The handoff is: **01-L01 FINAL**
+   regenerates the manifest through the classifier, and the regenerated rows
+   include every new Bun suite that 03-L02 (INITIAL and FINAL) adds. Nobody
+   hand-edits the manifest. The item stays **open** in this parent until
+   TASK-551-01-L01 records a dated mirror that takes it on. The 01-L01 FINAL
+   inventory correction's sentence "This correction does not hand-edit
+   `tests/bun-lane-manifest.json`, and default-lane membership follows the
+   family's existing classifier path." (01-L01 :1859-1860) still applies and
+   is not superseded.
+3. **R3-37: 03-L03 dependency clarification.** The TASK-551-03-L03 header
+   `**Dependencies:** TASK-551-03-L02; TASK-551-07-L01 and terminal
+   TASK-551-08-L03 FINAL cache/invalidation runtime receipt` (03-L03 :9-10)
+   refers to **03-L02 INITIAL, satisfied transitively. There is no FINAL
+   edge.** In the graph, `TASK-551-03-L02:initial` (:992) precedes
+   `TASK-551-07-L02:single` → `TASK-551-08-L01:single` →
+   `TASK-551-08-L02:single` → `TASK-551-08-L03:final`, and
+   `TASK-551-03-L03:single` depends only on `TASK-551-08-L03:final` (:998).
+   `TASK-551-03-L02:final` (:997) is a sibling, not a predecessor. Node order
+   alone places it before 03-L03. This refines, and does not supersede, R2-06
+   item 4 at :1249-1250: "`TASK-551-03-L03:single` keeps
+   `dependsOn: ["TASK-551-08-L03:final"]` (its envelope is not touched)." The
+   header wording itself belongs to the TASK-551-03-L03 file's own mirror.

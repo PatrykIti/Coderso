@@ -1512,3 +1512,127 @@ certification; any such need invalidates the smoke and returns to the affected
 gate/post-audit/smoke phases.
 Do not edit any
 TASK-414/TASK-547 task state or changelog 1266 during TASK-554 closure.
+
+## Dated Contract Handoff — 2026-09-24 (to TASK-551-03-L02; append-only)
+
+Source: owner decision D2 in
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-faza0-dispositions.md`,
+resolving finding F-10 (with the D2 parts of F-09 and F-31 and the TASK-554
+ordering note of O13/F-34). This section amends the contract only as stated
+here; every other TASK-554 clause, its status (`✅ Done`) and its changelog
+entry stay unchanged.
+
+- **Suites concerned.** This task named
+  `tests/vitest/admin/postsClientCacheAuthority.test.ts` as the focused owner
+  of the post cache race matrix, to run with `postsClient.test.ts` (:401-403),
+  and pinned both in the targeted Vitest command (:1306-1307).
+- **Permitted adaptation.** TASK-551-03-L02 migrates the posts list wire shape
+  from a raw array to the `{ items, nextCursor, hasMore }` envelope, with no
+  raw-array fallback. It may adapt the array-shaped list mocks, fixtures and
+  list-result expectations in those two suites MECHANICALLY to that envelope.
+  Nothing else may change. Sites verified at HEAD `ae6bea8a`:
+  - `postsClientCacheAuthority.test.ts`: :294 (stale list
+    `jsonResponse([...])`) and :297-298 (`listRead` / `getCachedPosts()`
+    `toEqual([])`), :542, :771-772, :800 (stale list resolves), :926 and :933
+    (fresh-list `toMatchObject([...])`).
+  - `postsClient.test.ts`: :443 and :499 (`listPostsCached()` results).
+  - The exact shape of the `getCachedPosts` / `listPostsCached` assertions
+    follows the post-migration signatures pinned by TASK-551-03-L02.
+- **Assertions that stay 1:1.** Test names, control flow, deferred-promise
+  resolve order, and the values of these assertion families must not change:
+  - mutation-generation and stale-list-epoch discard (a stale list read that
+    overlaps a publish/metadata/delete mutation resolves as empty or fresh,
+    never as the stale row);
+  - tombstone behavior (`getCachedPostDetail(...)` is `null` after delete;
+    deleted rows never reappear);
+  - accepted/deferred metadata request ordering (A/B races, the
+    `detailReadCount` reconciliation, the failed-reconciliation path);
+  - cache-event publication order: exactly one list `update` and then exactly
+    one detail `update` after an accepted, non-tombstoned full detail; delete
+    keeps its ordered list/detail `invalidate` events and never emits an
+    update;
+  - stale-while-revalidate / cached-read results and request counts in
+    `postsClient.test.ts`.
+- **Rerun rule amended.** The requirement that these TASK-554 suites "rerun
+  unchanged" now reads "rerun with wire-shape-only adaptation". The rerun is an
+  execution-only command in the TASK-551 envelope (O9/F-31), and both files
+  join the TASK-551-03-L02 allowlist and Vitest argv (O8/F-09). Any
+  non-mechanical change to these suites needs a new owner decision.
+
+### D2 extension — 2026-09-25 (TASK-551-03-L02 round 2, R2-23; append-only)
+
+Source: disposition R2-23 in
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`.
+This extends the D2 handoff above. Its "Assertions that stay 1:1" and "Rerun
+rule amended" clauses are unchanged. Sites were re-verified at HEAD `9c5b6666`,
+where both suites are byte-identical to the D2 baseline line numbers above.
+
+- **Pinned post-migration shapes.** Envelope below means
+  `{ items, nextCursor, hasMore }`. If TASK-551-03-L02's `PostListEnvelope`
+  carries further keys, the adapted fixtures and expectations include them with
+  fixture values, and that is still mechanical.
+  - A stale list read that the client discards resolves the envelope form of
+    today's `getCachedPosts() ?? []` (`core/admin/services/postsClient.ts:379-381`).
+    It resolves the currently cached first-page envelope for the same filters
+    when one exists (fresh), and otherwise
+    `{ items: [], nextCursor: null, hasMore: false }`. It never resolves the
+    discarded response's rows. R2-23's wording "stale-epoch discard resolves
+    `{items:[],nextCursor:null,hasMore:false}`" is read this way. A literal
+    always-empty reading would flip `:931` from fresh to empty and break the D2
+    1:1 rule.
+  - `getCachedPosts(filters?)` returns the cached first-page envelope for those
+    filters, or `null` when nothing is cached (unchanged `null` semantics).
+  - Default filters send no query string: the list request stays the bare
+    `/admin/api/posts`. The `url.endsWith("/posts")` routing and the literal URL
+    pins therefore stay unchanged.
+  - `listPostsCached(filters?, options?)` takes the filters first. A call that
+    passes only `{ force: true }` becomes `listPostsCached(undefined, { force: true })`,
+    which uses the default first-page filters. This call-argument move is the
+    only non-fixture edit this extension permits.
+  - Browser hydration: the value stored under `cacheKeys.postsList` (inside the
+    unchanged `{ value, savedAt }` local-cache wrapper) becomes the versioned
+    envelope `{ v: 1, filters, items, nextCursor, hasMore }`, with `filters`
+    equal to the posts client's exported default first-page filter constant. A
+    legacy raw-array value is a miss and triggers the network read, so the two
+    hydration fixtures must be adapted. The storage-only fields `v` and
+    `filters` are not part of the returned or `getCachedPosts()` envelope. Any
+    new legacy-miss assertion belongs to TASK-551-03-L02's own suites, not to
+    these two files.
+- **Precondition (flagged for TASK-551-03-L02).** Today `upsertCachedPost`
+  seeds the list cache from nothing (`readPostsCache() ?? []`,
+  `postsClient.ts:247-256`). Several sites below read `getCachedPosts()` after
+  only a detail read or mutation, with no list read: `:118`, `:204`, `:248`,
+  `:349`, `:396`, `:443`, `:452`, `:468`, `:475`, `:509`, `:584`, `:654`,
+  `:711`. Their mechanical form holds only if the migrated client still creates
+  or patches the default-filter first-page envelope on detail upsert. That
+  envelope is synthesized as `nextCursor: null, hasMore: false`, and
+  `removeCachedPost` filters `items`. If TASK-551-03-L02 patches only an
+  existing envelope, those assertions change semantically, and under the D2
+  rerun rule that needs a new owner decision.
+- **Site list** (every array-shaped list site plus the unchanged neighbours
+  that pin the list contract; "mechanical" means wire-shape only):
+
+| File:line (HEAD `9c5b6666`) | Current | Classification and adapted form |
+|---|---|---|
+| Authority `:285`, `:540`, `:731`, `:769`, `:798`, `:919`, `:926` | `listPostsCached({ force: true })` | mechanical: `listPostsCached(undefined, { force: true })` |
+| Authority `:294`, `:542`, `:747`, `:800`, `:928` | `jsonResponse([post(...)])` list mock | mechanical: `jsonResponse({ items: [post(...)], nextCursor: null, hasMore: false })` |
+| Authority `:771-778` | multi-line `jsonResponse([post({ status: "scheduled", ... })])` | mechanical: same envelope wrapping |
+| Authority `:898` + `:911` | `freshList = [post(...)]`, `jsonResponse(freshList)` | mechanical: the response becomes the envelope over `freshList` (array constant may stay as `items`) |
+| Authority `:296`, `:544`, `:802` | `resolves.toEqual([])` | mechanical: `resolves.toEqual({ items: [], nextCursor: null, hasMore: false })`; stale-epoch family, empty never stale |
+| Authority `:298`, `:509`, `:545`, `:584`, `:803` | `getCachedPosts()).toEqual([])` | mechanical: `toEqual({ items: [], nextCursor: null, hasMore: false })` (`:509`, `:584` under the precondition) |
+| Authority `:749`, `:780`, `:926`, `:931` | `resolves.toMatchObject([{...}])` | mechanical: `resolves.toMatchObject({ items: [{...}] })`; `:931` stays the fresh list |
+| Authority `:349`, `:396`, `:443-445`, `:452`, `:468`, `:475`, `:654-661`, `:711-718`, `:750`, `:781`, `:933` | `getCachedPosts()).toMatchObject([...])` | mechanical: `toMatchObject({ items: [...] })`, same element values and count |
+| Authority `:118`, `:204`, `:248`, `:886` | `getCachedPosts()?.find(...)` | mechanical: `getCachedPosts()?.items.find(...)`; `:886` stays `toBeUndefined()` (tombstone) |
+| Authority `:272`, `:531`, `:738`, `:763`, `:791`, `:909` | `url.endsWith("/posts") && GET` routing | unchanged (bare URL) |
+| Authority `:437`, `:462`, `:476` | `detailReads` `toHaveLength(2/3/3)` | unchanged |
+| Authority `:83`, `:147` and every `events`/`deliveries` `toEqual([` (`:119`, `:120`, `:145`, `:205`, `:211`, `:249`, `:299`, `:350`, `:397`, `:438`, `:453`, `:454`, `:463`, `:477`, `:510`, `:511`, `:547`, `:585`, `:639`, `:645`, `:719`, `:805`, `:888`) | cache-event keys and order | unchanged |
+| Client `:55` | `jsonResponse([])` for `listPosts()` | mechanical: `jsonResponse({ items: [], nextCursor: null, hasMore: false })` |
+| Client `:59-61` | `listPosts()`, `calls` `toHaveLength(1)`, input `"/admin/api/posts"` | unchanged (no query string) |
+| Client `:419` | `jsonResponse([])` list mock (never reached) | mechanical: empty envelope |
+| Client `:425-440`, `:441` | `cached` array; `storage.setItem(cacheKeys.postsList, { value: cached })` | mechanical: the array stays the `items`; the stored value becomes `{ v: 1, filters: <default filter constant>, items: cached, nextCursor: null, hasMore: false }` |
+| Client `:443-445` | `listPostsCached()`; `toEqual(cached)`; `calls.length` 0 | mechanical: `toEqual({ items: cached, nextCursor: null, hasMore: false })`; call and count unchanged |
+| Client `:465-487`, `:492` | `stale`/`fresh` arrays; `jsonResponse(fresh)` | mechanical: arrays stay item lists; the response becomes the envelope over `fresh` |
+| Client `:498` | `storage.setItem(cacheKeys.postsList, { value: stale })` | mechanical: versioned envelope over `stale` |
+| Client `:499`, `:503` | `toEqual(stale)` / `toEqual(fresh)` | mechanical: `toEqual({ items: stale/fresh, nextCursor: null, hasMore: false })` |
+| Client `:504-505` | `calls` `toHaveLength(1)`, input `"/admin/api/posts"` | unchanged (TTL expiry semantics and bare URL) |
+| Client `:189`, `:217`, `:229-230`, `:314-327` | revision-endpoint mocks and revision assertions | unchanged (not the posts-list wire) |

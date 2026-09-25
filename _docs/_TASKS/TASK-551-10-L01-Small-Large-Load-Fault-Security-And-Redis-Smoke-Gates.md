@@ -1052,6 +1052,7 @@ bunx vitest run tests/vitest/db/databaseConfig.test.ts \
   tests/vitest/db/queryFingerprintRegistry.test.ts \
   tests/vitest/db/databaseApplicationIdentity.test.ts
 bun test tests/integration/server/task551DatabaseLifecycle.test.ts \
+  tests/integration/server/task551DatabaseLifecycleRealDb.test.ts \
   tests/integration/server/task551RuntimeEntrypoints.test.ts \
   tests/perf/database-pool-telemetry.test.ts
 bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts
@@ -1084,22 +1085,24 @@ bun test tests/unit/access/accessLogService.test.ts \
 bunx vitest run tests/vitest/database/revisionAllocation.test.ts \
   tests/vitest/maintenance/partitionReadinessService.test.ts
 bun test tests/unit/pages/revisionService.test.ts \
-  tests/unit/widgets/widgetTemplateRevisionService.test.ts \
   tests/unit/content/detailPageRevisionService.test.ts \
   tests/integration/server/task551RevisionConcurrency.test.ts \
   tests/integration/server/task551RevisionRetention.test.ts \
   tests/perf/database-revision-budgets.test.ts \
+  tests/perf/database-revision-candidate-bounds.test.ts \
   tests/integration/runtime/retentionScheduler.test.ts \
+  tests/integration/runtime/retentionScheduler-real-db.test.ts \
   tests/integration/server/task551RetentionJobService.test.ts \
   tests/perf/database-retention-jobs.test.ts \
-  tests/perf/database-partition-readiness.test.ts
+  tests/perf/database-partition-readiness.test.ts \
+  tests/perf/database-partition-readiness-catalog.test.ts
 bun scripts/task-551-partition-readiness.ts --check
 bun test --timeout 120000 tests/perf/task551DatabaseCachePerformanceGate.test.ts
 bun test --timeout 120000 tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts
 bun test --timeout 120000 tests/security/task551ServerCacheSecurityGate.test.ts
 bun test --timeout 180000 tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts
 SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-test REDIS_URL="$REDIS_URL" bun scripts/task551-redis-smoke.ts
-playwright-cli -s=wf55103l02
+bun scripts/runtime-smoke.ts run --suite task-551-admin-lists --profile certification --session wf551l01admin
 env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run \
   tests/vitest/cache/server-cache-contracts.test.ts \
   tests/vitest/cache/server-cache-coherence-conditional-write.test.ts \
@@ -1111,6 +1114,7 @@ bun run test
 bun run test:coverage
 bun run precommit:check
 bun run gates:coderso
+bun run gates:coderso:perf
 bun run scan:security:strict
 git diff --check
 ```
@@ -1186,7 +1190,13 @@ Playwright client environment.
     "_docs/_workflows/_smoke/task-551/03-l02/booking-dirty-refresh-light.png",
     "_docs/_workflows/_smoke/task-551/03-l02/booking-dirty-refresh-dark.png",
     "_docs/_workflows/_smoke/task-551/03-l02/extracted-views-light.png",
-    "_docs/_workflows/_smoke/task-551/03-l02/extracted-views-dark.png"
+    "_docs/_workflows/_smoke/task-551/03-l02/extracted-views-dark.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/page-history-load-more-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/page-history-load-more-dark.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/offpage-selected-label-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/offpage-selected-label-dark.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/custom-screen-list-view-light.png",
+    "_docs/_workflows/_smoke/task-551/03-l02/custom-screen-list-view-dark.png"
   ],
   "forbiddenPaths": [
     "core/db/schema.ts",
@@ -1194,6 +1204,7 @@ Playwright client environment.
     "core/server/publicSite.tsx",
     "tests/perf/database-query-inventory.test.ts",
     "tests/integration/server/task551DatabaseLifecycle.test.ts",
+    "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts",
     "docs/develop/runtime-model.md",
     "_docs/_TASKS/TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md"
   ],
@@ -1237,9 +1248,9 @@ Playwright client environment.
     {
       "id": "database-lifecycle-tests",
       "lane": "bun-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551RuntimeEntrypoints.test.ts", "tests/perf/database-pool-telemetry.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551RuntimeEntrypoints.test.ts", "tests/perf/database-pool-telemetry.test.ts"],
       "environmentProfile": "task551-db-test",
-      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551RuntimeEntrypoints.test.ts", "tests/perf/database-pool-telemetry.test.ts"], "minimum": 1 }
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551RuntimeEntrypoints.test.ts", "tests/perf/database-pool-telemetry.test.ts"], "minimum": 4 }
     },
     {
       "id": "search-vector-vitest",
@@ -1307,9 +1318,9 @@ Playwright client environment.
     {
       "id": "revision-retention-db-tests",
       "lane": "bun-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/pages/revisionService.test.ts", "tests/unit/widgets/widgetTemplateRevisionService.test.ts", "tests/unit/content/detailPageRevisionService.test.ts", "tests/integration/server/task551RevisionConcurrency.test.ts", "tests/integration/server/task551RevisionRetention.test.ts", "tests/perf/database-revision-budgets.test.ts", "tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/unit/pages/revisionService.test.ts", "tests/unit/content/detailPageRevisionService.test.ts", "tests/integration/server/task551RevisionConcurrency.test.ts", "tests/integration/server/task551RevisionRetention.test.ts", "tests/perf/database-revision-budgets.test.ts", "tests/perf/database-revision-candidate-bounds.test.ts", "tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/runtime/retentionScheduler-real-db.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts", "tests/perf/database-partition-readiness-catalog.test.ts"],
       "environmentProfile": "task551-db-test",
-      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/unit/pages/revisionService.test.ts", "tests/unit/widgets/widgetTemplateRevisionService.test.ts", "tests/unit/content/detailPageRevisionService.test.ts", "tests/integration/server/task551RevisionConcurrency.test.ts", "tests/integration/server/task551RevisionRetention.test.ts", "tests/perf/database-revision-budgets.test.ts", "tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts"], "minimum": 1 }
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/unit/pages/revisionService.test.ts", "tests/unit/content/detailPageRevisionService.test.ts", "tests/integration/server/task551RevisionConcurrency.test.ts", "tests/integration/server/task551RevisionRetention.test.ts", "tests/perf/database-revision-budgets.test.ts", "tests/perf/database-revision-candidate-bounds.test.ts", "tests/integration/runtime/retentionScheduler.test.ts", "tests/integration/runtime/retentionScheduler-real-db.test.ts", "tests/integration/server/task551RetentionJobService.test.ts", "tests/perf/database-retention-jobs.test.ts", "tests/perf/database-partition-readiness.test.ts", "tests/perf/database-partition-readiness-catalog.test.ts"], "minimum": 12 }
     },
     {
       "id": "partition-readiness-check",
@@ -1356,7 +1367,7 @@ Playwright client environment.
     {
       "id": "admin-list-ui-smoke",
       "lane": "runtime-smoke",
-      "argv": ["playwright-cli", "-s=wf55103l02"],
+      "argv": ["bun", "scripts/runtime-smoke.ts", "run", "--suite", "task-551-admin-lists", "--profile", "certification", "--session", "wf551l01admin"],
       "environmentProfile": "none",
       "positiveDiscovery": { "kind": "not-applicable" }
     },
@@ -1396,6 +1407,13 @@ Playwright client environment.
       "positiveDiscovery": { "kind": "not-applicable" }
     },
     {
+      "id": "coderso-performance-gate",
+      "lane": "aggregate",
+      "argv": ["bun", "--env-file=/dev/null", "scripts/coderso-release-gates.ts", "--gate", "performance"],
+      "environmentProfile": "task551-db-redis-test",
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
       "id": "strict-security-scan",
       "lane": "tooling",
       "argv": ["bun", "run", "scan:security:strict"],
@@ -1414,7 +1432,7 @@ Playwright client environment.
     {
       "id": "single",
       "dependsOn": ["TASK-551-01-L01:final"],
-      "commandIds": ["core-lint-types", "core-lint", "final-query-inventory", "pg-stat-interval-test", "database-contract-vitest", "database-lifecycle-tests", "search-vector-vitest", "schema-migration-drift-verification", "migration-and-plan-tests", "online-indexes-rollout-forward-first", "online-indexes-rollout-forward-second", "online-indexes-status", "retention-policy-vitest", "retention-db-tests", "revision-contract-vitest", "revision-retention-db-tests", "partition-readiness-check", "cache-performance-gate", "cache-fault-matrix", "cache-security-gate", "two-process-redis-smoke-test", "redis-smoke-script", "admin-list-ui-smoke", "cache-contract-vitest", "full-bun-test", "coverage", "precommit-check", "coderso-gates", "strict-security-scan", "diff-check"]
+      "commandIds": ["core-lint-types", "core-lint", "final-query-inventory", "pg-stat-interval-test", "database-contract-vitest", "database-lifecycle-tests", "search-vector-vitest", "schema-migration-drift-verification", "migration-and-plan-tests", "online-indexes-rollout-forward-first", "online-indexes-rollout-forward-second", "online-indexes-status", "retention-policy-vitest", "retention-db-tests", "revision-contract-vitest", "revision-retention-db-tests", "partition-readiness-check", "cache-performance-gate", "cache-fault-matrix", "cache-security-gate", "two-process-redis-smoke-test", "redis-smoke-script", "admin-list-ui-smoke", "cache-contract-vitest", "full-bun-test", "coverage", "precommit-check", "coderso-gates", "coderso-performance-gate", "strict-security-scan", "diff-check"]
     }
   ]
 }
@@ -1520,3 +1538,284 @@ canonicalization, so the INITIAL and FINAL vitest lines canonicalize to the
 `["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", ...]`.
 The 09-L04 owner receipt SHA-256 digest must be re-derived at closure from
 this corrected block.
+
+## Dated Contract Corrections — 2026-09-25 (03-L02 round-2 mirror)
+
+This entry mirrors TASK-551-03-L02 round-2 dispositions R2-10 and R2-34
+(`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`)
+and 03-L02 corrections C14, C15 and C17 into this leaf. As in the earlier
+mirrors, only the literal receipt surfaces were edited in place — the Workflow
+Dispatch Envelope (so it stays one strictly parseable JSON document for the
+TASK-551 dispatch preflight) and its prose mirror in "Exact Validation
+Commands". Every other sentence quoted under "Superseded" below keeps its
+original bytes above and is superseded by this section.
+
+**Source of truth.** 03-L02 C15 registers the runtime-smoke suite
+`task-551-admin-lists` (adapter `scripts/runtime-smoke/adapters/task-551-admin-lists.ts`
+plus `task-551-admin-lists/{contracts,fixtures,browser-plan,suite}.ts`) and pins
+eight scenario ids for this leaf; 10-L01 reuses the suite and never re-owns it.
+03-L02 C14/C17 route `gates:coderso`, `gates:coderso:perf` and `scan:security`
+for the 03-L02 occurrence to this leaf.
+
+### M1 — Registered runtime-smoke suite replaces the bare Playwright session
+
+- Envelope `admin-list-ui-smoke.argv`, before: `["playwright-cli", "-s=wf55103l02"]`;
+  after: `["bun", "scripts/runtime-smoke.ts", "run", "--suite", "task-551-admin-lists", "--profile", "certification", "--session", "wf551l01admin"]`.
+  Lane `runtime-smoke`, `environmentProfile: "none"` and
+  `positiveDiscovery: { "kind": "not-applicable" }` are unchanged; this matches
+  03-L02's own `admin-list-playwright-smoke` row (runtime-smoke / `none`, C14).
+- Validation Commands prose, before: `playwright-cli -s=wf55103l02`; after:
+  `bun scripts/runtime-smoke.ts run --suite task-551-admin-lists --profile certification --session wf551l01admin`.
+- Session `wf551l01admin` satisfies `SESSION_PATTERN`
+  (`/^[a-z][a-z0-9-]{2,63}$/u`, `scripts/runtime-smoke/cli.ts:10`) and does not
+  collide with 03-L02's own `wf55103l02` run. The shared runner report lands
+  under `_docs/_workflows/_smoke/evidence/task-551/wf551l01admin/` and the
+  suite's session-scoped screenshots under
+  `_docs/_workflows/_smoke/task-551/03-l02/wf551l01admin/`; this leaf's final
+  `ui-smoke-v1.json` and root screenshots stay at the `03-l02/` root and collide
+  with neither 03-L02 output directory (C15).
+- Profile `certification` is this leaf's release-boundary run. Precondition:
+  `scripts/runtime-smoke/cli.ts` `SUPPORTED_PROFILES["task-551-admin-lists"]`
+  must include `"certification"` (03-L02 C15 owns that registration; C15 as of
+  this mirror names only `fast`). Until 03-L02 registers it, this command fails
+  closed with `smoke_argument_invalid` ("profile is not supported by the
+  selected suite") and blocks dispatch; this leaf never edits the registry.
+- Superseded envelope preamble sentence: "The PATH-resolved Playwright client has
+  `environmentProfile:"none"` and receives no DB/Redis binding. Any required
+  server process is separately started by L11 through its trusted absolute-Bun,
+  profile-controlled launch, never through the Playwright client environment."
+  Replacement: the registered runner `bun scripts/runtime-smoke.ts` runs with
+  `environmentProfile:"none"` and receives no injected DB/Redis binding; the
+  shared runner lifecycle owns the dev-server restart, admin plus front health
+  checks, the `task551-03l02-<run>` seed prefix and set-based cleanup of only
+  prefixed rows, exactly as 03-L02 C15 declares.
+
+### M2 — Admin-list scenarios widen from five to eight
+
+The exact ordered scenario ids (03-L02 C15) are: `pagination-next-previous`,
+`filter-reset`, `equal-sort-boundary`, `booking-dirty-refresh`,
+`extracted-views`, `page-history-load-more`, `offpage-selected-label`,
+`custom-screen-list-view`. Each runs in light and dark mode with DOM/geometry/
+ARIA visible-effect assertions, one screenshot per mode, and zero console errors.
+
+- Envelope `allowlist`: after the ten existing screenshots, six were appended in
+  scenario order: `page-history-load-more-{light,dark}.png`,
+  `offpage-selected-label-{light,dark}.png` and
+  `custom-screen-list-view-{light,dark}.png`, all under
+  `_docs/_workflows/_smoke/task-551/03-l02/` (sixteen screenshots total).
+- Superseded (Overview): "Re-run and consume TASK-551-03-L02's five Admin-list
+  visible-effect scenarios in light and dark mode with screenshots and zero
+  console errors." Replacement: re-run and consume TASK-551-03-L02's eight
+  Admin-list visible-effect scenarios, in the order above, through the
+  registered suite in light and dark mode with screenshots and zero console
+  errors.
+- Superseded (Exact Single-Writer Ownership): "`_docs/_workflows/_smoke/task-551/03-l02/ui-smoke-v1.json`
+  and these exact ten screenshots: … `extracted-views-{light,dark}.png` in that
+  same directory." Replacement: the same `ui-smoke-v1.json` and these exact
+  sixteen screenshots: the ten listed plus `page-history-load-more-{light,dark}.png`,
+  `offpage-selected-label-{light,dark}.png` and
+  `custom-screen-list-view-{light,dark}.png`, in that same directory.
+- Superseded (Required Admin List UI Smoke): "Restart the app and use
+  `playwright-cli -s=wf55103l02` to run, in order, `pagination-next-previous`,
+  `filter-reset`, `equal-sort-boundary`, `booking-dirty-refresh`, and
+  `extracted-views`." and "The fifth scenario covers Booking, Media, and
+  Users/Roles extracted surfaces." Replacement: run the M1 command, which
+  executes the eight ids above in order; `extracted-views` covers Booking, Media
+  and Users/Roles extracted surfaces, `page-history-load-more` covers the page
+  HistorySheet and detail-template history, `offpage-selected-label` covers media
+  and page labels resolved through `ids[]`, and `custom-screen-list-view` covers
+  configured columns, the field filter and sort, and summary cards. A missing
+  mode, screenshot, visible-effect assertion, scenario, or any console error
+  still fails the aggregate gate.
+- Superseded (Implementation Pseudocode): `session: "wf55103l02", scenarios: 5,
+  themes: ["light", "dark"],`. Replacement: `session: "wf551l01admin",
+  scenarios: 8, themes: ["light", "dark"],`.
+- Superseded (Testing Requirements): "Run all five Admin-list Playwright
+  scenarios in both themes; validate ten non-empty screenshots, visible-effect
+  assertions, and zero console errors." Replacement: run all eight Admin-list
+  scenarios through the registered suite in both themes; validate sixteen
+  non-empty screenshots, visible-effect assertions, and zero console errors.
+- `Task551AdminListUiSmokeEvidenceV1` is owned by TASK-551-10; its matching
+  2026-09-25 correction widens the scenario union to the same eight ids and sets
+  `session: "wf551l01admin"`.
+
+### M3 — `gates:coderso:perf` owned by this leaf
+
+- New envelope command, inserted directly after `coderso-gates`:
+  `{ "id": "coderso-performance-gate", "lane": "aggregate", "argv": ["bun", "--env-file=/dev/null", "scripts/coderso-release-gates.ts", "--gate", "performance"], "environmentProfile": "task551-db-redis-test", "positiveDiscovery": { "kind": "not-applicable" } }`.
+  The argv is the `gates:coderso:perf` package script body
+  (`package.json:78`) with the env-free prefix, because the dispatch parser
+  requires every non-`none` command to start with `bun --env-file=/dev/null`
+  (`_docs/_workflows/lib/task-551-dispatch-contract.mjs:553-556`); calling the
+  package script would auto-load `.env` (03-L02 C14).
+- Profile rationale: at HEAD the `performance` gate runs only
+  `tests/perf/codersoPerformanceGate.test.ts` with synthetic
+  `rowsResolver` rows (no DB), but this leaf additively wires its TASK-551
+  performance suite (`tests/perf/task551DatabaseCachePerformanceGate.test.ts`,
+  command `cache-performance-gate`, profile `task551-db-redis-test`) into that
+  gate (Overview; `scripts/coderso-release-gates.ts` ownership). The final gate
+  therefore needs real PostgreSQL and real Redis, so it takes the same
+  `task551-db-redis-test` profile as the suite it wraps; `task551-db-test`
+  would omit Redis and `none` would turn the wired suite into a required skip.
+- Validation Commands prose: `bun run gates:coderso:perf` inserted directly after
+  `bun run gates:coderso`.
+- `occurrences[single].commandIds`: `"coderso-performance-gate"` inserted
+  directly after `"coderso-gates"` (31 ids; every id resolves to exactly one
+  command and each command is used exactly once).
+
+## Dated Contract Corrections — 2026-09-25 (03-L02 round-3 mirror; append-only)
+
+This entry mirrors TASK-551-03-L02 round-3 disposition R3-27 (with the R3-23
+handoff it cites) from
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round3-dispositions.md`
+into this leaf. It is prose-only: the Workflow Dispatch Envelope, its prose
+mirror in "Exact Validation Commands", every command id, argv, profile, session
+and artifact path stay byte-identical, because no path changes. The source of
+truth is 03-L02 "R2-27 — C15 runtime smoke v2"
+(`TASK-551-03-L02-Bounded-Admin-Lists-And-Oversized-Service-Splits.md:4101-4144`).
+Every sentence quoted below keeps its original bytes above and is superseded by
+this section.
+
+### R3-27a — Cleanup is exact `RunFixtureLedger` ownership
+
+- Superseded (2026-09-25 03-L02 round-2 mirror, M1, lines 1583-1587):
+  "Replacement: the registered runner `bun scripts/runtime-smoke.ts` runs with
+  `environmentProfile:"none"` and receives no injected DB/Redis binding; the
+  shared runner lifecycle owns the dev-server restart, admin plus front health
+  checks, the `task551-03l02-<run>` seed prefix and set-based cleanup of only
+  prefixed rows, exactly as 03-L02 C15 declares."
+- Replacement: the registered runner `bun scripts/runtime-smoke.ts` runs with
+  `environmentProfile:"none"` and receives no injected DB/Redis binding. The
+  shared runner lifecycle owns the dev-server restart and the admin plus front
+  health checks. Seeding and cleanup follow 03-L02 C15 v2 (`:4128-4140`):
+  - every created row is appended to a `RunFixtureLedger`
+    (`scripts/runtime-smoke/database/fixture-ledger.ts:83`) with its exact
+    owned-row identity digest;
+  - cleanup is `buildCleanupBatchPlan`
+    (`scripts/runtime-smoke/database/batch-contract.ts:54`), one set-based
+    transactional `DELETE … RETURNING` per profile/wave batch, then one bounded
+    post-commit absence proof;
+  - rows are identified by exact ledger ownership, never by prefix sweep. The
+    `task551-03l02-<run>` prefix is a human marker only and selects no row for
+    cleanup.
+- This leaf's `certification` run (`wf551l01admin`) reuses that suite-owned
+  seed/cleanup path unchanged and adds no cleanup of its own.
+
+### R3-27b — `fast` and `certification` are both registered by 03-L02 C15 v2
+
+- Superseded (2026-09-25 03-L02 round-2 mirror, M1, lines 1573-1578):
+  "Profile `certification` is this leaf's release-boundary run. Precondition:
+  `scripts/runtime-smoke/cli.ts` `SUPPORTED_PROFILES["task-551-admin-lists"]`
+  must include `"certification"` (03-L02 C15 owns that registration; C15 as of
+  this mirror names only `fast`). Until 03-L02 registers it, this command fails
+  closed with `smoke_argument_invalid` ("profile is not supported by the
+  selected suite") and blocks dispatch; this leaf never edits the registry."
+- Replacement: profile `certification` is this leaf's release-boundary run.
+  03-L02 C15 v2 (`:4108-4112`) now pins
+  `SUPPORTED_PROFILES["task-551-admin-lists"] = ["fast", "certification"]` in
+  `scripts/runtime-smoke/cli.ts`. Both profiles run the same eight scenarios
+  and assertions, and `fast` may only shorten controlled waits. 03-L02 runs
+  `fast` (`wf55103l02`); this leaf runs `certification` (`wf551l01admin`) and
+  never edits the registry.
+- The precondition is unchanged in kind: at HEAD `9c5b6666`
+  `SUPPORTED_PROFILES` (`scripts/runtime-smoke/cli.ts:13-28`) has no
+  `task-551-admin-lists` entry yet. The registration lands with 03-L02
+  INITIAL, which precedes this leaf in the land order. If it is missing at
+  dispatch, the M1 command still fails closed with `smoke_argument_invalid`
+  and blocks dispatch.
+
+### R3-27c — Root artifacts route through the 03-L02 inventory gloss
+
+- This leaf's root artifacts under `_docs/_workflows/_smoke/task-551/03-l02/`
+  are `ui-smoke-v1.json` plus the sixteen `<scenario>-{light,dark}.png`
+  screenshots listed in the envelope `allowlist`. They are routed through the
+  inventory gloss that 03-L02 adds under disposition R3-23 in
+  `tests/unit/runtime-smoke/smoke-evidence-inventory.test.ts`. That test is
+  allowlisted for 03-L02 and is not allowlisted for this leaf.
+- R3-23 also pins the 03-L02 session-directory gloss
+  `^_docs/_workflows/_smoke/task-551/03-l02/[a-z][a-z0-9-]{2,63}/[a-z0-9-]+\.png$`,
+  which covers the suite's `03-l02/wf551l01admin/` screenshots named in M1.
+  The shared runner report under
+  `_docs/_workflows/_smoke/evidence/task-551/wf551l01admin/` already matches
+  the canonical `CANONICAL_EVIDENCE_RE`
+  (`smoke-evidence-inventory.test.ts:26`).
+- This leaf never edits the inventory test. If the root-artifact gloss has not
+  landed at dispatch, the inventory gate is a 03-L02 blocker to report. This
+  leaf does not add a local workaround.
+
+## Dated Contract Corrections — 2026-09-25 (revision-suite argv sync; append-only)
+
+### Amendment (2026-09-25): revision-suite argv sync with 06-L02 R9 / 06-L03 A1 / 02-L02
+
+This amendment edits the Exact Validation Commands block and the Workflow
+Dispatch Envelope `json` fence in place. The envelope stays valid JSON, every
+argv stays at or below 128 tokens, and each edited `positiveDiscovery.minimum`
+now equals its path count. The superseded text is quoted below. Line numbers
+are post-edit.
+
+- Sources. The predecessor envelopes add four test files after their own
+  in-place amendments:
+  - 06-L02 R9: `tests/perf/database-revision-candidate-bounds.test.ts`
+    (06-L02 `revision-concurrency-and-budget-tests`, `minimum: 4`).
+  - 06-L03 A1-0: `tests/perf/database-partition-readiness-catalog.test.ts` and
+    `tests/integration/runtime/retentionScheduler-real-db.test.ts`
+    (06-L03 `scheduler-and-database-tests`, `minimum: 6`).
+  - 02-L02 B1: `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`
+    (02-L02 `database-lifecycle-test`, `minimum: 2`).
+  This leaf lists every sibling of those files, so each file joins the same
+  list as its sibling. None of the four exists at HEAD `9c5b6666`; each is
+  created by its owning predecessor, which lands before this leaf.
+- Removed: `tests/unit/widgets/widgetTemplateRevisionService.test.ts`. It is
+  absent from disk and from the index at HEAD `9c5b6666`. `git log -1
+  --diff-filter=D` names `12ae47f6` (2026-08-20, "feat(task-580): remove v1
+  widget system, migrate detail pages to Page V2") as the deleting commit.
+  06-L02 "Exact File Ownership" (`:36-39`) confirms that no
+  `widgetTemplateRevisionService.ts` is created, because the widget-template
+  family is retention-only legacy scope after TASK-580. With the stale path
+  still listed, `bun test` would fail on a missing file.
+- Exact Validation Commands, lifecycle block (`:1054-1057`). Superseded:
+  "bun test tests/integration/server/task551DatabaseLifecycle.test.ts \
+  tests/integration/server/task551RuntimeEntrypoints.test.ts \
+  tests/perf/database-pool-telemetry.test.ts". Replacement: the same block,
+  with `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`
+  inserted after `task551DatabaseLifecycle.test.ts`.
+- Exact Validation Commands, revision/maintenance block (`:1087-1098`).
+  Superseded: "bun test tests/unit/pages/revisionService.test.ts \
+  tests/unit/widgets/widgetTemplateRevisionService.test.ts \
+  tests/unit/content/detailPageRevisionService.test.ts \
+  tests/integration/server/task551RevisionConcurrency.test.ts \
+  tests/integration/server/task551RevisionRetention.test.ts \
+  tests/perf/database-revision-budgets.test.ts \
+  tests/integration/runtime/retentionScheduler.test.ts \
+  tests/integration/server/task551RetentionJobService.test.ts \
+  tests/perf/database-retention-jobs.test.ts \
+  tests/perf/database-partition-readiness.test.ts". Replacement: the
+  widget-template path is dropped. `database-revision-candidate-bounds` follows
+  `database-revision-budgets`, `retentionScheduler-real-db` follows
+  `retentionScheduler`, and `database-partition-readiness-catalog` follows
+  `database-partition-readiness`. That gives twelve paths.
+- Envelope `forbiddenPaths` (`:1207`). Superseded: the list named only
+  `tests/integration/server/task551DatabaseLifecycle.test.ts` of the 02-L02
+  lifecycle suites. Replacement: it also names
+  `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`, because
+  02-L02 owns both files and this leaf only runs them.
+- Envelope command `database-lifecycle-tests` (`:1251-1253`). Superseded argv:
+  `["bun", "--env-file=/dev/null", "test",
+  "tests/integration/server/task551DatabaseLifecycle.test.ts",
+  "tests/integration/server/task551RuntimeEntrypoints.test.ts",
+  "tests/perf/database-pool-telemetry.test.ts"]`, with the same three
+  `positiveDiscovery.paths` and `"minimum": 1`. Replacement: the RealDb path
+  is inserted second in both argv and paths, giving 7 argv tokens, four paths
+  and `"minimum": 4`.
+- Envelope command `revision-retention-db-tests` (`:1321-1323`). Superseded
+  argv: `["bun", "--env-file=/dev/null", "test",` followed by the ten paths
+  quoted in the prose item above, including the widget-template path, with the
+  same ten `positiveDiscovery.paths` and `"minimum": 1`. Replacement: the
+  twelve-path order from the prose item in both argv and paths, giving 15 argv
+  tokens and `"minimum": 12`.
+- Unchanged: command ids, `lane`, `environmentProfile`, `commandIds`, the
+  allowlist, dependencies, and every other command. The Overview receipt
+  sentence at `:297-299` still names `task551DatabaseLifecycle.test.ts` as
+  02-L02's default Bun suite. That sentence describes receipt pins and is not
+  a command, so it is not rewritten. The RealDb leg is run through the
+  commands above.

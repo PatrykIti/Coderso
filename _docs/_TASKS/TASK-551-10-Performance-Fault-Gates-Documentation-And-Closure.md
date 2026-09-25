@@ -905,3 +905,77 @@ current HEAD/tree values before the first L02 write.
 TASK-551-10-L02 owns the exact documentation and closure set declared in its
 file. This child does not grant any other leaf shared-doc, task-board, status, or
 changelog authority.
+
+## Dated Contract Corrections — 2026-09-25 (03-L02 round-2 mirror; append-only)
+
+This entry mirrors TASK-551-03-L02 round-2 disposition R2-10
+(`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`)
+and 03-L02 correction C15 (runtime smoke) into this child. It is append-only:
+every sentence quoted below keeps its original bytes above and is superseded
+here. TASK-551-10-L01's matching 2026-09-25 correction (M1-M3) moves the
+Admin-list smoke onto the registered runtime-smoke suite `task-551-admin-lists`
+(`bun scripts/runtime-smoke.ts run --suite task-551-admin-lists --profile certification --session wf551l01admin`)
+and adds its `coderso-performance-gate` command for `gates:coderso:perf`.
+
+### P1 — Admin-list UI smoke evidence: eight scenarios, registered-suite session
+
+Corrected type (replaces the `Task551AdminListUiSmokeEvidenceV1` declaration in
+"Structured Evidence Contract"):
+
+```ts
+type Task551AdminListUiSmokeEvidenceV1 = Readonly<{
+  schema: "coderso.task551.admin-list-ui-smoke@v1";
+  pass: boolean;
+  session: "wf551l01admin";
+  scenarios: readonly {
+    id: "pagination-next-previous" | "filter-reset" |
+      "equal-sort-boundary" | "booking-dirty-refresh" |
+      "extracted-views" | "page-history-load-more" |
+      "offpage-selected-label" | "custom-screen-list-view";
+    pass: boolean;
+    themes: readonly ["light", "dark"];
+    visibleEffectAssertions: readonly string[];
+    screenshots: readonly [string, string];
+  }[]; // exactly the eight union members above, in declaration order
+  consoleErrors: readonly [];
+  failures: readonly string[];
+}>;
+```
+
+- Superseded type members: `session: "wf55103l02";`, the five-member `id` union
+  ending in `"extracted-views";`, and the comment
+  `// exactly the five union members above, in declaration order`. The eight ids
+  and their order are exactly 03-L02 C15's; the session is 10-L01's
+  non-colliding registered-suite session (03-L02's own run keeps `wf55103l02`).
+- Superseded (Implementation Pseudocode): `session: "wf55103l02", themes:
+  ["light", "dark"], scenarioCount: 5,`. Replacement: `session: "wf551l01admin",
+  themes: ["light", "dark"], scenarioCount: 8,`.
+- Superseded (Overview): "consume and re-prove the TASK-551-03-L02 five-scenario
+  Admin-list visible-effect smoke in light and dark mode". Replacement: consume
+  and re-prove the TASK-551-03-L02 eight-scenario Admin-list visible-effect smoke
+  in light and dark mode.
+- Superseded (Required Handoff Verification, item 7): "Run TASK-551-03-L02's
+  five exact Admin-list Playwright scenarios from a fresh server in task session
+  `wf55103l02`." Replacement: run TASK-551-03-L02's eight exact Admin-list
+  scenarios through the registered suite `task-551-admin-lists` (profile
+  `certification`) from a fresh server in task session `wf551l01admin`. The rest
+  of item 7 (visible DOM/geometry/ARIA effects, both themes, one screenshot per
+  scenario per mode, zero console errors, strict receipt validation) is unchanged.
+- Superseded (Aggregate Acceptance Matrix): "The five ordered TASK-551-03-L02
+  Admin-list scenarios run through real Admin UI flows in both themes, assert
+  visible effects, produce ten human-review screenshots, and report zero console
+  errors." Replacement: the eight ordered TASK-551-03-L02 Admin-list scenarios
+  run through real Admin UI flows in both themes, assert visible effects,
+  produce sixteen human-review screenshots, and report zero console errors.
+- Superseded (Implementation Pseudocode data flow): "five-scenario Admin UI
+  smoke". Replacement: eight-scenario Admin UI smoke.
+- Superseded (Testing Requirements): "Validate the exact
+  `Task551AdminListUiSmokeEvidenceV1` receipt, ten non-empty screenshot files,
+  both themes per scenario, and an empty console-error array." Replacement:
+  validate the exact corrected `Task551AdminListUiSmokeEvidenceV1` receipt,
+  sixteen non-empty screenshot files, both themes per scenario, and an empty
+  console-error array.
+- Unchanged: "At least five distinct real-flow scenarios run through two
+  independent app processes and one real Redis service" and the "five two-process
+  Redis" wording refer to the Redis infrastructure smoke, not the Admin-list
+  smoke.

@@ -1512,6 +1512,7 @@ dispatch command for either L01 graph occurrence.
     "tests/perf/fixtures/task551QueryInventory.ts",
     "tests/perf/database-query-inventory.test.ts",
     "tests/perf/database-query-inventory-capability-routes.test.ts",
+    "tests/perf/database-query-inventory-final-forms.test.ts",
     "tests/integration/server/task551BunLaneMembership.test.ts",
     "tests/bun-lane-manifest.json"
   ],
@@ -1576,6 +1577,31 @@ dispatch command for either L01 graph occurrence.
       "lane": "cli",
       "environmentProfile": "none",
       "argv": ["bun", "scripts/task-551-query-inventory.ts", "--check", "--phase", "final"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "inventory-final-forms-disposition-test",
+      "lane": "bun-test",
+      "environmentProfile": "none",
+      "argv": ["bun", "test", "tests/perf/database-query-inventory-final-forms.test.ts"],
+      "positiveDiscovery": {
+        "kind": "test-paths",
+        "paths": ["tests/perf/database-query-inventory-final-forms.test.ts"],
+        "minimum": 1
+      }
+    },
+    {
+      "id": "inventory-final-forms-eslint",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["bunx", "eslint", "--max-warnings=0", "tests/perf/database-query-inventory-final-forms.test.ts"],
+      "positiveDiscovery": { "kind": "not-applicable" }
+    },
+    {
+      "id": "inventory-final-forms-line-count",
+      "lane": "tooling",
+      "environmentProfile": "none",
+      "argv": ["wc", "-l", "tests/perf/database-query-inventory-final-forms.test.ts"],
       "positiveDiscovery": { "kind": "not-applicable" }
     },
     {
@@ -1700,6 +1726,9 @@ dispatch command for either L01 graph occurrence.
         "inventory-capability-routes-focused-test",
         "lane-membership-test",
         "inventory-check-final",
+        "inventory-final-forms-disposition-test",
+        "inventory-final-forms-eslint",
+        "inventory-final-forms-line-count",
         "root-lint-types",
         "root-eslint",
         "core-lint-types",
@@ -1747,3 +1776,1278 @@ rule targets unplanned strays, not these five contracted files. Effective at thi
 
 Evidence: `_docs/_workflows/_smoke/task-551/impl-11-classifier-gate.json` (pre-classifier
 receipts, one-path mutation proof, manifest digest, membership postcheck outcomes).
+
+## Dated Contract Corrections — 2026-09-25 (03-L02 round-2 mirror)
+
+Source: disposition R2-11 in
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`
+("F-31 `deprecated-unused` assertion → dated 01-L01 FINAL correction"). This
+section is append-only. It amends only the FINAL occurrence and the envelope
+edits listed under E1. The INITIAL occurrence, its receipts, and every other
+clause above are unchanged.
+
+**Handed-over item (quoted from TASK-551-03-L02).** C1 (`:1946-1947`):
+"**F-31.** The `deprecated-unused` inventory assertion leaves this leaf and is
+handed to TASK-551-01-L01 final (C16)." C16 (`:2619-2622`): "Contract :985-986
+and :1103-1104 read: "`formsService.listForms` has zero Admin route/client
+callers; its assistant callers are preserved (C8)". The `deprecated-unused`
+inventory assertion is removed from this leaf's tests and handed to
+TASK-551-01-L01 final." The superseded 03-L02 sentence was (`:1015-1016`):
+"Assert no production import/call of `formsService.listForms` remains and the
+final inventory disposition is `deprecated-unused`". From this date
+TASK-551-01-L01 FINAL is the sole owner of the inventory half of that
+assertion. TASK-551-03-L02 keeps the caller half ("zero Admin route/client
+callers; assistant callers preserved", its C8 `:2257-2260` and C16).
+
+**Verified constraints (HEAD `9c5b6666`).**
+
+- `deprecated-unused` is not a value of the closed `Disposition` enum. The
+  record shape above (`:476`), `scripts/task551QueryInventory/contracts.ts:60`
+  and `:204`, and the fixture codebook
+  (`tests/perf/fixtures/task551QueryInventory.ts:106`) admit only `optimize`,
+  `preserve-bounded` and `external-handoff`. A record carrying
+  `deprecated-unused` fails validation with `query_inventory_invalid`. This
+  correction does not add an enum member. Adding one would change the closed
+  schema, codebook, validator, digests and focused tests, and would need its own
+  audited correction.
+- The inventory records database call sites in `core/**`, not function callers.
+  `formsService.listForms` keeps its assistant callers
+  (`core/services/assistant/actionExecutorService.ts:66,151`,
+  `core/services/assistant/adminContextCatalogs.ts:240`), so its select
+  (`core/services/forms/formsService.ts:65-67`) stays a discovered call site.
+  At HEAD it is fixture row `current-593` (`tests/perf/fixtures/task551QueryInventory.ts:15183-15207`,
+  `L66:C13`, drizzle-executor/select, bound 101, owner `TASK-551-03-L02`,
+  disposition `optimize`). TASK-551-03-L02 no longer optimizes this function,
+  so that tuple goes stale once 03-L02 lands.
+- The focused suite `tests/perf/database-query-inventory.test.ts` is already
+  1,889 physical lines at HEAD, above the 1,000-line limit. Adding the assertion
+  there would first require a split, so it goes into a new focused suite (E1).
+
+**F-31 assertion, restated in closed-schema terms (FINAL only).** The FINAL
+receipt proves that `formsService.listForms` has left the Admin form-list read
+model for good:
+
+1. `TASK551_QUERY_INVENTORY` contains exactly one `current` record whose
+   `source.file` is `core/services/forms/formsService.ts` and whose
+   `source.symbol` is `listForms` (drizzle-executor/select). It is anchored at
+   its landed line and column and is not deleted, because the scanner still
+   discovers it.
+2. That record does not carry the `admin-forms-page` or
+   `admin-forms-fixed-summary` `budgetId`, does not carry the
+   `admin_forms_page` or `admin_forms_fixed_summary` fingerprint key, and is not
+   `disposition: "optimize"` owned by `TASK-551-03-L02`. FINAL review refreshes
+   its remaining tuple (`preserve-bounded` or `external-handoff`, owner, bound,
+   fingerprint nullability) from the landed source under the existing matrix
+   rules (`:510-520`). The literal `deprecated-unused` never appears in the
+   fixture, the receipt or the suite.
+3. `PLANNED_QUERY_DELTAS` contains no `admin-forms-page` or
+   `admin-forms-fixed-summary` record (the planned rows at `:685-686` are
+   consumed). The landed `core/services/forms/formReadService.ts` records
+   `selectFormListRows` and `selectFormListFixedSummary` are the only records
+   carrying those two budget IDs and fingerprint keys.
+
+**Owning test.** New DB-free Bun suite
+`tests/perf/database-query-inventory-final-forms.test.ts` (FINAL only; imports
+only the reviewed fixture exports `TASK551_QUERY_INVENTORY`,
+`PLANNED_QUERY_DELTAS` and `TASK551_QUERY_INVENTORY_RECEIPT`; no scan, DB or
+environment). It asserts items 1-3 with one positive test and negative
+mutations: a cloned record set carrying `optimize`/`TASK-551-03-L02` on the
+`listForms` row, an `admin_forms_page` key on it, a surviving planned
+`admin-forms-page` row, and a `deprecated-unused` disposition (which must fail
+the existing strict validator with `query_inventory_invalid`). Each mutation
+must fail. The suite stays at or below 1,000 lines. It runs through its literal
+envelope argv. This correction does not hand-edit `tests/bun-lane-manifest.json`,
+and default-lane membership follows the family's existing classifier path.
+
+**E1 — envelope edits (in place, this date).** `allowlist` gains
+`tests/perf/database-query-inventory-final-forms.test.ts`. `commands` gains
+three FINAL-only commands, all profile `none`:
+`inventory-final-forms-disposition-test`
+(`["bun","test","tests/perf/database-query-inventory-final-forms.test.ts"]`,
+`test-paths` minimum 1), `inventory-final-forms-eslint`
+(`["bunx","eslint","--max-warnings=0","tests/perf/database-query-inventory-final-forms.test.ts"]`),
+and `inventory-final-forms-line-count`
+(`["wc","-l","tests/perf/database-query-inventory-final-forms.test.ts"]`).
+`occurrences.final.commandIds` references all three, directly after
+`inventory-check-final`. The shared `root-eslint` and `per-file-line-count`
+argv, the "closed 25-path set" wording (`:1394-1396`), the `initial`
+occurrence, `dependencies` and `dependsOn` are unchanged. The new path is
+covered only by the FINAL-only commands, because it does not exist when the
+INITIAL commands run. `forbiddenPaths` is unchanged.
+
+**Validation Commands addendum (FINAL).** After
+`bun scripts/task-551-query-inventory.ts --check --phase final`:
+`bun test tests/perf/database-query-inventory-final-forms.test.ts`,
+`bunx eslint --max-warnings=0 tests/perf/database-query-inventory-final-forms.test.ts`,
+`wc -l tests/perf/database-query-inventory-final-forms.test.ts`.
+
+## Dated Contract Corrections — 2026-09-25 (re-open: bun-lane classifier ownership rule; append-only)
+
+This section is append-only. It re-opens only the TASK-551 manifest-slice rule
+and the code that implements it. Every other clause above stays in force,
+including the 2026-09-02 correction's evidence and the 2026-09-25 03-L02 mirror.
+
+**Defect (verified at HEAD `9c5b6666`, dirty tree).**
+
+- `bun scripts/bun-lane-classify.ts` writes `tests/bun-lane-manifest.json`
+  (`scripts/bun-lane-classify.ts:731-733`).
+- `scripts/task551QueryInventory/bunLane.ts:37-46` keeps a closed five-path list
+  of contracted non-planned `task551` tests. `task551ManifestSlice`
+  (`:210-224`, filter `:220-221`) counts every other `task551`-named row as an
+  unplanned stray. That fails `assertExactMaterializedTask551BunLaneMembership`
+  (`:342-348`, `query_inventory_final_receipt_missing:task551-manifest-membership`),
+  and so fails the live pin in
+  `tests/integration/server/task551BunLaneMembership.test.ts:151-162` and any
+  post-finalization call through `scripts/task551QueryInventory/check.ts:77-87`.
+- A fresh in-process classification at this tree has 475 rows against 454
+  committed, so `tests/unit/toolchain/bunLaneManifest.test.ts` is already red
+  ("committed manifest equals a fresh classification run" and "manifest rows
+  are internally consistent"). There are 21 new rows and none removed. Twelve
+  of the new rows are `task551`-named integration tests that belong to later
+  leaves:
+  `tests/integration/server/task551{ActionExecutionStore,AppendHeavyRetention}.test.ts`
+  (TASK-551-06-L01),
+  `task551{CacheInvalidationOutboxSchema,ConcurrencyConstraints,IndexAndConstraintCatalog,OnlineIndexDeployment,SchemaMigrationParity,SearchVectorMigration}.test.ts`
+  (TASK-551-05-L01), `task551SolutionKitRollbackAuthoritySchema.test.ts`
+  (TASK-551-05-L03), `task551{RevisionConcurrency,RevisionRetention}.test.ts`
+  (TASK-551-06-L02), and `task551RetentionJobService.test.ts` (TASK-551-06-L03).
+  TASK-551-03-L02 will add `tests/integration/routes/task551BoundedAdminLists.test.ts`
+  and `tests/integration/server/task551AdminWriteConcurrency.test.ts`. The
+  other nine new rows are not `task551`-named and become ordinary generic rows.
+- So a regeneration cannot turn green under the five-path rule, and that
+  includes the regeneration at 01-L01 FINAL. The filename heuristic is a
+  latent defect, not a stale count.
+
+**Superseded sentences (quoted; superseded from this date).**
+
+- 2026-09-02 correction (`:1764-1766`): "The slice for the exact
+  post-generation equality is every planned path plus every
+  otherwise-unplanned path whose normalized filename contains `task551`,
+  EXCEPT exactly these five literal paths. Any unplanned `task551`-marked row
+  outside this closed five-path list still fails."
+- 2026-09-02 correction (`:1767-1769`): "`task551ManifestSlice` in
+  `scripts/task551QueryInventory/bunLane.ts` implements exactly this exclusion,
+  and the L01 membership suite pins all five paths present in the generated
+  manifest so a future rename, move, or removal of any of them fails loudly."
+- Post-Materialization Lane-Finalization Gate (`:366-368`), refined rather than
+  removed: "Duplicate rejection and exact equality apply only to this defined
+  slice: an unplanned `task551`-marked row fails, while a nonmatching generic
+  row is ignored by this contract." From this date, "unplanned" means neither
+  planned nor contracted under the ownership rule below.
+
+**Unchanged sentences (quoted; still binding).**
+
+- 03-L02 mirror (`:1859-1860`): "This correction does not hand-edit
+  `tests/bun-lane-manifest.json`, and default-lane membership follows the
+  family's existing classifier path." This correction does not hand-edit the
+  manifest either. It changes only through the literal classifier command.
+- `:922`: "The inventory CLI never regenerates that file."
+- 2026-09-02 correction (`:1761-1762`): the five files stay contracted products
+  of their owners. Renaming, moving, or replanning them would still violate
+  those contracts. They now qualify through the ownership rule, not through a
+  literal list.
+
+**Binding rule (ownership, replaces the filename heuristic).** Take a manifest
+row whose normalized filename contains `task551` (case-insensitive) and that is
+not one of the nine `TASK551_PLANNED_BUN_TEST_PATHS`. That row is *contracted*
+when its exact path (case-sensitive) matches at least one of these in the
+TASK-551 family dispatch projection returned by `preflightTask551DispatchSnapshot`:
+
+1. an entry of a leaf envelope's `allowlist`, or
+2. a token of any command's `argv` in a leaf envelope, or
+3. a `positiveDiscovery.paths` entry of kind `test-paths`.
+
+Otherwise the row is a *stray*, and a stray still fails
+`task551-manifest-membership`. The TASK-551 slice is every planned row plus every
+stray. Exact duplicate-free equality with the sorted materialized planned set
+is unchanged.
+
+What the projection exposes (verified): each `dispatchOrder[]` node carries
+`taskId`, `allowlist`, and `commands[]` (`argv`, `positiveDiscovery`),
+built by `_docs/_workflows/lib/task-551-dispatch-contract.mjs:1002-1018`. The
+preflight already rejects the same path allowlisted by two leaves
+(`allowlist_cross_owner`, `:954-960`), so each contracted path has at most one
+allowlist owner. At this tree the family preflight passes: 41 task files, 11
+children, 29 leaves, 33 occurrences. After filtering to lane test paths the rule
+yields 26 contracted paths, 17 of which are present on disk. The five paths from
+2026-09-02 are all contracted: the two TASK-551-02-L02 paths through its
+allowlist, and the three `tests/unit/workflows/task551*.test.ts` paths through
+TASK-551-10-L02's `workflow-contract-tests` positive discovery. TASK-551-11 is
+a child and has no envelope. Applied to the fresh 475-row classification, the
+slice is exactly the nine planned paths, with zero strays.
+
+**Decision: remove the five-path constant; no fallback.** The
+`TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` export and its set are deleted.
+`contractedPaths` is a required input wherever a manifest slice is computed.
+A missing, malformed, or failing snapshot fails closed with
+`query_inventory_invalid`. The stale list is not used as a fallback, for three
+reasons:
+
+- A fallback would silently bring back exactly this defect: the twelve owned
+  rows would count as strays again.
+- It would keep two sources of truth that drift apart.
+- It would be a fallback added only so that tests pass, which AGENTS.md forbids.
+
+The historical five paths survive only as a test-side regression pin (below).
+
+**Pure derivation and loader.** Both live in
+`scripts/task551QueryInventory/bunLane.ts`. The module keeps no import-time
+coupling to `_docs/`. The sidecar is reached through a lazy dynamic import of
+the typed facade `preflightTask551AuthorAuditDispatch`
+(`_docs/_workflows/task-551-author-audit.mjs`, types in
+`task-551-author-audit.d.mts`). The facade returns `{ sourceHead, inventory,
+taskFiles, dispatchOrder }`. Only `dispatchOrder` is consumed. The `dispatch`
+key that the `.d.mts` declares is not present at runtime, so it must not be
+read. Node fields beyond `taskId` are typed `unknown`, so the derivation
+validates them structurally.
+
+```ts
+// scripts/task551QueryInventory/bunLane.ts
+const TASK551_TASK_FILE = /^TASK-551(?:[-_].*)?\.md$/u;
+// Non-evidentiary: the projection's sourceHead is never read or emitted; the
+// task-file bytes of the current tree are the only input (task551AuthorAudit
+// test precedent). Must satisfy the preflight's /^[0-9a-f]{7,64}$/ shape.
+const CONTRACTED_PATHS_SNAPSHOT_HEAD = "0000000";
+
+export function deriveTask551ContractedLaneTestPaths(input: {
+  dispatchOrder: unknown;
+  planned: readonly string[];
+}): readonly string[] {
+  const bad = () => fail("query_inventory_invalid", "task551-dispatch-snapshot");
+  if (!Array.isArray(input.dispatchOrder) || input.dispatchOrder.length === 0) bad();
+  const candidates = new Set<string>();
+  for (const node of input.dispatchOrder) {
+    if (!isPlainRecord(node) || typeof node.taskId !== "string" ||
+        !node.taskId.startsWith("TASK-551-") || !isStringArray(node.allowlist) ||
+        !Array.isArray(node.commands)) bad();
+    node.allowlist.forEach((p) => candidates.add(p));
+    for (const command of node.commands) {
+      if (!isPlainRecord(command) || !isStringArray(command.argv) ||
+          !isPlainRecord(command.positiveDiscovery)) bad();
+      command.argv.forEach((token) => candidates.add(token));
+      if (command.positiveDiscovery.kind === "test-paths") {
+        if (!isStringArray(command.positiveDiscovery.paths)) bad();
+        command.positiveDiscovery.paths.forEach((p) => candidates.add(p));
+      }
+    }
+  }
+  const planned = new Set(input.planned);
+  return Object.freeze([...candidates].filter((p) =>
+    TEST_FILE.test(p) && !hasDotPathSegment(p) &&
+    EXECUTED_ROOTS.some((root) => p.startsWith(`${root}/`)) &&
+    p.toLowerCase().includes("task551") && !planned.has(p)).sort());
+}
+
+export async function readTask551ContractedLaneTestPaths(
+  planned: readonly string[]
+): Promise<readonly string[]> {
+  let dispatchOrder: unknown;
+  try {
+    const dir = path.join(ROOT, "_docs/_TASKS");
+    const names = readdirSync(dir).filter((n) => TASK551_TASK_FILE.test(n)).sort();
+    const taskFiles = names.map((n) => ({
+      path: `_docs/_TASKS/${n}`, text: readFileSync(path.join(dir, n), "utf8") }));
+    const { preflightTask551AuthorAuditDispatch } =
+      await import("../../_docs/_workflows/task-551-author-audit.mjs");
+    dispatchOrder = preflightTask551AuthorAuditDispatch({
+      sourceHead: CONTRACTED_PATHS_SNAPSHOT_HEAD, taskFiles }).dispatchOrder;
+  } catch {
+    // Never echo sidecar codes, task text, or paths beyond the fixed detail.
+    return fail("query_inventory_invalid", "task551-dispatch-snapshot");
+  }
+  return deriveTask551ContractedLaneTestPaths({ dispatchOrder, planned });
+}
+
+function task551ManifestSlice(planned, manifest, contractedPaths): readonly string[] {
+  assertUniquePaths(contractedPaths, "task551-contracted-paths");
+  const plannedSet = new Set(planned);
+  if (contractedPaths.some((p) => plannedSet.has(p)))
+    fail("query_inventory_invalid", "task551-contracted-paths");
+  const contracted = new Set(contractedPaths);
+  return manifest.rows.map((row) => row.file)
+    .filter((file) => plannedSet.has(file) ||
+      (file.toLowerCase().includes("task551") && !contracted.has(file)))
+    .sort();
+}
+// assertTask551BunLaneMembershipState(input & { contractedPaths: readonly string[] })
+//   -> passes contractedPaths to both slice calls (ownsNoRows and post-finalization).
+// assertExactMaterializedTask551BunLaneMembership(input & { contractedPaths }) -> required.
+// BunLaneMembershipInput gains `contractedPaths?: readonly string[]`; when
+//   `manifest !== undefined && contractedPaths === undefined` ->
+//   fail("query_inventory_invalid", "task551-contracted-paths"). No default.
+```
+
+```ts
+// scripts/task551QueryInventory/check.ts
+export type RunInventoryCheckDependencies = Readonly<{
+  exists?; readManifest?; scan?;
+  readContractedPaths?: (planned: readonly string[]) => Promise<readonly string[]>;
+}>;
+// in runInventoryCheck, AFTER parseExactInventoryCliArgs, the final-phase
+// short-circuit, and assertExactTask551BunTestPlan (so the final branch still
+// performs zero exists/manifest/scan/snapshot calls), BEFORE the state call:
+const contractedPaths = await (dependencies.readContractedPaths ??
+  readTask551ContractedLaneTestPaths)(TASK551_PLANNED_BUN_TEST_PATHS);
+const state = assertTask551BunLaneMembershipState({ ...plan, manifest, exists, contractedPaths });
+// :123 assertCanonicalBunLaneMembership keeps no manifest, so it needs no paths.
+```
+
+**Tests (`tests/integration/server/task551BunLaneMembership.test.ts`; there is
+no separate `bunLane.ts` unit test, and this suite is the unit owner).**
+
+- Remove the `TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` import.
+  `task551StateInput(manifest, exists, contractedPaths)` takes explicit paths.
+  Synthetic cases pass `[]` where every row is planned.
+- Rename "keeps the five contracted non-planned task551 lane tests outside the
+  slice and strays failing" to "keeps every leaf-contracted task551 lane test
+  outside the slice and strays failing".
+- Live pin: `contracted = await readTask551ContractedLaneTestPaths(planned)`.
+  Each of the five 2026-09-02 literal paths (kept as a test-local regression
+  list) must be in `contracted` and must be exactly one manifest row. The live
+  manifest must classify as `post-finalization` and must pass
+  `assertExactMaterializedTask551BunLaneMembership` with `contracted`. Do not
+  pin a count of the derived set, because later leaves may add owned paths.
+- New synthetic case, owned is contracted: a two-node `dispatchOrder`. Node A
+  allowlists `tests/integration/server/task551SyntheticOwned.test.ts`. Node B
+  lists `tests/unit/workflows/task551SyntheticArgv.test.ts` only in a
+  `test-paths` positive discovery. The derived set contains both. The
+  materialized manifest plus both rows classifies as `post-finalization`.
+- New synthetic case, owned nowhere is a stray: the same manifest plus
+  `tests/perf/task551StrayProbe.test.ts` fails with
+  `query_inventory_final_receipt_missing`. So does
+  `tests/perf/Task551StrayProbe.test.ts` while only the lower-case path is
+  allowlisted, because matching is exact.
+- Fail-closed: `deriveTask551ContractedLaneTestPaths` throws
+  `query_inventory_invalid` for a non-array or empty `dispatchOrder`, a node
+  without `allowlist`, a non-string `argv` token, and a `test-paths` discovery
+  whose `paths` is not a string array. A manifest-bearing
+  `assertCanonicalBunLaneMembership` without `contractedPaths` throws
+  `query_inventory_invalid`. A `contractedPaths` value that overlaps a planned
+  path, or contains a duplicate, throws `query_inventory_invalid`.
+- Planned paths never enter the derived set, even though L02, L03, and L04
+  allowlist them. Vitest and non-lane paths are filtered out.
+- Keep all existing state, bucket, duplicate, extra, and parse assertions
+  unchanged. Do not weaken any of them.
+
+`tests/perf/database-query-inventory.test.ts` is not touched. It is already
+1,889 lines, and touching it would first require a split. Its `runInventoryCheck`
+cases at `:1840-1889` inject `exists`, `readManifest`, and `scan` only, so they
+use the default DB-free loader against the live task files. The final-phase
+zero-call pin still holds because the loader runs after the final
+short-circuit. The legal-initial and recovery-initial cases keep an empty
+slice. The all-planned case still fails `initial-inventory-state`.
+
+**Regeneration and `bunLaneManifest.test.ts`.** After the source and test edits
+pass their targeted gates, the orchestrator runs the literal
+`bun scripts/bun-lane-classify.ts` from the worktree root. It takes a pre/post
+`git status --porcelain` snapshot. The only mutation this command may cause is
+`tests/bun-lane-manifest.json`, a generated artifact that is exempt from the
+line gate.
+
+This run is a dated re-open regeneration. It is not a replay of, and does not
+amend, the closed L11 barrier receipt `impl-11-classifier-gate.json`. The
+"exactly once" wording at `:312` and `:1370` governs that barrier only.
+
+`tests/unit/toolchain/bunLaneManifest.test.ts` pins no row count. It compares
+against a fresh classification (`:235-240`) and the git golden set (`:242-245`),
+so it needs no re-baseline and stays read-only, as declared in L01's
+`readOnlyImports`. The golden set includes untracked files, so an unrelated
+new lane test in the shared tree makes it red until the next regeneration.
+
+**Line gate (verified `wc -l`).** Current counts, with the projected count
+after this correction in parentheses:
+
+| File | Lines now | Projected |
+| --- | --- | --- |
+| `bunLane.ts` | 356 | about 430 |
+| `check.ts` | 127 | about 140 |
+| `task551BunLaneMembership.test.ts` | 449 | about 560 |
+| `bunLaneManifest.test.ts` | 304 | untouched |
+| `scripts/bun-lane-classify.ts` | 744 | untouched |
+
+No touched file exceeds 1,000 lines, so no split is part of this correction.
+`tests/perf/database-query-inventory.test.ts` (1,889 lines) must stay untouched
+here.
+
+**Envelope.** No change. `bunLane.ts`, `check.ts`, the membership test and
+`tests/bun-lane-manifest.json` are already in the single envelope `allowlist`,
+which both occurrences share. The eslint and `wc -l` argv of `root-eslint` and
+`per-file-line-count` already cover the three sources. The facade
+`scripts/task-551-query-inventory.ts` needs no edit, because `export *`
+re-exports the new functions and drops the deleted constant. The family
+preflight passes on the tree that carries this section.
+
+**Land order.** This correction lands on its own as soon as its post-audit is
+clean. It is not sequenced behind the TASK-551-11 re-open splits or 03-L02 W0.
+Its regeneration captures whatever lane files exist when its gate runs. Any
+later lane-file addition makes `bunLaneManifest.test.ts` red until the next
+regeneration: the TASK-551-11 re-open's new non-`task551` tests, and the two
+03-L02 `task551` tests, which are already contracted through the 03-L02
+allowlist and so can never become strays. The canonical regeneration is
+repeated at 01-L01 FINAL with the same literal command and the same one-path
+mutation proof.
+
+**Validation (this correction).**
+
+- `./node_modules/.bin/eslint --max-warnings=0 scripts/task551QueryInventory/bunLane.ts scripts/task551QueryInventory/check.ts tests/integration/server/task551BunLaneMembership.test.ts`
+- Airtight, after regeneration:
+  `env DATABASE_URL=postgresql://127.0.0.1:1/none bun --env-file=/dev/null test tests/integration/server/task551BunLaneMembership.test.ts tests/unit/toolchain/bunLaneManifest.test.ts tests/perf/database-query-inventory.test.ts`.
+  All must be green.
+- `wc -l` on the three touched sources, then `git diff --check` and
+  `git status --short`.
+- The orchestrator runs `bun run lint:repo:types` between phases.
+
+**Receipt addendum.** The orchestrator records the addendum, not the L01
+implementer (L01 "writes no workflow sidecar or receipt itself", `:338`). It
+appends one entry to a new top-level `reopenAddenda` array in
+`_docs/_workflows/_smoke/task-551/impl-01-l01-initial.json`, with these fields:
+
+- `id: "2026-09-25-bun-lane-ownership-rule"`
+- `headAtStart`
+- `filesTouched`
+- `classifierCommand`
+- `mutationProof`, where the changed-path delta is exactly
+  `["tests/bun-lane-manifest.json"]`
+- `manifestRows` as `{ before, after }`
+- `contractedPathCount`
+- `task551SliceEqualsPlanned`
+- `gates[]` as `{ command, exit, detail }`
+- `verdict`
+
+Existing keys stay byte-unchanged. The entry holds no environment values, DB
+identities, SQL, or fixture data.
+
+### Amendment v2 (2026-09-25): static contracted list, no L11 edge
+
+Recorded at HEAD `9c5b6666` (dirty tree) from orchestrator decisions D1-D6,
+verified against two independent audits of the v1 section above. This
+amendment is append-only. It supersedes v1 wherever stated, and **V2-11**
+quotes every superseded sentence. Every v1 clause that is not quoted there
+stays binding, in particular: the **Defect** evidence, the three 2026-09-02 and
+`:366-368` supersessions (they stay superseded; v2 does not revive the closed
+five-path rule), the **Unchanged sentences** block, the one-path mutation proof
+of the regeneration, the statement that the regeneration is a dated re-open and
+not a replay of `impl-11-classifier-gate.json`, the no-re-baseline analysis of
+`tests/unit/toolchain/bunLaneManifest.test.ts`, the untouched
+`tests/perf/database-query-inventory.test.ts`, and the receipt addendum
+location.
+
+#### V2-1 Why v1 is replaced
+
+The v1 loader made `scripts/task551QueryInventory/bunLane.ts` import the
+TASK-551-11 private sidecar (`_docs/_workflows/task-551-author-audit.mjs`) at
+runtime and read `_docs/_TASKS/TASK-551*.md` on every inventory check. That
+adds an L01-to-L11 import edge, couples the inventory CLI to task-file text,
+and widens `RunInventoryCheckDependencies` with a fourth callback. v2 removes
+all three. The contracted non-planned list becomes static data owned by
+01-L01, and a DB-free test binds it to the task-file fences. The binding lives
+in the test, not in production code.
+
+#### V2-2 Binding rule (static contracted list)
+
+Take a manifest row whose normalized path contains `task551`
+(case-insensitive) and that is not one of the nine
+`TASK551_PLANNED_BUN_TEST_PATHS`. That row is *contracted* when its exact path
+(case-sensitive) is a member of the static frozen
+`TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` (**V2-3**). Otherwise it is a
+*stray*, and a stray still fails `task551-manifest-membership`. The TASK-551
+slice is every planned row plus every stray. Exact duplicate-free equality with
+the sorted materialized planned set is unchanged.
+
+The list admits an entry only when a TASK-551 leaf envelope already names that
+path in its `allowlist`, in a command `argv`, or in a `positiveDiscovery.paths`
+entry of kind `test-paths`. **V2-5** enforces this. An entry may be declared
+before its file exists; a declared-but-absent entry has no manifest row and so
+never enters the slice.
+
+**Growth rule.** When a leaf starts naming a new `task551`-path Bun-lane test,
+a dated 01-L01 mirror adds that exact path to the static list in the same land
+window. The mirror is the single writer of `bunLane.ts`. Until it lands, the
+membership suite fails closed and names the missing path. A leaf that does not
+want this coupling names its new test without the `task551` token, as the
+TASK-551-11 re-open does.
+
+**Placement: `bunLane.ts`, not a new module.** D1 proposed a new data module,
+`scripts/task551QueryInventory/contractedLaneTests.ts`. This amendment keeps
+the frozen list in `bunLane.ts` instead, where the historical five-path
+constant already lives (`:37-46`). A new L01 source file would break D1's own
+"no new edges" invariant, for three reasons (verified):
+
+- The L01 phase provenance in
+  `_docs/_workflows/lib/task-551-worktree-compatibility.mjs:121-155`
+  (`ownedFiles`, `ownedTests`, `readOnlyImports`) is a closed literal list.
+  `TASK551_L01_BARRIER_INPUT_PATHS` (`:289-316`) is checked by `exactSorted`
+  against that projection (`:435-440`). An unlisted module would sit outside
+  the L11 barrier digest, which is a coverage gap. Listing it would need a
+  TASK-551-11 edit, which is an L11 edge.
+- The 01-L01 envelope `allowlist` and the `root-eslint` and
+  `per-file-line-count` argv in the ` ```json ` fence (`:1482`) would each need
+  an in-place fence edit.
+- The TASK-551-11 all-phase `ownedFiles + ownedTests` pins (TASK-551-11
+  **V3-3**, `l01 22 + 3 = 25`) would shift.
+
+Keeping the list in `bunLane.ts` needs no new file, no envelope change, no
+provenance or barrier change, and no TASK-551-11 edit.
+
+#### V2-3 The static list (exact; 26 entries; sorted by UTF-16 code unit)
+
+| # | Path | Contracted via (owner) | On disk at `9c5b6666` |
+| --- | --- | --- | --- |
+| 1 | `tests/integration/routes/task551BoundedAdminLists.test.ts` | allowlist (TASK-551-03-L02) | no |
+| 2 | `tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts` | allowlist (TASK-551-10-L01) | no |
+| 3 | `tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts` | allowlist (TASK-551-10-L01) | no |
+| 4 | `tests/integration/server/task551ActionExecutionStore.test.ts` | allowlist (TASK-551-06-L01) | yes |
+| 5 | `tests/integration/server/task551AdminWriteConcurrency.test.ts` | allowlist (TASK-551-03-L02) | no |
+| 6 | `tests/integration/server/task551AppendHeavyRetention.test.ts` | allowlist (TASK-551-06-L01) | yes |
+| 7 | `tests/integration/server/task551AssistantDocsCandidateQuery.test.ts` | allowlist (TASK-551-04-L02) | no |
+| 8 | `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts` | allowlist (TASK-551-05-L01) | yes |
+| 9 | `tests/integration/server/task551ConcurrencyConstraints.test.ts` | allowlist (TASK-551-05-L01) | yes |
+| 10 | `tests/integration/server/task551DatabaseLifecycle.test.ts` | allowlist (TASK-551-02-L02); historical five | yes |
+| 11 | `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts` | allowlist (TASK-551-02-L02) | no |
+| 12 | `tests/integration/server/task551IndexAndConstraintCatalog.test.ts` | allowlist (TASK-551-05-L01) | yes |
+| 13 | `tests/integration/server/task551OnlineIndexDeployment.test.ts` | allowlist (TASK-551-05-L01) | yes |
+| 14 | `tests/integration/server/task551RetentionJobService.test.ts` | allowlist (TASK-551-06-L03) | yes |
+| 15 | `tests/integration/server/task551RevisionConcurrency.test.ts` | allowlist (TASK-551-06-L02) | yes |
+| 16 | `tests/integration/server/task551RevisionRetention.test.ts` | allowlist (TASK-551-06-L02) | yes |
+| 17 | `tests/integration/server/task551RuntimeEntrypoints.test.ts` | allowlist (TASK-551-02-L02); historical five | yes |
+| 18 | `tests/integration/server/task551SchemaMigrationParity.test.ts` | allowlist (TASK-551-05-L01) | yes |
+| 19 | `tests/integration/server/task551SearchRankedQueries.test.ts` | allowlist (TASK-551-04-L01) | no |
+| 20 | `tests/integration/server/task551SearchVectorMigration.test.ts` | allowlist (TASK-551-05-L01); argv (TASK-551-04-L01) | yes |
+| 21 | `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` | allowlist (TASK-551-05-L03) | yes |
+| 22 | `tests/perf/task551DatabaseCachePerformanceGate.test.ts` | allowlist (TASK-551-10-L01) | no |
+| 23 | `tests/security/task551ServerCacheSecurityGate.test.ts` | allowlist (TASK-551-10-L01) | no |
+| 24 | `tests/unit/workflows/task551AuthorAudit.test.ts` | argv + test-paths (TASK-551-10-L02); historical five | yes |
+| 25 | `tests/unit/workflows/task551EvidenceContract.test.ts` | argv + test-paths (TASK-551-10-L02); historical five | yes |
+| 26 | `tests/unit/workflows/task551WorkflowContracts.test.ts` | argv + test-paths (TASK-551-10-L02); historical five | yes |
+
+The list has 17 entries on disk: the historical five plus the twelve v1
+**Defect** rows. It has 9 declared-but-absent entries: the two TASK-551-03-L02
+suites, plus seven more that are already named in leaf allowlists:
+`task551DatabaseLifecycleRealDb` (02-L02), `task551SearchRankedQueries`
+(04-L01), `task551AssistantDocsCandidateQuery` (04-L02), and four TASK-551-10-L01
+suites (`task551ServerCacheFaultMatrix`, `task551TwoProcessRedisSmoke`,
+`task551DatabaseCachePerformanceGate`, `task551ServerCacheSecurityGate`). The
+seven must be listed now. Without them the fence-binding assertion in **V2-5**
+would fail on the current tree. The five TASK-551-03-L02 Vitest paths
+(`tests/vitest/**`) are outside the Bun lane roots
+(`scripts/bun-lane-classify.ts:62-73`), so they never enter the list. This
+equals the v1 derivation result ("26 contracted paths, 17 of which are present
+on disk"). Applied to the fresh 475-row classification, the slice is still
+exactly the nine planned paths, with zero strays.
+
+#### V2-4 Source change (`scripts/task551QueryInventory/bunLane.ts` only)
+
+```ts
+// scripts/task551QueryInventory/bunLane.ts — replaces :30-46; no new import.
+/**
+ * Amendment v2 (2026-09-25): the static contracted non-planned TASK-551
+ * Bun-lane test list. Each entry is named by a TASK-551 leaf envelope
+ * (allowlist, argv, or test-paths discovery) and may be declared before its
+ * file exists. task551BunLaneMembership.test.ts binds this list to the
+ * task-file fences; only a dated TASK-551-01-L01 mirror may change it.
+ */
+export const TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS: readonly string[] = Object.freeze([
+  "tests/integration/routes/task551BoundedAdminLists.test.ts",
+  // ... the 26 V2-3 paths, byte-exact and in V2-3 order ...
+  "tests/unit/workflows/task551WorkflowContracts.test.ts",
+]);
+const TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATH_SET: ReadonlySet<string> = new Set(
+  TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS
+);
+```
+
+The following stay byte-unchanged (verified):
+
+- `task551ManifestSlice` (`bunLane.ts:210-224`) keeps its current two-argument
+  shape and its filter at `:220-221`. It reads the widened set.
+- `BunLaneMembershipInput` (`:15-20`), `assertTask551BunLaneMembershipState`,
+  and `assertExactMaterializedTask551BunLaneMembership` (`:330-356`) keep their
+  signatures. No `contractedPaths` parameter is added.
+- `scripts/task551QueryInventory/check.ts` is unchanged, including `:40`.
+  `RunInventoryCheckDependencies` stays the three-function shape. The prose at
+  this file's `:788-791` ("`runInventoryCheck` accepts an optional DB-free
+  dependency input with only `exists`, `readManifest`, and `scan` functions")
+  and the type block at `:801-805` stay binding verbatim.
+- `bunLane.ts` gains no `_docs/` import, no dynamic import, no filesystem read
+  of task files, and no fallback.
+
+The facade `scripts/task-551-query-inventory.ts` needs no edit. Its
+`export * from "./task551QueryInventory/bunLane"` keeps re-exporting the
+constant under the same name, so the membership test's import at `:17` stays
+valid.
+
+The L11 barrier input set
+(`task-551-worktree-compatibility.mjs:289-316`), the L01 phase provenance, and
+the L01 import closure are unchanged. v2 adds no edges.
+
+#### V2-5 Tests (`tests/integration/server/task551BunLaneMembership.test.ts`)
+
+The membership suite is 449 lines now and projected at about 690 after v2, so
+no new test file is needed (the D2 fallback of a separate test of at most 400
+lines is not triggered). The suite stays DB-free. It imports no
+`_docs/_workflows` module. It reads the `TASK-551*.md` task files with a
+minimal in-test parser:
+
+```ts
+// additions; existing imports and helpers stay
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+
+const REPO_ROOT = path.resolve(import.meta.dir, "../../..");
+const TASK551_TASK_FILE = /^TASK-551(?:[-_].*)?\.md$/u;
+const FIRST_JSON_FENCE = /^```json\n([\s\S]*?)\n```$/mu;
+const LANE_TEST_FILE = /^tests\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.test\.(?:ts|tsx)$/u;
+const HISTORICAL_CONTRACTED_PATHS: readonly string[] = Object.freeze([
+  "tests/integration/server/task551DatabaseLifecycle.test.ts",
+  "tests/integration/server/task551RuntimeEntrypoints.test.ts",
+  "tests/unit/workflows/task551AuthorAudit.test.ts",
+  "tests/unit/workflows/task551EvidenceContract.test.ts",
+  "tests/unit/workflows/task551WorkflowContracts.test.ts",
+]);
+// Static entries that a dated 01-L01 mirror declared before the owning leaf's
+// envelope names them. Must be empty at every 01-L01 closure; empty today.
+const DECLARED_NOT_YET_ALLOWLISTED: readonly string[] = Object.freeze([]);
+
+type FenceRecord = Readonly<Record<string, unknown>>;
+type StaticListBindingInput = Readonly<{
+  derived: readonly string[];
+  staticList: readonly string[];
+  allowance: readonly string[];
+}>;
+
+function isFenceRecord(value: unknown): value is FenceRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function fenceArray(value: unknown, label: string): readonly unknown[] {
+  if (!Array.isArray(value)) throw new Error(`task551_fence_shape:${label}`);
+  const items: readonly unknown[] = value;
+  return items;
+}
+
+function fenceStrings(value: unknown, label: string): readonly string[] {
+  const strings: string[] = [];
+  for (const item of fenceArray(value, label)) {
+    if (typeof item !== "string") throw new Error(`task551_fence_shape:${label}`);
+    strings.push(item);
+  }
+  return strings;
+}
+
+/** First ```json fence only; top-level allowlist, commands[].argv, test-paths. */
+function collectFenceLaneTestPaths(markdown: string, source: string): readonly string[] {
+  const match = FIRST_JSON_FENCE.exec(markdown);
+  if (match === null) return [];
+  const parsed: unknown = JSON.parse(match[1] ?? "");
+  if (!isFenceRecord(parsed)) throw new Error(`task551_fence_shape:${source}`);
+  const tokens: string[] = [];
+  if (parsed.allowlist !== undefined)
+    tokens.push(...fenceStrings(parsed.allowlist, `${source}:allowlist`));
+  const commands: readonly unknown[] =
+    parsed.commands === undefined ? [] : fenceArray(parsed.commands, `${source}:commands`);
+  for (const command of commands) {
+    if (!isFenceRecord(command)) throw new Error(`task551_fence_shape:${source}:command`);
+    tokens.push(...fenceStrings(command.argv, `${source}:argv`));
+    const discovery: unknown = command.positiveDiscovery;
+    if (isFenceRecord(discovery) && discovery.kind === "test-paths")
+      tokens.push(...fenceStrings(discovery.paths, `${source}:discovery`));
+  }
+  return tokens.filter((token) => LANE_TEST_FILE.test(token));
+}
+
+function readFamilyFenceLaneTestPaths(): readonly string[] {
+  const dir = path.join(REPO_ROOT, "_docs/_TASKS");
+  const union = new Set<string>();
+  const names = readdirSync(dir).filter((name) => TASK551_TASK_FILE.test(name)).sort();
+  for (const name of names)
+    for (const testPath of collectFenceLaneTestPaths(readFileSync(path.join(dir, name), "utf8"), name))
+      union.add(testPath);
+  return [...union].sort();
+}
+
+function contractedFromFencePaths(
+  fencePaths: readonly string[],
+  planned: readonly string[],
+  laneRoots: readonly string[]
+): readonly string[] {
+  const plannedSet = new Set(planned);
+  return fencePaths
+    .filter(
+      (testPath) =>
+        testPath.toLowerCase().includes("task551") &&
+        !plannedSet.has(testPath) &&
+        laneRoots.some((root) => testPath.startsWith(`${root}/`))
+    )
+    .sort();
+}
+
+function staticListBindingErrors(input: StaticListBindingInput): readonly string[] {
+  const staticSet = new Set(input.staticList);
+  const derivedSet = new Set(input.derived);
+  const allowanceSet = new Set(input.allowance);
+  return [
+    ...input.derived.filter((p) => !staticSet.has(p)).map((p) => `missing-from-static:${p}`),
+    ...input.staticList
+      .filter((p) => !derivedSet.has(p) && !allowanceSet.has(p))
+      .map((p) => `undeclared-static:${p}`),
+    ...input.allowance
+      .filter((p) => !staticSet.has(p) || derivedSet.has(p))
+      .map((p) => `stale-allowance:${p}`),
+  ];
+}
+
+function laneTestFilesOnDisk(laneRoots: readonly string[]): readonly string[] {
+  const files: string[] = [];
+  for (const root of laneRoots)
+    for (const entry of readdirSync(path.join(REPO_ROOT, root), { recursive: true, encoding: "utf8" })) {
+      const file = `${root}/${entry.split(path.sep).join("/")}`;
+      if (LANE_TEST_FILE.test(file)) files.push(file);
+    }
+  return files.sort();
+}
+
+function unownedTask551LaneFiles(
+  files: readonly string[],
+  planned: readonly string[],
+  staticList: readonly string[]
+): readonly string[] {
+  const owned = new Set([...planned, ...staticList]);
+  return files.filter((file) => file.toLowerCase().includes("task551") && !owned.has(file)).sort();
+}
+```
+
+`laneRoots` is always `canonicalBunLaneRootsFromClassifier()`, which the suite
+already imports, and `planned` is always `TASK551_PLANNED_BUN_TEST_PATHS`.
+Failures are fail-closed and name the paths: each case asserts
+`expect(errors).toEqual([])`, so the diff shows each offending path.
+
+**Cases (added):**
+
+1. "binds the static contracted list to every TASK-551 task-file fence" (live).
+   Set `derived = contractedFromFencePaths(readFamilyFenceLaneTestPaths(), …)`.
+   `derived` is non-empty, the historical five are all in `derived` (the fence
+   read is not vacuous),
+   `staticListBindingErrors({ derived, staticList: TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS, allowance: DECLARED_NOT_YET_ALLOWLISTED })`
+   equals `[]`, and `DECLARED_NOT_YET_ALLOWLISTED` equals `[]`.
+2. "keeps the static contracted list sorted, unique, frozen, lane-rooted,
+   task551-named and disjoint from the plan". The historical five are members.
+   Do not pin a count.
+3. Allowlist branch: a synthetic fence whose only path is
+   `tests/integration/server/task551SyntheticAllow.test.ts` in `allowlist`,
+   with `commands: []`, yields exactly that path.
+4. argv-only branch: `allowlist: []` and one command
+   `{ argv: ["bun", "test", "tests/unit/workflows/task551SyntheticArgv.test.ts"], positiveDiscovery: { kind: "not-applicable" } }`
+   yields exactly that path.
+5. Discovery branch: `allowlist: []` and one command with
+   `argv: ["bun", "run", "gate"]` and
+   `positiveDiscovery: { kind: "test-paths", paths: ["tests/perf/task551SyntheticDiscovery.test.ts"] }`
+   yields exactly that path. The same `paths` under any other `kind` yields
+   `[]`, which isolates the kind guard.
+6. Parser shape: a markdown file without a fence yields `[]`. A fence without
+   `allowlist` or `commands` (the family graph shape) yields `[]`. Each of the
+   following throws `task551_fence_shape`: a non-object fence, a non-string
+   `allowlist` item, a non-array `commands`, a command without `argv`, and a
+   `test-paths` discovery whose `paths` is not a string array. Invalid JSON
+   throws. Non-lane (`tests/vitest/...`) and planned paths never reach
+   `contractedFromFencePaths` output.
+7. Absent-entry allowance branch. A static entry that is not in `derived`
+   yields `undeclared-static:<path>`. With that path in `allowance`, the
+   result is `[]`. An allowance entry that is also derived, or that is not
+   static, yields `stale-allowance:<path>`. A derived path that is missing from
+   the static list yields `missing-from-static:<path>`.
+8. "every task551-path lane file on disk is planned or statically contracted"
+   (live): `unownedTask551LaneFiles(laneTestFilesOnDisk(roots), planned, static)`
+   equals `[]`. The synthetic stray `tests/perf/task551StrayProbe.test.ts` is
+   reported. So is the case-variant
+   `tests/integration/server/Task551DatabaseLifecycle.test.ts`, because
+   matching is exact.
+
+**Case renamed (D5).** "keeps the five contracted non-planned task551 lane
+tests outside the slice and strays failing" becomes "keeps the static
+contracted task551 lane-test list outside the slice and strays failing".
+
+- The historical five are members of the static list, and each is exactly one
+  live manifest row. This is the original pin, kept.
+- Every static entry has exactly one live manifest row when its file exists
+  on disk and none when it does not.
+- The present rows plus the materialized manifest classify as
+  `post-finalization`.
+- A synthetic manifest that materializes all 26 entries also classifies as
+  `post-finalization`. This proves that declared-but-absent entries are
+  accepted once they land.
+- The existing stray and case-variant stray assertions
+  (`tests/perf/task551StrayProbe.test.ts` and
+  `tests/perf/Task551StrayProbe.test.ts` fail with
+  `query_inventory_final_receipt_missing`) stay byte-unchanged.
+
+**Unchanged (D5).**
+
+- `task551StateInput(manifest, exists)` keeps two parameters.
+- Every direct call of `assertExactMaterializedTask551BunLaneMembership`
+  (`:159`, `:344-418`) keeps its `{ planned, manifest, exists? }` argument, so
+  those assertions stay byte-unchanged.
+- The live pin (`:137-163`), and every state, bucket, duplicate, extra, and
+  parse assertion, is kept and not weakened.
+- `tests/perf/database-query-inventory.test.ts` stays untouched. Its
+  `runInventoryCheck` cases inject only `exists`, `readManifest`, and `scan`,
+  which remains the complete dependency shape.
+
+#### V2-6 Regeneration precondition (D3)
+
+This extends v1's **Regeneration** paragraph. `bun scripts/bun-lane-classify.ts`
+may write `tests/bun-lane-manifest.json` only after every to-be-added suite has
+passed through the real lane runner. The to-be-added set is recomputed at gate
+time as the fresh in-process classification rows minus the committed rows. At
+`9c5b6666` it is the 21 v1 **Defect** rows:
+
+- the twelve `task551` rows, and
+- the nine generic rows `tests/integration/runtime/retentionScheduler.test.ts`,
+  `tests/perf/database-explain-plans.test.ts`,
+  `tests/perf/database-index-write-overhead.test.ts`,
+  `tests/perf/database-partition-readiness.test.ts`,
+  `tests/perf/database-pool-telemetry.test.ts`,
+  `tests/perf/database-retention-batches.test.ts`,
+  `tests/perf/database-retention-jobs.test.ts`,
+  `tests/perf/database-revision-budgets.test.ts`, and
+  `tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`.
+
+Steps (orchestrator; none of them writes a tracked path):
+
+1. **Scratch manifest.** Classify exactly the to-be-added rows in process,
+   using the exported `classify` (`scripts/bun-lane-classify.ts:694`, `:744`).
+   Write them as a v2 manifest to
+   `.tmp/task551-reopen-v2/precondition-manifest.json`. The `.tmp` directory
+   is gitignored (`.gitignore:18`). Never use `/tmp`, and never use `tests/`.
+2. **Owner-map run (DB).**
+   `BUN_LANE_MANIFEST_PATH=.tmp/task551-reopen-v2/precondition-manifest.json bun scripts/run-bun-parallel.ts --lane all --report .tmp/task551-reopen-v2/precondition-report.json`,
+   with `--workers`/`--pool` inside the runner's `workers x pool <= 10`
+   budget. It runs in the closed owner-map environment on `DATABASE_URL3`:
+   the URL as `DATABASE_URL` and `DATABASE_DIRECT_URL`, the owning leaves'
+   `TASK551_FIXTURE_*` keys, and `DB_LOCK_TIMEOUT_MS=15000`. Record one of
+   pass, skip, or fail for each suite. When a worker holding several files
+   fails, re-run each of its files once by name to attribute the failure. The
+   tracked `tests/bun-lane-timings.json` is read-only here.
+3. **Map-free run (DB-free).**
+   `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <the to-be-added files>`.
+   Each suite either passes, or its DB-gated tests skip cleanly. A connection
+   error, hang, or failure means the suite lacks a DB gate.
+4. **Blocking.** Any owner-map fail, or any map-free failure, is a hand-off to
+   the leaf that allowlists that suite (**V2-3** owner column; for the generic
+   rows, the leaf whose envelope names the path). That leaf adds the DB gate or
+   the fix. Regeneration is blocked until the hand-off lands and steps 2 and 3
+   are green for that suite.
+
+**`task551OnlineIndexDeployment.test.ts` gating verdict (verified at
+`9c5b6666`).** The suite really has no DB or skip gating. It never reads
+`DATABASE_URL`. Its one `testIfDb` hit (`:363`) counts gates in a different
+file. It needs none, because it is DB-free by construction. Its header
+(`:68-69`) states that no test opens a connection, and its only `postgres(...)`
+handle (`:832`) targets `postgresql://127.0.0.1:1/none`, is never connected,
+and is ended at once. The map-free run at this tree gives 49 pass, 0 fail. So
+there is no DB-gate hand-off to TASK-551-05-L01, and it does not block
+regeneration. The suite must *pass*, not skip, in both steps 2 and 3.
+
+Separate observation, handed off to the owners and not blocking 01-L01: the
+file is 3,513 lines and `task551SolutionKitRollbackAuthoritySchema.test.ts` is
+2,182 lines. Both exceed the 1,000-line gate. Those splits belong to
+TASK-551-05-L01 and TASK-551-05-L03.
+
+#### V2-7 Cross-file effects (D4; hand-offs, append-only, owners write)
+
+- **TASK-551-11 V3-2 (`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md:1088`)
+  becomes stale rationale.** It says: "`scripts/task551QueryInventory/bunLane.ts:37-43`
+  closes the non-planned `task551` lane-test list to five paths, and
+  `:220-221` (`task551ManifestSlice`) treats any other manifest row whose path
+  contains `task551` as an unplanned stray." It also says: "The three monolith
+  names are kept, so the closed five-path list and its TASK-551-01-L01 mirror
+  (`TASK-551-01-L01…md:1758-1759`) stay valid." Hand-off: the TASK-551-11
+  owner appends a dated note citing this amendment. The naming rule "Every NEW
+  test file carries no `task551` token" stays binding and harmless. Such files
+  are ordinary generic rows, never slice members, and need no static-list
+  entry. No TASK-551-11 source, test, provenance, or barrier list changes.
+- **TASK-551-10-L02
+  (`TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md:1702-1706`)
+  becomes stale rationale.** It says: "The three original names stay, because
+  `scripts/task551QueryInventory/bunLane.ts:37-43` pins them in the closed
+  five-path `TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` list. `:218-221`
+  treats any other `task551`-named test as an unplanned stray." Hand-off: the
+  TASK-551-10-L02 closure writer appends a dated note. The three names remain
+  contracted as static entries 24-26.
+- **Every leaf that names a new `task551`-path Bun-lane test** falls under the
+  **V2-2** growth rule.
+
+#### V2-8 Line gate (verified `wc -l`; projected)
+
+| File | Lines now | Projected |
+| --- | --- | --- |
+| `scripts/task551QueryInventory/bunLane.ts` | 356 | about 380 |
+| `tests/integration/server/task551BunLaneMembership.test.ts` | 449 | about 690 |
+| `scripts/task551QueryInventory/check.ts` | 127 | untouched |
+| `tests/unit/toolchain/bunLaneManifest.test.ts` | 304 | untouched |
+| `scripts/bun-lane-classify.ts` | 744 | untouched |
+| `tests/perf/database-query-inventory.test.ts` | 1,889 | untouched |
+
+No new data module exists (**V2-2** placement). No touched file exceeds
+1,000 lines, and no split is part of v2.
+
+#### V2-9 Envelope
+
+No change. `bunLane.ts`, the membership test, and
+`tests/bun-lane-manifest.json` are already in the single envelope `allowlist`.
+The `root-eslint` and `per-file-line-count` argv already cover `bunLane.ts`.
+The family preflight passes on the tree that carries this amendment, because
+no fence byte changes.
+
+#### V2-10 Land order, validation, receipt (D6)
+
+**Land order.** v2 lands on its own once its post-audit is clean. It does not
+depend on the TASK-551-11 re-open or on 03-L02 W0. The order is:
+
+1. source and test edits,
+2. their fast gates,
+3. the **V2-6** precondition,
+4. the literal classifier command with v1's one-path mutation proof,
+5. the airtight gates.
+
+The regeneration is repeated at 01-L01 FINAL with the same precondition, the
+same literal command, and the same one-path proof. Later lane-file additions
+make `bunLaneManifest.test.ts` red until the next regeneration. A new
+`task551`-path addition also makes membership cases 1 and 8 red until its
+**V2-2** mirror lands.
+
+**Validation.**
+
+- `./node_modules/.bin/eslint --max-warnings=0 scripts/task551QueryInventory/bunLane.ts tests/integration/server/task551BunLaneMembership.test.ts`
+- Before regeneration: the airtight run of the membership suite has
+  **V2-5** cases 1-8 green. Only the live-manifest assertions may be red: the
+  live pin, the renamed case's live half, and the two
+  `bunLaneManifest.test.ts` cases named in v1.
+- Airtight, after regeneration, all green:
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551BunLaneMembership.test.ts tests/unit/toolchain/bunLaneManifest.test.ts tests/perf/database-query-inventory.test.ts tests/perf/database-query-inventory-capability-routes.test.ts`
+- `wc -l scripts/task551QueryInventory/bunLane.ts tests/integration/server/task551BunLaneMembership.test.ts`,
+  then `git diff --check` and `git status --short`.
+- The orchestrator runs `bun run lint:repo:types` between phases.
+
+**Receipt addendum.** The location and the v1 fields are unchanged: one entry
+in `reopenAddenda` of `_docs/_workflows/_smoke/task-551/impl-01-l01-initial.json`,
+written by the orchestrator.
+
+- `filesTouched` lists `bunLane.ts`, the membership test, and
+  `tests/bun-lane-manifest.json`. It does not list `check.ts`.
+- `contractedPathCount` is the static list length (26 at `9c5b6666`).
+- The entry adds `preRegenerationLaneRun` as `[{ path, ownerMap, mapFree }]`,
+  where each value is `"pass" | "skip" | "fail"`.
+- The entry adds `handoffs[]` as `{ taskId, reason }` for **V2-6** and
+  **V2-7**.
+
+The entry holds no environment values, DB identities, SQL, or fixture data.
+
+#### V2-11 Superseded v1 sentences (quoted; superseded from this date)
+
+- **Binding rule** (`:1952-1958`): "That row is *contracted* when its exact
+  path (case-sensitive) matches at least one of these in the TASK-551 family
+  dispatch projection returned by `preflightTask551DispatchSnapshot`: 1. an
+  entry of a leaf envelope's `allowlist`, or 2. a token of any command's `argv`
+  in a leaf envelope, or 3. a `positiveDiscovery.paths` entry of kind
+  `test-paths`." Replaced by: membership in the static list (**V2-2**). The
+  three sources now bind the list in the test (**V2-5**), not at runtime.
+- **Decision** (`:1979-1983`): "The
+  `TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` export and its set are
+  deleted. `contractedPaths` is a required input wherever a manifest slice is
+  computed. A missing, malformed, or failing snapshot fails closed with
+  `query_inventory_invalid`." Replaced by: the export and its set stay, widened
+  to the 26 **V2-3** paths, and no slice function takes a `contractedPaths`
+  input.
+- `:1988`: "It would keep two sources of truth that drift apart." Superseded
+  as a reason. The list is bound to the fences by **V2-5** cases 1 and 8, so
+  drift fails closed. The other two v1 reasons still hold, and v2 adds no
+  fallback.
+- `:1991`: "The historical five paths survive only as a test-side regression
+  pin (below)." Replaced by: they are static entries 10, 17, and 24-26, and
+  they are also pinned test-side.
+- **Pure derivation and loader** (`:1993-1994`): "Both live in
+  `scripts/task551QueryInventory/bunLane.ts`." This covers the whole paragraph
+  and both ` ```ts ` blocks after it (`deriveTask551ContractedLaneTestPaths`,
+  `readTask551ContractedLaneTestPaths`, `CONTRACTED_PATHS_SNAPSHOT_HEAD`, the
+  three-argument `task551ManifestSlice`, the `contractedPaths` input rules,
+  the `readContractedPaths?` field, and the `check.ts` loader call). None of
+  them is implemented.
+- **Tests** (`:2098-2100`): "Remove the
+  `TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` import.
+  `task551StateInput(manifest, exists, contractedPaths)` takes explicit paths.
+  Synthetic cases pass `[]` where every row is planned." Replaced by the
+  **V2-5** Unchanged list.
+- **Tests** (`:2101-2103`): the rename target "keeps every leaf-contracted
+  task551 lane test outside the slice and strays failing". Replaced by the
+  **V2-5** rename.
+- **Tests** (`:2104-2109`): "Live pin: `contracted = await
+  readTask551ContractedLaneTestPaths(planned)`." and "must pass
+  `assertExactMaterializedTask551BunLaneMembership` with `contracted`."
+  Replaced by the unchanged live pin and **V2-5** case 1.
+- **Tests** (`:2110-2126`): the "owned is contracted" two-node
+  `dispatchOrder` case and the "Fail-closed:
+  `deriveTask551ContractedLaneTestPaths` throws …" bullet, including "A
+  manifest-bearing `assertCanonicalBunLaneMembership` without
+  `contractedPaths` throws `query_inventory_invalid`." Replaced by **V2-5**
+  cases 3-7. The "owned nowhere is a stray" bullet survives in substance
+  through the unchanged stray assertions and case 8.
+- **Line gate** (`:2162-2164`): "| `bunLane.ts` | 356 | about 430 |",
+  "| `check.ts` | 127 | about 140 |", and
+  "| `task551BunLaneMembership.test.ts` | 449 | about 560 |". Replaced by
+  **V2-8**.
+- **Envelope** (`:2172-2178`): "`bunLane.ts`, `check.ts`, the membership test
+  and `tests/bun-lane-manifest.json` are already in the single envelope
+  `allowlist`" (the conclusion stands, but `check.ts` is no longer touched),
+  and "The facade `scripts/task-551-query-inventory.ts` needs no edit, because
+  `export *` re-exports the new functions and drops the deleted constant."
+  Replaced by: no new functions; the constant stays re-exported (**V2-4**).
+- **Land order** (`:2184-2186`): "and the two 03-L02 `task551` tests, which
+  are already contracted through the 03-L02 allowlist and so can never become
+  strays." Replaced by: they are contracted as static entries 1 and 5.
+- **Regeneration** (`:2140-2142`): "After the source and test edits pass their
+  targeted gates, the orchestrator runs the literal
+  `bun scripts/bun-lane-classify.ts` from the worktree root." Refined, not
+  removed: the **V2-6** precondition now runs in between.
+- **Validation** (`:2192`): the eslint argv with
+  `scripts/task551QueryInventory/check.ts`. Replaced by **V2-10**, which drops
+  `check.ts` and adds `tests/perf/database-query-inventory-capability-routes.test.ts`
+  to the airtight run.
+
+### Amendment v3 (2026-09-25): static-list growth and gated regeneration
+
+Recorded at HEAD `9c5b6666` (dirty tree) from the v2 audit findings H, M1, and
+M2, verified against the current task fences and test sources. This amendment
+is append-only. It supersedes v2 only where stated, and **V3-6** quotes every
+superseded v2 sentence with its current line. Every v2 clause that is not
+quoted there stays binding. No ` ```json ` fence byte changes (**V3-5**).
+
+#### V3-1 Static list grows to 27 entries (finding H)
+
+TASK-551-02-L02 Re-open amendment R6 (2026-09-25) adds
+`tests/integration/server/task551DedicatedSessionGuards.test.ts` to its
+envelope (`TASK-551-02-L02-Pool-Lifecycle-Timeouts-And-Sanitized-Query-Telemetry.md`
+R6.4 at `:1683-1718`; fence `allowlist` at `:812`, `database-lifecycle-test`
+`argv` at `:834`, and `positiveDiscovery.paths` at `:837`). The file is not on
+disk at this tree, so it is declared-but-absent. It contains `task551`, sits
+under the `tests/integration/server` lane root, and is not planned, so the
+**V2-5** case-1 derivation already yields it. Without it,
+`staticListBindingErrors` reports `missing-from-static:` for that path.
+
+The **V2-3** table gains one row. In UTF-16 order it falls between entry 11
+(`task551DatabaseLifecycleRealDb`) and the old entry 12
+(`task551IndexAndConstraintCatalog`), because `Da` sorts before `De`:
+
+| # | Path | Contracted via (owner) | On disk at `9c5b6666` |
+| --- | --- | --- | --- |
+| 12 | `tests/integration/server/task551DedicatedSessionGuards.test.ts` | allowlist + argv + test-paths (TASK-551-02-L02, R6) | no |
+
+Old entries 12-26 become 13-27. Their paths, owners, and on-disk flags do not
+change. Entries 1-11 keep their numbers. The list therefore has 27 entries:
+17 on disk and 10 declared-but-absent. The historical five are now entries 10,
+18, and 25-27. The two TASK-551-03-L02 suites are still entries 1 and 5.
+
+Verification (2026-09-25, DB-free, read-only). Take the first ` ```json `
+fence of every `TASK-551*.md` file. Collect the `allowlist`, every command
+`argv`, and every `test-paths` discovery. Filter them with the **V2-5**
+predicates: the `LANE_TEST_FILE` regex, the `task551` token, not a member of
+`TASK551_PLANNED_BUN_TEST_PATHS`, and inside the `scripts/bun-lane-classify.ts:62-73`
+lane roots. This yields exactly the 27 paths above in that order. No other
+path is derived. `DECLARED_NOT_YET_ALLOWLISTED` stays `[]`, because the new
+entry is already named by the 02-L02 fence.
+
+**`bunLane.ts` edit (V2-4, still the single writer).** The frozen
+`TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` holds the 27 paths above,
+byte-exact and in order. Nothing else in **V2-4** changes. **V2-8** now
+projects `bunLane.ts` at about 381 lines; the membership test projection is
+unchanged.
+
+**Receipt.** `contractedPathCount` is not a literal. The orchestrator writes
+`TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS.length` as read from the tree
+at the time of the run (27 when v3 lands). **V2-5** case 2 already pins no
+count, and v3 adds none. Any v2 or v3 number is descriptive, not an assertion.
+
+#### V3-2 Growth-rule gate (finding M1; family rule)
+
+This replaces the **V2-2** growth-rule timing with a same-correction gate:
+
+1. A TASK-551 leaf may allowlist, or name in `argv` or `test-paths`, a NEW
+   `task551`-named Bun-lane test path. When it does, the SAME dated correction
+   in that leaf must also do two things:
+   - record the matching TASK-551-01-L01 mirror (a dated 01-L01 amendment that
+     adds the exact path to the static list; 01-L01 stays the single writer of
+     `bunLane.ts`), and
+   - put the verification suite in its own gate set: the 01-L01
+     `lane-membership-test` suite, `tests/integration/server/task551BunLaneMembership.test.ts`,
+     run airtight as
+     `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551BunLaneMembership.test.ts`.
+2. The leaf's gate is green only when **V2-5** cases 1 and 8 are green on the
+   tree that carries both the leaf's correction and the 01-L01 mirror. A
+   correction that names a new path without its mirror is incomplete. The
+   leaf's post-audit must report it as a MEDIUM finding.
+3. The leaf's gate set means its implementer FAST gates and orchestrator gates
+   (prose). A fence `commands[]` entry is allowed but not required. The
+   membership path is a planned path, so naming it never changes the
+   derivation.
+4. The escape hatch of a name without the `task551` token (**V2-2**,
+   TASK-551-11 precedent) stays available.
+
+**Owed additions at this tree (verified from each fence):**
+
+- **TASK-551-02-L02 (R6).** `task551DedicatedSessionGuards.test.ts` gets its
+  mirror through **V3-1**. Hand-off: the 02-L02 owner appends a dated note
+  that adds the membership suite to its R6.4 implementer FAST gates. This is
+  prose only; the fence does not change. Until that note lands, the 02-L02
+  post-audit must re-run the membership suite itself.
+- **TASK-551-10-L01.** Its envelope names four future `task551` suites
+  (`TASK-551-10-L01-Small-Large-Load-Fault-Security-And-Redis-Smoke-Gates.md`
+  fence `allowlist` `:1173-1176`, and the `cache-performance-gate`,
+  `cache-fault-matrix`, `cache-security-gate`, and
+  `two-process-redis-smoke-test` commands):
+  `tests/perf/task551DatabaseCachePerformanceGate.test.ts`,
+  `tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts`,
+  `tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts`, and
+  `tests/security/task551ServerCacheSecurityGate.test.ts`. None of them is on
+  disk. They are ALREADY static entries 23, 2, 3, and 24 (v2 entries 22, 2, 3,
+  and 23) as declared-but-absent, so v3 adds no row for them. Their mirror
+  obligation is met now. The owed part is the membership-suite gate and the
+  regeneration handoff in **V3-3**.
+- **No other leaf** names an unlisted `task551` Bun-lane path at this tree
+  (derivation in **V3-1**).
+
+#### V3-3 TASK-551-10-L01 regeneration handoff (decision: 10-L01 regenerates)
+
+The 10-L01 `full-bun-test` command (`["bun", "--env-file=/dev/null", "run", "test"]`,
+fence `:1382-1386`) runs `tests/unit/toolchain/bunLaneManifest.test.ts`. That
+suite is red while any lane test file on disk is missing from
+`tests/bun-lane-manifest.json`. The four 10-L01 suites are exactly such files
+once they are written. So the full run needs a regeneration AFTER those suites
+exist. Of the two options, v3 picks the first and records it as a 10-L01
+handoff. It does not reorder 01-L01 FINAL after 10-L01.
+
+- **Handoff to TASK-551-10-L01 (its owner writes, append-only).** The 10-L01
+  owner adds a dated mirror correction. It allowlists the generated
+  `tests/bun-lane-manifest.json` for exactly one purpose: the literal command
+  `bun scripts/bun-lane-classify.ts` from the worktree root. That command is
+  the FIRST command of the 10-L01 gate sequence. It runs after the four suites
+  exist and after the **V3-4** precondition is green for the recomputed
+  to-be-added set, which then includes the four suites and any other new
+  lane file. Next in the sequence comes the airtight membership suite
+  (**V3-2**). Then comes `tests/unit/toolchain/bunLaneManifest.test.ts`,
+  followed by the rest of the existing gates, `full-bun-test` included.
+- The 10-L01 regeneration keeps v1's one-path mutation proof: exactly
+  `tests/bun-lane-manifest.json` changes. The manifest is never hand-edited.
+- 01-L01 stays the contract owner of the classifier output and of
+  `bunLane.ts`. The 10-L01 write is a delegated regeneration of a generated
+  artifact under the literal command, not a second writer of any
+  human-authored file.
+- The regeneration at 01-L01 FINAL (**V2-10**) is unchanged. It is not
+  reordered after 10-L01.
+
+#### V3-4 Owner-map verdicts by gating class (finding M2)
+
+This refines **V2-6** steps 2-4 (quoted in **V3-6**). Each to-be-added suite
+is classified by how its real-DB legs are gated. The class decides the
+required result in each run. Gating below was verified by grep at this tree.
+
+| Class | Suites (of the 21 v1 **Defect** rows) | Gate (verified anchor) | Owner-map run (step 2) | Map-free run (step 3) |
+| --- | --- | --- | --- | --- |
+| A. `TASK551_FIXTURE_*` owner-map gated | `task551ActionExecutionStore` (`:37`, `:91`), `task551AppendHeavyRetention` (`:92`, `:100`), `task551RevisionConcurrency` (`:56`, `:113`), `task551RevisionRetention` (`:96`, `:104`), `database-pool-telemetry` (`:61`, `:269`), `database-retention-batches` (`:80`, `:818`), `database-retention-jobs` (`:90`, `:102-113`, `:600`, a map plus routable probe), `database-revision-budgets` (`:84`, `:90`), `database-partition-readiness` (`:70`, `:103`, a map plus routable probe) | `test.skipIf(!OWNER_DB_TEST_MAP_PRESENT …)` over the three `TASK551_FIXTURE_DATABASE_{URL,NAME,SENTINEL}` keys | must PASS; a skip is blocking | pass, with DB legs skipped |
+| B. Ambient `DATABASE_URL` gated | `task551CacheInvalidationOutboxSchema` (`:52`, `:61-62`), `task551ConcurrencyConstraints` (`:76`, `:85-86`), `task551IndexAndConstraintCatalog` (`:55`, `:64-65`), `task551RetentionJobService` (`:107-108`), `task551SchemaMigrationParity` (`:109`, `:118-119`), `task551SearchVectorMigration` (`:81`, `:90-91`), `task551SolutionKitRollbackAuthoritySchema` (`:994-999`, a `select 1` probe through the core client), `retentionScheduler` (`:64-65`), `database-index-write-overhead` (`:38`, `:47-48`) | `hasDb ? test : test.skip` after a connect probe on the ambient URL | must PASS with the closed env (`DATABASE_URL` = `DATABASE_URL3`); a skip is blocking | pass, with DB legs skipped |
+| C. Injection gated (L11 broker; no env read) | `database-explain-plans` (live halves `:2579-2610` return when `readTask551ExplainAuthority()` is `undefined`; the reader is set only by `configureTask551ExplainAuthority`, `tests/perf/fixtures/task551QueryPlanContracts.ts:3432-3440`), `task489-solution-kit-run-predecessor-plans` (`:2333-2335` returns when `readTask489PredecessorInjection()` is `undefined`, `:1205-1206`) | no env gate; the lane runner injects nothing | must PASS; live halves inert; the airtight arms assert absence | must PASS |
+| D. Ungated (DB-free by construction) | `task551OnlineIndexDeployment` (verdict in **V2-6**) | none | must PASS | must PASS |
+
+The count is 9 + 9 + 2 + 1 = 21, which matches the **V2-6** set.
+
+**Correction to the audit seed.** The seed put `database-explain-plans` and
+`task489-solution-kit-run-predecessor-plans` in class A. The grep shows no
+`process.env.TASK551_FIXTURE_*` read and no `skipIf` in either file. Their
+`TASK551_FIXTURE_DATABASE_*` literals (`:2370-2373` and `:1270-1273`) are
+synthetic fixtures for the no-socket target-seam tests. Their live halves are
+gated by in-process injection, which the lane runner never performs. So the
+owner-map run cannot make them execute live. In it they must pass with inert
+live halves, and their live proof stays with the L11 broker (TASK-551-05-L02
+and the TASK-489 predecessor owners). This does not block regeneration.
+
+**Blocking rule (replaces V2-6 step 4 wording).** Any of these blocks
+regeneration and is a hand-off to the owning leaf:
+
+- a fail in either run;
+- a skip in the owner-map run of any class-A or class-B DB leg;
+- a skip in either run of a class-C or class-D suite;
+- a map-free connection error or hang.
+
+The owning leaf is the **V2-3**/**V3-1** owner column, or for generic rows the
+leaf whose envelope names the path. Regeneration stays blocked until the
+hand-off lands and both runs meet this table for that suite. The
+**`task551OnlineIndexDeployment` gating verdict** and its "no DB-gate hand-off
+to TASK-551-05-L01" conclusion stand unchanged.
+
+The to-be-added set is still recomputed at gate time (**V2-6**). Suppose
+`task551DedicatedSessionGuards.test.ts` (DB-free by the 02-L02 R6.4 contract)
+or any 10-L01 suite exists when a regeneration runs. It then joins the set and
+is classified by grep in the same way before the run. An unclassifiable suite
+blocks.
+
+**Receipt.** Each `preRegenerationLaneRun` entry adds `gatingClass`
+(`"fixture" | "ambient" | "injection" | "ungated"`). `ownerMap` and `mapFree`
+keep the values `"pass" | "skip" | "fail"`, and a recorded skip that this
+table forbids is a blocking result, never a pass. The entry still holds no
+environment values.
+
+#### V3-5 Envelope, validation, land order
+
+- **Envelope.** No change. `bunLane.ts`, the membership test, and
+  `tests/bun-lane-manifest.json` are already in the 01-L01 `allowlist`. No
+  fence byte changes, so the family preflight result is the same as the v2
+  tree's.
+- **Validation.** **V2-10** is unchanged, with one exception: the receipt
+  count follows **V3-1**.
+- **Land order.** **V2-10** is unchanged. v3 lands together with v2's source
+  and test edits. The **V3-3** 10-L01 regeneration is a separate, later gate
+  in TASK-551-10-L01.
+
+#### V3-6 Superseded v2 sentences (quoted; superseded from this date)
+
+- `:2292`: "#### V2-3 The static list (exact; 26 entries; sorted by UTF-16
+  code unit)". Replaced by: exact, 27 entries (**V3-1**).
+- `:2323-2325`: "The list has 17 entries on disk: the historical five plus the
+  twelve v1 **Defect** rows. It has 9 declared-but-absent entries: the two
+  TASK-551-03-L02 suites, plus seven more that are already named in leaf
+  allowlists:". Replaced by: 17 on disk, 10 declared-but-absent (the nine
+  named in v2 plus `task551DedicatedSessionGuards`).
+- `:2334-2335`: "This equals the v1 derivation result ("26 contracted paths,
+  17 of which are present on disk")." Replaced by: the fence derivation at
+  this tree yields 27 paths, 17 present (**V3-1**). The v1 figure at `:1972`
+  stays a historical record.
+- `:2351`: "// ... the 26 V2-3 paths, byte-exact and in V2-3 order ...".
+  Replaced by: the 27 paths of **V2-3** as amended by **V3-1**.
+- `:2575-2576`: "A synthetic manifest that materializes all 26 entries also
+  classifies as `post-finalization`." Replaced by: all entries of the static
+  list, iterated from the constant rather than counted.
+- `:2263-2266`: "When a leaf starts naming a new `task551`-path Bun-lane test,
+  a dated 01-L01 mirror adds that exact path to the static list in the same
+  land window. The mirror is the single writer of `bunLane.ts`. Until it
+  lands, the membership suite fails closed and names the missing path."
+  Replaced by **V3-2**: same dated correction, a recorded 01-L01 mirror, and
+  the membership suite in the leaf's own gate set. The single-writer sentence
+  stays.
+- `:2626-2627`: "Record one of pass, skip, or fail for each suite." Replaced
+  by: record it, and judge it against the **V3-4** class table.
+- `:2632-2633`: "Each suite either passes, or its DB-gated tests skip
+  cleanly." Replaced by: class A and class B suites pass with DB legs skipped,
+  and class C and class D suites must pass (**V3-4**).
+- `:2634-2638`: "Any owner-map fail, or any map-free failure, is a hand-off to
+  the leaf that allowlists that suite (**V2-3** owner column; for the generic
+  rows, the leaf whose envelope names the path)." and "Regeneration is blocked
+  until the hand-off lands and steps 2 and 3 are green for that suite."
+  Replaced by the **V3-4** blocking rule, which adds forbidden skips.
+- `:2674-2675`: "The three names remain contracted as static entries 24-26."
+  Replaced by: static entries 25-27.
+- `:2737`: "`contractedPathCount` is the static list length (26 at
+  `9c5b6666`)." Replaced by: the list length read from the tree at the time
+  of the run, not a literal (**V3-1**).
+- `:2758-2759`: "the export and its set stay, widened to the 26 **V2-3**
+  paths". Replaced by: widened to the 27 paths of **V2-3** as amended by
+  **V3-1**.
+- `:2766-2767`: "they are static entries 10, 17, and 24-26". Replaced by:
+  static entries 10, 18, and 25-27.

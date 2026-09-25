@@ -1175,7 +1175,7 @@ projection receipt and run closure-only checks:
 node --check _docs/_workflows/task-551-author-audit.mjs
 node --check _docs/_workflows/task-551-implement.mjs
 node --check _docs/_workflows/task-551-fix.mjs
-bun test tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/task551EvidenceContract.test.ts
+bun test tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/authorAuditDriftRounds.test.ts tests/unit/workflows/authorAuditBoundedChild.test.ts tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/workflowContractsBootstrap.test.ts tests/unit/workflows/workflowContractsSubgates.test.ts tests/unit/workflows/workflowContractsImplementation.test.ts tests/unit/workflows/task551EvidenceContract.test.ts tests/unit/workflows/evidenceContractMatrix.test.ts tests/unit/workflows/dispatchContractCaps.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
 git diff --check
@@ -1190,8 +1190,11 @@ forbidden-diff failure.
 ## Documentation Updates Required
 
 Exactly the documentation and closure files listed under **Exact Single-Writer
-Ownership**. No other documentation is modified without a fresh ownership
-amendment and reconcile PASS.
+Ownership**, plus `_docs/PAGE_MODEL.md` and
+`docs/guide/screens/page-editor-preview-settings-and-history.md` (ownership
+amendment 2026-09-25, "06-L02 R7 docs mirror" section below). No other
+documentation is modified without a fresh ownership amendment and reconcile
+PASS.
 
 ## Workflow Dispatch Envelope
 
@@ -1233,6 +1236,8 @@ symlink, non-1310, or stale graph rejects before every closure writer.
     "docs/develop/runtime-model.md",
     "docs/develop/security.md",
     "docs/develop/testing.md",
+    "_docs/PAGE_MODEL.md",
+    "docs/guide/screens/page-editor-preview-settings-and-history.md",
     "_docs/_TASKS/TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md",
     "_docs/_TASKS/TASK-551-01-L02-Small-Large-Fixtures-Baselines-And-Budgets.md",
     "_docs/_TASKS/TASK-551-01-L03-Isolated-Fixture-Target-Bootstrap.md",
@@ -1312,9 +1317,9 @@ symlink, non-1310, or stale graph rejects before every closure writer.
     {
       "id": "workflow-contract-tests",
       "lane": "bun-test",
-      "argv": ["bun", "test", "tests/unit/workflows/task551AuthorAudit.test.ts", "tests/unit/workflows/task551WorkflowContracts.test.ts", "tests/unit/workflows/task551EvidenceContract.test.ts"],
+      "argv": ["bun", "test", "tests/unit/workflows/task551AuthorAudit.test.ts", "tests/unit/workflows/authorAuditDriftRounds.test.ts", "tests/unit/workflows/authorAuditBoundedChild.test.ts", "tests/unit/workflows/task551WorkflowContracts.test.ts", "tests/unit/workflows/workflowContractsBootstrap.test.ts", "tests/unit/workflows/workflowContractsSubgates.test.ts", "tests/unit/workflows/workflowContractsImplementation.test.ts", "tests/unit/workflows/task551EvidenceContract.test.ts", "tests/unit/workflows/evidenceContractMatrix.test.ts", "tests/unit/workflows/dispatchContractCaps.test.ts"],
       "environmentProfile": "none",
-      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/unit/workflows/task551AuthorAudit.test.ts", "tests/unit/workflows/task551WorkflowContracts.test.ts", "tests/unit/workflows/task551EvidenceContract.test.ts"], "minimum": 1 }
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/unit/workflows/task551AuthorAudit.test.ts", "tests/unit/workflows/authorAuditDriftRounds.test.ts", "tests/unit/workflows/authorAuditBoundedChild.test.ts", "tests/unit/workflows/task551WorkflowContracts.test.ts", "tests/unit/workflows/workflowContractsBootstrap.test.ts", "tests/unit/workflows/workflowContractsSubgates.test.ts", "tests/unit/workflows/workflowContractsImplementation.test.ts", "tests/unit/workflows/task551EvidenceContract.test.ts", "tests/unit/workflows/evidenceContractMatrix.test.ts", "tests/unit/workflows/dispatchContractCaps.test.ts"], "minimum": 10 }
     },
     {
       "id": "core-lint-types",
@@ -1347,3 +1352,445 @@ symlink, non-1310, or stale graph rejects before every closure writer.
   ]
 }
 ```
+
+## Dated Contract Corrections — 2026-09-25 (03-L02 round-2 mirror)
+
+Source: disposition R2-34 in
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round2-dispositions.md`
+("10-L02 scenario count 8"), mirroring TASK-551-03-L02 C15 ("Runtime smoke").
+This section is append-only and supersedes only the sentence quoted below. The
+envelope, ownership, validation commands and every other clause are unchanged.
+
+- **Superseded (`:536-537`, Required Documentation Content):** "the five
+  TASK-551-03-L02 Admin-list visible-effect scenarios, light/dark screenshots,
+  and zero-console-error receipt alongside the infrastructure smoke."
+- **Now reads:** "the eight TASK-551-03-L02 Admin-list visible-effect scenarios
+  of suite `task-551-admin-lists` (session `wf55103l02`), in this order:
+  `pagination-next-previous`, `filter-reset`, `equal-sort-boundary`,
+  `booking-dirty-refresh`, `extracted-views`, `page-history-load-more`,
+  `offpage-selected-label`, `custom-screen-list-view`; each in light and dark
+  with screenshots under `_docs/_workflows/_smoke/task-551/03-l02/wf55103l02/`,
+  plus the zero-console-error receipt, alongside the infrastructure smoke."
+- The documentation deliverable names exactly these eight ids. A five-scenario
+  receipt or a missing id fails this item.
+
+## Dated Contract Corrections — 2026-09-25 (06-L02 R7 docs mirror; append-only)
+
+Sources: TASK-551-06-L02 "R7 amendments (round 2, 2026-09-25)" G1 (page
+whole-family floor) and G5 (request-path handoff), the 06-L02 R7 re-audit B
+reconciliation of the full-site lifecycle path, and TASK-551-03-L02 C17 v2
+(round-2 items owed to this leaf). This section is append-only. Besides it,
+only the envelope `allowlist` (two added paths) and the **Documentation Updates
+Required** paragraph were edited in place; ownership, validation commands and
+every other clause are unchanged. Anchors were verified on 2026-09-25 at HEAD
+`9c5b6666` plus the uncommitted R6/R7 edits; the implementer re-reads every
+anchor at closure because the owning 06-L02 R7 edits shift line numbers.
+
+### Ownership amendment (two literal paths)
+
+- `_docs/PAGE_MODEL.md` and
+  `docs/guide/screens/page-editor-preview-settings-and-history.md` join this
+  leaf's single-writer documentation set and its envelope `allowlist`. A grep
+  over all 41 `TASK-551*.md` files found no other envelope listing either path
+  (TASK-551-06-L02 names them only in prose, as a handoff to this leaf).
+- Edits are limited to the revision-retention statements below; no formatter
+  rewrite of either file. No envelope command lists documentation line
+  counts, so no command changes; the production/test line-count gate is
+  unaffected (both are documentation).
+
+### Revision retention statements owed to the two docs
+
+Precondition: 06-L02 R7 (R7-F1 plus G1) has landed and is green. The closure
+writer verifies before writing that `resolveWholeFamilyRetentionPolicy`
+exists in `core/services/content/revisionRetentionService.ts` and is applied in
+`runRevisionFamilyRetention`; if it is absent, STOP (the scheduler statement
+below would be false).
+
+Current text to reconcile (verified anchors):
+
+- `_docs/PAGE_MODEL.md:990-993` — "`settings.revisionRetention` controls
+  publish revision retention: default 10, min 1, max 100";
+- `_docs/PAGE_MODEL.md:2418-2420` (Revisions And Autosave) — "`publish`
+  snapshots, governed by `settings.revisionRetention`; one latest `autosave`
+  snapshot";
+- `docs/guide/screens/page-editor-preview-settings-and-history.md:273-275` —
+  "Revision retention is a page-level policy ...".
+
+The two docs must state, consistently, exactly these facts:
+
+1. **Per-page setting.** `settings.revisionRetention` is an integer 1..100,
+   default 10 (`core/services/pages/revisionRetention.ts`:
+   `DEFAULT_PAGE_REVISION_RETENTION`, `MIN_`/`MAX_PAGE_REVISION_RETENTION`;
+   non-numeric values normalize to 10, out-of-range values clamp).
+2. **Request path (publish and explicit prune).** On publish
+   (`core/services/pages/pageService.ts:229-238` -> `pruneRevisionsTx`) and on
+   the explicit `pruneRevisions(pageId, keep)` the page keeps its newest N
+   revision rows counted across BOTH kinds (publish rows plus the single
+   latest autosave row), where N is `settings.revisionRetention`. A row beyond
+   those N is deleted only when it is also older than the family
+   `maxAgeDays` (180 by default, `RETENTION_PAGE_REVISIONS_MAX_AGE_DAYS`,
+   30..2555). Saving an autosave does not itself prune.
+3. **Full-site lifecycle path.** The site-lifecycle publish
+   (`pageService.ts:633-643`) keeps the N newest PUBLISH rows of the staged
+   page (autosave rows are not counted toward N) and does not age-gate. The
+   docs name both paths explicitly instead of the single "controls publish
+   revision retention" sentence, so `PAGE_MODEL.md:990-993` and `:2419` no
+   longer contradict the request-path behaviour in item 2.
+4. **Scheduled whole-family job.** The `page_revisions` family pass
+   (TASK-551-06-L03 scheduler -> `runRevisionFamilyRetention`) deletes only
+   rows older than `maxAgeDays` that lie beyond a per-page floor of
+   `max(RETENTION_PAGE_REVISIONS_KEEP_NEWEST_PER_PARENT, MAX_PAGE_REVISION_RETENTION)`,
+   i.e. never below 100 for pages (family default 50, env bounds 1..500), so
+   the scheduler never deletes a row a page's own setting could keep. Other
+   revision families use their family value unchanged.
+5. **Newest publish anchor.** The newest `kind='publish'` row of every page
+   always survives every path (request, lifecycle, scheduled).
+6. **Behaviour change.** Older publish rows ARE prunable once they are beyond
+   the applicable floor and older than `maxAgeDays`. This is new after
+   TASK-551-06-L02 R7: before it, a defect in the published-anchor predicate
+   protected every publish row, so none was ever deleted. The changelog 1310
+   entry records this as a user-visible behaviour change.
+
+The guide (`page-editor-preview-settings-and-history.md`) states items 1, 2,
+5 and 6 in end-user terms (keep a higher value for sensitive pages; rows older
+than the retention age beyond the setting may be removed; the latest published
+version is always kept) and may reference the scheduled job without env names.
+`PAGE_MODEL.md` states all six items with the constant and env names.
+
+### TASK-551-03-L02 C17 v2 items owed to this leaf
+
+The earlier 2026-09-25 03-L02 round-2 mirror above covers only the eight-
+scenario smoke receipt. TASK-551-03-L02 "R2-10 / R2-11 / R2-34 — C17 handoffs
+v2" (its task file `:4173`, list at `:4212-4219`) keeps the Round-1 C17 list
+for this leaf (`:2834-2839`: endpoint cursor/limit/error deltas, custom-screen
+projection parameters, export-job routes, the booking split map, the Admin
+cache delta for `_docs/ADMIN_CACHE.md`/`_docs/ADMIN_CACHE_MAP.md`, and the
+`.env.example` entry) and adds the items below. None of them was recorded in
+this file before this section. All target docs are already in this leaf's set;
+`_docs/CMS_API.md` carries the route and error rows.
+
+- **R2-01 `last_admin`:** the last-admin guard counts only `status =
+  'active'` users holding a full-access role; a disabled or pending admin no
+  longer counts, so it no longer prevents demoting or disabling the last
+  active one. The loser code stays `last_admin` (409).
+- **Fence 503 rows (R2-01):** `mapAdminUserError` and `mapAdminRoleError` map
+  `native_cms_writer_fence_busy` and `native_cms_writer_recovery_required` to
+  503 with the same code and fixed messages (03-L02 `:2973-2977`).
+- **Comma-list query parameters (R2-04, 03-L02 `:3117`):** multi-value params
+  are single-key comma lists (`ids=a,b`; also `fields`, `types`), bounded,
+  strict tokens, duplicates rejected; a repeated key collapses to its last
+  value at the transport and is not a supported form. This supersedes the
+  Round-1 wording "`ids[]`".
+- **Form export-job routes (R2-06, 03-L02 `:3266`):** INITIAL
+  `POST /forms/:id/export-jobs` and `GET /forms/:id/export-jobs/:jobId`;
+  FINAL `GET /forms/:id/export-jobs/:jobId/download?token=` (after
+  TASK-551-08-L03 FINAL), with their `forms:read` RBAC and error codes.
+- **Booking week (R2-18, 03-L02 `:3457`):** `GET /booking/reservations/week`
+  (`booking:read`, bounded span, `booking_week_range_invalid` 400).
+- **`PAGINATION_CURSOR_SECRET`:** the `.env.example` entry remains owed
+  (purpose and size requirement, no real value), subject to the existing
+  TASK-511-07 `.env.example` precondition.
+
+Exact route paths, parameters, bounds and error codes are copied from the
+landed 03-L02 source and its C17 v2 text at closure, never from this summary; a
+mismatch is resolved in favour of the shipped source and recorded in the
+changelog entry.
+
+## Dated Contract Corrections — 2026-09-25 (03-L02 Round-3/4 docs mirror; append-only)
+
+Source: orchestrator disposition R4-15 in
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round4-dispositions.md`
+("TASK-551-10-L02 Round-3 mirror"), mirroring TASK-551-03-L02 "C17 v3 —
+Handoffs" (its task file `:5577`, 10-L02 list at `:5591-5597`) and the
+Round-3 items it cites: R3-07 (`:4730`), R3-09 (`:4790`), R3-11 (`:4838`),
+R3-18 (`:5212`) and R3-26 (`:5381`, `displayField` bullet `:5413-5415`), plus
+Round-4 disposition R4-08 (week cache). This section is append-only and
+supersedes only the two sentences quoted below. The envelope, allowlist,
+ownership, validation commands and every other clause are unchanged: every
+target document named here (`.env.example`, `_docs/ADMIN_CACHE_MAP.md`,
+`_docs/ADMIN_CACHE.md`, `_docs/CMS_API.md`) is already in this leaf's
+**Exact Single-Writer Ownership** list (`:104`, `:115-116`) and envelope
+`allowlist` (`:1222`, `:1232-1233`), so no fence edit is made. Anchors were
+verified on 2026-09-25 at HEAD `9c5b6666` plus the uncommitted Round-3/4
+edits; 03-L02 line numbers shift as that file grows (the C17 v2 heading cited
+as `:4173` in the section above is now at `:4191`), so the closure writer
+re-reads every anchor.
+
+### Superseded sentences
+
+- **Superseded (`:1476-1478`, "TASK-551-03-L02 C17 v2 items owed to this
+  leaf"):** "**Fence 503 rows (R2-01):** `mapAdminUserError` and
+  `mapAdminRoleError` map `native_cms_writer_fence_busy` and
+  `native_cms_writer_recovery_required` to 503 with the same code and fixed
+  messages (03-L02 `:2973-2977`)."
+- **Now reads:** "**Fence 503 rows (R2-01, R3-11):** `mapAdminUserError`
+  (`core/server/routes/adminUsersRoutes.ts`) and `mapAdminRoleError`
+  (`core/server/routes/adminRolesRoutes.ts`) map all four writer-fence codes
+  thrown by `core/db/nativeCmsWriterFence.ts` —
+  `native_cms_writer_fence_busy`, `native_cms_writer_recovery_required`,
+  `native_cms_writer_fence_failed` and `native_cms_writer_fence_lost` — to
+  503 with the same code and a fixed message, never echoing driver text
+  (03-L02 R3-11, `:4838-4851`). Backup's existing 409 busy row is unchanged."
+- **Superseded (`:1494-1497`, closing paragraph of the same section):**
+  "Exact route paths, parameters, bounds and error codes are copied from the
+  landed 03-L02 source and its C17 v2 text at closure, never from this
+  summary; a mismatch is resolved in favour of the shipped source and
+  recorded in the changelog entry."
+- **Now reads:** "Exact route paths, parameters, bounds, error codes, env
+  names and cache keys are copied from the landed 03-L02 source and its
+  latest dated C17 text at closure — C17 v3 (`:5577`), or a later dated C17
+  v4 if 03-L02 lands one that supersedes it — never from this summary; C17 v2
+  bullets apply only where C17 v3/v4 leaves them standing. A mismatch is
+  resolved in favour of the shipped source and recorded in the changelog
+  entry." (No C17 v4 heading exists in 03-L02 on 2026-09-25; the closure
+  writer greps for it before copying.)
+
+### Additional C17 v3 items owed to this leaf
+
+These join the C17 v2 list above; none was recorded in this file before this
+section.
+
+- **`.env.example` export entries (R3-09).** Two entries, with purpose text
+  and no real value, subject to the existing TASK-511-07 `.env.example`
+  precondition (`:104`, `:134`):
+  - `FORM_SUBMISSIONS_EXPORT_TOKEN_SECRET` — HMAC key for export download
+    tokens (`core/services/forms/submissionExportJob.ts:145-149`; operators
+    generate 32 random bytes). REQUIRED for multi-replica deployments. When
+    unset, a per-process random key is used (`:139-143`), so on a single
+    replica a restart invalidates every outstanding token (403
+    `submission_export_token_invalid`); this is documented behaviour, not a
+    defect.
+  - `FORM_SUBMISSIONS_EXPORT_DIR` — export artifact root (default
+    `storage/exports`, resolved against the process cwd,
+    `submissionExportJob.ts:132-135`). A multi-replica deployment MUST point
+    every replica at the same shared directory; otherwise a token minted on
+    one replica returns 403 on another or its artifact returns 404.
+  - The existing `PAGINATION_CURSOR_SECRET` entry (C17 v2 bullet above) is
+    written in the same edit: purpose (keyset cursor signing,
+    `core/services/database/keysetCursor.ts:317`) and the at-least-32-
+    decoded-bytes requirement, no real value.
+- **`_docs/ADMIN_CACHE_MAP.md` week key (R3-07, R4-08).** A row for the
+  booking week family `bookingReservationsWeek`, keyed as
+  `buildAdminListCacheKey(cacheKeys.bookingReservationsList, "week", filters,
+  null)` in `core/admin/services/bookingClient.ts` (no new `cachePolicy.ts`
+  key; 03-L02 `:3495-3499`). Sources/invalidation: the same-tab create and
+  status-update mutations clear it before their existing broadcast; a
+  `bookingReservationsList` cacheBus event (same-tab or cross-tab) clears it;
+  `clearBookingCache` clears it; the week Map, in-flight map and subscription
+  are registered with `registerAdminModuleCacheReset` and guarded by the
+  installation token; a completion after an invalidation is returned but
+  never cached; `BookingPage` renders only the latest week request (request
+  token) and force-revalidates the active week in the background on a list
+  event. `_docs/ADMIN_CACHE.md` states the same rule in prose.
+- **Admin users list is memory-only (R3-18).** `_docs/ADMIN_CACHE_MAP.md`
+  and `_docs/ADMIN_CACHE.md` record that the Admin users list
+  (`core/admin/services/adminUsersClient.ts`) is cached in memory only (memory
+  key prefix `admin-users:list`, never a storage key): no
+  `localStorage`/`sessionStorage` slot and no persisted first page, because
+  rows carry PII; it is cleared by module cache reset and by every users
+  mutation.
+- **`relatedEntryResolver` `displayField` nested-path drop (R2-24, R3-26).**
+  `_docs/CMS_API.md`, beside the custom-screen projection parameters already
+  owed there (C17 v2 list above), records the visible behaviour change in
+  `core/services/customScreens/relatedEntryResolver.ts`: a `displayField` is
+  projected only when it is a top-level scalar key matching
+  `ADMIN_LIST_FIELD_KEY_PATTERN`; a nested path is no longer resolved and the
+  related entry's label falls back to the entry `title` (03-L02
+  `:3849-3852`). The changelog entry lists it as a user-visible behaviour
+  change. No Custom Screens guide page is in this leaf's set, so no other
+  document is edited for it.
+
+### Amendment (2026-09-25): Round-4/5 items
+
+Source: orchestrator disposition R5-03 in
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round5-dispositions.md`
+("10-L02 mirror adds the lowercase-only `ids` rule and the per-resource lock
+note and replaces its "no C17 v4" sentence"), mirroring TASK-551-03-L02
+"C17 v4 — Handoffs and owed mirrors" (its task file `:6561`, 10-L02 paragraph
+`:6563-6569`: "Round 4 adds the lowercase-only `ids` rule to the `CMS_API`
+delta (R4-03) and the per-resource reservation lock to the booking notes
+(R4-01)."). This amendment is append-only and supersedes only the one
+sentence quoted below. The envelope, allowlist, ownership, validation
+commands and every other clause are unchanged: both target documents named
+here (`_docs/CMS_API.md`, `_docs/DATABASE_PERFORMANCE.md`) are already in
+this leaf's **Exact Single-Writer Ownership** list (`:102`, `:108`), so no
+fence edit is made. Anchors were verified on 2026-09-25 at HEAD `9c5b6666`
+plus the uncommitted Round-4/5 edits; 03-L02 line numbers shift as that file
+grows (the C17 v3 heading cited as `:5577` in the section above is now at
+`:5802`), so the closure writer re-reads every anchor.
+
+#### Superseded sentence
+
+- **Superseded (`:1545-1546`, "Superseded sentences" in the Round-3/4 docs
+  mirror above, trailing the second "Now reads"):** "(No C17 v4 heading
+  exists in 03-L02 on 2026-09-25; the closure writer greps for it before
+  copying.)"
+- **Now reads:** "03-L02 now carries "C17 v4 — Handoffs and owed mirrors"
+  (`:6561` on 2026-09-25), which lists this leaf's owed items. Copy authority
+  is the latest dated C17 heading in 03-L02 at closure: C17 v4 on 2026-09-25,
+  or any later dated C17 heading that supersedes it. The closure writer greps
+  03-L02 for every `C17 v` heading, copies from the highest dated one, and
+  applies earlier C17 bullets only where that heading leaves them standing."
+  C17 v4's own phrase "copy authority = C17 v3" describes the Round-3 mirror
+  as recorded; it does not cap the rule above.
+
+#### Round-4 items owed to this leaf
+
+These join the C17 v2 and C17 v3 lists above; neither was recorded in this
+file before this amendment.
+
+- **Lowercase-only `ids` (R4-03; `CMS_API` delta).** `_docs/CMS_API.md`,
+  beside the comma-list query-parameter row owed above (R2-04), records that
+  every `ids` list accepts only lowercase canonical UUIDs: each token matches
+  the fixed-width lowercase `U` class of the `ADMIN_LIST_PARAM_RULES` `ids`
+  row (03-L02 R3-12 table, `:5089`), so an uppercase or mixed-case UUID is a
+  pattern rejection → `validation_error` (400), and a repeated lowercase id
+  stays a duplicate rejection → `validation_error` (03-L02 R4-03 table,
+  `:6108-6109`; Security Contract rows (Round 4), `:6555-6556`). The Admin
+  client serializer lowercases `ids` before its dedupe (`:5098`), so Admin UI
+  requests are unaffected; direct API callers must send lowercase UUIDs. The
+  changelog entry lists this as an API-visible tightening.
+- **Per-resource reservation lock (R4-01; booking notes).**
+  `_docs/DATABASE_PERFORMANCE.md`, under the concurrency-patterns and
+  expected-error-mapping item (`:159-160`), and `_docs/CMS_API.md`, beside
+  the booking rows owed above, record: the create and reactivation
+  (`pending`/`confirmed`) reservation writes in
+  `core/services/booking/bookingMutationService.ts` each run in one
+  `read committed` transaction whose first statement is the exclusive
+  transaction advisory lock `pg_advisory_xact_lock(551033,
+  hashtext(resource_id))` (two-int4 form; namespace constant
+  `BOOKING_RESOURCE_LOCK_NAMESPACE = 551_033`, never renumbered, taken by
+  `acquireBookingResourceLock`; 03-L02 R4-01, `:5934-6040`, code block
+  `:5973-5978`). The create preflight (reservation and blackout reads) runs
+  on the transaction after the grant; reactivation keeps its no-preflight
+  behaviour. A losing writer gets `booking_slot_unavailable` (409), either
+  from the preflight or from the `23P01` exclusion backstop mapped to the
+  same code, with no retry; the former bounded `40P01` retry is removed.
+  Writers on different resources never wait on each other (a `hashtext`
+  collision only over-serializes); blackouts and cancel/complete updates
+  take no lock. `_docs/DATABASE_PERFORMANCE.md` names `551033` as the
+  booking namespace, distinct from `551031`, `551032` and every other landed
+  advisory-lock namespace (03-L02 collision inventory, `:6036-6040`). No
+  other booking-lock wording exists in this file, so nothing earlier here is
+  superseded by this bullet.
+
+Exact namespace values, lock SQL, statuses and error codes are copied from
+the landed 03-L02 source and its latest dated C17 text at closure, never
+from this summary; a mismatch is resolved in favour of the shipped source
+and recorded in the changelog entry.
+
+### Amendment (2026-09-25): TASK-551-11 re-open ripples
+
+Source: TASK-551-11 "Amendment v3 (2026-09-25): re-open scope after pre-audit"
+(`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md:1041` onward), handoff
+bullet "**TASK-551-10-L02 (owner: 10-L02 closure).**" (`:1102`), plus the
+orchestrator's v4 mandate that adds a seventh new test file,
+`tests/unit/workflows/dispatchContractCaps.test.ts`. On 2026-09-25, at HEAD
+`9c5b6666` plus the uncommitted re-open edits, the 11 file carries v3 only. Its
+**V3-2** list names six new test files, and no text in it names
+`dispatchContractCaps.test.ts`. This leaf takes the ten-file set from the v4
+mandate. If v4 lands under another name, or without that file, the closure
+writer uses the landed 11 list in place of the tenth path and records the
+change in the changelog entry. This amendment is append-only. The only other
+edits are the three in-place edits in item 1: the prose command and two
+fields of one fence command. Every other clause, command, dependency and
+occurrence is unchanged. Anchors were verified on 2026-09-25. Line numbers in
+the 11 file shift as it grows, so the closure writer re-reads them.
+
+#### 1. Family-closure sidecar test command covers all ten files
+
+The re-open splits the three sidecar monoliths. The three original names stay,
+because `scripts/task551QueryInventory/bunLane.ts:37-43` pins them in the
+closed five-path `TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` list.
+`:218-221` treats any other `task551`-named test as an unplanned stray. So
+every new test file carries no `task551` token (11 **V3-2**). The new helper
+modules are `task551AuthorAuditFixtures.ts`, `task551WorkflowContractsFixtures.ts`,
+`task551WorkflowExecutionFixtures.ts` and `task551EvidenceContractFixtures.ts`.
+They are not `*.test.ts`, so they are never argv or discovery paths. The new
+lib modules are `task-551-dispatch-primitives.mjs`, `task-551-dispatch-envelope.mjs`,
+`task-551-phase-provenance.mjs`, `task-551-worktree-snapshot.mjs` and
+`task-551-l01-barrier.mjs`. None of them joins this leaf's commands. Running
+only the three monoliths after the split would narrow coverage. The following
+are therefore edited in place:
+
+- **Prose command (`:1178`, "Exact Validation Commands").**
+  - Superseded: "`bun test tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/task551EvidenceContract.test.ts`"
+  - Now reads: `bun test` over the ten paths listed below, in the same order.
+- **Envelope command `workflow-contract-tests` (`:1320-1322`).**
+  - Superseded argv: "`["bun", "test", "tests/unit/workflows/task551AuthorAudit.test.ts", "tests/unit/workflows/task551WorkflowContracts.test.ts", "tests/unit/workflows/task551EvidenceContract.test.ts"]`"
+  - Superseded discovery: "`"paths": [<the same three>], "minimum": 1`"
+  - Now: the argv is `bun`, `test` plus the ten paths (12 tokens, under the
+    parser's 128-token argv cap). `positiveDiscovery.paths` lists the same ten
+    paths, and `minimum` is `10`, equal to the path count, so a missing split
+    file cannot pass as discovered.
+
+The ten paths, in order (11 **V3-2** test order, with the v4 file last), all
+under `tests/unit/workflows/`:
+
+1. `task551AuthorAudit.test.ts`
+2. `authorAuditDriftRounds.test.ts`
+3. `authorAuditBoundedChild.test.ts`
+4. `task551WorkflowContracts.test.ts`
+5. `workflowContractsBootstrap.test.ts`
+6. `workflowContractsSubgates.test.ts`
+7. `workflowContractsImplementation.test.ts`
+8. `task551EvidenceContract.test.ts`
+9. `evidenceContractMatrix.test.ts`
+10. `dispatchContractCaps.test.ts`
+
+- **Environment form.** The command's `environmentProfile` is `none`. The
+  parser (`task-551-dispatch-contract.mjs:554-556`) requires the
+  `bun --env-file=/dev/null` prefix only for non-`none` profiles. Its literal-
+  argv rule (`:480-487`) also rejects any `NAME=value` token, so a
+  `DATABASE_URL` override cannot be carried in argv. The envelope argv
+  therefore stays `bun test …`. The executable closure run is still the
+  airtight DB-free form:
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <the ten paths>`.
+  This matches the 11 **V3-6** gate, which expects 0 fail and 0 skip over the
+  split files.
+- **Precondition.** None of the seven new test files exists on disk on
+  2026-09-25 (`tests/unit/workflows/` holds only the three monoliths). This
+  leaf runs only after TASK-551-11 has landed every re-open step green, so a
+  missing path fails `positiveDiscovery` and is not a skip.
+
+#### 2. Frozen debt ceilings of the five 11-owned sidecar sources
+
+The 11 re-open (**V3-1f**) records five UNTOUCHED sidecar sources as pre-
+existing line debt. They are exempt from its per-path ≤999 cap until touched.
+The next TASK-551-11 change that touches one of them must first split it to
+≤999. Physical line counts (`wc -l`, 2026-09-25, HEAD `9c5b6666` working
+tree) are frozen here as ceilings:
+
+| Path | Frozen ceiling (lines) |
+| --- | --- |
+| `_docs/_workflows/lib/task-551-evidence-contract.mjs` | 1,562 |
+| `_docs/_workflows/lib/task-551-evidence-filesystem.mjs` | 1,014 |
+| `_docs/_workflows/task-551-author-audit.mjs` | 1,039 |
+| `_docs/_workflows/task-551-implement.mjs` | 1,844 |
+| `_docs/_workflows/task-551-fix.mjs` | 1,459 |
+
+- **Superseded in part (`:1185-1186`, "Exact Validation Commands"):** "Verify
+  line counts for every production/test file touched from the pre-family
+  baseline."
+- **Now reads:** For these five paths only, the family-closure line gate
+  requires each file to be at or under its frozen ceiling above, not ≤1,000.
+  A count above its ceiling is a failed gate. Every other production/test
+  file touched from the pre-family baseline keeps the ≤1,000 gate, and the
+  split paths keep the stricter 11 caps. The debt is owned by TASK-551-11:
+  its next touch of any of the five splits it. This leaf never edits them.
+  The same reading applies to the "complete touched production/test line-count
+  gate" in "Terminal-Handoff Acceptance Gate" (`:1122-1123`).
+
+#### 3. Task-file byte cap is 1 MiB
+
+The 11 re-open (byte-cap amendment `:1033` onward and **V3-4**) raises
+`TASK551_MAX_TASK_FILE_BYTES` from `512 * 1024` (524,288) to `1024 * 1024`
+(1,048,576 bytes). The constant moves, `export`ed, into
+`lib/task-551-dispatch-primitives.mjs`. Until step 1 of that re-open lands,
+`task-551-dispatch-contract.mjs:96` still reads
+`const TASK551_MAX_TASK_FILE_BYTES = 512 * 1024;`. After this amendment,
+this file is about 108 KB, and the largest family file,
+`TASK-551-03-L02…md`, is 522,753 bytes. This leaf's closure edits (status,
+completion fields and receipts) fit under either cap. After the re-open
+lands, the dispatch preflight rejects a task file above 1,048,576 UTF-8
+bytes with `task551_dispatch_snapshot_file_text`.

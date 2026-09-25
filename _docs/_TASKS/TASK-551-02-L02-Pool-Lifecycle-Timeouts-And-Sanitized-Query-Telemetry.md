@@ -795,6 +795,7 @@ categories described in the file-ownership contract.
   },
   "allowlist": [
     "core/db/client.ts",
+    "core/db/dedicatedDatabaseSession.ts",
     "core/db/databaseLifecycle.ts",
     "core/db/databaseApplicationIdentity.ts",
     "core/db/queryFingerprintRegistry.ts",
@@ -807,6 +808,8 @@ categories described in the file-ownership contract.
     "tests/vitest/db/queryFingerprintRegistry.test.ts",
     "tests/vitest/db/databaseApplicationIdentity.test.ts",
     "tests/integration/server/task551DatabaseLifecycle.test.ts",
+    "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts",
+    "tests/integration/server/task551DedicatedSessionGuards.test.ts",
     "tests/integration/server/task551RuntimeEntrypoints.test.ts",
     "tests/perf/database-pg-stat-interval.test.ts"
   ],
@@ -828,11 +831,11 @@ categories described in the file-ownership contract.
       "id": "database-lifecycle-test",
       "lane": "bun-test",
       "environmentProfile": "task551-db-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551DedicatedSessionGuards.test.ts"],
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts"],
-        "minimum": 1
+        "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551DedicatedSessionGuards.test.ts"],
+        "minimum": 3
       }
     },
     {
@@ -1021,3 +1024,901 @@ Everything else in this contract is unchanged, including the receipt shape, the
 read-only/no-reset guarantee, the closed name/purpose matrix, and the exact
 CLI commands. `tests/perf/database-pg-stat-interval.test.ts` pins the corrected
 set and the code map above.
+
+## Dated Contract Corrections — 2026-09-25 (re-open: reserved-session transactions; append-only)
+
+Append-only re-open. Every earlier section, the Workflow Dispatch Envelope, `**Status:**` and
+`**Changelog:**` stay byte-identical; where this section contradicts earlier wording, this
+section wins and the superseded sentence is quoted below. Anchors were grounded on 2026-09-25
+against the working tree of `/home/coder/project/Coderso-551` (branch `feat/task-551-db-cache`,
+HEAD `9c5b6666` plus uncommitted 06-L02/06-L03 work; `core/db/client.ts` 736 lines and
+`tests/integration/server/task551DatabaseLifecycle.test.ts` 818 lines, both clean against HEAD).
+Line numbers are anchors at that moment, not contract.
+
+### R1 — Defect (orchestrator-verified 2026-09-25)
+
+postgres.js 3.4.9 `reserve()` (`node_modules/postgres/src/index.js:203-231`) returns
+`Sql(handler)` plus `release`. Only the top-level pool object receives `options`, `reserve`,
+`begin`, `close` and `end` (`src/index.js:69-81`); a reserved handle has neither `begin` nor
+`options`. `types/index.d.ts:730` declares `ReservedSql extends Sql`, so the missing `begin` is
+inherited in the types: type checks pass while the runtime throws
+`TypeError: owner.begin is not a function`. A scratch reproduction on `DATABASE_URL3`
+(`coderso02`) confirmed it. Affected sites:
+
+- `runAffinityProbe` (`core/db/client.ts:216`): `owner.begin(...)` at `:226` and `:235`. Every
+  maintenance affinity probe throws, so `assertMaintenanceSessionAffinity` never succeeds.
+- `createTrackedDedicatedSession(...).transaction` (`core/db/client.ts:423-437`):
+  `reserved.begin(...)` at `:429`. Every real dedicated-session transaction throws.
+- The `finally` block of `runAffinityProbe` (`:259-261`) unlocks unconditionally
+  (`if (owner) { await owner\`select pg_advisory_unlock(...)\` }`). When the lock was never
+  acquired, PostgreSQL emits `WARNING 01000 "you don't own a lock of type ExclusiveLock"`.
+
+Consequences (review evidence from the diagnosis journal, not re-run here):
+
+- `tests/integration/server/task551RetentionJobService.test.ts` gates `hasDb` on
+  `assertMaintenanceSessionAffinity()` (`:97-108`, call at `:100`), so all 9 DB legs skip.
+- The real legs of `tests/integration/runtime/retentionScheduler.test.ts` fail.
+- Every real `runRetentionPlan` batch (06-L03) fails.
+
+The DB-free fakes hid the defect: `makeFakeReserved` in
+`tests/integration/server/task551DatabaseLifecycle.test.ts` (`:364-384`) gives the reserved
+handle a `begin` (`:369`) that the real driver never has. The pool fakes (`makeFakeSql`
+`:392-`, `begin` at `:398`; the `dedicatedFixtures` pool `:599-644`, `begin` at `:617`) have
+`begin` but no `options`. The file has no real-DB leg at all: its only describes are the
+lifecycle/registry ones and the DB-free `:436` and `:578` blocks. So the "Real-DB cases …"
+promise in Testing Requirements (quoted in R4) was never executed.
+
+### R2 — Binding fix: `runAffinityProbe`
+
+Superseded sentence (pseudocode, `assertMaintenanceSessionAffinity` comment): "Unlock on the
+owner's same PID and release/cancel both sessions in finally." Replaced by: unlock on the
+owner's same PID **only when the owner actually acquired the lock**, then release both
+sessions in `finally`.
+
+- Each of the two owner transactions is explicit SQL on the reserved handle, never `.begin()`:
+  `await owner\`begin\`` → the probe query through `owner` → `await owner\`commit\``. On any
+  error inside that window, run a best-effort `await owner\`rollback\`` and rethrow the original
+  error. postgres.js permits a literal `BEGIN` on a reserved connection: its `UNSAFE_TRANSACTION`
+  guard only fires when `!connection.reserved` (`src/connection.js:604-605`).
+- A local `ownerAcquired` flag becomes `true` only after the first transaction's row reports
+  `acquired === true`. The `finally` unlock runs only when `ownerAcquired` is true. The
+  verifier's re-entrant balancing unlock (`:254`) is unchanged because it already runs only
+  after `verifierRow.acquired`.
+- The probe semantics are unchanged: two owner transactions on one PID, a different verifier
+  PID, a verifier that cannot acquire the lock, the bounded
+  `database_maintenance_session_unavailable` code, lifecycle-generation caching, and no caching
+  of failures.
+
+### R3 — Binding fix: dedicated-session transactions and the drizzle seam
+
+Superseded sentence (pseudocode): "export type DedicatedDatabaseTransaction =
+DrizzleTransactionBoundToReservedSql;". The landed alias `DedicatedDatabaseTransaction =
+TransactionSql` (`core/db/client.ts:318`) is superseded too. No `TransactionSql` object ever
+exists on this path at runtime.
+
+- `transaction(input)` issues `await reserved\`begin\``. If `input.signal` is already aborted,
+  it drains through `drainActiveAndRollback(input.signal)` and throws
+  `dedicated_database_session_lost`, as today. Otherwise it awaits `input.run(reserved)` and then
+  `await reserved\`commit\``, and returns the callback result only after that commit resolves.
+  On any error from `begin`, `run` or `commit`, it calls
+  `drainActiveAndRollback(input.signal)` (`:367-384`; its rollback-else-terminate outcome is
+  unchanged) and rethrows. The rethrown error is `dedicated_database_session_lost` when the
+  signal aborted, otherwise the original error.
+- The callback receives `reserved` itself as its transaction handle. That is the same physical
+  session that `execute` already hands to `StaticDedicatedStatement` (`:325-327`).
+  `DedicatedDatabaseTransaction` is retyped to that reserved surface, minus at least `begin`
+  (absent at runtime) and `release` (calling it would re-pool a live lease). The implementer
+  chooses the exact spelling, provided no consumer can type-call a member that is absent at
+  runtime or that ends the lease. The handle stays callback-scoped, as the existing "Consumers
+  receive no retained handle" rule (`:320-324`) requires.
+- `input.statementTimeoutMs` stays as landed: the session-level startup bound applies. The
+  transaction-local `set_config('statement_timeout', …, true)` pattern that consumers issue
+  inside the callback is now a real transaction boundary, and R4 proves it.
+- New export from `core/db/client.ts`: `withPoolOptions`, a drizzle-compatible view of a
+  dedicated-session handle. Its public form takes one argument,
+  `withPoolOptions(handle: DedicatedDatabaseTransaction)`. It returns the same handle with the
+  live `maintenanceSqlClient.options` object (`:101`, including a test override installed by
+  `setDatabaseClientRuntimeForTests`) attached **by reference**. It is typed so that
+  `drizzle(withPoolOptions(tx))` compiles with no consumer-side cast; client.ts is the one owner
+  of the single documented cast.
+  - Why by reference: drizzle-orm 0.45.2 `postgres-js/driver.js:15-22` mutates
+    `client.options.parsers`/`serializers` in place, and postgres.js connections read the same
+    `parsers` object (`src/connection.js:61`, `:660`). A copy would make drizzle's parser
+    override inert.
+  - The helper never exposes `begin`, `release` or the pool. Drizzle's own `.transaction` over
+    it stays forbidden, as 06-L03 already requires.
+- Recorded consequence: in `primary` mode `maintenanceSqlClient === sqlClient`, and `db`
+  (`:91`) already applied those transparent parsers, so nothing changes. In `direct|session`
+  mode the first helper-backed drizzle construction makes the eight date/time OIDs transparent
+  for later raw queries on that maintenance pool. Today, client.ts's own raw maintenance
+  statements read only pid/boolean columns. Any consumer's raw `execute` statement that reads
+  those types must not rely on `Date` parsing.
+- Cross-leaf seam: TASK-551-06-L03's drizzle-over-transaction adapter (its R1) consumes
+  `withPoolOptions`, which replaces its inline `drizzle(tx as unknown as Sql)` cast. Land order is
+  02-L02 (this correction) → 06-L03. 06-L03 owns its own file edits; this leaf edits no 06-L03
+  file.
+
+### R4 — Binding test changes (`tests/integration/server/task551DatabaseLifecycle.test.ts`)
+
+Kept, now actually executed: Testing Requirements, "Real-DB cases acquire a session advisory
+lock, run multiple transactions through that same backend PID, cancel a hung statement, and
+prove cancellation plus rollback or backend termination is confirmed within 4,500 ms before
+release."
+
+- Fakes model the real surface. `makeFakeReserved` loses `begin` and has no `options`; its
+  literal `begin`/`commit`/`rollback` statements are recorded in `sqlCalls` like any other SQL.
+  The affinity and dedicated-session DB-free legs assert the explicit statement sequence:
+  `begin` → probe → `commit` twice for the owner, and `begin` → run → `commit` (or `rollback`
+  on throw/abort) for `transaction`. The finally-unlock is asserted absent whenever the owner
+  never acquired the lock. Pool fakes keep `begin` (the real pool has it) and gain `options`
+  only where a leg exercises `withPoolOptions`. No behavioral assertion is weakened.
+- New real-DB leg, gated by the presence-only owner-map idiom of
+  `tests/integration/server/task551RevisionConcurrency.test.ts:46-65` (all three
+  `TASK551_FIXTURE_DATABASE_*` keys present; the fixture URL is the only URL dialed; otherwise
+  `test.skip` by name). It builds its own `postgres(<fixture URL>, { max: 2, onnotice: <recorder> })`
+  pool and injects it through `setDatabaseClientRuntimeForTests({ config: { pgbouncerMode: "off",
+  maintenanceMode: "primary", poolMax: 2 }, maintenanceSqlClient })`. In `finally` it restores
+  the override and `end()`s the pool. It proves:
+  1. the affinity probe succeeds, the owner lock is acquired, and the owner PID is identical
+     across both explicit transactions;
+  2. the verifier (a different PID) cannot acquire the lock (a forced foreign-PID/re-entrant
+     case yields `database_maintenance_session_unavailable`);
+  3. inside a dedicated-session `transaction`, `set_config('statement_timeout', '<n>ms', true)`
+     is visible via `current_setting` and has reverted to the session value after `commit`;
+  4. a probe run in which the owner lock is NOT acquired (the key pre-held by a separate test
+     session) records zero `WARNING`/`01000` notices from the unlock path;
+  5. `drizzle(withPoolOptions(tx))` executes a query on the same PID.
+- The leg touches no application table: advisory locks, `pg_backend_pid`, `set_config` and
+  `current_setting` only, so there are no rows to clean. Each DB test carries an explicit
+  `60_000` timeout (repo convention, e.g. `tests/unit/kits/fullSiteAdapterAtomicity.test.ts:707`;
+  remote round trips cost about 1.2-1.8 s per transaction).
+- Scope note (not binding): an idle `rollback` from `drainActiveAndRollback` at lease release
+  can itself raise PostgreSQL's `25P01 "there is no transaction in progress"` warning. Per
+  PostgreSQL semantics this is expected, but it was not reproduced here. The zero-WARNING
+  assertion is scoped to the probe's unlock path, and any change to idle-rollback behavior is
+  an orchestrator decision.
+- Line budget: soft target ≤ 960, hard cap 1,000. If the leg cannot fit, STOP and report: a new
+  test file needs an envelope change that this correction does not grant.
+
+### R5 — Gates, envelope and receipt
+
+- The envelope stays byte-identical. `core/db/client.ts` and
+  `tests/integration/server/task551DatabaseLifecycle.test.ts` are already in the closed
+  `allowlist` and in the `database-lifecycle-test` argv/discovery. No path, command or
+  occurrence is added.
+- Implementer FAST gates:
+  - `./node_modules/.bin/eslint --max-warnings=0 core/db/client.ts tests/integration/server/task551DatabaseLifecycle.test.ts`;
+  - airtight run (the real leg skips by name):
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551DatabaseLifecycle.test.ts tests/integration/server/task551RuntimeEntrypoints.test.ts tests/perf/database-pg-stat-interval.test.ts`;
+  - `./node_modules/.bin/vitest run tests/vitest/db/queryFingerprintRegistry.test.ts tests/vitest/db/databaseApplicationIdentity.test.ts`;
+  - `wc -l` on both touched files, `git diff --check`.
+- Orchestrator gates:
+  - the closed owner-map form on `DATABASE_URL3` (`coderso02`), with the real leg EXECUTED
+    (not skipped):
+    `env -i PATH=… HOME=… DATABASE_URL=<URL3> TASK551_FIXTURE_DATABASE_URL=<URL3> TASK551_FIXTURE_DATABASE_NAME=coderso02 TASK551_FIXTURE_DATABASE_SENTINEL=<bootstrap sentinel> DB_LOCK_TIMEOUT_MS=15000 bun --env-file=/dev/null test tests/integration/server/task551DatabaseLifecycle.test.ts tests/perf/database-pg-stat-interval.test.ts`;
+  - `bun --cwd core lint:types` and `bun --cwd core lint`.
+  - Then 06-L03 reruns its own owner-map gate, where `task551RetentionJobService.test.ts` must
+    execute, not skip, its DB legs.
+  - Not re-run for this correction: the `pg-stat-interval-start`/`-end` CLI commands (an
+    operator-named interval; the transaction mechanism does not affect them).
+    `gates:coderso`, `gates:coderso:perf` and `scan:security` move to the combined run under
+    Validation Rules.
+- Receipt: the orchestrator appends one dated top-level addendum key to
+  `_docs/_workflows/_smoke/task-551/impl-02-l02.json` (for example
+  `"reopenAddendum20260925"`), leaving every existing key byte-identical. The addendum records
+  the defect summary, the final line counts and sha256 of both touched files, and every gate
+  result above, including real-leg executed/skipped counts. This task file records the contract
+  only.
+
+### Re-open amendments (2026-09-25, orchestrator decisions)
+
+Append-only. It amends the "Dated Contract Corrections — 2026-09-25" section above; where the two
+disagree, this section wins, and each superseded sentence is quoted. The one in-place edit is the
+`json` fence of the Workflow Dispatch Envelope, as B1 describes. Everything else above stays
+byte-identical. Anchors were grounded on 2026-09-25 against `/home/coder/project/Coderso-551`
+(HEAD `9c5b6666` plus uncommitted work). `core/db/client.ts` is 736 lines and
+`tests/integration/server/task551DatabaseLifecycle.test.ts` is 818 lines; both are clean against
+HEAD. Line numbers are anchors, not contract.
+
+#### B1 — Real-DB leg moves to a new test file (line cap)
+
+Superseded sentences (quoted):
+
+- R4: "Line budget: soft target ≤ 960, hard cap 1,000. If the leg cannot fit, STOP and report: a new
+  test file needs an envelope change that this correction does not grant."
+- R5: "The envelope stays byte-identical." and "No path, command or occurrence is added."
+- Dated Contract Corrections preamble: "Every earlier section, the Workflow Dispatch Envelope,
+  `**Status:**` and `**Changelog:**` stay byte-identical". This now holds for everything except the
+  envelope `json` fence.
+- File Ownership: the closing "… `tests/perf/database-pg-stat-interval.test.ts` only." The
+  allowlist now also contains `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`.
+
+Binding replacement:
+
+- The whole R4 real-DB leg lives in the NEW file
+  `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`. That covers R4 items 1-5 and
+  the B2 assertion below. The R4 fake rewrites (`makeFakeReserved` without `begin`/`options`, the
+  explicit statement-sequence assertions, and the absent finally-unlock) stay in
+  `tests/integration/server/task551DatabaseLifecycle.test.ts`, which must stay at or under 1,000
+  lines. The new file has the same 1,000-line hard cap. It is independently runnable. It reuses the
+  presence-only owner-map gate, its own `max: 2` pool with the `onnotice` recorder, the
+  `setDatabaseClientRuntimeForTests` injection with restore and `end()` in `finally`, and the
+  explicit `60_000` per-test timeout, all exactly as R4 specifies. In the airtight run (no
+  `TASK551_FIXTURE_DATABASE_*` keys) every real-DB test skips by name.
+- This is binding, not conditional: the envelope's positive discovery now requires both paths. The
+  envelope edit is `allowlist` += the new path, the `database-lifecycle-test` argv += the new path,
+  and its `positiveDiscovery.paths` += the new path with `minimum` 1 → 2. No other command,
+  occurrence or `forbiddenPaths` entry changes. The envelope has no line-count command, so there was
+  nothing else to extend. After the edit the family preflight
+  (`preflightTask551DispatchSnapshot`, `sourceHead` `9c5b6666`, repo-relative paths) passes.
+- R5 FAST gates, restated: `./node_modules/.bin/eslint --max-warnings=0 core/db/client.ts
+  tests/integration/server/task551DatabaseLifecycle.test.ts
+  tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`. Both airtight and
+  owner-map `bun --env-file=/dev/null test` commands name
+  `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts` right after
+  `tests/integration/server/task551DatabaseLifecycle.test.ts`. `wc -l` covers all three touched
+  files. The orchestrator owner-map run on `DATABASE_URL3` must show the new file's real-DB tests
+  EXECUTED, not skipped. The R5 receipt addendum records line counts and sha256 for all three files.
+- Not in scope: the generated `tests/bun-lane-manifest.json` (owner TASK-551-01-L01, not in this
+  allowlist) has no row for the new file. This follows the recorded stale-manifest precedent in
+  `TASK-551-03-L02-…md:4219-4221`. This leaf does not hand-edit the manifest; the rebaseline belongs
+  to 01-L01.
+
+#### B2 — Idle-rollback `25P01` warning: verified, not optional (new R4 item 6)
+
+Superseded sentence (quoted, R4 "Scope note (not binding)"): "The zero-WARNING assertion is scoped
+to the probe's unlock path, and any change to idle-rollback behavior is an orchestrator decision."
+The orchestrator has now decided, as follows.
+
+Grounding: `drainActiveAndRollback` (`core/db/client.ts:367-384`) issues `reserved\`rollback\``
+unconditionally (`:379`). Both lease-release paths call it through
+`cancelActiveAndRollback("lease_release")`, even after a committed transaction or plain `execute`
+use: `withDedicatedDatabaseSession` at `:511`, and the advisory-lock lease `finally` at `:560`.
+PostgreSQL answers `ROLLBACK` outside a transaction block with `WARNING 25P01 "there is no
+transaction in progress"`.
+
+- R4 item 6 (binding, in the new real-DB file): on the recorder pool, open a dedicated session, run
+  one `transaction` that commits and one `execute`, then let the lease release. The recorder must
+  hold ZERO `WARNING` notices, including `25P01`. The implementer runs this assertion against the
+  real driver first. If it passes unguarded, record that and leave the drain unchanged.
+- If it emits the warning, guard the drain. The binding guard is LOCAL state tracking:
+  `createTrackedDedicatedSession` keeps a `transactionOpen` flag. The flag is set before the
+  wrapper issues its own `begin` and cleared only after that wrapper's `commit` or `rollback`
+  resolves. `drainActiveAndRollback` issues `rollback` only while the flag is set. Otherwise it
+  issues a no-op confirmation round trip on the same session (for example `select 1`), so the
+  "cancellation plus rollback or backend termination is confirmed within 4,500 ms before release"
+  guarantee still holds. The return union `"rolled_back" | "connection_terminated"` and
+  terminate-on-confirmation-failure stay unchanged. A server-side
+  `txid_current_if_assigned()`/`pg_current_xact_id_if_assigned()` check is NOT an acceptable sole
+  guard. It returns NULL inside an open transaction that has not been assigned an xid yet (every
+  read-only or pre-write transaction), so it would skip the rollback and re-pool an open
+  transaction.
+- If the guard lands, the following re-baselines of
+  `tests/integration/server/task551DatabaseLifecycle.test.ts` are intended contract changes, not
+  weakenings: `:664` (idle release after `execute` plus a committed `transaction` asserts no
+  `rollback` and one confirmation statement); `:675` (run throws outside any transaction → no
+  `rollback`, one confirmation); `:679-690` (the terminate case fails the confirmation statement).
+  Add one fake leg where the drain runs with the wrapper transaction open and asserts exactly one
+  `rollback`, plus one where that `rollback` fails and asserts `connection_terminated`. Every
+  existing release-exactly-once and termination assertion is kept.
+
+#### B3 — Helper name pinned: `withPoolOptions(handle)`
+
+Restated from R3, now pinned for cross-leaf citation: `core/db/client.ts` exports exactly
+`withPoolOptions(handle)`. It takes one argument, `handle: DedicatedDatabaseTransaction`. It returns
+that same handle with the live `maintenanceSqlClient.options` attached BY REFERENCE (a test override
+installed by `setDatabaseClientRuntimeForTests` included), typed so that
+`drizzle(withPoolOptions(tx), { schema })` compiles with no consumer-side cast. No other name,
+arity, or options-copying variant is contract. TASK-551-06-L03 R1-c cites this same name for its
+"<02-L02 helper>" (`TASK-551-06-L03-…md:1101-1102`). Land order is 02-L02 (this re-open) →
+TASK-551-06-L02 R8/R9 → TASK-551-06-L03 R1. This extends R3's "Land order is 02-L02 (this
+correction) → 06-L03" (quoted, superseded) by inserting the 06-L02 R8/R9 step. This leaf still edits
+no 06-L02 or 06-L03 file.
+
+### Re-open amendment R6 (2026-09-25): reserved-session guard design
+
+Append-only. It amends R1-R5 and B1-B3 above; where they disagree, R6 wins, and every superseded
+sentence is quoted in R6.8. The only in-place edit is again the `json` fence of the Workflow
+Dispatch Envelope (R6.4). Anchors were grounded on 2026-09-25 against
+`/home/coder/project/Coderso-551` (HEAD `9c5b6666` plus uncommitted work; `core/db/client.ts`
+736 lines, clean against HEAD). Line numbers are anchors, not contract.
+
+Evidence: an orchestrator-dispatched design diagnosis ran scratch probes against `coderso02`
+(`DATABASE_URL3`) with postgres.js 3.4.9 under Bun 1.4.2 (driver cancel also re-checked under
+Node 26). It then built a prototype of the design below; 11 of its 12 legs passed. The one failure
+is the driver residual in R6.3. Probes used explicit PIDs, advisory key `551551551` and two
+session-temp tables, all dropped. A residue probe confirmed zero probe sessions, zero probe-key
+locks and zero temp tables afterwards. The findings are review evidence verified by the
+orchestrator; the probe scripts are scratch-only and are not repository artifacts.
+
+#### R6.1 — Verified defects in the landed `core/db/client.ts`
+
+| # | Anchor | Probe evidence |
+|---|---|---|
+| D1 | `terminateReservedBackend` `:350-364` | It runs `select pg_backend_pid()` on the reserved handle with no deadline. On a dead handle that never settles, so no `withDedicated*` call returns. |
+| D2 | `withDedicatedDatabaseSession` `:516`; advisory lease `:566`, `:573`; probe `:267`, `:272` | `release()` after loss or after our own termination puts a closed connection into the pool's open queue. Later pool queries and `reserve()` then hang (10 s timeout on both). With no release, the pool recovers the slot through its closed queue and stays healthy. |
+| D3 | `drainActiveAndRollback` `:367-384` | The drain `rollback` on a dead handle hangs. An idle `rollback` emits `WARNING 25P01`. |
+| D4 | `:372`, `:399`, `:409` (`query.cancel()`) | The driver's `PendingQuery.cancel()` has no effect on this deployment (Bun and Node). A hung statement stops only at the 15 s `statement_timeout`, far over the 4,500 ms drain contract. `pg_cancel_backend(pid)` from a second connection works: `57014` in 184 ms warm, 1,952 ms with a cold connect. |
+| D5 | `runAffinityProbe` `:205`, `:216-275` | The fixed key `551551551` is released after every probe, so it serialises nothing. But simultaneous probes collide every time: 10 of 10 warm simultaneous pairs had one side fail with `database_maintenance_session_unavailable`. In direct/session mode that fails database startup of one replica in a simultaneous rollout. The probe `finally` also releases handles that may be lost (D2). |
+| D6 | `withDedicatedDatabaseAdvisoryLock` `:538-579` | It unlocks only on the success path. A `run` that throws always terminates the backend instead of unlocking in `finally`. |
+| D7 | `createTrackedDedicatedSession` `:366-448` | `activeQuery` tracks only `execute`. Statements issued inside `transaction` are untracked, so abort cannot cancel them. |
+
+Driver facts the design depends on (probe-verified, postgres.js 3.4.9):
+
+- COMMIT on an aborted block resolves, with no error and no notice, with the tag
+  `result.command === "ROLLBACK"`. A literal `BEGIN` resolves with `result.command === "BEGIN"`.
+  Nested `BEGIN` gives `WARNING 25001`.
+- `result.state` is `{ pid, secret }` of the backend that served the statement.
+- An idle `ROLLBACK` or `COMMIT` emits `WARNING 25P01`. After a failed COMMIT (for example
+  `23505`), no block is open, and a later `ROLLBACK` also emits `25P01`.
+- When a reserved connection's socket closes, `onclose` (`src/index.js:421-426`) sets
+  `c.reserved = null` and moves `c` to the closed queue. The reserved handler
+  (`src/index.js:227-231`) still holds `c`, so later statements either hang forever (an uncaught
+  `TypeError` from `socket.write` on null; the process survives) or, after ordinary pool traffic
+  has reconnected `c`, run silently on a different backend (observed PID 880134 → 880137, no
+  error).
+- A kill during an in-flight statement surfaces as `CONNECTION_CLOSED`, not `57P01`, because the
+  FATAL ErrorResponse is dropped when the socket closes before ReadyForQuery.
+- After `pg_terminate_backend`, the backend exits 865-1,208 ms later (RTT included).
+
+#### R6.2 — Binding design
+
+Module split (binding, line cap):
+
+- New module `core/db/dedicatedDatabaseSession.ts` (hard cap 600 lines) owns the guarded-session
+  primitive:
+  - `guardSession`, the loss classifier, the drain, `terminateAndWait`, the scoped statement
+    handle and the close epoch;
+  - the deadline constants below;
+  - `DEDICATED_DATABASE_SESSION_ERROR_CODES`.
+- The module is dependency-injected. Its inputs are the reserved handle, a control executor (below),
+  a getter for the live pool `options`, the COMMIT deadline and a clock. It imports no `client.ts`,
+  `databaseConfig`, settings or runtime module. So there is no import cycle, and the DB-free suite
+  can import it with no environment.
+- `core/db/client.ts` keeps: pools, config, lifecycle close, the affinity probe,
+  `withDedicatedDatabaseSession`, `withDedicatedDatabaseAdvisoryLock`,
+  `assertDedicatedDatabaseSessionBudget`, `withPoolOptions` and the test seams.
+- `client.ts` re-exports every public name that consumers import today (`DedicatedDatabaseSession`,
+  `DedicatedDatabaseTransaction`, `StaticDedicatedStatement`, `DedicatedCancelReason`) plus
+  `maintenanceConnectionCloseObserver`. Consumer import paths do not change.
+- `client.ts` deletes `createTrackedDedicatedSession` and `terminateReservedBackend`. It must stay
+  at or under 1,000 lines (expected about 650-700).
+
+Error codes (one owner):
+
+- `DEDICATED_DATABASE_SESSION_ERROR_CODES` holds four codes:
+  - `sessionLost`: `dedicated_database_session_lost` (unchanged value);
+  - `transactionAborted`: `dedicated_database_transaction_aborted` (new);
+  - `transactionNested`: `dedicated_database_transaction_nested` (new);
+  - `drainUnconfirmed`: `dedicated_database_drain_unconfirmed` (new).
+- `DATABASE_CLIENT_ERROR_CODES` keeps its key `dedicatedSessionLost`. It adds the keys
+  `dedicatedTransactionAborted`, `dedicatedTransactionNested` and `dedicatedDrainUnconfirmed`, and
+  all four refer to the module constants, so no string literal is duplicated.
+- Session loss always rejects with `dedicated_database_session_lost`. No path ever surfaces a raw
+  driver code (`CONNECTION_CLOSED`, `57P01`, …), a driver message or a PID to a consumer.
+
+Deadline constants (exported from the module and pinned by tests):
+
+- `DEDICATED_CONTROL_STATEMENT_DEADLINE_MS = 2_000`: identity snapshot, `begin`, drain
+  `rollback`/confirmation, `pg_advisory_unlock`, and each probe statement.
+- `DEDICATED_CANCEL_DEADLINE_MS = 1_500`: the server-side cancel.
+- `DEDICATED_EPOCH_VERIFY_DEADLINE_MS = 3_000`. The prototype got a false loss at 1,500 ms when the
+  control connection had to connect cold; 3,000 ms passed.
+- `DEDICATED_DRAIN_DEADLINE_MS = 4_500`, equal to `RETENTION_CANCEL_DRAIN_DEADLINE_MS`: the whole
+  drain, measured from its start.
+- `DEDICATED_TERMINATION_POLL_INTERVAL_MS = 100`.
+- The COMMIT deadline is the injected session statement bound (`config.statementTimeoutMs`, default
+  15,000 ms). The server may legitimately take that long to flush a commit.
+- Inside a drain, every control statement (including the epoch verify) is bounded by
+  `min(its constant, deadlineAt - now)`.
+- An expired control deadline is a session loss. Deadlines are `Promise.race` timers, cleared on
+  every settlement; no timed-out promise keeps work alive that the caller relies on.
+
+Control connection (orchestrator-approved design change, recorded here):
+
+- The earlier contract required "the current postgres.js `PendingQuery` through its supported
+  `cancel()` surface" (quoted in R6.8). It is replaced by server-side control statements that
+  never touch the reserved handle.
+- Those statements run as ordinary, unreserved statements on the live `maintenanceSqlClient` pool.
+  This is the budgeted control slot in R6.5. No extra client is created.
+- The control statements are static and parameterized, and always identify the session by
+  `pid = $pid and backend_start::text = $started`, so a recycled PID is never signalled:
+  - cancel: `select pg_cancel_backend(pid) from pg_stat_activity where pid = $pid and
+    backend_start::text = $started and state = 'active'`;
+  - terminate: `select pg_terminate_backend(pid) from pg_stat_activity where pid = $pid and
+    backend_start::text = $started`;
+  - liveness: `select exists(select 1 from pg_stat_activity where pid = $pid and
+    backend_start::text = $started) as alive`.
+- Evidence: D4 above.
+
+`guardSession(reserved, control, options)` is a closure over the following state:
+
+- `id = { pid, secret, startedText }`. It is snapshotted from the first statement on the lease:
+  `select pg_backend_pid() as pid, (select backend_start::text from pg_stat_activity where pid =
+  pg_backend_pid()) as started`.
+  - `pid` and `secret` come from `result.state`. The `::text` cast keeps the value independent of
+    drizzle's in-place parser mutation (R3).
+  - A snapshot failure or deadline is a loss.
+- `liveState`: the first result's `state` object, held by reference. Its `pid` and `secret` change
+  when the driver reconnects that connection.
+- `lost`, `transactionOpen`, `transactionActive`, `scope` (a counter), `inFlight: Set<PendingQuery>`,
+  single-flight `draining` and `cancelling` promises, and `verifiedEpoch`.
+
+Module close epoch:
+
+- A module counter `maintenanceCloseEpoch` is bumped by `maintenanceConnectionCloseObserver`.
+- `client.ts` passes that observer as the typed pool option `onclose`
+  (`types/index.d.ts:121`, `src/index.js:421-426`) on every pool it builds.
+- A test pool injected through `setDatabaseClientRuntimeForTests` passes the same observer. Fakes
+  call the observer directly.
+
+Guards, applied to every statement issued through the session (`execute`, the transaction handle,
+`assertAlive`, the drain's confirmation and the unlock):
+
+- G1, before issue:
+  - if `lost`, reject `session_lost`;
+  - if `liveState.pid !== id.pid` or `liveState.secret !== id.secret`, mark lost;
+  - if `verifiedEpoch !== maintenanceCloseEpoch`, run `verify()`. It asks the control connection
+    for liveness, bounded by `DEDICATED_EPOCH_VERIFY_DEADLINE_MS`. If the answer is false, the
+    query fails, the deadline expires, or identity changed, mark lost. Otherwise set
+    `verifiedEpoch` to the epoch read at the start of the verify.
+  - A lost session issues nothing on the handle.
+- G3, after every result: `res.state?.pid === id.pid && res.state?.secret === id.secret`, otherwise
+  mark lost and reject `session_lost` (the result is discarded).
+- G4, the loss classifier:
+
+  ```text
+  isDedicatedSessionLossError(e) =
+    e.code ∈ { CONNECTION_CLOSED, CONNECTION_ENDED, CONNECTION_DESTROYED, CONNECT_TIMEOUT,
+               ECONNRESET, EPIPE, ETIMEDOUT, ECONNREFUSED, EHOSTUNREACH, ENETUNREACH }
+    || e.severity ∈ { FATAL, PANIC }
+    || e.code starts with "57P" || e.code starts with "08" || e.code === "25P03"
+    || e is the module's internal control-deadline error
+  ```
+
+  - `57014`, `25P02`, `40P01` and `23xxx` are NOT loss: the backend is alive. They are rethrown
+    unchanged unless the caller's signal aborted, in which case the rejection is `session_lost`.
+  - A classified loss marks the session lost and rejects `session_lost`.
+  - An abort rejects the operation with `session_lost` but does not mark the physical session lost;
+    the drain decides that.
+- G5, release: see "Release and termination" below.
+
+Scoped statement handle (`DedicatedDatabaseTransaction`, also the argument type of
+`StaticDedicatedStatement`):
+
+- It is a Proxy over `reserved`, created per `transaction` scope and per `execute` call.
+  - The `apply` and `unsafe` traps return `wrapQuery(q)`.
+  - `begin`, `release`, `end`, `close`, `reserve`, `listen` and `subscribe` are `undefined` at
+    runtime and absent from the type.
+  - `options` returns the live pool `options` object by reference.
+- `wrapQuery` proxies the query:
+  - its `then` trap checks `myScope === scope`; a handle retained past its scope rejects
+    `session_lost` without issuing anything;
+  - it then runs G1 (inside a transaction, an unverified epoch rejects `session_lost` without
+    issuing the statement), adds the query to `inFlight`, and applies G3/G4 on settlement;
+  - methods that return the target (for example `.values()`) return the proxy, so drizzle's
+    `.values()` path stays tracked.
+- The prototype verified that drizzle `select().from().where()` via `.values()`, drizzle `execute`,
+  and three pipelined statements all ran on the session PID. Calls after the scope closed rejected.
+- `withPoolOptions(handle)` (name and arity pinned by B3) returns that same handle, typed for
+  `drizzle(withPoolOptions(tx), { schema })`. The live `options` reference is the Proxy trap, so it
+  stays "attached BY REFERENCE" as B3 requires. `client.ts` supplies the options getter and holds
+  the one documented cast.
+
+Transactions:
+
+- `transaction(input)`:
+  - if `transactionActive` or `draining`, reject `dedicated_database_transaction_nested`;
+  - if `input.signal.aborted`, issue zero statements and reject `session_lost`;
+  - otherwise set `transactionActive = true` and `myScope = ++scope`, and register
+    abort → `cancelInFlight()`.
+- `begin` is a control statement. `transactionOpen` is set when `begin` resolves with
+  `command === "BEGIN"`, even if the scope has been taken over by a drain in the meantime. Any
+  other tag or a loss marks the session lost.
+- `run(handle)` is raced with the abort. Afterwards `scope++` closes the handle. If the scope is no
+  longer owned (`scope !== myScope + 1` at that point, meaning a drain took over) or the signal
+  aborted, the call goes to `failWith(session_lost)` and the callback result is discarded.
+- COMMIT (never cancelled by the signal: the server decides the outcome):
+
+  ```text
+  commit = await control(handle`commit`, commitDeadlineMs)
+  transactionOpen = false
+  if (commit.command !== "COMMIT") throw dedicated_database_transaction_aborted
+  ```
+
+  - COMMIT rejected with a non-loss error: `transactionOpen = false` and no rollback is sent (the
+    server has already ended the block; a later `ROLLBACK` gives `25P01`). The original error is
+    rethrown.
+  - COMMIT lost or past its deadline: the session is lost and terminated, and the call rejects
+    `session_lost`. The outcome is unknown, so no result is published.
+- `failWith(e)`:
+  - `external = scope !== myScope` (a drain owns the block);
+  - if not external and `transactionOpen`, `await drain()`; else if `draining`, `await draining`;
+  - throw `session_lost` when the signal aborted, the session is lost, or `external`; otherwise
+    throw `e`.
+  - The callback throwing gives exactly one rollback and rethrows the original error.
+- `finally`: `transactionActive = false`.
+- Nested or concurrent `transaction`, and `execute` while a transaction is active or while
+  draining, reject `dedicated_database_transaction_nested`. Concurrent `execute` calls outside a
+  transaction pipeline on the one session and stay allowed.
+- `execute` on an already-aborted signal issues zero statements and rejects `session_lost`. An
+  abort during `execute` rejects `session_lost` immediately and triggers `cancelInFlight()`; the
+  drain at lease release or an explicit `cancelActiveAndRollback` confirms the session.
+- `assertAlive` issues the identity statement under G1/G3. No row, or a foreign identity, is
+  `session_lost`.
+
+Cancel, drain, and termination:
+
+- `cancelInFlight()` is single-flight through `cancelling`. It does nothing when `inFlight` is
+  empty. Otherwise it issues the control cancel statement, bounded by
+  `DEDICATED_CANCEL_DEADLINE_MS`. Triggers: signal abort (in `execute` and `transaction`) and the
+  drain.
+- `drain()` (single-flight; it is what `cancelActiveAndRollback(reason)` runs):
+
+  ```text
+  drain(): if (draining) return draining; scope++; draining = (async () => {
+    deadlineAt = now + DEDICATED_DRAIN_DEADLINE_MS
+    if (lost) return terminateAndWait(deadlineAt)
+    await cancelInFlight()
+    await every inFlight settlement, bounded by deadlineAt   // expiry → terminateAndWait
+    try { await control(transactionOpen ? handle`rollback` : handle`select 1`,
+                        min(DEDICATED_CONTROL_STATEMENT_DEADLINE_MS, deadlineAt - now))
+          transactionOpen = false; return "rolled_back" }
+    catch { return terminateAndWait(deadlineAt) } })().finally(() => draining = null)
+  ```
+
+  - The rollback-versus-confirmation choice is made only after every in-flight statement
+    (including an in-flight `begin`) has settled. So a `BEGIN` that resolves during the drain is
+    rolled back, never re-pooled. This orchestrator hardening closes a race the prototype did not
+    exercise.
+  - `scope++` hands the block to the drain: the transaction path sees that it no longer owns the
+    block and joins `draining` instead of issuing its own rollback. Exactly one rollback is sent.
+  - The return union stays `"rolled_back" | "connection_terminated"`.
+- `terminateAndWait(deadlineAt)`:
+  - sets `lost = true` and issues the control terminate statement, bounded by the remaining time;
+  - then polls liveness every `DEDICATED_TERMINATION_POLL_INTERVAL_MS` until `deadlineAt`;
+  - returns `"connection_terminated"` once the backend is gone;
+  - otherwise throws `dedicated_database_drain_unconfirmed`.
+  - The reserved handle is never used for termination (D1).
+  - It is idempotent: a backend that is already gone returns at once. Because termination matches
+    `backend_start`, a connection that the driver reconnected to a new backend for ordinary traffic
+    is never terminated.
+- Every path that marks a session lost ends in `terminateAndWait` before the lease is discarded. A
+  lost-but-still-open socket is then closed by the server, and the pool recovers the slot through
+  its closed queue instead of leaking it.
+- Budget: cancel ≤ 1,500 ms, then confirmation or rollback ≤ min(2,000, remaining), then terminate
+  plus poll for the rest, all inside 4,500 ms.
+
+Release and termination (G5):
+
+- A handle is released only when all three hold:
+  - it is not lost;
+  - its final confirmation (the drain's `rollback`/`select 1`, or for the advisory lease the exact
+    unlock) resolved;
+  - `release()` is called in the same continuation as that resolution, with no `await` in between,
+    so no `onclose` can run in between.
+- A lost or terminated handle is never touched again and never released (D2). The lease is
+  discarded.
+- A lease-release drain failure (`drain_unconfirmed` or `connection_terminated`) stays contained in
+  `withDedicatedDatabaseSession`'s `finally`. It never turns a returned `run` result into a
+  failure. The lease is discarded, and a later bounded telemetry/diagnostic owner may count it.
+  An explicit `cancelActiveAndRollback` call rejects `drain_unconfirmed` to its caller.
+
+Advisory-lock lease (`withDedicatedDatabaseAdvisoryLock`, fixes D6):
+
+- The `pg_try_advisory_lock` statement runs through the guarded session.
+  - Exact `false` throws the caller's `conflictCode` without invoking `run`. No lock is held, so no
+    unlock is sent, and the lease follows the "otherwise" branch below (terminated, never
+    released). The existing conflict termination behaviour is preserved.
+- `finally`, on every path after the lock was acquired (success, throw, abort):
+  1. `drain()`;
+  2. when not lost, exactly one `pg_advisory_unlock(key)` through the guarded session;
+  3. release in the same continuation only when the unlock returned exactly `true`.
+- Otherwise (unlock false, error, loss, drain failure, or never acquired), `terminateAndWait` and
+  never release.
+- `run`'s result or error propagates unchanged. Lease-teardown failures are contained as above.
+
+Affinity probe (supersedes the key choice of R2; R2's explicit `begin`/`commit` and `ownerAcquired`
+rules stay):
+
+- The probe is built on `guardSession`. Both the owner and the verifier are guarded, so a lost probe
+  handle is terminated and never released.
+- Key: a per-probe random two-int key, as the design payload recommends. The call is
+  `pg_try_advisory_lock($ns::int4, $key::int4)`, where `$ns = MAINTENANCE_AFFINITY_PROBE_LOCK_NAMESPACE
+  = 551022` (derived from TASK-551-02-L02, following the 06-L03 derivation style) and `$key` is a
+  fresh `crypto.randomInt(1, 2 ** 31)` for each probe. The owner, the verifier and the `finally`
+  unlock all use that same pair.
+  - `551022` shares no namespace with the landed inventory (`20260604`, `20260628`, `20260818`,
+    `548`, `547`, `551063`).
+  - Two-int keys live in `objsubid 2`, so they never collide with any bigint key.
+- Replica semantics (binding): the probe is a per-process proof of physical-session affinity, not
+  leader election. Concurrent replicas probe independently and no longer contend.
+  - A random-key collision between two overlapping probes has probability about 2⁻³¹ per pair. It
+    fails closed with `database_maintenance_session_unavailable` and is never cached as success;
+    the next probe draws a new key.
+  - The rejected alternative was to keep the fixed key and retry on owner contention (3 attempts
+    within 3 s). That serialises N replicas at about 0.4-1.3 s each.
+- `client.ts` exports `MAINTENANCE_AFFINITY_PROBE_LOCK_NAMESPACE`.
+- The test-override input of `setDatabaseClientRuntimeForTests` gains the optional field
+  `affinityProbeKey` (an int4), which pins the key for the pre-holder legs.
+- `AFFINITY_PROBE_LOCK_KEY = 551551551n` is deleted.
+- Capacity: the probe holds the owner and the verifier and needs the control slot. So
+  `assertMaintenanceSessionAffinity` fails closed with `database_maintenance_session_unavailable`
+  before reserving anything when the active channel has fewer than 3 sessions: `poolMax < 3` in
+  `off + primary` (`:287`), or `maintenancePoolMax < 3` in `direct|session`.
+
+Test seam (binding):
+
+- `export function resetMaintenanceSessionAffinityForTests(): void { lifecycleGeneration += 1;
+  affinityProofPromise = null; }`. It ends no client.
+- `setDatabaseClientRuntimeForTests` does NOT call it automatically. That keeps 06-L03's
+  generation "Ordering law" (`tests/integration/runtime/retentionScheduler.test.ts:19-21`)
+  unchanged.
+
+#### R6.3 — Known limitations (documented, not fixed)
+
+- Driver residual (postgres.js 3.4.9 `src/connection.js:535-551`, `:436-457`):
+  - Terminating a backend while a statement is active leaves the old `query`/`errorResponse` on
+    the Connection. The first query that reconnects that pool slot then fails once with `57P01`.
+    In probe p8 (active), query #1 was rejected and query #2 succeeded.
+  - No documented API fixes this. Mitigation:
+    1. Termination is the last resort, reached only after the server-side cancel and the
+       rollback/confirmation both failed or the session was already lost. Idle termination (every
+       loss path) does not trigger the residual.
+    2. In `direct|session` mode the residual lands on the maintenance pool only, never on ordinary
+       traffic. In `off + primary` mode one later ordinary query may fail once with `57P01`.
+    3. Every dedicated-session statement classifies `57P01` as a loss, so a dedicated caller gets
+       `session_lost` and never a result from a stale slot. That handle is terminated (idle, a
+       no-op if it is already gone), which closes the slot.
+  - Forced termination with an active statement is therefore tested only with fakes (R6.6).
+- Partial partition: the client socket closes but the backend stays alive. The control connection
+  may still report the backend "alive". This is bounded by the control deadlines: the next
+  statement on the dead socket misses its deadline, is classified as a loss, and is terminated.
+- `drain_unconfirmed`: when neither cancel/rollback nor termination can be confirmed (for example
+  the control connection is unavailable), the handle is discarded unreleased. Its pool slot comes
+  back only when the socket closes. For an open block, that is the server's
+  `idle_in_transaction_session_timeout` startup bound. Otherwise it is a TCP failure or process
+  close. The bounded code surfaces to explicit `cancelActiveAndRollback` callers.
+
+#### R6.4 — Scope and envelope change (binding)
+
+- File Ownership adds `core/db/dedicatedDatabaseSession.ts` (hard cap 600 lines) and the new DB-free
+  fake-leg suite `tests/integration/server/task551DedicatedSessionGuards.test.ts` (hard cap 800
+  lines).
+- `core/db/client.ts` (736 lines today) cannot take about 350-400 more lines within 1,000.
+  `tests/integration/server/task551DatabaseLifecycle.test.ts` (818 lines) cannot take the fake
+  matrix; it keeps only the re-baselines in R6.6.
+- Envelope `json` fence, edited in place:
+  - `allowlist` += `core/db/dedicatedDatabaseSession.ts` (after `core/db/client.ts`) and
+    `tests/integration/server/task551DedicatedSessionGuards.test.ts` (after
+    `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`);
+  - `database-lifecycle-test` `argv` += `tests/integration/server/task551DedicatedSessionGuards.test.ts`
+    (6 tokens);
+  - its `positiveDiscovery.paths` += the same path, with `minimum` 2 → 3.
+  - No other command, occurrence, lane, environment profile or `forbiddenPaths` entry changes.
+    The fence parses as JSON.
+  - The family preflight (`preflightTask551DispatchSnapshot`, `sourceHead` `9c5b6666`,
+    repo-relative paths) passed after the edit on 2026-09-25.
+- The guards suite imports `core/db/dedicatedDatabaseSession.ts` directly (no environment needed).
+  Only F16/F17 import `core/db/client.ts`, under the same airtight
+  `DATABASE_URL=postgresql://127.0.0.1:1/none` convention the lifecycle suite already uses. It opens
+  no database connection. It stays a Bun-lane suite, because its owning command is
+  `database-lifecycle-test`.
+- Implementer FAST gates, restating B1:
+  - `./node_modules/.bin/eslint --max-warnings=0` over `core/db/client.ts`,
+    `core/db/dedicatedDatabaseSession.ts`, `tests/integration/server/task551DatabaseLifecycle.test.ts`,
+    `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts` and
+    `tests/integration/server/task551DedicatedSessionGuards.test.ts`;
+  - the airtight run of the B1 command with `tests/integration/server/task551DedicatedSessionGuards.test.ts`
+    appended after the RealDb file;
+  - `wc -l` over all five files, and `git diff --check`.
+- The orchestrator owner-map run on `DATABASE_URL3` also appends the guards file. The R5 receipt
+  addendum records line counts and sha256 for all five files.
+- The generated `tests/bun-lane-manifest.json` is still not hand-edited (B1 precedent; the
+  rebaseline belongs to 01-L01).
+
+#### R6.5 — Connection budget (+1 control slot)
+
+`assertDedicatedDatabaseSessionBudget(input)` counts one control slot:
+
+- `off + primary`: `poolMax >= lockOwners + workSessions + ordinaryHeadroom + 1`.
+- `direct|session`: `maintenancePoolMax >= lockOwners + workSessions + 1`.
+- `transaction + primary` stays unavailable.
+
+The control slot is additive, not shared with ordinary headroom. A drain's cancel/terminate must
+not queue behind saturated ordinary traffic within its 4,500 ms deadline. The design payload's
+alternative `max(ordinaryHeadroom, 1)` form is rejected for that reason.
+
+Worked values (TASK-548 Guide ingest: lock owner 1, work session 1, headroom 1):
+
+- `DB_POOL_MAX >= 4` under `off + primary` (was 3);
+- `DB_MAINTENANCE_POOL_MAX >= 3` under `direct|session` (was 2).
+
+The standalone affinity probe needs 3 sessions (R6.2).
+
+#### R6.6 — Test matrix (binding)
+
+Fake legs, new file `tests/integration/server/task551DedicatedSessionGuards.test.ts` (DB-free):
+
+- Fake shape:
+  - The fake reserved handle has no `begin` and no `options`. Its results carry a mutable `state`
+    and a `command` tag.
+  - The fake control executor records control statements and answers liveness, cancel and
+    terminate.
+  - The epoch is driven through `maintenanceConnectionCloseObserver`.
+- Deadline legs use injected short deadlines or a fake clock. No fixed sleeps.
+
+| Leg | Scenario | Required outcome |
+|---|---|---|
+| F1 | COMMIT tag `ROLLBACK` | `dedicated_database_transaction_aborted`. The sequence is identity, `begin`, statement, `commit`, then at release `select 1`. No `rollback` is sent. |
+| F2 | Callback throws | Exactly one `rollback`. The original error is rethrown. |
+| F3 | Signal already aborted (`transaction` and `execute`) | Zero statements. `session_lost`. |
+| F4 | COMMIT rejects `23505` | No `rollback`. `transactionOpen` is false. `23505` is rethrown. |
+| F5 | COMMIT rejects `CONNECTION_CLOSED` | Lost, `terminateAndWait`, `session_lost`. `release` is never called. |
+| F6 | `liveState.pid` mutated before issue | `session_lost` with zero statements issued on the handle. |
+| F7 | Epoch bumped, control says alive | The call proceeds (no false positive). |
+| F8 | Epoch bumped, control says gone or times out | Lost. No statement is issued on the handle. |
+| F9 | Result with a foreign `state.pid` | Lost, `session_lost`, result discarded. |
+| F10 | Nested and concurrent `transaction`; `execute` while a transaction is active or draining | `dedicated_database_transaction_nested`. |
+| F11 | External `cancelActiveAndRollback` during a transaction | Exactly one `rollback`. The transaction rejects `session_lost`. |
+| F12 | Abort during the callback | Exactly one control cancel (single-flight), then one `rollback`. |
+| F13 | Rollback misses its deadline | Terminate, poll until gone, `connection_terminated`. `release` is never called. Total time ≤ `DEDICATED_DRAIN_DEADLINE_MS`. |
+| F14 | Control connection unavailable | `dedicated_database_drain_unconfirmed`. `release` is never called. |
+| F15 | Idle release | One `select 1`, zero `rollback`, `release` exactly once. |
+| F16 | Advisory lease (via `client.ts`) | `pg_advisory_unlock` runs in `finally` on the throw path; exact `true` → release once; `false` → terminate, never release. |
+| F17 | Probe whose owner is not acquired (via `client.ts`) | No unlock is sent. Owner and verifier drain and release (not lost). |
+| F18 | Transaction handle retained after its scope | Rejected `session_lost` with zero statements. |
+| F19 | `withPoolOptions` | Returns the same object. `options` is the live pool `options` by reference (identity equality before and after a test override). |
+| F20 | Classifier table | Every code in G4 is a loss; `57014`, `25P02`, `40P01` and `23505` are not. |
+| F21 | `BEGIN` resolving while a drain is in flight | That drain sends `rollback`, not `select 1`. |
+| F22 | Forced termination while a statement is active (replaces the real leg; R6.3) | `connection_terminated`, `release` never called, handle discarded. |
+
+Re-baselines in `tests/integration/server/task551DatabaseLifecycle.test.ts` (intended contract
+changes named by R6, not weakenings):
+
+- `makeFakeReserved` results gain `state` and `command`. The lease responder answers the identity
+  snapshot. The pool fake gains the control statements.
+- `:679-693` (terminate when the drain rollback fails): `pg_terminate_backend` is now a control
+  statement followed by a liveness poll, and `releases` 1 → 0.
+- `:695-706` (already-aborted `execute`): the expected `cancel select 1` call becomes zero
+  statements issued. The idle lease still confirms and releases once.
+- `:708-716` (`assertAlive` with no row): the empty responder now fails the lease-start identity
+  snapshot, which is a loss, so the rejection is still `dedicated_database_session_lost` and
+  `releases` 1 → 0.
+- `:732-744` (conflict code without running the body): `releases` 1 → 0 (the conflicted lease is
+  terminated, never released).
+- `:746-773` (conflicted lock terminates): the `pg_backend_pid` call on the reserved handle is gone
+  (identity comes from the snapshot), and `releases` 1 → 0.
+- `:775-794` (exact unlock `false`): the same two changes.
+- `:796-` (unlock and release after success): only the fake shape changes.
+- B2's `:664`, `:675`, `:679-690` re-baselines stay as written.
+- Every other behaviour assertion is kept. The file stays at or under 1,000 lines.
+
+Real-DB legs, `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`:
+
+- The gate is unchanged (presence-only owner map; the fixture URL is the only URL dialed; each test
+  has a `60_000` timeout).
+- The recorder pool is `postgres(<fixture URL>, { max: 3, onnotice: <recorder>, onclose:
+  maintenanceConnectionCloseObserver, connection: { client_min_messages: "notice" } })`.
+- `resetMaintenanceSessionAffinityForTests()` runs before each probe leg.
+- Zero-WARNING guard:
+  - every zero-WARNING assertion first asserts that `current_setting('client_min_messages')` is
+    `notice`, `log` or `debug*`;
+  - a canary (an idle `rollback` on the recorder, recording exactly one `WARNING:25P01`) runs once
+    before any zero-WARNING assertion is trusted.
+- Pre-holder: a separate `postgres(<fixture URL>, { max: 1 })` client takes the pinned pair with
+  `pg_advisory_lock($ns, $key)`, and unlocks it and `end()`s in `finally`.
+
+| Leg | Scenario | Required outcome |
+|---|---|---|
+| R4.1-R4.5 | As written (B1), with key-specific wording read against the pinned `affinityProbeKey` | Unchanged. |
+| R4.6 | As written (B2) | Unchanged. |
+| R6-a | Pinned key pre-held | `database_maintenance_session_unavailable`. Zero WARNINGs after the canary. |
+| R6-b | `select 1/0` inside the callback, then COMMIT | `dedicated_database_transaction_aborted`. Zero WARNINGs. |
+| R6-c | `execute(select pg_sleep(30))` aborted after 1.5 s | Rejects `session_lost`. The drain returns `rolled_back` within 4,500 ms measured from the abort. The owner-side observer shows that PID not `active`. The lease is released and three follow-up pool queries succeed. |
+| R6-d | Same as R6-c inside a transaction via `drizzle(withPoolOptions(tx))` | Same outcome. Exactly one `rollback`. |
+| R6-e | External `pg_terminate_backend` on an idle lease (from the pre-holder client) | The next call rejects `session_lost` without hanging and with no uncaught error. The lease is discarded (never released). Three follow-up pool queries succeed. |
+| R6-f | Lost handle | `release` is never called on the lost handle (test-side reserve wrapper counts releases). |
+| R6-g | After an unrelated idle-timeout close on the recorder pool (`idle_timeout: 1`) | A new dedicated transaction still succeeds (epoch verify, no false loss). |
+| R6-h | Two simultaneous probes on two fresh lifecycle generations with random (unpinned) keys | Both succeed (collision regression for D5). |
+
+- None of these legs touches an application table.
+- Prototype measurements, for sizing only (not contract):
+  - R6-c took 1,190-1,635 ms from abort to `rolled_back`, including a cold control connect;
+  - R6-d took 882-1,708 ms;
+  - with cancel disabled, forced termination finished in 3,778-3,903 ms.
+
+#### R6.7 — Cross-leaf handoffs (this leaf edits none of these files)
+
+- **TASK-551-06-L03** (land order: 02-L02 R6 → 06-L02 R8/R9 → 06-L03 R1, extending B3):
+  - The probe-key inventory in `tests/integration/runtime/retentionScheduler.test.ts:448-462` lists
+    `[0, 551551551]`. That becomes stale: replace the row with an assertion that
+    `RETENTION_JOB_LOCK_NAMESPACE !== MAINTENANCE_AFFINITY_PROBE_LOCK_NAMESPACE`, importing the
+    namespace from `core/db/client`.
+  - The collision-inventory comment in `core/services/maintenance/retentionJobService.ts:170-179`
+    (at `:178`, "the dedicated-session affinity probe's single key 551551551 (which lives in
+    classid 0)") must name the two-int namespace `551022`.
+  - Its drizzle-over-transaction adapter (`retentionJobService.ts:282`) consumes `withPoolOptions`
+    (B3). The handle is now a scoped Proxy with no `begin`/`release`, and it expires with its
+    scope.
+  - `session.cancelActiveAndRollback("retention_lock_lost")` (`:259`) may now reject
+    `dedicated_database_drain_unconfirmed`. Its callers map the new
+    `dedicated_database_transaction_aborted`, `…_nested` and `…_drain_unconfirmed` codes at the 06-L03
+    boundary.
+  - The generation "Ordering law" is unaffected because the reset seam is never automatic.
+- **TASK-548-01-L03**: the Guide budget becomes `DB_POOL_MAX >= 4` under `off + primary` and a
+  maintenance pool of at least 3 under `direct|session`
+  (`TASK-548-01-L03-…md:1064`, `:2040`). It still calls the helper and never re-implements the
+  matrix.
+- **TASK-551-02-L01** (`core/db/databaseConfig.ts`, forbidden here):
+  - `DB_MAINTENANCE_POOL_MAX` is parsed with default 2, minimum 2 (`databaseConfig.ts:326`), and
+    `sessionAffineMaintenanceCandidate` uses `poolMax >= 2` (`:365`).
+  - Under R6, a `direct|session` deployment on the default 2 fails closed at its startup probe
+    with `database_maintenance_session_unavailable`.
+  - 02-L01 must raise the default and minimum to 3 and the primary candidate bound to 3, and
+    re-derive the fleet budget, before any deployment enables `direct|session`. Until then this
+    leaf's fail-closed check is the guard.
+  - This is an open dependency for the orchestrator. R6 does not widen scope into 02-L01.
+
+#### R6.8 — Superseded sentences (quoted)
+
+- Implementation Pseudocode: "It tracks the current postgres.js `PendingQuery` through its
+  supported `cancel()` surface without debug hooks or undocumented pool internals."
+  - Replaced by the server-side control cancel (R6.2).
+- Implementation Pseudocode: "false, error, abort, session loss, or ambiguous result uses the
+  owner's private reserved-handle termination path, awaits backend disappearance, and never
+  returns that connection to a pool."
+  - Termination now uses the control connection (`terminateAndWait`), never the reserved handle.
+    The "never returns" rule stands.
+- Implementation Pseudocode: "`off + primary` requires `DB_POOL_MAX >= 2` and the live affinity
+  proof".
+  - Now `DB_POOL_MAX >= 3`.
+- Implementation Pseudocode: "(for example the TASK-548 Guide ingest budget of two dedicated
+  sessions plus one ordinary-query headroom slot requires `DB_POOL_MAX >= 3` under
+  `off + primary`)".
+  - Now `>= 4` (R6.5).
+- Implementation Pseudocode comment: "fewer than two available physical sessions" and "Unlock on
+  the owner's same PID and release/cancel both sessions in finally." (R2 had already superseded
+  the latter.)
+  - Now fewer than three. Only non-lost probe handles are released.
+- Implementation Pseudocode: "fails before work when the primary pool has fewer than two
+  sessions."
+  - Now fewer than three.
+- Testing Requirements: "raising capacity to 2 permits the probe."
+  - Now 3. The `DB_POOL_MAX=1` fixture otherwise stands.
+- R2: "then release both sessions in `finally`."
+  - Release only non-lost handles after confirmation; lost handles go through `terminateAndWait`.
+- R3: "If `input.signal` is already aborted, it drains through
+  `drainActiveAndRollback(input.signal)` and throws `dedicated_database_session_lost`, as today."
+  - Zero statements, `session_lost` (F3).
+- R3: "On any error from `begin`, `run` or `commit`, it calls `drainActiveAndRollback(input.signal)`
+  (`:367-384`; its rollback-else-terminate outcome is unchanged) and rethrows."
+  - `failWith` and the COMMIT rules in R6.2. A non-loss COMMIT error sends no rollback. The COMMIT
+    tag `ROLLBACK` gives `dedicated_database_transaction_aborted`.
+- R3: "The rethrown error is `dedicated_database_session_lost` when the signal aborted, otherwise
+  the original error."
+  - `session_lost` also on loss or on an external drain. `transaction_aborted` on the COMMIT tag.
+    `transaction_nested` on nesting.
+- R3: "The callback receives `reserved` itself as its transaction handle."
+  - It receives the scoped guarded handle (R6.2).
+- R4: "It builds its own `postgres(<fixture URL>, { max: 2, onnotice: <recorder> })` pool", and B1:
+  "its own `max: 2` pool with the `onnotice` recorder".
+  - `max: 3` with `onclose` and `client_min_messages` (R6.6).
+- B1: "The envelope edit is `allowlist` += the new path, the `database-lifecycle-test` argv += the
+  new path, and its `positiveDiscovery.paths` += the new path with `minimum` 1 → 2. No other
+  command, occurrence or `forbiddenPaths` entry changes."
+  - Extended by R6.4 (two more allowlist paths, one more argv/discovery path, `minimum` 2 → 3).
+- B1 and R5 FAST gates, and the receipt "line counts and sha256 for all three files".
+  - Now five files (R6.4).
+- B2: "The implementer runs this assertion against the real driver first. If it passes unguarded,
+  record that and leave the drain unchanged."
+  - Probe p1 confirmed the warning, so the guard is unconditional.
+- B2: "The flag is set before the wrapper issues its own `begin` and cleared only after that
+  wrapper's `commit` or `rollback` resolves."
+  - The flag is set when `begin` resolves with the `BEGIN` tag. It is cleared per the R6.2 COMMIT
+    and drain rules, including a non-loss COMMIT rejection. The drain chooses only after in-flight
+    statements settle.
+- B2: "The return union `"rolled_back" | "connection_terminated"` and terminate-on-confirmation-failure
+  stay unchanged."
+  - The union stands. An unconfirmed termination now rejects
+    `dedicated_database_drain_unconfirmed` (R6.2).

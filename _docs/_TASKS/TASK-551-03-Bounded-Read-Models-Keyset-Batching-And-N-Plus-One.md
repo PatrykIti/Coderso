@@ -187,3 +187,55 @@ zero console errors.
 No shared docs are edited here. Each leaf supplies its limits, cursor/startup,
 API, service-split, and validation handoff to TASK-551-10-L02, which owns shared
 documentation and the single changelog entry.
+
+## Dated Contract Corrections — 2026-09-25 (03-L02 round-3 mirror; append-only)
+
+This entry mirrors TASK-551-03-L02 round-3 disposition R3-37 from
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round3-dispositions.md`
+into this child. It is prose-only. Every sentence quoted below keeps its
+original bytes above and is superseded by this section.
+
+### R3-37a — 03-L02 has INITIAL and FINAL occurrences
+
+- The 03-L02 Workflow Dispatch Envelope now declares two occurrences
+  (`TASK-551-03-L02-Bounded-Admin-Lists-And-Oversized-Service-Splits.md:1916-1927`):
+  - `initial` depends on `TASK-551-09-L04:initial`. It covers the bounded
+    Admin/revision route, schema, client, UI, consumer-graph and concurrency
+    adoption.
+  - `final` depends on `TASK-551-08-L03:final`. It covers the token-guarded
+    binary export download and removes the legacy synchronous export.
+- The TASK-551 parent carries both nodes (parent land order items 8 and 11,
+  `TASK-551_Scalable_Database_Query_And_Cache_Optimization.md:932-938`).
+- The "L02" in this child's Dependencies header (lines 9-10) and in
+  "no TASK-551-03 route/client/UI edit may precede all four L02 receipts"
+  (lines 64-65) is 03-L02 INITIAL. 03-L02 FINAL additionally requires 08-L03
+  FINAL's binary response lane.
+
+### R3-37b — Family order places 03-L02 FINAL after 08-L03 FINAL
+
+- Superseded (Sub-Tasks, lines 62-64): "The compile-green family order is 01 →
+  02 → 08-L03 INITIAL → 05 → 03-L01 → 06 → 07-L01 → 09-L04 INITIAL → 03-L02 →
+  07-L02 → 08-L01 → 08-L02 → 08-L03 FINAL → 03-L03 → 04;"
+- Replacement: "The compile-green family order is 01 → 02 → 08-L03 INITIAL →
+  05 → 03-L01 → 06 → 07-L01 → 09-L04 INITIAL → 03-L02 INITIAL → 07-L02 →
+  08-L01 → 08-L02 → 08-L03 FINAL → 03-L02 FINAL → 03-L03 → 04;". This matches
+  the parent node order, which places 03-L02 FINAL between 08-L03 FINAL and
+  03-L03 (`TASK-551_Scalable_Database_Query_And_Cache_Optimization.md:1250-1252`).
+- "L02 and L03 may not land in parallel" (line 60) now covers both 03-L02
+  occurrences. 03-L03 lands only after 03-L02 FINAL. It depends on 03-L02
+  INITIAL transitively and has no FINAL edge.
+
+### R3-37c — The 03-L02 smoke runs eight scenarios
+
+- Superseded (Testing Requirements, lines 181-183): "and completes its
+  five-scenario visible-effect Playwright smoke in light and dark mode with
+  zero console errors."
+- Replacement: "and completes its eight-scenario visible-effect runtime smoke
+  (registered suite `task-551-admin-lists`, 03-L02 C15 v2) in light and dark
+  mode with zero console errors." The ordered ids are
+  `pagination-next-previous`, `filter-reset`, `equal-sort-boundary`,
+  `booking-dirty-refresh`, `extracted-views`, `page-history-load-more`,
+  `offpage-selected-label`, `custom-screen-list-view`. 03-L02 runs profile
+  `fast` (`wf55103l02`). TASK-551-10-L01 re-runs the same eight scenarios
+  under `certification` (`wf551l01admin`)
+  (`TASK-551-03-L02-Bounded-Admin-Lists-And-Oversized-Service-Splits.md:4108-4112`).
