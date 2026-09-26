@@ -3,7 +3,7 @@ import { TextEncoder } from "node:util";
 export const TASK551_GRAPH_SCHEMA = "coderso.task551.workflow-dispatch-graph@v1";
 export const TASK551_ENVELOPE_SCHEMA = "coderso.task551.workflow-dispatch@v1";
 
-const TASK551_MAX_TASK_FILE_BYTES = 512 * 1024;
+export const TASK551_MAX_TASK_FILE_BYTES = 1024 * 1024;
 const TASK551_MAX_JSON_BYTES = 160 * 1024;
 const TASK551_MAX_JSON_DEPTH = 64;
 const TASK551_MAX_JSON_NODES = 20_000;

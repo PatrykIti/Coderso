@@ -124,6 +124,7 @@ const expectedL11SidecarTests = [
   "tests/unit/workflows/task551AuthorAudit.test.ts",
   "tests/unit/workflows/task551WorkflowContracts.test.ts",
   "tests/unit/workflows/task551EvidenceContract.test.ts",
+  "tests/unit/workflows/dispatchContractCaps.test.ts",
 ] as const;
 
 const sha = (value: string): string => createHash("sha256").update(value).digest("hex");
@@ -1504,13 +1505,13 @@ describe("TASK-551 L11 compatibility bootstrap and generic barrier", () => {
     expect([
       expectedL11SidecarPaths.length + expectedL11SidecarTests.length,
       receipt.sidecarPaths.length,
-    ]).toEqual([19, 16]);
+    ]).toEqual([20, 16]);
     expect(
       TASK551_PHASE_PROVENANCE.reduce(
         (count, phase) => count + phase.ownedFiles.length + phase.ownedTests.length,
         0
       )
-    ).toBe(81);
+    ).toBe(82);
     expect(receipt.sidecarPaths).toEqual(expectedL11SidecarPaths);
     expect(receipt.plannedBunPaths).toEqual(exactManifestPaths);
     expect(receipt.sidecarClosureSha256).toBe(shaBytes(framed));

@@ -114,6 +114,7 @@ export const TASK551_PHASE_PROVENANCE = freeze([
       "tests/unit/workflows/task551AuthorAudit.test.ts",
       "tests/unit/workflows/task551WorkflowContracts.test.ts",
       "tests/unit/workflows/task551EvidenceContract.test.ts",
+      "tests/unit/workflows/dispatchContractCaps.test.ts",
     ],
     readOnlyImports: [],
     materializedWorktreeOutputs: [],

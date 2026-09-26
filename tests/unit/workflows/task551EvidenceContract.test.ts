@@ -890,6 +890,7 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
       authorTest,
       workflowTest,
       evidenceTest,
+      capsTest,
       authorSource,
       implementSource,
       fixSource,
@@ -901,6 +902,7 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
       readFile(new URL("./task551AuthorAudit.test.ts", import.meta.url), "utf8"),
       readFile(new URL("./task551WorkflowContracts.test.ts", import.meta.url), "utf8"),
       readFile(new URL("./task551EvidenceContract.test.ts", import.meta.url), "utf8"),
+      readFile(new URL("./dispatchContractCaps.test.ts", import.meta.url), "utf8"),
       readFile(new URL(`${base}task-551-author-audit.mjs`, import.meta.url), "utf8"),
       readFile(new URL(`${base}task-551-implement.mjs`, import.meta.url), "utf8"),
       readFile(new URL(`${base}task-551-fix.mjs`, import.meta.url), "utf8"),
@@ -970,6 +972,7 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
       privateImports(authorTest),
       privateImports(workflowTest),
       privateImports(evidenceTest),
+      privateImports(capsTest),
     ]).toEqual([
       [`${base}task-551-author-audit.mjs`, `${base}task-551-fix.mjs`].sort(),
       [
@@ -978,6 +981,7 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
         `${base}task-551-implement.mjs`,
       ].sort(),
       [`${base}lib/task-551-evidence-contract.mjs`, `${base}task-551-implement.mjs`].sort(),
+      [`${base}task-551-author-audit.mjs`],
     ]);
     const bridge = "bootstrapTask551EvidenceStorageForOwnerWorkflowHost";
     expect(
@@ -1037,7 +1041,9 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
     expect(validateTask551EvidenceValue(row, cycle)).toBe("task551_evidence_value_invalid");
     const staticRow = TASK551_DURABLE_EVIDENCE_MANIFEST[2]!;
     const sparse = requireEvidenceRecord(evidenceValueFor(staticRow));
-    sparse.focusedTests = [processReceipt(), ,];
+    const focusedTestsWithHole = [processReceipt()];
+    focusedTestsWithHole.length = 2;
+    sparse.focusedTests = focusedTestsWithHole;
     expect(validateTask551EvidenceValue(staticRow, sparse)).toBe("task551_evidence_value_invalid");
     const oversized = requireMutableEvidence(evidenceValueFor(row));
     oversized.commandReceipt.stdoutBytes = 1_048_577;
