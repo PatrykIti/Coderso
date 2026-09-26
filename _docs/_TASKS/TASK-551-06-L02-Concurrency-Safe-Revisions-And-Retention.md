@@ -3168,3 +3168,2240 @@ values.
   "does not list the new file" is stale. That leaf's amendment now lists
   `tests/perf/database-revision-candidate-bounds.test.ts` (10-L01 `:1092`,
   argv `:1321`, `positiveDiscovery` `:1323`, `"minimum": 12`).
+
+### R10 amendments (R11, 2026-09-25): cold-state gate, cost model, plan guard
+
+This subsection is append-only. Nothing above it is edited. It amends R10
+after the R10 contract audits (1 HIGH, 4 MEDIUM and several LOWs). Where an
+item below quotes an earlier sentence, the item wins and the quoted sentence
+is read as replaced. Anchors into this file are current line numbers. R11
+starts after `:3170`, so no earlier line moves. Every other anchor was
+grounded on 2026-09-25 against HEAD `ee4c7f93` plus the uncommitted working
+tree. R11 does not touch the Workflow Dispatch Envelope fence,
+`**Status:**` or `**Changelog:**`. It adds no file to the R10-9 scope and
+changes no expected test count.
+
+Receipt figures below are rounded to whole milliseconds. They come from
+`_docs/_workflows/_smoke/task-551/audit-evidence/`:
+
+- `06-l02-r7-explain-receipt.json` (run `5a60dbac`, "the R7 receipt");
+- `06-l02-r9-f-floor-join-explain.json` (run `a44606f6`);
+- `06-l02-r9-f-floor-join-explain-part2.json` (run `84f5139b`);
+- `06-l02-r9-f2-prod-shape-explain.json` (run `07de0980`, "F2R").
+
+#### R11-1 (HIGH) — The latency gate applies only in the VM-set state
+
+**Decision.** The R10-7 latency gate (below 4,000 ms) applies ONLY in the
+`after_vacuum_analyze_custom` state. Of the four stats states, it is the only
+one in which the visibility map is set. `ANALYZE` does not set the visibility
+map, so `as_is_custom`, `after_analyze_custom` and `after_analyze_generic`
+are all VM-unset states. In each of them every case is measured and RECORDED
+(`rowsReturned`, shared hit and read blocks, `executionMs`, the timeout
+flag), with `gated: false` and a `coldVisibilityMapUnset` note.
+
+**Why.** A gate on VM-unset states measures the host, not the contract:
+
+- F2R `sparse_large` (wide, 1,000 × 100): F2 measured 3,642 ms in
+  `after_analyze_custom`, a margin of 358 ms (about 9 %). Variant F, the same
+  predicate in CTE form, measured 4,216 ms in the same state and run.
+- `84f5139b` `backlog_1000x101_info`: F measured 5,617 ms in
+  `after_analyze_custom`.
+- The `as_is_custom` state is run-dependent ("stats as left by the previous
+  case"). F2R `sparse_large` measured every exact stateless variant above 4 s
+  there (G 9,088, F 7,097, F2 6,395, F3 8,478 ms). The same case in
+  `a44606f6` measured F, G and H at about 1.8 s.
+
+R11-2 closes the VM-unset gap in production. The gate does not.
+
+**State evidence.** Immediately before each measured statement, every state
+records `page_revisions` `relpages` and `relallvisible` from `pg_class`. The
+gated `after_vacuum_analyze_custom` state is valid only when
+`relallvisible / greatest(relpages, 1) >= 0.9`. On a miss, the orchestrator
+re-runs `VACUUM (ANALYZE)` once. A second miss is a harness STOP, never a
+latency pass or breach.
+
+**Unchanged.** The plan guard (R10-7 budget item 2) and the rows check
+(item 3) still apply in all four states. The R10-5 (2) DB legs keep their
+4,000 ms ceiling. They run on freshly seeded NARROW rows (VM unset). F2R
+measured that shape (`dbleg_mixed_narrow`) at 804 ms worst, in
+`as_is_custom`.
+
+**Drain reads (R10-7 budget item 4).** The gated drain simulation runs after
+the `after_vacuum_analyze_custom` state. A drain that the harness runs in a
+VM-unset state is recorded with `gated: false`.
+
+**Superseded (quoted).**
+
+- `:2286`, the evidence-table cell for `sparse_large` under F2: "6,395 as-is
+  cold (29.5k read blocks); 3,642 / 2,151 / 148 in the other three states
+  (P2)". It now reads: 6,395 in `as_is_custom` (29.5k read blocks), 3,642 in
+  `after_analyze_custom` and 2,151 in `after_analyze_generic`, all three
+  VM-unset (recorded, not gated); 148 in `after_vacuum_analyze_custom`, the
+  VM-set gated state (P2 in all four). "As-is cold" no longer implies that the
+  other two ANALYZE-only states are VM-set.
+- `:3018-3020`, R10-7 budget item 1: "**Latency.** Every case's worst
+  `executionMs` across `after_analyze_custom`, `after_analyze_generic` and
+  `after_vacuum_analyze_custom` is below 4,000 ms
+  (`RETENTION_STATEMENT_TIMEOUT_MS`), with no timeout." It now reads:
+  "**Latency.** Every case's `executionMs` in `after_vacuum_analyze_custom`
+  (the VM-set state, validated per R11-1) is below 4,000 ms
+  (`RETENTION_STATEMENT_TIMEOUT_MS`), with no timeout. The three VM-unset
+  states are recorded with `gated: false`." The `many_parents_k` case
+  (R11-3) follows its own outcome rule instead.
+- `:3031-3036`, the paragraph "**The `as_is_custom` state.** It is the cold
+  state after a bulk seed, with the visibility map unset. Every case measures
+  and records it, with `gated: false` and a `coldVisibilityMapUnset` note. It
+  is NOT a latency gate: F2R measured wide `sparse_large` there at 6,395 ms,
+  and every exact stateless variant exceeds 4 s in that state. That gap is
+  residual risk 1 in R10-8, and the owner decides it. The plan guard still
+  applies in this state." It now reads as R11-1. The rule covers all three
+  VM-unset states, "every exact stateless variant exceeds 4 s" holds for F2R
+  only, and the gap is closed by the decided R11-2 policy, not by an open
+  owner decision.
+- `:3065-3076`, R10-8 risk 1, "**Cold, wide, VM-unset 100k families (OPEN
+  OWNER DECISION).**", including "rely on PostgreSQL's insert-triggered
+  autovacuum, since retention only reads rows at least 180 days old, whose
+  pages are normally all-visible by then;" and "R10 does not decide this. Its
+  default is the R10-7 `as_is_custom` rule (recorded, not gated). The
+  orchestrator records the owner's answer in the receipt (`coldStatePolicy`)
+  before closure." It now reads: "**Cold, wide, VM-unset families
+  (DECIDED, R11-2).** VM-unset states are recorded, not gated (R11-1).
+  Production closes the gap with the threshold-triggered pre-retention vacuum
+  of R11-2, and the R10-7 receipt records that policy as `coldStatePolicy`."
+
+#### R11-2 (MEDIUM) — `coldStatePolicy` decided: threshold-triggered pre-retention vacuum
+
+**Decision.** This is the orchestrator decision relayed in the R11 mandate.
+It closes R10-8 risk 1: `coldStatePolicy` is
+`"pre_retention_vacuum_on_threshold"`. Before each revision family's
+retention transaction, the scheduled retention job (06-L03) runs
+`VACUUM (ANALYZE) <family table>` as a separate NON-transactional maintenance
+statement, but only when the threshold below fires for that family table.
+R10-2's code does not change: the vacuum belongs to the job, and
+`runRevisionFamilyRetention` never issues it.
+
+**Threshold (columns verified).** One catalog statement per family table
+reads the following:
+
+- from `pg_stat_user_tables`, joined on `relid = pg_class.oid` as in
+  `core/services/maintenance/partitionReadinessService.ts:376-392`:
+  `n_dead_tup`, `n_live_tup` and `n_ins_since_vacuum`;
+- from `pg_class`: `relpages` and `relallvisible`. These two are `pg_class`
+  columns, NOT `pg_stat_user_tables` columns.
+
+The vacuum runs when ANY of these holds:
+
+1. `n_dead_tup::float8 / (n_live_tup + 1) > 0.1`;
+2. `relallvisible::float8 / greatest(relpages, 1) < 0.9`;
+3. `n_ins_since_vacuum::float8 / (n_live_tup + 1) > 0.1`. This is an R11
+   addition. Newly inserted pages stay VM-unset until they are vacuumed,
+   while `relpages` and `relallvisible` are refreshed only by VACUUM,
+   ANALYZE and CREATE INDEX. After a bulk insert, disjunct 2 can therefore be
+   stale.
+
+A missing `pg_stat_user_tables` row (for example after a stats reset) counts
+as "run the vacuum". An empty table (`relpages = 0`) satisfies disjunct 2,
+and vacuuming it is cheap.
+
+**Execution rules (binding handoff to 06-L03).**
+
+- **Statement.** `VACUUM (ANALYZE) <table>`. The identifier comes from the
+  closed family map (`REVISION_FAMILY_SPECS`,
+  `core/services/content/revisionRetentionService.ts:158-194`) and is
+  rendered as a quoted identifier. It never comes from input or settings.
+- **Channel.** It runs through the dedicated maintenance session's
+  non-transactional `session.execute(statement, signal)`
+  (`core/db/client.ts:329-334`), after `session.assertAlive(signal)` and
+  before `session.transaction(...)`
+  (`core/services/maintenance/retentionJobService.ts:818-819`). `VACUUM`
+  cannot run inside a transaction block, so it never goes through
+  `session.transaction` or `drizzleOverTransaction(tx)`.
+- **Lock.** A plain `VACUUM` takes `SHARE UPDATE EXCLUSIVE`, which blocks no
+  reads, inserts or deletes. It can wait on a concurrent vacuum or `ANALYZE`
+  of the same table, bounded by the session lock timeout.
+- **Bound.** 06-L03 chooses a bounded statement timeout inside the run budget
+  (`DEFAULT_MAX_RUN_MS`, 300,000 ms, `retentionJobService.ts:604`). The
+  statement honours the abort signal.
+- **Failure.** A timeout, lock timeout or error is recorded in the job ledger
+  as a redacted, machine-readable code, which 06-L03 names. It does NOT fail
+  or skip the family's retention transaction, because correctness (R10-3)
+  does not depend on the visibility map. The worst case is a VM-unset
+  candidate read cancelled by the 4,000 ms tx-local bound, which surfaces as
+  the existing `retention_batch_failed`.
+- **Mode.** The vacuum runs for dry-run and apply alike. It changes no
+  logical data, and the dry-run reads the same statement. For each family the
+  ledger records whether the vacuum ran, was skipped by the threshold, or
+  failed.
+- **Owner.** 06-L03 R1 gains a "pre-retention vacuum" item. That item
+  implements the vacuum, tests it (a pure test of the threshold function, and
+  a DB leg that asserts the statement order and the non-transactional
+  channel) and receipts it. The handoff is binding and is recorded here; this
+  leaf does not edit the 06-L03 file.
+
+**Autovacuum assumption (stated).** PostgreSQL autovacuum stays enabled (the
+default). Insert-triggered autovacuum (PostgreSQL 13 and later, through
+`autovacuum_vacuum_insert_threshold` and
+`autovacuum_vacuum_insert_scale_factor`) normally sets the visibility map on
+the pages of aged rows. The design does not RELY on it: the threshold check
+exists for the cases where autovacuum lags or is disabled.
+
+**Recent-rows argument (recorded).** R10-8 risk 1 argued that retention only
+reads rows at least 180 days old, on pages that are normally all-visible by
+then. That holds for the outer candidate scan. It does not hold for the
+per-parent probes:
+
+- the floor probe (`order by floor_probe.version desc offset $1 limit 1`)
+  reads each parent's NEWEST `k + 1` index entries;
+- the anchor sub-select reads each parent's newest publish row.
+
+These are the most recently written rows, on exactly the pages autovacuum is
+least likely to have reached. Their index-only scans then fall back to heap
+fetches, which is the 2.2-3.6 ms per parent in R11-3. Autovacuum alone does
+not bound the VM-unset cost; the threshold vacuum does.
+
+**Receipt.** The R10-7 receipt records:
+
+```text
+coldStatePolicy: {
+  policy: "pre_retention_vacuum_on_threshold",
+  thresholds: { deadRatio: 0.1, allVisibleRatio: 0.9, insertedRatio: 0.1 },
+  owner: "TASK-551-06-L03 R1 pre-retention vacuum",
+  decidedBy: "TASK-551-06-L02 R11"
+}
+```
+
+#### R11-3 (MEDIUM) — Cost model restated from the receipts; `many_parents_k`
+
+**Per-parent cost.** These figures are for the page family with `k = 100`.
+Each is a whole-statement time divided by the parent count, so it also
+includes the candidate fetch.
+
+| regime | per parent | receipt basis | parents at 4 s |
+|---|---|---|---|
+| 5-row parents (below the floor) | 65-120 µs | F2R `many_parents_info` 20,000 × 5: 1,328 ms VM set, 2,414 ms worst | ≈ 33k-60k |
+| ≥ `k` rows, VM set | 148-332 µs | F2R `after_vacuum_analyze_custom`: `sparse_large` 148 ms, `backlog` 332 ms, each over 1,000 parents | ≈ 12k-27k |
+| ≥ `k` rows, VM unset | 2.2-3.6 ms | F2R `sparse_large`: 2,151 ms (`after_analyze_generic`) and 3,642 ms (`after_analyze_custom`) over 1,000 parents | ≈ 1.1k-1.8k |
+
+F2R also measured a cold cache on top of an unset VM: `sparse_large` in
+`as_is_custom` took 6,395 ms, about 6.4 ms per parent (about 600 parents
+within 4 s). That figure is recorded only. It is not a design regime.
+
+R11-2 keeps production in the VM-set regime, where the 4 s bound is reached
+at roughly 12k-27k parents with at least `k` rows each. No R10 gate case has
+more than 1,000 parents.
+
+**Superseded (quoted).**
+
+- `:2744-2746`, R10-4 cost-model bullet: "About 65-120 µs per parent: one
+  loose-scan step, one floor probe that walks up to `k + 1` index entries
+  (index-only once the visibility map is set), and one anchor probe on
+  kind-bearing families." It now reads: per-parent cost is one loose-scan
+  step, one floor probe that walks up to `k + 1` index entries (index-only
+  once the visibility map is set) and one anchor probe on the kind-bearing
+  families. It costs about 65-120 µs for parents below the floor, about
+  148-332 µs for parents with at least `k` rows when the VM is set, and about
+  2.2-3.6 ms when it is unset (the R11-3 table).
+- `:3077-3079`, R10-8 risk 2: "**Parent-count scaling.** F2 costs about
+  65-120 µs per parent. 20,000 parents took 2.2-2.4 s per batch (1.3 s warm),
+  so the 4 s bound is reached at roughly 35,000 parents per family. This
+  matters mainly for `entry`." It now reads: "**Parent-count scaling.**
+  Per-parent cost depends on parent size and VM state (R11-3 table). The 4 s
+  bound is reached at about 33k-60k five-row parents, at about 12k-27k
+  parents with at least `k` rows when the VM is set, and at about 1.1k-1.8k
+  such parents when it is unset. R11-2 keeps families in the VM-set regime.
+  The `many_parents_k` receipt case measures that regime at 20,000 parents,
+  and its outcome rule decides whether a documented limit applies. This
+  matters mainly for `entry`."
+
+**New R10-7 receipt case `many_parents_k`.**
+
+- **Shape.** 20,000 parents × 101 aged rows, contiguous per parent (the
+  `backlog` shape at 20 times the parent count). Every row is `publish`, and
+  rows are NARROW (`data '{}'::jsonb`), 2,020,000 rows in all. The floor
+  probes walk about 2.02 million index entries per batch.
+- **Rows returned: 500.** Each parent has exactly one eligible row (version 1).
+  Its anchor, version 101, lies inside the newest 100 rows.
+- **Why narrow.** Wide rows would put about 4 GB on the shared `coderso02`
+  (`shared_buffers` 64 MB). In the gated state the floor probe is index-only,
+  so heap width only matters in the VM-unset states, which are recorded
+  anyway.
+- **Seeding.** Per R11-5 (b): at most 20,000 rows per statement, so 101
+  insert statements.
+
+**Outcome rule for `many_parents_k`.** This is not a closure-blocking latency
+gate, and it is never silent.
+
+- If `after_vacuum_analyze_custom` measures `executionMs < 4,000`, the receipt
+  records `parentCountCeiling: { measuredParents: 20000, withinBound: true }`.
+- If it measures 4,000 ms or more, or is cancelled, the receipt records
+  `parentCountCeiling` as a DOCUMENTED LIMIT, with the measured ms and the
+  derived per-family parent ceiling. Before 06-L02 closes, the orchestrator
+  authors a named follow-on leaf for the 06-L03 mitigation: per-parent
+  batching by parent ranges, where the job walks bounded parent-id ranges and
+  runs one bounded retention statement per range. The limit has performance
+  and reliability impact, so the follow-on is active work, never a
+  `TASK-9999` deferral.
+- When the statement completes, the rows check (500) and the R10-4 plan guard
+  stay gated for this case in every state.
+
+At 148-332 µs per parent, the expected cost is about 3.0-6.6 s, so the
+documented-limit branch is the likely outcome.
+
+#### R11-4 (MEDIUM) — Plan-guard required item 4; F2 on `sparse` and `small`
+
+**Superseded (quoted).** `:2739-2740`, R10-4 required item 4: "In `sparse`
+and `sparse_large`, `retention_floors` yields 0 rows, so the candidate fetch
+runs 0 loops and returns 0 rows." It now reads:
+
+> 4. In `sparse` and `sparse_large`, `retention_floors` yields 0 rows and the
+> candidate fetch fetches 0 candidate rows. The join node that feeds the Sort
+> or the Limit emits 0 rows. In a P2 plan, the inner
+> `page_revisions_page_version_idx` Index Scan also reports 0 actual rows in
+> total (rows × loops). Loop counts are recorded, not asserted. A P2 inner
+> scan may show 0 or more loops, and a P1 outer `page_revisions_retention_idx`
+> scan legitimately runs one loop that walks the aged range while the join
+> rejects every row.
+
+**F2 on `sparse` and `small` (required).** F2 has never been measured on
+`small` or `sparse`. F2R (`07de0980`) has neither case, and `a44606f6`
+measured variant F there, which is a different statement text. The R10-7
+re-run's `small` and `sparse` cases are therefore REQUIRED F2 measurements of
+the production statement in all four states. Citing F cannot satisfy them.
+Until that run, the R10-5 (2) `sparse` margin, which rests on F ("F (same
+predicate) wide worst 75 ms"), is a pre-run estimate.
+
+#### R11-5 (LOW) — Receipt, harness and anchor items
+
+**(a) Budgets source pins (untouched).**
+`tests/perf/database-revision-budgets.test.ts` is outside the R10 scope and
+must stay green without edits. The file is dirty in the working tree from
+another stream, so its lines were grounded on disk; HEAD `ee4c7f93` lines are
+in brackets. Its source pins over `revisionRetentionService.ts`:
+
+- `:591` [`:569`]: `countOccurrences(source, ".limit(limit)")` is 1;
+- `:592` [`:570`]: `'.for("update", { skipLocked: true })'`;
+- `:593-596` [`:571-574`]: the delete and drain strings;
+- `:597` [`:575`]: `lt(spec.createdAtColumn, cutoff)`;
+- `:611-613` [`:589-591`]:
+  `computeRetentionCutoff(policy.now, policy.maxAgeDays)`.
+
+Consequences for R10-2:
+
+- The whole-family read uses `.limit(policy.batchSize)`, as the R10-2 snippet
+  already shows, and never the text `.limit(limit)`. The per-parent
+  `.limit(limit)` (the working-tree service at `:502`) stays the only
+  occurrence.
+- The per-parent `.for("update", { skipLocked: true })` (working tree `:504`)
+  stays byte-identical. The whole-family
+  `.for("update", { of: spec.table, skipLocked: true })` is a different
+  string and leaves every pin unaffected.
+
+New R10-9 stop rule: if any of these pins would go red, the implementer STOPS
+and reports.
+
+**(b) Seed and cleanup batching.** R10-5 (2) specifies "**Seeds set-based.**
+One `pages` insert of the leg's marker pages [...] and one `page_revisions`
+`insert ... select ... generate_series` statement." (`:2894-2896`). A single
+statement of about 100k rows can hit the 15 s `DB_STATEMENT_TIMEOUT_MS`. The
+R7 receipt's seeds took 48,498 ms (`large`) and 59,846 ms (`sparse_large`).
+The rule is now:
+
+- The page insert stays one statement.
+- Revisions are seeded in bounded set-based batches of at most 20,000 rows
+  per statement: 6 statements for `mixed`, 3 for `dense`, 1 for `sparse`.
+- Cleanup deletes the leg's marker pages in batches of at most 200 pages per
+  statement, so at most 20,000 cascaded revisions per statement.
+- A seed or cleanup timeout or failure is a harness STOP: the implementer
+  stops and reports it. It is never a latency breach, because only the one
+  dry-run call is timed.
+
+The same rules bind the R10-7 re-run harness, including `many_parents_k` and
+`equiv_detail_page`.
+
+**(c) Red-before wording.** Superseded (quoted), `:2937-2943`: "The `mixed`
+leg is the red-before leg. Against the R7 statement (the current source),
+A_r7 timed out on this exact shape, so the read is cancelled by the 15 s
+`DB_STATEMENT_TIMEOUT_MS` and surfaces as `retention_batch_failed`." and
+"`dense` and `sparse` are regression bounds (A_r7 finished there in F2R and
+in the R7 receipt)." They now read:
+
+- **`mixed` (red-before).** Against R7, the leg's read is either cancelled
+  (surfacing as `retention_batch_failed`) or, if it completes, at or above
+  the 4,000 ms ceiling. It is red either way. Evidence: A_r7 was cancelled at
+  the 15 s measurement bound in all four states on this narrow shape in
+  `84f5139b` and in F2R. `a44606f6` has no DB-leg-shape case.
+- **`dense` (regression bound).** A_r7 finished on 200 × 600 in `84f5139b`
+  (33-494 ms) and in F2R (16-164 ms). The R7 receipt has no dense case.
+- **`sparse` (regression bound, not red-before).** A_r7 finished on wide
+  100 × 100 in `a44606f6` (2,340-3,531 ms) and in the R7 receipt `5a60dbac`
+  (2,565-3,858 ms). F2R has no sparse case. The leg bounds the zero-match
+  walk.
+
+**(d) R10-1 vs R10-6 reconciled.** R10-1 (`:2409-2410`) says "Three parts
+stay as R9-7 set them: the three-file scope (`:2179-2186`), gate 4 and
+gate 6." R10-6 (`:2969`) keeps "the R9-7 scope and gates 1, 4, 5 and 6, as
+amended by R10-9." The surviving R9-7 parts are the scope plus gates 1, 4, 5
+and 6. Gates 1 and 5 survive byte-identical and are restated in R10-9. R10-9
+is the single authoritative gate list, and the R10-1 "Three parts" sentence
+is read as R10-6. R9-7 gates 2 and 3, its Receipt paragraph and its line
+counts are superseded.
+
+**(e) R9-7 Receipt quoted as superseded.** `:2205-2210`: "**Receipt.** The
+orchestrator's `impl-06-l02.json` addendum (R8 "Receipt", `:1740-1746`) also
+records R9. It records the final bytes, line counts and sha256 of the three
+R9 files, the executed counts of gates 1-5 (including the DB leg's measured
+`elapsedMs`), the envelope edit of R9-5 (3), and the R9-6 receipt as a GATE
+(its `budgetVerdict`), no longer as known-limitation evidence." R10-9
+**Receipt** (`:3134-3141`) replaces it, as amended in (g).
+
+**(f) `budgetMs`.** Add to the R10-7 `statementSource` changes (`:3005-3014`):
+the receipt's `budgetMs`, currently `5000`, becomes `4000`. Grounded: in
+`06-l02-r7-explain-receipt.json`, `budgetMs` is a TOP-LEVEL key, not a
+`statementSource` key. `statementTimeoutMs` stays `15000`.
+
+**(g) Apply statement and receipt fields.** The R10-7 re-run also records
+`applyCompiledSql`: the R10-2 page statement plus
+` for update of "page_revisions" skip locked`, 1,367 characters. Its
+`applyCompiledSqlSha256` must be
+`58ce9b6279a3f1fd83d463aba9d8f1699d0ed73205882de94f823eeb40c2572c`
+(computed on 2026-09-25 from the `:2435` statement bytes plus the suffix, with
+no trailing newline). The R10-9 **Receipt** addendum also records:
+
+- `coldStatePolicy` (R11-2);
+- `parentCountCeiling` (R11-3);
+- the `equiv_detail_page` verdict (h);
+- the per-state `relpages` and `relallvisible` evidence (R11-1).
+
+**(h) Equivalence evidence for the non-page families.**
+
+- **DB-free.** The R10-5 (1) family-map test (all five families: parent
+  column, floor probe and anchor presence) and the new-file Tests 2 and 3
+  (byte pins of all five statements). The R10-3 proof is family-generic:
+  only the table, the parent column and the anchor term vary.
+- **DB, a new gated R10-7 case `equiv_detail_page`.** It applies the F2R
+  `equiv` method to `detail_page_revisions`: about 300 marker detail-page
+  parents with 0-259 rows each, random kinds (about 30 % publish), and
+  hour-truncated timestamps with ties and fresh rows. It compares against the
+  JS oracle for R7's `E(r)`:
+  - the full ordered set of the R10-2 `detail_page` statement (1,464
+    characters, sha256
+    `1d6b991c6b2fb71267727815797e56a0c8d71d53d8dc6777546b9463b6be0117`),
+    bound with `$3` at least the eligible count;
+  - its first 500 rows.
+
+  The gate is that both are equal. The case has no latency gate. The
+  kind-less families (`widget_template`, `entry`, `post`) rely on the DB-free
+  evidence plus the proof: their statements are the same template without the
+  anchor term.
+
+**(i) Anchor corrections in R10-1.**
+
+- R9-2 **Helper** is quoted as `:1824-1826`. The quoted sentence spans
+  `:1824-1825`.
+- The `candidate_parents` fragment pin is cited as `:2012-2018`. It is
+  `:2013-2019`: the lead-in sentence at `:2013` and the fence at
+  `:2015-2019`.
+
+**(j) Cross-file notes (added; each belongs to its owner, none is edited
+here).**
+
+- TASK-551-10-L01, `:1748` (heading "Amendment (2026-09-25): revision-suite
+  argv sync with 06-L02 R9 / 06-L03 A1 / 02-L02") and `:1758` ("06-L02 R9:
+  `tests/perf/database-revision-candidate-bounds.test.ts`"): read as R10. The
+  path is unchanged.
+- TASK-551-06-L03 R1 gains the "pre-retention vacuum" item (R11-2).
+
+**Updated R10-7 case table (additions).**
+
+| case | shape | rows returned | gate |
+|---|---|---|---|
+| `many_parents_k` | 20,000 × 101 aged, contiguous per parent, publish, narrow | 500 | R11-3 outcome rule; rows and plan guard gated when it completes |
+| `equiv_detail_page` | about 300 detail-page parents × 0-259 rows, random kinds | oracle-equal | ordered equality only |
+
+**R10-9 stop rules (additions).** The implementer also STOPS and reports
+when:
+
+- a budgets-test source pin (a) would go red;
+- a DB-leg seed or cleanup statement times out or fails (b).
+
+### R11 amendments (R12, 2026-09-26)
+
+This subsection is append-only. Nothing above it is edited. It amends R11
+after the two R11 contract audits (1 HIGH, 10 MEDIUM of which two pairs overlap, and
+7 LOWs; the finding-to-disposition table is R12-7). Where an item below quotes
+an earlier sentence, the item wins and the quoted sentence is read as
+replaced. Anchors into this file are current line numbers. R12 starts after
+`:3625`, so no earlier line moves. Every other anchor was grounded on
+2026-09-26 against HEAD `ee4c7f93` plus the uncommitted working tree. R12
+does not touch the Workflow Dispatch Envelope fence, `**Status:**` or
+`**Changelog:**`. It adds no file to the R10-9 scope and changes no expected
+test count: the new file keeps 6 tests (85 = 79 + 6, `:3122`) and the unit
+regression keeps 37 (`:3126`). Its only code-contract addition is one export
+in `core/services/content/revisionRetentionService.ts` (R12-3), a file
+already in the R10-9 scope.
+
+The orchestrator decisions relayed in the R12 mandate are cited as D1-D10:
+
+- D1: the pre-retention VACUUM is a scheduler pre-step on the ordinary
+  client, with its own 120 s statement bound, before the family session
+  opens and outside any lease; failure is logged and never blocks retention;
+  06-L03 C4 is untouched.
+- D2: VACUUM runs unconditionally before each family's retention pass; the
+  ratio triggers are dropped.
+- D3: a closed accessor `getRevisionFamilyTableName(family)` joins R10-2 and
+  its pins.
+- D4: `many_parents_k` is exempt from budget items 1, 4 and 5; a documented
+  `parentCountCeiling` names the reserved follow-on `TASK-551-06-L04`.
+- D5: VM-unset measurement timeouts are recorded, not gated.
+- D6: cleanup batches are sized by cascaded rows.
+- D7: per-leg wall budget; 180 s for the `mixed` and `dense` legs.
+- D8: harness VACUUM bound of 300 s; a timeout is a harness STOP with the
+  xmin-horizon check recorded.
+- D9: the red-before receipt citation is corrected.
+- D10: the R10-7 drain wording is gated per budget item 4.
+
+#### R12-1 (HIGH) — The pre-retention VACUUM is an unconditional scheduler pre-step
+
+**Finding.** R11-2 routed the VACUUM through the dedicated session's
+autocommit `session.execute` with a bound "inside the run budget". Outside a
+transaction that statement keeps only the 15 s session bound
+(`core/db/client.ts:75`), while 06-L03 C4 (06-L03 `:623-627`) admits only
+non-hanging statements outside transactions and drains in 4,500 ms
+(`RETENTION_CANCEL_DRAIN_DEADLINE_MS`, `core/db/databaseLifecycle.ts:30`). A
+VACUUM bounded inside the drain rarely finishes on a large table, and a longer
+bound breaks C4. The table-ratio trigger also let up to 10 % of rows, the
+newest ones that the per-parent probes read, stay VM-unset.
+
+**Decision (D1, D2).** `coldStatePolicy` is
+`"pre_retention_vacuum_unconditional"`. Each scheduled run issues, for each
+ENABLED revision family in `REVISION_RETENTION_FAMILY_ORDER`, one
+`VACUUM (ANALYZE) <family table>` as a separate autocommit statement on the
+ORDINARY database client. All of them run BEFORE `runRetentionPlan` opens the
+dedicated maintenance session, so they run outside the advisory-lock lease
+and outside every `session.transaction`. There is no threshold: VACUUM skips
+all-visible pages, so it is cheap when nothing changed since the last run. A
+VACUUM failure or timeout is logged and never blocks retention. R10-2's code
+still never issues VACUUM, and 06-L03 C4 stays byte-identical: C4 governs the
+dedicated session, which the pre-step never uses.
+
+**Binding execution rules (handoff to 06-L03; this leaf edits neither the
+06-L03 file nor its code).**
+
+- **Placement.** In the scheduler's run, immediately before the plan call
+  `runRetentionPlan(now, signal, { maxRunMs })`
+  (`core/server/jobs/retentionScheduler.ts:397-398`, the default runner that
+  `executeRun` at `:513` awaits). The pre-step shares the run's
+  `AbortController` signal and the scheduler's strict non-overlap rule
+  (`:561-562`): a pre-step that outlives an interval drops the next due tick
+  and never overlaps it.
+- **Families.** Only families whose owner normalizer reports them enabled:
+  `normalizeRevisionRetentionPolicy(family, undefined, env).enabled`
+  (`revisionRetentionService.ts:317`). A disabled family gets no SQL. A
+  normalizer error skips that family's VACUUM with a log code; the job
+  re-normalizes and keeps its own fail-closed classification.
+- **Statement and identifier.** `VACUUM (ANALYZE) "<table>"`. The table name
+  comes only from `getRevisionFamilyTableName(family)` (R12-3). It is rendered
+  as a quoted identifier through the driver's identifier API, never
+  concatenated from input or settings.
+- **Channel.** It runs on one reserved connection of the ordinary client, the
+  pool behind `db` (`core/db/client.ts:91`). It never runs on
+  `maintenanceSqlClient`, the dedicated session, `session.transaction` or
+  `drizzleOverTransaction(tx)`.
+- **Bound (D1; realization recorded).** PostgreSQL rejects VACUUM inside any
+  transaction block, including the implicit block of a multi-statement query
+  string. So a literal tx-local `set_config('statement_timeout', '120000',
+  true)` cannot precede it. The 120,000 ms bound is scoped to this one
+  statement on the reserved connection instead:
+  `select set_config('statement_timeout', '120000', false)`, then the VACUUM,
+  then `reset statement_timeout` in `finally`, then release. `reset` restores
+  the startup value `config.statementTimeoutMs` (`client.ts:75`). If the reset
+  does not confirm, the backend is terminated instead of being returned to the
+  pool, so the 120 s bound never leaks into ordinary traffic. Ordinary
+  sessions are verified against exactly that startup value
+  (`client.ts:162`, `:174`). `lock_timeout` keeps the session value.
+- **Transaction pooling.** With `DB_PGBOUNCER_MODE=transaction`
+  (`core/db/databaseConfig.ts:316-319`) a reserved connection is not
+  session-affine, so the scoped bound could land on another backend. The
+  pre-step then issues no VACUUM for any family and logs one skip code.
+  Retention proceeds under the residual below.
+- **Abort.** The run signal is checked before each VACUUM. On abort the live
+  statement is cancelled (the driver's `query.cancel()`), the reset or
+  terminate path runs, and the abort PROPAGATES. The run ends in the
+  scheduler's `aborted` outcome (`retentionScheduler.ts:531`) and the plan is
+  not started. Abort is never swallowed as a VACUUM failure. Shutdown
+  containment for the pre-step is this abort-driven cancel plus the ordinary
+  client's close; it is not a C4 statement.
+- **Failure.** A statement timeout, lock timeout or other error is logged at
+  warn level with a redacted closed code and the family id only. The log
+  carries no SQL text, bind value, OID or server message. The next family's
+  VACUUM, then the retention plan, proceed. Correctness does not depend on the
+  visibility map (R10-3).
+- **Privilege.** VACUUM on a table the role may not vacuum emits a WARNING and
+  skips it, without an error. Before the first VACUUM, one catalog statement
+  reads `pg_has_role(current_user, c.relowner, 'USAGE')` over `pg_class` for
+  the enabled family tables. A table the role may not vacuum is skipped with a
+  `not permitted` code. A PostgreSQL 17+ `MAINTAIN`-only grant is
+  conservatively treated as not permitted; that is a recorded limitation.
+- **Effectiveness.** After each VACUUM that returned, one catalog read of that
+  table's `pg_class.relpages` and `relallvisible`. A ratio
+  `relallvisible / greatest(relpages, 1)` below 0.9 logs an `ineffective`
+  code. The usual causes are an older snapshot holding the xmin horizon, or
+  concurrent inserts. The code is telemetry, never a failure.
+- **Outcomes.** 06-L03 names one closed log-code set that covers: ran,
+  ineffective, skipped (disabled, normalizer error, transaction pooling, not
+  permitted) and failed (statement timeout, lock timeout, other error).
+- **Lock (corrects R11-2 "Lock").** VACUUM takes `SHARE UPDATE EXCLUSIVE`. It
+  blocks no reads, inserts or deletes, but it conflicts with a concurrent
+  VACUUM, ANALYZE or `CREATE INDEX CONCURRENTLY` on the same table; that wait
+  is bounded by the session `lock_timeout`. Its final heap-truncation phase
+  may briefly take `ACCESS EXCLUSIVE`, acquired only conditionally and given
+  up when another backend waits. That can block reads for a moment and is
+  replayed as a lock on hot standbys. The statement text stays as D2 pins it;
+  this leaf does not adopt `TRUNCATE false`.
+- **Mode.** It runs for dry-run and apply alike, since it changes no logical
+  data. It runs before the session and on another client, so 06-L03's
+  dedicated-session statement accounting ("dry-run is L02's single bounded
+  candidate read", `retentionJobService.ts:797-799`) and its PID-proof tests
+  do not change. The pre-step's statements are counted in its own tests.
+- **Module and line gate.** The pre-step lives in its own module. Statement
+  rendering, the closed codes and the outcome classification are pure and
+  Bun-free; the database calls sit behind lazy deps. `retentionScheduler.ts`
+  (786 lines) and `retentionJobService.ts` (947 lines) receive only the call,
+  and neither may exceed 1,000 lines.
+- **Tests (owned by 06-L03).** Pure: statement and identifier rendering for
+  all five families, the closed codes and the skip classification. DB leg:
+  the VACUUM succeeds (so it ran outside any transaction), it runs before the
+  dedicated session opens, the released connection's `statement_timeout`
+  equals the startup value, and an abort propagates.
+- **Prerequisites (recorded; the orchestrator places them).**
+  1. The reserved ordinary-connection seam with the scoped bound belongs in
+     `core/db/client.ts`. That file exports no reservation today (`sqlClient`
+     is module-private; only `db` at `:91`), and it is in 06-L03's
+     `forbiddenPaths` (06-L03 `:333`). Its owner, TASK-551-02-L02, or an
+     orchestrator-named amendment adds the seam before 06-L03 implements the
+     pre-step.
+  2. 06-L03's envelope `allowlist` (06-L03 `:319-331`) gains the pre-step
+     module and its test file.
+
+  Neither file is edited here.
+
+**Residual (recorded).** The pre-step is best-effort. When a VACUUM is
+skipped, fails, is ineffective, or cannot set the visibility map because of
+the xmin horizon, the per-parent probes read VM-unset pages. The candidate
+read is then bounded by the 4,000 ms tx-local cancel and surfaces as the
+existing `retention_batch_failed` for that family and run. The next run
+vacuums again.
+
+**Receipt (replaces the R11-2 block at `:3364-3371`).**
+
+```text
+coldStatePolicy: {
+  policy: "pre_retention_vacuum_unconditional",
+  statement: "VACUUM (ANALYZE) <family table>",
+  channel: "ordinary client, autocommit, before the dedicated session, outside any lease",
+  statementTimeoutMs: 120000,
+  failure: "logged; never blocks retention",
+  owner: "TASK-551-06-L03 scheduler pre-step (pre-retention vacuum)",
+  decidedBy: "TASK-551-06-L02 R11, amended R12"
+}
+```
+
+**Superseded (quoted).**
+
+- `:3214`: "R11-2 closes the VM-unset gap in production. The gate does not."
+  It now reads: "R12-1's unconditional pre-retention VACUUM moves production
+  toward the VM-set state before every run. It is best-effort; the residual is
+  bounded by the 4,000 ms cancel (R12-1 **Residual**). The gate does not
+  close the gap."
+- `:3276-3281` (R11-2 **Decision**), from "`\"pre_retention_vacuum_on_threshold\"`"
+  to "never issues it.": read as R12-1 **Decision**.
+- `:3283-3304`, the whole **Threshold (columns verified)** paragraph with its
+  three disjuncts, including `:3302-3303` "A missing `pg_stat_user_tables` row
+  (for example after a stats reset) counts as \"run the vacuum\"." No
+  threshold exists any more. That sentence was also wrong: the view has a row
+  for every user table, and a stats reset zeroes the counters.
+- `:3308-3311` (**Statement**), "The identifier comes from the closed family
+  map (`REVISION_FAMILY_SPECS`, [...]) and is rendered as a quoted
+  identifier.": the identifier now comes from `getRevisionFamilyTableName`
+  (R12-3). The map stays module-private.
+- `:3312-3318` (**Channel**), "It runs through the dedicated maintenance
+  session's non-transactional `session.execute(statement, signal)` [...],
+  after `session.assertAlive(signal)` and before `session.transaction(...)`":
+  read as R12-1 **Placement** and **Channel**.
+- `:3319-3321` (**Lock**), "A plain `VACUUM` takes `SHARE UPDATE EXCLUSIVE`,
+  which blocks no reads, inserts or deletes.": read as R12-1 **Lock**.
+- `:3322-3324` (**Bound**), "06-L03 chooses a bounded statement timeout
+  inside the run budget (`DEFAULT_MAX_RUN_MS`, 300,000 ms,
+  `retentionJobService.ts:604`).": read as R12-1 **Bound** (120,000 ms).
+- `:3325-3330` (**Failure**): read as R12-1 **Failure** and **Abort**. Abort
+  and session loss are never swallowed.
+- `:3331-3334` (**Mode**), "For each family the ledger records whether the
+  vacuum ran, was skipped by the threshold, or failed.": the outcome is logged
+  by the scheduler (R12-1 **Outcomes**). It is not a job-ledger field.
+- `:3335-3339` (**Owner**), "06-L03 R1 gains a \"pre-retention vacuum\" item.
+  That item implements the vacuum, tests it (a pure test of the threshold
+  function, and a DB leg that asserts the statement order and the
+  non-transactional channel) and receipts it.": 06-L03 gains a "scheduler
+  pre-step (pre-retention vacuum)" item with the R12-1 **Tests**.
+- `:3345-3346`, "the threshold check exists for the cases where autovacuum
+  lags or is disabled": the unconditional pre-step covers those cases.
+- `:3359-3360`, "Autovacuum alone does not bound the VM-unset cost; the
+  threshold vacuum does.": "Autovacuum alone does not bound the VM-unset cost.
+  The unconditional pre-step reduces it, and the 4,000 ms cancel bounds the
+  residual."
+- `:3389`, "R11-2 keeps production in the VM-set regime": "R12-1 moves
+  production toward the VM-set regime, best-effort".
+- `:3269-3270` (the R11 text of R10-8 risk 1), "Production closes the gap
+  with the threshold-triggered pre-retention vacuum of R11-2": "Production
+  reduces the gap with the unconditional pre-retention VACUUM of R12-1; the
+  residual is bounded by the 4,000 ms cancel."
+- `:3411` (the R11 text of R10-8 risk 2), "R11-2 keeps families in the VM-set
+  regime.": "R12-1 moves families toward the VM-set regime, best-effort."
+- `:3612`, R11-5 (j): "TASK-551-06-L03 R1 gains the \"pre-retention vacuum\"
+  item (R11-2).": it gains the R12-1 scheduler pre-step item.
+
+#### R12-2 (MEDIUM) — Gate accounting: `many_parents_k`, VM-unset timeouts, drain reads
+
+**(a) `many_parents_k` (D4).** The case is exempt from R10-7 budget items 1
+(latency), 4 (drain reads) and 5 (`breaches`). Its drain is recorded with
+`gated: false`. A documented-limit `parentCountCeiling` is a recorded limit,
+never a `budgetVerdict` breach.
+
+- **Expected outcome.** The closest measured shape is F2R `backlog` (1,000
+  parents × 101 rows, contiguous, publish): 332 ms in
+  `after_vacuum_analyze_custom`, about 332 µs per parent. That predicts about
+  6.6 s at 20,000 parents, so the documented-limit branch is expected. The
+  148 µs `sparse_large` figure does not fit this shape, because 100-row
+  parents produce no floor row.
+- **Receipt field.**
+
+  ```text
+  parentCountCeiling: {
+    measuredParents: 20000,
+    withinBound: <boolean>,
+    vmSetExecutionMs: <number | null>,
+    timedOut: <boolean>,
+    derivedCeilings: {
+      atLeastKRowsVmSet: <floor(4000 / (vmSetExecutionMs / 20000)); an upper bound when timedOut>,
+      fiveRowParents: "about 33k-60k (F2R many_parents_info; not re-measured)"
+    },
+    followOn: "TASK-551-06-L04 Per-parent retention batching" | null,
+    gated: false
+  }
+  ```
+
+- **Follow-on.** The follow-on id `TASK-551-06-L04`, "Per-parent retention
+  batching", is RESERVED. The orchestrator allocates it at 06-L02 closure in
+  the documented-limit branch. It is active work, never a `TASK-9999`
+  deferral. Its scope is both derived ceilings: the job walks bounded
+  parent-id ranges and runs one bounded retention statement per range. It
+  lands after the 06-L03 R1 code, because it changes the 06-L03 family unit.
+  It does not block 06-L02 closure, where the limit is recorded. As a
+  TASK-551-06 child, it blocks the TASK-551-06 parent and TASK-551 from
+  closing until it is terminal. In the `withinBound: true` branch the id
+  stays reserved for this purpose only. The orchestrator then decides at
+  closure from the recorded ceilings whether to allocate it, and records the
+  decision in the closure receipt.
+- **Superseded (quoted).**
+  - `:3431-3432`: "This is not a closure-blocking latency gate, and it is
+    never silent." It now reads: "It is exempt from budget items 1, 4 and 5
+    (R12-2 (a)), and it is never silent."
+  - `:3438-3443`, "Before 06-L02 closes, the orchestrator authors a named
+    follow-on leaf for the 06-L03 mitigation": the follow-on is the reserved
+    `TASK-551-06-L04` above.
+  - `:3447-3448`: "At 148-332 µs per parent, the expected cost is about
+    3.0-6.6 s, so the documented-limit branch is the likely outcome." It now
+    reads: "On the `backlog` basis (332 µs per parent) the expected cost is
+    about 6.6 s, so the documented-limit branch is expected."
+  - `:3249-3250`, "The `many_parents_k` case (R11-3) follows its own outcome
+    rule instead.": it also leaves items 4 and 5, as above.
+
+**(b) VM-unset measurement timeouts, every case (D5).** In a VM-unset state
+(`as_is_custom`, `after_analyze_custom`, `after_analyze_generic`), a
+measurement cancelled at the 15 s bound is recorded as
+`timedOut: true, gated: false`. It is neither a breach nor a harness STOP.
+
+- **Plan guard.** It is then evaluated on a plain `EXPLAIN (FORMAT JSON)`,
+  without ANALYZE, of the same statement and binds in the same state, and it
+  checks node shapes only:
+  - evaluated: forbidden items 1, 3, 4 and 5; required items 2 and 3; and
+    the node shape of required item 1 (a Limit over an Index Scan or Index
+    Only Scan on `page_revisions_page_version_idx`, alias `floor_probe`);
+  - recorded as `notEvaluable`: forbidden item 2 and the loop equality of
+    required item 1, which need `Actual Loops`, and required item 4, which
+    needs actual rows.
+- **Rows check.** It runs only when the statement completes.
+- **VM-set state.** A timeout in `after_vacuum_analyze_custom` is still a
+  budget item 1 breach for every case except `many_parents_k` ((a)).
+- **Superseded (quoted).** `:3223-3224`: "The plan guard (R10-7 budget item 2)
+  and the rows check (item 3) still apply in all four states." It now reads:
+  "The plan guard and the rows check apply in all four states when the
+  statement completes; a VM-unset timeout follows R12-2 (b)." `:3444-3445`
+  ("When the statement completes, the rows check (500) and the R10-4 plan
+  guard stay gated for this case in every state.") is read with (b): a
+  VM-unset timeout of `many_parents_k` uses the EXPLAIN node-shape guard.
+
+**(c) Drain reads (D10).** Superseded (quoted), `:3038`: "**Per-run drain
+evidence (recorded, not a gate).**" It now reads: "**Per-run drain evidence
+(gated by budget item 4, except `many_parents_k`).**" Budget item 4 gates the
+candidate READS of the drain run after the `after_vacuum_analyze_custom`
+state (R11-1 `:3229-3231`). Deletes, per-batch walls and totals stay recorded.
+A drain in a VM-unset state stays `gated: false`, and the `many_parents_k`
+drain is recorded with `gated: false` ((a)).
+
+**(d) R10-4 case scope.** `:2715-2716`, "Required items 1-3 apply to the
+cases with at least 100,000 rows (`large`, `sparse_large`, `dense`,
+`backlog`).": the list also includes `many_parents_k` (2,020,000 rows).
+
+**(e) `equiv_detail_page`.** Its only gate is the R11-5 (h) ordered equality.
+Budget items 1, 2 and 4 do not apply, because the plan guard and the
+latency bound are page-family contracts. It runs no drain.
+
+#### R12-3 (MEDIUM) — Closed accessor `getRevisionFamilyTableName` (D3)
+
+**Why.** `REVISION_FAMILY_SPECS` is module-private
+(`revisionRetentionService.ts:158`), and `retentionJobService.ts:74-79`
+imports no table accessor. Without an export, 06-L03 could only obtain the
+VACUUM identifier by editing the 06-L02-owned file or by duplicating the
+family-to-table map, which AGENTS.md forbids.
+
+**Addition to R10-2 (binding).** The service gains exactly one export, next
+to `isRevisionRetentionFamily` (`:197`), plus `getTableName` in the existing
+`drizzle-orm` import (`:69`):
+
+```ts
+/** Physical table of one closed revision family (06-L03 pre-retention VACUUM). */
+export function getRevisionFamilyTableName(family: RevisionFamily): string {
+  if (!isRevisionRetentionFamily(family)) fail("family_unknown");
+  return getTableName(REVISION_FAMILY_SPECS[family].table);
+}
+```
+
+It reuses the existing `family_unknown` reason (`:322`), so no new error code
+is added. No statement byte changes: the R10-2 pins and the budgets source
+pins of R11-5 (a) are unaffected.
+
+**Pins (new file only, no new test).**
+
+- A constant `R10_FAMILY_TABLE: Readonly<Record<RevisionFamily, string>>`
+  holds `page_revisions`, `widget_template_revisions`,
+  `detail_page_revisions`, `content_revisions` and `post_revisions` (grounded:
+  `core/db/tables/pages.ts:90`, `:163`, `widgets.ts:76`, `content.ts:121`,
+  `posts.ts:88`).
+- Test 2 asserts, per family,
+  `getRevisionFamilyTableName(family) === R10_FAMILY_TABLE[family]`, plus one
+  assertion that an unknown family throws a `RetentionPolicyError` with
+  `reason` `family_unknown`.
+- Test 3's `"<table>"` is `R10_FAMILY_TABLE[family]`.
+
+**Superseded (quoted).**
+
+- `:2416-2418`, "and changes no export, ledger shape, error code or policy
+  knob.": "and adds exactly one export (`getRevisionFamilyTableName`,
+  R12-3); it changes no other export, ledger shape, error code or policy
+  knob."
+- `:3280`, "R10-2's code does not change": R10-2 gains only the R12-3
+  accessor; its statements do not change.
+- `:3146`, "service about 720;": about 730. `:2950` and `:3148`, "about 330":
+  about 350 (R12-3 pins and the R12-4 constants and batch loops).
+
+New R10-9 stop rule: if a family's physical table differs from its
+`R10_FAMILY_TABLE` literal, the implementer STOPS and reports; the pin is
+never edited to match the code.
+
+#### R12-4 (MEDIUM) — Harness: cleanup batching, per-leg budget, VACUUM bound
+
+**(a) Cleanup batches sized by cascaded rows (D6).** Pages per cleanup
+statement = `floor(20,000 / rowsPerParent)`, where `rowsPerParent` is the
+largest parent in the batch:
+
+| shape | rows per parent | pages per statement |
+|---|---|---|
+| DB-leg `dense`, receipt `dense`, receipt `small` | 600 | 33 (`small` has 1 page) |
+| receipt `large` | 1,000 | 20 |
+| receipt `backlog`, `many_parents_k` | 101 | 198 |
+| DB-leg `sparse`, receipt `sparse`, `sparse_large` | 100 | 200 |
+| DB-leg `mixed` | 100, plus one 105-row parent | 200; the 105-row parent is deleted alone |
+| `equiv_detail_page` | at most 259 | 77 |
+
+The file-level `afterAll` residue sweep (`${RUN}%`) uses the same rule, with
+the leg's largest parent as `rowsPerParent`. A STOP report records the
+residue count: marker pages and cascaded revisions left behind.
+
+Superseded (quoted), `:3512-3513`: "Cleanup deletes the leg's marker pages in
+batches of at most 200 pages per statement, so at most 20,000 cascaded
+revisions per statement." It now reads as (a).
+
+**(b) Per-leg wall budget (D7).** A leg's budget covers seed, recount, the
+timed read and cleanup. The `mixed` and `dense` legs run under a new constant
+`DB_LEG_HEAVY_TIMEOUT_MS = 180_000`; `sparse` keeps
+`DB_LEG_TIMEOUT_MS = 60_000`. `CANDIDATE_READ_CEILING_MS` stays 4,000 ms, and
+only the one dry-run call is timed against it. A leg-level test timeout is a
+harness STOP, never a latency breach. Evidence: F2R seeded
+`dbleg_mixed_narrow` in 44,861 ms and `84f5139b` in 48,779 ms, before
+recount and cleanup.
+
+Superseded (quoted): `:2844` "`DB_LEG_TIMEOUT_MS = 60_000`." now reads
+"`DB_LEG_TIMEOUT_MS = 60_000` (sparse) and `DB_LEG_HEAVY_TIMEOUT_MS =
+180_000` (mixed, dense)." `:2887` "Each is `testIfDb(<title>, ...,
+DB_LEG_TIMEOUT_MS)`" now reads "Each is `testIfDb(<title>, ..., <its leg
+timeout>)`". The three titles are unchanged.
+
+**(c) Receipt-harness statement bounds (decided here).** The R10-7 re-run
+harness keeps the 15 s measurement bound (`:2986`) for measured statements
+only. Its seed and cleanup statements run under a harness bound of 120 s,
+which is recorded. R10-8 risk 4 measured up to 2.3-3.3 s per 500-row wide
+delete, and the R7 wide seed rate (59,846 ms per 100k) leaves about 12 s per
+20k rows. A 15 s bound would make the wide receipt cases a near-certain STOP.
+A seed or cleanup timeout under the 120 s bound is still a harness STOP. The
+DB legs are narrow and keep the lane's 15 s bound.
+
+**(d) Harness VACUUM (D8).** Every harness `VACUUM (ANALYZE)` runs under a
+300 s statement bound, which is recorded. A VACUUM timeout on `coderso02` is a
+harness STOP, not a miss that earns a re-run. On a STOP the receipt records
+the xmin-horizon check, verbatim
+`select xact_start from pg_stat_activity where state <> 'idle'`, together with
+`autovacuum`, `autovacuum_vacuum_insert_threshold` and
+`autovacuum_vacuum_insert_scale_factor` from `pg_settings`. The R11-1
+`relallvisible` validity check (`:3216-3221`) is unchanged: one re-run on a
+ratio miss, then STOP, and a second ratio miss records the same evidence.
+
+**(e) Run order and preconditions.** No other lane runs on `DATABASE_URL3`
+during the receipt. `many_parents_k` runs last, followed by its cleanup and
+one final `VACUUM (ANALYZE) page_revisions` under the 300 s bound. The final
+VACUUM is recorded and does not gate.
+
+#### R12-5 (LOW) — Wording and evidence corrections
+
+**(a) Red-before citation (D9).** Superseded (quoted), `:3530-3532`:
+"Evidence: A_r7 was cancelled at the 15 s measurement bound in all four
+states on this narrow shape in `84f5139b` and in F2R." It now reads:
+"Evidence: A_r7 was cancelled at the 4,000 ms statement timeout in all four
+states on this narrow shape in `84f5139b` and in F2R." Grounded:
+`06-l02-r9-f2-prod-shape-explain.json` case `dbleg_mixed_narrow` (`cases[4]`)
+and `06-l02-r9-f-floor-join-explain-part2.json` `cases[1]` record A_r7 with
+`"timedOut": true` and `"statementTimeoutMs": 4000` in all four states. That
+is red, because the leg ceiling is 4,000 ms.
+
+**(b) Cost table.** The R11-3 row "≥ `k` rows, VM unset | 2.2-3.6 ms"
+(`:3383`) now reads "1.2-3.6 ms (F2R `backlog` 1,209 and 1,356 ms,
+`sparse_large` 2,151 and 3,642 ms, each over 1,000 parents)", which gives
+about 1.1k-3.3k parents at 4 s. R11-3 keeps the 3.6 ms worst case as its
+design ceiling.
+
+**(c) `heapFetches`.** If the re-run records heap fetches, it records the raw
+per-node EXPLAIN `Heap Fetches` values as `heapFetchesRawPerNode`, never
+multiplied by loops. F2R's `heapFetches` (60,599,001 against 101,001 rows
+touched) is not comparable, and no gate uses it.
+
+**(d) Hashes recomputed (2026-09-26).** From the file bytes, with no trailing
+newline: `:2435` is 1,324 characters, sha256 `4335ee3c…0902`, as in
+`:3006`. Plus the suffix it is 1,367 characters, sha256 `58ce9b62…572c`, as in
+`:3566`. `:2441` is 1,464 characters, sha256 prefix `1d6b991c6b2f`, as in
+`:3588`.
+
+**(e) Cross-file notes (each belongs to its owner; none is edited here).**
+
+- TASK-551-06-L03 has no pre-retention vacuum item yet. It gains the R12-1
+  scheduler pre-step item and the envelope prerequisite. Its A2 sentences
+  (`:1411-1412`) "`TASK-551-06-L04` is not allocated. No file under
+  `_docs/_TASKS/` references it apart from R1-d above." are stale once R12 is
+  recorded: the id is now reserved for "Per-parent retention batching"
+  (R12-2 (a)), a different purpose from the superseded R1-d proposal. It was
+  never allocated, so reserving it reuses no retired number.
+- `core/db/client.ts` owner (TASK-551-02-L02): the R12-1 prerequisite 1 seam.
+- TASK-551-06 parent and the board: allocating `TASK-551-06-L04` at 06-L02
+  closure adds the child row and the statistics delta, which are
+  closure-owned.
+
+#### R12-6 — R10-9 receipt and stop-rule additions
+
+The R10-9 **Receipt** addendum records `coldStatePolicy` in the R12-1 shape,
+`parentCountCeiling` in the R12-2 shape, every harness VACUUM bound and
+outcome (R12-4 (d)), and the harness seed and cleanup bound (R12-4 (c)).
+
+The implementer also STOPS and reports when:
+
+- a DB leg exceeds its leg timeout (R12-4 (b));
+- a family's physical table differs from its `R10_FAMILY_TABLE` literal
+  (R12-3).
+
+#### R12-7 — Finding-to-disposition table
+
+Audit A (1 HIGH, 4 MEDIUM, 2 LOW) and audit B (6 MEDIUM, 5 LOW):
+
+| finding | severity | disposition |
+|---|---|---|
+| A1 VACUUM on the dedicated session breaks C4; no 06-L03 owner item | HIGH | Closed by R12-1 (D1): ordinary-client pre-step before the session, 120 s scoped bound, C4 untouched; 06-L03 item and prerequisites recorded (R12-5 (e)) |
+| A2 production trigger does not reproduce the gated state (ratio, xmin horizon, privilege) | MEDIUM | Closed by R12-1 (D2): unconditional VACUUM, effectiveness re-read, privilege check, claims reworded as best-effort with the residual stated |
+| A3 `many_parents_k` near-certain breach; follow-on unnamed | MEDIUM | Closed by R12-2 (a) (D4): exempt from items 1, 4 and 5; `backlog` basis; `TASK-551-06-L04` reserved; land order and closure effect stated; both ceilings recorded |
+| A4 cleanup arithmetic false | MEDIUM | Closed by R12-4 (a) (D6); wide seed and cleanup margin closed by R12-4 (c) |
+| A5 harness VACUUM not deterministic | MEDIUM | Closed by R12-4 (d) and (e) (D8): 300 s bound, timeout STOP with xmin and autovacuum evidence, no concurrent lane, `many_parents_k` last |
+| A6 lock claim incomplete; dry-run statement accounting | LOW | Closed by R12-1 **Lock** and **Mode** |
+| A7 missing `pg_stat_user_tables` row sentence | LOW | Moot: the threshold is removed (R12-1); the sentence is quoted as wrong |
+| B1 `many_parents_k` still under items 4 and 5 | MEDIUM | Closed by R12-2 (a) |
+| B2 VM-unset timeout leaves items 2 and 3 unevaluable | MEDIUM | Closed by R12-2 (b) (D5) |
+| B3 cleanup arithmetic false | MEDIUM | Closed by R12-4 (a) (D6) |
+| B4 60 s leg timeout vs 45-49 s seeds | MEDIUM | Closed by R12-4 (b) (D7) |
+| B5 `REVISION_FAMILY_SPECS` private; no export | MEDIUM | Closed by R12-3 (D3) |
+| B6 `coldStatePolicy` premise (10 % window is the probed rows) | MEDIUM | Closed by R12-1 (D2) and the reworded claims |
+| B7 red-before citation (15 s vs 4,000 ms) | LOW | Closed by R12-5 (a) (D9) |
+| B8 pre-step module vs 947-line job service | LOW | Closed by R12-1 **Module and line gate** |
+| B9 truncation lock; abort must propagate | LOW | Closed by R12-1 **Lock** and **Abort** |
+| B10 R10-4 list lacks `many_parents_k` | LOW | Closed by R12-2 (d) |
+| B11 VM-unset cost row uses `sparse_large` only | LOW | Closed by R12-5 (b) |
+| B INFO heap-fetch metric; sha unchecked; DB legs VM-unset | INFO | R12-5 (c) and (d); the DB-leg note needs no change |
+| R10-7 drain wording "recorded, not a gate" | orchestrator | Closed by R12-2 (c) (D10) |
+
+### R12 amendments (R13, 2026-09-26)
+
+This subsection is append-only. Nothing above it is edited. It amends R12
+after the two R12 contract audits (audit A: 1 HIGH, 2 MEDIUM, 5 LOW, 2 INFO;
+audit B: 3 HIGH, 2 MEDIUM, 5 LOW; the finding-to-disposition table is
+R13-8). Where an item below quotes an earlier sentence, the item wins and the
+quoted sentence is read as replaced; R13-6 lists every quote. Everything not
+quoted stays binding. Anchors into this file are current line numbers; R13
+starts after `:4154`, so no earlier line moves. Every other anchor was
+grounded on 2026-09-26 against HEAD `66203e22` plus the uncommitted working
+tree.
+
+The orchestrator decisions for this round are in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+They are cited as D1-D9. R12's own decision list (`:3643-3661`) is cited as
+R12-D1 to R12-D10 so the two lists never collide. R13 implements D2, D4 and
+D5, and consumes D1 (owned by TASK-551-02-L02 R9) as its prerequisite 1.
+
+R13 does not touch the Workflow Dispatch Envelope fence (`:321-438`),
+`**Status:**` or `**Changelog:**`. It edits no json or sh fence. It adds one
+test file to the code scope, `tests/integration/server/task551RetentionJobService.test.ts`
+(R13-4 (i)), which is NOT in this leaf's envelope `allowlist`; R13-9 records
+the exact entry that would be needed. It changes no expected test count.
+
+#### R13-1 (HIGH) — Pre-step channel, target, bound and abort go through the D1 seam (D2)
+
+**Findings (bounded).** R12-1 ran the VACUUM on a reserved connection of the
+ordinary pool behind `db`, with a session-level `set_config`, a `reset` in
+`finally` and a terminate-on-unconfirmed branch. 02-L02 R7 removed that
+reserved-handle lifecycle because a statement or `release()` on a dead
+reserved handle never settles and poisons the pool (02-L02 `:1338-1341`,
+R7.9 `:2504-2508`). R12-1 also skipped the pre-step under transaction
+pooling, which is the documented Render shape (`core/db/connectionTargets.ts:4-5`,
+02-L02 `:2041-2043`), so A2 and B6 were closed on a no-op in production. And
+R12-1 aborted through the driver's `query.cancel()`, which has no effect on
+this deployment (02-L02 `:1341`, `:1971`; 06-L03 C4 `:626-627`), so an abort
+could leave a VACUUM running for up to 120 s past the 4,500 ms scheduler
+drain.
+
+**Decision (D2).** The pre-step runs every `VACUUM (ANALYZE)` through the D1
+seam `runDedicatedMaintenanceStatement` (R13-3 prerequisite 1) on the R7.2
+dedicated/direct maintenance target (02-L02 `:2014-2019`). It never runs on
+the ordinary pool behind `db`, never on a reserved handle, and never on the
+plan's dedicated session. There is no `set_config`, no `reset`, no
+terminate-a-pooled-backend branch and no transaction-pooling skip: each
+statement runs on the seam's own short-lived `max: 1` client, whose startup
+`statement_timeout` carries the bound and which is discarded on every path.
+`query.cancel()` is never relied on.
+
+**Binding execution rules (replace R12-1 Channel, Bound, Transaction pooling
+and Abort; handoff to 06-L03, this leaf edits neither the 06-L03 file nor its
+code).**
+
+- **Channel and target.** Every pre-step statement (the privilege read, each
+  VACUUM and the effectiveness read) is one call of
+  `runDedicatedMaintenanceStatement({ signal, statementTimeoutMs, statement })`.
+  The seam resolves the target at call time through the R7.2 matrix:
+  `off + primary` uses `DATABASE_DIRECT_URL` or a verified non-pooled
+  `DATABASE_URL`; `direct` (either PgBouncer mode) uses the verified
+  `DB_MAINTENANCE_URL`. Each call is autocommit, outside any BEGIN, on one
+  backend that is never shared. Running the privilege and effectiveness reads
+  on the same target and role as the VACUUM keeps the privilege answer valid
+  for the role that actually vacuums.
+- **Production shape.** Under `DB_PGBOUNCER_MODE=transaction` retention
+  already starts only with `DB_MAINTENANCE_MODE=direct`: the scheduler awaits
+  the affinity proof before its timer exists and fails closed otherwise
+  (`core/server/jobs/retentionScheduler.ts:615-619`). So the Render shape
+  (`DATABASE_URL` on 6432) DOES get the pre-step, through the direct target.
+  `transaction + primary` and `session` never start retention, so the
+  pre-step is unreachable there from the scheduler.
+- **Skip.** The pre-step is skipped only when the seam rejects
+  `database_maintenance_session_unavailable` (a resolver throw, an
+  unverifiable URL, an unavailable R7.2 row, or a failed live proof; zero
+  factory calls for the unavailable rows). It logs one skip code, issues no
+  further pre-step statement in that run, and the plan still runs. No other
+  seam rejection is a skip, except the D5 lock-timeout class (R13-4 (d)).
+- **Bound.** Each VACUUM passes `statementTimeoutMs` =
+  `min(120_000, remaining pre-step share)` (R13-2). The seam clamps and
+  validates it against `[config.statementTimeoutMs, 120_000]` and rejects an
+  out-of-range value; the pre-step therefore never calls it with a bound
+  below `config.statementTimeoutMs` and records `budget_exhausted` instead.
+  The two catalog reads pass `config.statementTimeoutMs`. `lock_timeout`
+  keeps the 02-L01 value (`DB_LOCK_TIMEOUT_MS`, default 5,000 ms,
+  `core/db/databaseConfig.ts:300`). Nothing can leak into ordinary traffic,
+  because the bound is a startup parameter of a client that no other caller
+  ever uses.
+- **Abort.** The run signal is checked before each seam call and passed into
+  it. On abort the seam's `finally` runs the R7.4 drain (local destroy first,
+  then `pg_cancel_backend(pid)` from the control client matched on pid plus
+  `backend_start`, then terminate as the last resort) and releases its slot.
+  When the signal is aborted, any seam rejection (normally
+  `dedicated_database_session_lost`, or `dedicated_database_drain_unconfirmed`)
+  is re-thrown as the run's abort; the drain code is logged. The abort
+  PROPAGATES: the run ends in the scheduler's `aborted` outcome
+  (`retentionScheduler.ts:531`) and the plan is not started. The run settles
+  within `RETENTION_CANCEL_DRAIN_DEADLINE_MS` (4,500 ms,
+  `core/db/databaseLifecycle.ts:30`), which equals the R7.4 drain deadline
+  counted from the drain start. Abort is never swallowed as a VACUUM failure.
+- **Connection budget.** The pre-step's calls are sequential with each other
+  and with the plan; each seam client is closed before the next call and
+  before `runRetentionPlan` opens the plan's dedicated session. The pre-step
+  therefore adds no concurrent dedicated connection beyond the per-process
+  budget of 02-L02 R8.5, and takes its slot under `POOL_ACQUISITION_DEADLINE_MS`
+  (2,000 ms) like every dedicated open.
+- **C4.** 06-L03 C4 stays byte-identical. It governs the plan's dedicated
+  session. The seam's client is not that session, and the pre-step is not a
+  C4 statement.
+
+**DB leg for the abort (D2; owned by 06-L03, file in R13-2).**
+
+1. The leg creates a leg-owned table in `current_schema()` whose name carries
+   the run marker, and inserts a few rows. No leg VACUUMs or locks a shared
+   family table; the pre-step's table-name dependency is injected to return
+   the leg table.
+2. A second session (the leg's observer client) opens a transaction and takes
+   `LOCK TABLE <leg table> IN SHARE UPDATE EXCLUSIVE MODE`, which conflicts
+   with VACUUM.
+3. The leg starts the pre-step with its own `AbortController` and the REAL D1
+   seam, then polls `pg_stat_activity` (bounded, 50 ms interval) until a
+   backend on the current database shows `wait_event_type = 'Lock'` and a
+   query starting with `VACUUM`. It records that backend's `pid` and
+   `backend_start`.
+4. It aborts, and measures from the abort call. Assertions: the pre-step
+   promise rejects with the abort (not a failure or skip class) within
+   4,500 ms; and, by the time it settles, no `pg_stat_activity` row matches the
+   recorded `pid` plus `backend_start`.
+5. `finally`: the lock holder rolls back and the leg table is dropped.
+
+The leg may run under the default 5,000 ms `lock_timeout`: the wait is
+observed within a few polls, and an aborted signal wins over any seam
+rejection, so the lock timeout cannot change the asserted outcome.
+
+**Residual per deployment shape (restates R12-1 Residual; the R12 text
+stays binding for the VM-unset consequence).**
+
+| shape | pre-step |
+|---|---|
+| direct Postgres, `off + primary` | runs on `DATABASE_DIRECT_URL` or the verified non-pooled `DATABASE_URL` |
+| transaction pooler (Render, 6432) with `DB_MAINTENANCE_MODE=direct` | runs on `DB_MAINTENANCE_URL` |
+| `transaction + primary`, `session` | retention never starts; nothing to vacuum for |
+| target lost at run time (seam rejects unavailable) | skipped for the rest of the run with its log code; the plan runs |
+
+When a VACUUM is skipped, fails, is ineffective, runs out of budget, or cannot
+set the visibility map because of the xmin horizon, the R12-1 **Residual**
+applies unchanged: the candidate read is bounded by the 4,000 ms tx-local
+cancel and surfaces as `retention_batch_failed` for that family and run.
+
+**Receipt (replaces the R12-1 block at `:3797-3807`; the old block is not
+edited).**
+
+```text
+coldStatePolicy: {
+  policy: "pre_retention_vacuum_unconditional",
+  statement: "VACUUM (ANALYZE) <family table>",
+  channel: "runDedicatedMaintenanceStatement (TASK-551-02-L02 R9) on the R7.2 dedicated/direct maintenance target; autocommit; own max:1 client, discarded on every path; before the plan's dedicated session; outside any lease",
+  statementTimeoutMs: "min(120000, remaining pre-step share); budget_exhausted below config.statementTimeoutMs",
+  abort: "R7.4 drain; the run settles within RETENTION_CANCEL_DRAIN_DEADLINE_MS (4500)",
+  skip: "database_maintenance_session_unavailable only (plus the D5 lock-timeout class)",
+  failure: "logged; never blocks retention",
+  owner: "TASK-551-06-L03 scheduler pre-step (pre-retention vacuum)",
+  decidedBy: "TASK-551-06-L02 R11, amended R12 and R13"
+}
+```
+
+**A2 and B6 restated (D2).** R12-7 closed A2 ("production trigger does not
+reproduce the gated state") and B6 ("`coldStatePolicy` premise") with the
+unconditional VACUUM. Those closures now rest on the direct-target design: the
+pre-step runs in every configuration where retention runs, including the
+Render transaction-pooler shape, and its residual is bounded as above. The
+`:3811-3815` replacement text for `:3214` is restated in R13-6.
+
+#### R13-2 (MEDIUM) — Shared run deadline, purity, lanes and paths (D4)
+
+**Shared deadline (binding).** The pre-step and the plan share the run's
+deadline; the parser invariant `maxRunMs < intervalMs`
+(`retentionScheduler.ts:222`) is untouched.
+
+```text
+runDeadlineAt  = runStartedAt + maxRunMs          // the scheduler's parsed budget
+planFloorMs    = max(1_000, ceil(maxRunMs / 2))   // R13 choice; 1_000 = the job's MIN_RUN_MS
+before each pre-step call:
+  if signal.aborted: throw abort
+  shareMs = runDeadlineAt - now - planFloorMs     // the pre-step's remaining run budget
+  if shareMs < config.statementTimeoutMs:         // the seam's lower clamp
+    log budget_exhausted for this and every remaining family; stop the pre-step
+  bound   = VACUUM ? min(120_000, shareMs) : config.statementTimeoutMs
+plan call:
+  runRetentionPlan(now, signal, { maxRunMs: max(1_000, runDeadlineAt - now) })
+```
+
+- "Remaining run budget" in D4 is read as the part of the run budget that is
+  not reserved for the plan. The reservation is `planFloorMs`, so the plan
+  always starts with at least half the run budget (and never below the job's
+  `MIN_RUN_MS`, `retentionJobService.ts:605`), and a slow VACUUM cannot starve
+  retention run after run.
+- A run including its pre-step ends within `maxRunMs`, plus at most one seam
+  watchdog grace and one 4,500 ms drain when a VACUUM hit its bound, plus the
+  `max(1_000, ...)` clamp. The scheduler's non-overlap rule (`:561-562`) still
+  drops any due tick that a run outlives.
+- `budget_exhausted` is a skip class. The plan still runs.
+
+**Purity and module split (binding).**
+
+- `core/services/maintenance/preRetentionVacuumPlan.ts` (pure, Bun-free,
+  imports nothing from `core/db/*`, `revisionRetentionService` or any runtime
+  adapter). It owns: the statement renderer, which takes the table name as a
+  PARAMETER; the catalog-read renderers; the closed log codes; the outcome
+  classification; the budget arithmetic above; and the pre-step loop, which
+  takes its dependencies as an argument.
+- `core/services/maintenance/preRetentionVacuum.ts` (the lazy-deps layer). It
+  binds the default dependencies: `getRevisionFamilyTableName` (R12-3),
+  `normalizeRevisionRetentionPolicy` (`revisionRetentionService.ts:317`), the
+  D1 seam, the clock and the logger. It uses STATIC imports only. A dynamic
+  `import()` of `core/db/client` is rejected by the query-inventory scanner
+  outside `core/db/databaseLifecycle.ts`
+  (`scripts/task551QueryInventory/literalDynamicClientImports.ts:331-332`,
+  `:533`, `:551`). Its seam call sites join the TASK-551-01-L01 inventory like
+  every other new call site.
+- `retentionScheduler.ts` (786 lines) and `retentionJobService.ts` (947)
+  receive only the call; neither may exceed 1,000 lines.
+
+**Statement and identifier (replaces R12-1 Statement and identifier,
+second and third sentences).** The renderer accepts only a name that matches
+`^[a-z_][a-z0-9_]{0,62}$` and otherwise throws a closed code. It returns
+`VACUUM (ANALYZE) "<name>"`. The name reaches it only from
+`getRevisionFamilyTableName(family)` in the lazy-deps layer, never from input
+or settings. The pattern admits no quote, so the same closed names may also
+be rendered as string literals in the two catalog reads. If 02-L02 R9 types
+the seam's `statement` as something other than SQL text, the lazy-deps layer
+adapts the rendered text to that type without changing its bytes.
+
+**Tests (owned by 06-L03; lanes and paths for the handoff).**
+
+- Vitest, DB-free, `environmentProfile: "none"`:
+  `tests/vitest/maintenance/preRetentionVacuumPlan.test.ts`. It covers:
+  - the renderer for the five literal table names passed as parameters
+    (`page_revisions`, `widget_template_revisions`, `detail_page_revisions`,
+    `content_revisions`, `post_revisions`), and rejection of a
+    non-matching name;
+  - the closed code set;
+  - the classification: `database_maintenance_session_unavailable` skips the
+    rest of the run; SQLSTATE `57014` is a statement-timeout failure;
+    `55P03` is `skipped_concurrent` (R13-4 (d)); any rejection with an
+    aborted signal propagates the abort; anything else is a failure with a
+    redacted closed code;
+  - effectiveness: `relpages = 0` is `ran`; a ratio below 0.9 is
+    `ineffective` (R13-4 (a));
+  - the budget arithmetic and `budget_exhausted` with a fake clock, and the
+    plan's `maxRunMs` handed on;
+  - the loop with fake dependencies: disabled and normalizer-error families
+    get no call, the abort check runs before each call, and a failure does
+    not stop the next family or the plan.
+- Bun, `tests/integration/runtime/preRetentionVacuum.test.ts`:
+  - the five-family identifier assertion through the real accessor,
+    `renderer(getRevisionFamilyTableName(family)) === 'VACUUM (ANALYZE) "<literal>"'`
+    for every family in `REVISION_RETENTION_FAMILY_ORDER`, against the file's
+    own literal map (it does not import 06-L02's `R10_FAMILY_TABLE`);
+  - the scheduler ordering: the default runner awaits the pre-step to
+    settlement before it calls `runRetentionPlan`;
+  - DB legs: a VACUUM of a leg-owned table through the real seam succeeds
+    (so it ran outside any block) and classifies as `ran`; and the R13-1
+    abort leg.
+  - Airtight form, which must show 0 fail with the identifier and ordering
+    legs passing and the DB legs skipping by name:
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/runtime/preRetentionVacuum.test.ts`.
+    The DB legs run in 06-L03's closed `task551-db-test` form, with zero
+    skips.
+- The no-leak check that R12-1 **Tests** put on the released connection is
+  moot: there is no released connection. 02-L02 RD13 proves the startup
+  `statement_timeout` never reaches another session; 06-L03 does not repeat
+  it.
+
+#### R13-3 — Prerequisites (rewritten; replaces R12-1 **Prerequisites**)
+
+1. **D1, owned by TASK-551-02-L02 R9.** `core/db/client.ts` exports
+   `runDedicatedMaintenanceStatement<TRow>({ signal, statementTimeoutMs, statement }): Promise<TRow[]>`.
+   Order: the close fence first; the R7.2 mode/target matrix, where
+   `transaction + primary` or `session` rejects
+   `database_maintenance_session_unavailable` with zero factory calls; one
+   semaphore slot under `POOL_ACQUISITION_DEADLINE_MS`; the fence re-checked
+   after the grant and before the client is built; a short-lived own
+   `max: 1` client from
+   `createDedicatedClientOptions(target, hooks, { statementTimeoutMs })`,
+   whose third argument is present-only, an integer clamped to
+   `[config.statementTimeoutMs, 120_000]`, and overrides only the
+   `connection.statement_timeout` startup parameter; registry membership from
+   construction; exactly one `execute` outside any BEGIN; watchdog bound =
+   `statementTimeoutMs` + grace; `finally` = the R7.4 drain and slot release.
+   The client is discarded on every path. Its tests are 02-L02's Guards leg
+   F27 (a fake factory: the startup parameter present only when given; one
+   statement, no BEGIN or `set_config`; abort leads to a forced drain and
+   `dedicated_database_session_lost`; after close, zero factory calls;
+   unavailable modes, zero calls; an out-of-range bound rejects) and RealDb
+   RD13 (`VACUUM (ANALYZE)` on a leg-owned table succeeds, so it ran outside
+   a block, and a fresh session shows the startup `statement_timeout`, never
+   leaked to another session). The 02-L02 R9 section is being written in
+   this round; its line anchors are recorded when it lands. The seam lands
+   WITH the 02-L02 R7/R8 code (land-order step 1), before "06-L02 R8-R13"
+   (step 3) and before 06-L03 R1. 06-L03 implements the pre-step only after
+   the D1 code and its F27 and RD13 receipts are green; otherwise it STOPS.
+2. **06-L03 envelope.** Its `allowlist` (06-L03 `:319-331`) gains four new
+   paths, and its `commands` and `occurrences` gain two commands. None of
+   these paths exists yet, and none is in any fence today. The exact entries
+   (text, not a fence edit):
+
+   ```text
+   allowlist += "core/services/maintenance/preRetentionVacuumPlan.ts"
+   allowlist += "core/services/maintenance/preRetentionVacuum.ts"
+   allowlist += "tests/vitest/maintenance/preRetentionVacuumPlan.test.ts"
+   allowlist += "tests/integration/runtime/preRetentionVacuum.test.ts"
+   commands  += { "id": "pre-retention-vacuum-vitest", "lane": "vitest", "environmentProfile": "none",
+                  "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/maintenance/preRetentionVacuumPlan.test.ts"],
+                  "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/vitest/maintenance/preRetentionVacuumPlan.test.ts"], "minimum": 1 } }
+   commands  += { "id": "pre-retention-vacuum-test", "lane": "bun-test", "environmentProfile": "task551-db-test",
+                  "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/preRetentionVacuum.test.ts"],
+                  "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/runtime/preRetentionVacuum.test.ts"], "minimum": 1 } }
+   occurrences[single].commandIds += "pre-retention-vacuum-vitest", "pre-retention-vacuum-test"
+   ```
+
+   `core/db/client.ts` stays in 06-L03's `forbiddenPaths` (`:333`): 06-L03
+   consumes the seam and never edits it.
+3. **06-L03 task file.** It gains a "scheduler pre-step (pre-retention
+   vacuum)" item carrying R12-1 as amended by R13-1, R13-2 and R13-4, plus the
+   R12-5 (e) A2 correction.
+
+#### R13-4 (LOW) — D5 corrections
+
+**(a) Effectiveness.** `relpages = 0` classifies as `ran`; there is no
+`ineffective` for an empty or zero-page table. The 0.9 ratio
+`relallvisible / relpages` applies only when `relpages > 0`. The read is one
+statement after the family VACUUMs of the run, through the seam, over
+`pg_class` in `current_schema()` for the families that ran. If the budget
+does not admit it, the outcomes stay `ran`.
+
+**(b) `atLeastKRowsVmSet` when `timedOut`.** It is computed with the
+15,000 ms measurement bound: `floor(4000 / (15000 / 20000))` = 5,333,
+recorded as an upper bound. `vmSetExecutionMs` stays `null` in that branch.
+
+**(c) Stale ranges.** Three sentences carry the old VM-unset range and are
+quoted as superseded by R12-5 (b) in R13-6: `:3358-3359`, `:3402-3403` and
+`:3410-3411`.
+
+**(d) Concurrency and cost.** The pre-step stays outside the advisory-lock
+lease, so every replica's scheduler runs it on every tick, even when its plan
+then ends `skipped_locked`.
+
+- A lock timeout (SQLSTATE `55P03`) on a VACUUM classifies as
+  `skipped_concurrent`, not as a failure. The only holders that conflict with
+  `SHARE UPDATE EXCLUSIVE` are another VACUUM or ANALYZE (normally a
+  concurrent replica's pre-step or autovacuum), `CREATE INDEX CONCURRENTLY`,
+  or DDL. There is no `SKIP_LOCKED`: the statement text stays as R12-D2 pins
+  it.
+- Cost, stated and accepted. Per run and per replica, each enabled family
+  costs one VACUUM pass (all-visible pages are skipped) plus one ANALYZE
+  sample (up to 300 × `default_statistics_target` rows, about 30,000 at the
+  default target), which re-samples and rewrites `pg_statistic` whether or
+  not anything changed. Add one seam connection per statement (N + 2 per
+  run). This is accepted at the daily default interval
+  (`DEFAULT_INTERVAL_MS = 86_400_000`, `retentionScheduler.ts:91`). At the
+  60 s minimum interval (`MIN_INTERVAL_MS`, `:94`) the same cost recurs every
+  minute on every replica. That is an operator choice this leaf does not
+  forbid, and it is called out here as a known cost.
+
+**(e) `TASK-551-06-L04` allocation.** When the orchestrator allocates the
+reserved leaf (R12-2 (a)), it also:
+
+- updates the family pins from 41 to 42 task files
+  (`tests/unit/workflows/task551AuthorAudit.test.ts:324`, and the TASK-551-11
+  family-preflight literal at `:1173`), together with the leaf and occurrence
+  counts and the dispatch-order size that one new `single` occurrence moves
+  (`:326-327`, `:336`);
+- gives the leaf a dispatch envelope whose `dependencies` include at least
+  `TASK-551-06-L03:single`;
+- places its occurrence before `TASK-551-10-L02:single`, which must stay the
+  last dispatch entry (`task551AuthorAudit.test.ts:335`).
+
+These are allocation-time edits by their owners; none is made here.
+
+**(f) `afterAll` sweep timeout.** The file-level `afterAll` residue sweep of
+`tests/perf/database-revision-candidate-bounds.test.ts` (R12-4 (a)) passes
+`DB_LEG_HEAVY_TIMEOUT_MS` as its hook option, as R8-1 does for `afterEach`
+(`:1561-1562`). Bun's 5 s hook default does not apply to it.
+
+**(g) `many_parents_k` and item 5.** The exemption from budget item 5 covers
+only its `breaches` and `budgetVerdict` entries. Item 5's "Residue is zero"
+(`:3029`) still binds `many_parents_k`, together with its R12-4 (e) cleanup.
+
+**(h) Privilege note.** The `MAINTAIN` privilege exists from PostgreSQL 17;
+the deployment runs PostgreSQL 18.4 (02-L02 `:1947`). A `MAINTAIN`-only
+grant is still conservatively treated as not permitted. The database-owner
+case, which PostgreSQL allows to VACUUM, is also reported as not permitted by
+`pg_has_role(current_user, c.relowner, 'USAGE')`. Both are recorded
+limitations. A family table absent from the privilege read in
+`current_schema()` is classified with the same not-permitted class.
+
+**(i) Schema-qualified `pg_stat_user_tables` lookup (lane safety, D5 with
+D6 (i)).** `tests/integration/server/task551RetentionJobService.test.ts:156`
+(working tree) reads
+`select coalesce((select n_tup_del::int from pg_stat_user_tables where relname = ${relname}), 0) as n`.
+With one `bun_worker_*` schema per lane worker, the unqualified scalar
+subquery returns several rows and raises "more than one row returned". The
+predicate gains `and schemaname = current_schema()`:
+
+```ts
+select coalesce((select n_tup_del::int from pg_stat_user_tables where relname = ${relname} and schemaname = current_schema()), 0) as n
+```
+
+It is the only `relname` lookup in that file (`:154-156`). No test title,
+assertion or count changes. D5 assigns this edit to 06-L02. The file is not
+in this leaf's envelope `allowlist` (`:329-341`); it is in 06-L03's
+(`:326`), and `:1001-1004` records it as 06-L03-owned. R13-9 records the
+entry that 06-L02 would need. The implementer does not make the edit until
+the orchestrator has resolved that ownership gap (R13-5 stop rule).
+
+#### R13-5 — R10-9 scope, gates, receipt and stop rules (additions)
+
+**Scope.** R13 adds two edits:
+
+- `tests/perf/database-revision-candidate-bounds.test.ts`, which is already
+  in the R10-9 scope and the envelope: the `afterAll` hook option
+  (R13-4 (f));
+- `tests/integration/server/task551RetentionJobService.test.ts:156`, which is
+  not in the envelope: the schema-qualified predicate (R13-4 (i)).
+
+Neither changes a test count: 85 and 37 stay (`:3122`, `:3126`), and the
+job-service suite keeps its count.
+
+**Gates (additions, fast forms).**
+
+1. `./node_modules/.bin/eslint --max-warnings=0 tests/perf/database-revision-candidate-bounds.test.ts tests/integration/server/task551RetentionJobService.test.ts`.
+2. Airtight:
+   `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551RetentionJobService.test.ts tests/perf/database-revision-candidate-bounds.test.ts`,
+   0 fail.
+3. `wc -l` on both files (at or under 1,000) and `git diff --check`.
+
+The closed owner-map run of the job-service suite stays an
+execution-only orchestrator receipt (R7 gate 2), serialized under D9: at most
+one `coderso02` DB gate at a time, family-wide.
+
+**Receipt.** The R10-9 addendum also records `coldStatePolicy` in the R13-1
+shape instead of the R12-1 shape.
+
+**Stop rules (additions).** The implementer STOPS and reports when:
+
+- the job-service test edit is due while
+  `tests/integration/server/task551RetentionJobService.test.ts` is still
+  outside this leaf's envelope and no orchestrator ownership decision is
+  recorded;
+- the `:156` predicate is not the only unqualified `relname` lookup in that
+  file when the edit is made.
+
+#### R13-6 — Superseded sentences (quoted; text authoritative)
+
+R12 (`:3627-4154`):
+
+- `:3645-3648` (R12-D1): "D1: the pre-retention VACUUM is a scheduler
+  pre-step on the ordinary client, with its own 120 s statement bound, before
+  the family session opens and outside any lease; failure is logged and never
+  blocks retention; 06-L03 C4 is untouched." It now reads: "the pre-retention
+  VACUUM is a scheduler pre-step through the D1 seam on the R7.2
+  dedicated/direct maintenance target, bounded by `min(120_000, remaining
+  pre-step share)`, before the plan's dedicated session opens and outside any
+  lease; failure is logged and never blocks retention; 06-L03 C4 is
+  untouched."
+- `:3677-3679`, "one `VACUUM (ANALYZE) <family table>` as a separate
+  autocommit statement on the ORDINARY database client.": "one
+  `VACUUM (ANALYZE) <family table>` as a separate autocommit statement through
+  `runDedicatedMaintenanceStatement` on the R7.2 dedicated/direct maintenance
+  target (R13-1)."
+- `:3681-3683`, "There is no threshold: VACUUM skips all-visible pages, so it
+  is cheap when nothing changed since the last run.": "There is no threshold.
+  VACUUM skips all-visible pages, but ANALYZE re-samples every run; the cost
+  is stated and accepted in R13-4 (d)."
+- `:3684-3685`, "C4 governs the dedicated session, which the pre-step never
+  uses.": "C4 governs the plan's dedicated session, which the pre-step never
+  uses; the seam's own client is not a C4 statement (R13-1 **C4**)."
+- `:3694-3696` (**Placement**), "and the scheduler's strict non-overlap rule
+  (`:561-562`): a pre-step that outlives an interval drops the next due tick
+  and never overlaps it.": "and the run's deadline (R13-2); the scheduler's
+  non-overlap rule (`:561-562`) still drops any due tick that a run
+  outlives."
+- `:3703-3705` (**Statement and identifier**), "It is rendered as a quoted
+  identifier through the driver's identifier API, never concatenated from
+  input or settings.": read as R13-2 **Statement and identifier**.
+- `:3706-3709` (**Channel**), "It runs on one reserved connection of the
+  ordinary client, the pool behind `db` (`core/db/client.ts:91`). It never
+  runs on `maintenanceSqlClient`, the dedicated session, `session.transaction`
+  or `drizzleOverTransaction(tx)`.": read as R13-1 **Channel and target**.
+  `maintenanceSqlClient` no longer exists as a channel (02-L02 R7.9 deletes
+  the import-time maintenance pool).
+- `:3710-3721` (**Bound**), from "PostgreSQL rejects VACUUM inside any
+  transaction block" to "`lock_timeout` keeps the session value.", including
+  "`select set_config('statement_timeout', '120000', false)`, then the VACUUM,
+  then `reset statement_timeout` in `finally`, then release." and "If the
+  reset does not confirm, the backend is terminated instead of being returned
+  to the pool, so the 120 s bound never leaks into ordinary traffic.": read as
+  R13-1 **Bound**. There is no `set_config`, `reset` or terminate step.
+- `:3722-3726` (**Transaction pooling**), "With `DB_PGBOUNCER_MODE=transaction`
+  (`core/db/databaseConfig.ts:316-319`) a reserved connection is not
+  session-affine, so the scoped bound could land on another backend. The
+  pre-step then issues no VACUUM for any family and logs one skip code.
+  Retention proceeds under the residual below.": read as R13-1 **Production
+  shape** and **Skip**.
+- `:3727-3733` (**Abort**), "On abort the live statement is cancelled (the
+  driver's `query.cancel()`), the reset or terminate path runs, and the abort
+  PROPAGATES." and "Shutdown containment for the pre-step is this abort-driven
+  cancel plus the ordinary client's close; it is not a C4 statement.": read
+  as R13-1 **Abort**.
+- `:3746-3749` (**Effectiveness**), "A ratio
+  `relallvisible / greatest(relpages, 1)` below 0.9 logs an `ineffective`
+  code.": read as R13-4 (a).
+- `:3750-3752` (**Outcomes**), "ran, ineffective, skipped (disabled,
+  normalizer error, transaction pooling, not permitted) and failed (statement
+  timeout, lock timeout, other error).": "ran, ineffective, skipped (disabled,
+  normalizer error, maintenance session unavailable, not permitted or absent,
+  concurrent, `budget_exhausted`) and failed (statement timeout, other
+  error)."
+- `:3766-3768` (**Module and line gate**), "The pre-step lives in its own
+  module. Statement rendering, the closed codes and the outcome
+  classification are pure and Bun-free; the database calls sit behind lazy
+  deps.": read as R13-2 **Purity and module split** (two modules).
+- `:3771-3775` (**Tests**), "Pure: statement and identifier rendering for all
+  five families, the closed codes and the skip classification. DB leg: the
+  VACUUM succeeds (so it ran outside any transaction), it runs before the
+  dedicated session opens, the released connection's `statement_timeout`
+  equals the startup value, and an abort propagates.": read as R13-2
+  **Tests** and the R13-1 abort leg.
+- `:3777-3784` (**Prerequisites** 1 and 2), from "The reserved
+  ordinary-connection seam with the scoped bound belongs in
+  `core/db/client.ts`." to "gains the pre-step module and its test file.":
+  read as R13-3.
+- `:3801` (R12-1 receipt block, not edited), `channel: "ordinary client,
+  autocommit, before the dedicated session, outside any lease",` and `:3802`
+  `statementTimeoutMs: 120000,`: read as the R13-1 receipt.
+- `:3811-3815`, the R12 replacement for `:3214`: "R12-1's unconditional
+  pre-retention VACUUM moves production toward the VM-set state before every
+  run. It is best-effort; the residual is bounded by the 4,000 ms cancel
+  (R12-1 **Residual**). The gate does not close the gap." It now reads:
+  "R13-1 runs the unconditional pre-retention VACUUM on the R7.2
+  dedicated/direct target, which exists in every configuration where
+  retention runs, including the Render transaction-pooler shape through
+  `DB_MAINTENANCE_MODE=direct`. It moves production toward the VM-set state
+  before every run, best-effort; the residual is bounded by the 4,000 ms
+  cancel (R12-1 **Residual**, R13-1). The gate does not close the gap."
+- `:3865-3866` (R12-2 (a)), "The case is exempt from R10-7 budget items 1
+  (latency), 4 (drain reads) and 5 (`breaches`).": read with R13-4 (g).
+- `:3885`, "atLeastKRowsVmSet: <floor(4000 / (vmSetExecutionMs / 20000)); an
+  upper bound when timedOut>,": "atLeastKRowsVmSet: <floor(4000 /
+  (vmSetExecutionMs / 20000)); when timedOut, 5333 from the 15000 ms bound,
+  recorded as an upper bound>," (R13-4 (b)).
+- `:4112`, "`core/db/client.ts` owner (TASK-551-02-L02): the R12-1
+  prerequisite 1 seam.": "`core/db/client.ts` owner (TASK-551-02-L02): the D1
+  seam, R9 (R13-3 prerequisite 1)."
+- `:4113-4115`, "TASK-551-06 parent and the board: allocating
+  `TASK-551-06-L04` at 06-L02 closure adds the child row and the statistics
+  delta, which are closure-owned.": it also carries the R13-4 (e) pin,
+  envelope and dispatch-position edits.
+- `:4135` (R12-7, A1 disposition), "Closed by R12-1 (D1): ordinary-client
+  pre-step before the session, 120 s scoped bound, C4 untouched; 06-L03 item
+  and prerequisites recorded (R12-5 (e))": "Closed by R12-1 as amended by
+  R13-1 and R13-2 (D2, D4): D1-seam pre-step on the direct target before the
+  plan's session, shared run deadline, C4 untouched; prerequisites in R13-3."
+- `:4136` (A2 disposition) and `:4147` (B6 disposition): restated in R13-1
+  **A2 and B6 restated**.
+- `:4150` (B9 disposition), "Closed by R12-1 **Lock** and **Abort**": the
+  abort part is closed by R13-1 **Abort**.
+
+R11 text, stale VM-unset range (R12-5 (b)):
+
+- `:3358-3359`, "Their index-only scans then fall back to heap fetches, which
+  is the 2.2-3.6 ms per parent in R11-3.": "Their index-only scans then fall
+  back to heap fetches, which is the 1.2-3.6 ms per parent of R12-5 (b)."
+- `:3402-3403`, "and about 2.2-3.6 ms when it is unset (the R11-3 table).":
+  "and about 1.2-3.6 ms when it is unset (R12-5 (b))."
+- `:3410-3411`, "and at about 1.1k-1.8k such parents when it is unset.": "and
+  at about 1.1k-3.3k such parents when it is unset (R12-5 (b))."
+
+#### R13-7 — Cross-file notes (each belongs to its owner; none is edited here)
+
+- TASK-551-02-L02 R9 owns D1 (R13-3 prerequisite 1). The R13-4 (d)
+  classification needs the seam to surface SQLSTATE `57014` and `55P03` as a
+  closed, redacted value. If R9 does not, the orchestrator records that as a
+  02-L02 handoff before 06-L03 R1; 06-L03 never parses server messages.
+- TASK-551-06-L03 receives R13-3 prerequisites 2 and 3.
+- TASK-551-01-L01: the job-service suite is lane-safe once R13-4 (i) lands
+  (D6 (i)). The four new pre-step paths join the inventory and the lane
+  tables through the growth rule when 06-L03 creates them.
+- Orchestrator: the R13-4 (i) ownership gap (R13-9); the D5 06-L04 pin work at
+  allocation (R13-4 (e)).
+
+#### R13-8 — Finding-to-disposition table
+
+Audit A (1 HIGH, 2 MEDIUM, 5 LOW, 2 INFO) and audit B (3 HIGH, 2 MEDIUM,
+5 LOW):
+
+| finding | severity | disposition |
+|---|---|---|
+| A1 abort relies on `query.cancel()`; VACUUM outlives the 4,500 ms drain | HIGH | Closed by R13-1 **Abort** (D2): R7.4 drain through the seam; DB leg with a lock-blocked VACUUM |
+| A2 prerequisite 1 contradicts 02-L02 R7 (reserved lease removed) | MEDIUM | Closed by R13-3 prerequisite 1 (D1): seam owned by 02-L02 R9, own `max: 1` client, semaphore slot, R7.4 drain, land order |
+| A3 transaction-pooling skip disables the pre-step on Render | MEDIUM | Closed by R13-1 **Production shape** and **Skip** (D2); A2/B6 and `:3811-3815` restated |
+| A4 `relpages = 0` logs `ineffective` | LOW | Closed by R13-4 (a) (D5) |
+| A5 `atLeastKRowsVmSet` undefined when `timedOut` | LOW | Closed by R13-4 (b) (D5) |
+| A6 three stale VM-unset ranges | LOW | Closed by R13-4 (c) and R13-6 (D5) |
+| A7 "pure" renderer depends on a DB-importing module | LOW | Closed by R13-2 (D4) |
+| A8 replicas collide outside the lease; ANALYZE cost | LOW | Closed by R13-4 (d) (D5) |
+| A INFO privilege: database owner, `MAINTAIN` | INFO | R13-4 (h) (D5) |
+| A INFO dynamic client import rejected by the scanner | INFO | R13-2: static imports only; call sites join the 01-L01 inventory |
+| B1 reserved ordinary connection on the primary pool | HIGH | Closed by R13-1 **Channel and target** and R13-3 (D1, D2) |
+| B2 transaction-pooling skip; A2/B6 closed on a no-op | HIGH | Closed by R13-1 (D2) |
+| B3 `query.cancel()` abort | HIGH | Closed by R13-1 **Abort** and the DB leg (D2) |
+| B4 pre-step outside `maxRunMs` | MEDIUM | Closed by R13-2 **Shared deadline** (D4) |
+| B5 pure tests import a non-Bun-free module; no lane named | MEDIUM | Closed by R13-2 (D4): two modules, Vitest and Bun paths, envelope entries in R13-3 |
+| B6 ANALYZE cost and per-replica duplication | LOW | Closed by R13-4 (d) (D5) |
+| B7 `atLeastKRowsVmSet` undefined when `timedOut` | LOW | Closed by R13-4 (b) (D5) |
+| B8 06-L04 allocation pins and envelope | LOW | Closed by R13-4 (e) (D5) |
+| B9 `afterAll` sweep has no hook timeout | LOW | Closed by R13-4 (f) (D5) |
+| B10 `many_parents_k` item 5 exemption vs residue | LOW | Closed by R13-4 (g) (D5) |
+| 01-L01 v5: unqualified `pg_stat_user_tables` scalar subquery | orchestrator (D5, D6 (i)) | R13-4 (i); edit gated on the R13-9 ownership decision |
+
+#### R13-9 — Envelope record (fence untouched)
+
+Paths R13 names, checked by `grep` against the fence at `:321-438`:
+
+- In the fence `allowlist`: `core/services/content/revisionRetentionService.ts`
+  (`:331`) and `tests/perf/database-revision-candidate-bounds.test.ts`
+  (`:340`).
+- NOT in the fence: `tests/integration/server/task551RetentionJobService.test.ts`.
+  For the R13-4 (i) edit to be in scope, the `allowlist` would need exactly
+  `"tests/integration/server/task551RetentionJobService.test.ts"`. The file
+  is also in 06-L03's `allowlist` (06-L03 `:326`), so granting it here makes
+  two envelopes list one file. The orchestrator decides between that fence
+  entry (with an explicit single-writer order against 06-L03 R1) and running
+  the edit under 06-L03. This leaf does not edit the fence.
+- NOT in any fence, and named only as 06-L03 handoffs (R13-3 prerequisite 2):
+  `core/services/maintenance/preRetentionVacuumPlan.ts`,
+  `core/services/maintenance/preRetentionVacuum.ts`,
+  `tests/vitest/maintenance/preRetentionVacuumPlan.test.ts` (the NEW pure
+  Vitest path) and `tests/integration/runtime/preRetentionVacuum.test.ts`.
+- Named as references only, not edited by this leaf:
+  `tests/unit/workflows/task551AuthorAudit.test.ts` (R13-4 (e)) and
+  `core/db/client.ts` (02-L02-owned; 06-L03 `forbiddenPaths`).
+
+### R13 amendments (R14, 2026-09-26)
+
+This subsection is append-only. Nothing above it is edited. It amends R13
+after the two R13 contract audits (audit A, agent `af02748558c10e64b`:
+0 HIGH, 3 MEDIUM, 8 LOW, 2 INFO; audit B, agent `a5d98b3f3ffb0d529`:
+0 HIGH, 5 MEDIUM, 9 LOW; the finding-to-disposition table is R14-9). Where an
+item below quotes an earlier sentence, the item wins and the quoted sentence
+is read as replaced; R14-8 lists every quote. Everything not quoted stays
+binding. Anchors into this file are current line numbers; R14 starts after
+`:4796`, so no earlier line moves. Every other anchor was grounded on
+2026-09-26 against HEAD `420bb24a` plus the uncommitted working tree.
+
+The orchestrator decisions for this round are Addendum D (D-1 to D-7) of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`,
+together with its Addendum A1 and C2. They are cited by those labels and are
+not re-decided here.
+
+- **02-L02 R10.** D-1, D-2, D-3 and D-4 assign seam changes to
+  TASK-551-02-L02 R10. At grounding time the 02-L02 file ends with R9.14
+  (`:3874-3893`) and has no R10 text, so R14 cites R10 by its D-number
+  content, never by line. Where R10's landed text differs from the D-number
+  text, the orchestrator reconciles before 06-L03 implements the pre-step.
+- **06-L03 A8.** The 2026-09-26 section of the 06-L03 file (heading at 06-L03
+  `:1625` at grounding time, still under its pre-relabel label) is cited as
+  "06-L03 A8 (2026-09-26)" per Addendum C2 and D-9. The relabel is its own
+  writer's edit.
+
+R14 does not touch the Workflow Dispatch Envelope fence (`:321-438`),
+`**Status:**` or `**Changelog:**`. It edits no json or sh fence. It REMOVES
+one file from R13's code scope (R14-6 (a)) and adds none. It changes no
+expected test count.
+
+#### R14-1 (MEDIUM) — SQLSTATE surface, consumer side (D-1)
+
+**Decision (D-1, option (a)).** 02-L02 R9.1's unchanged rethrow of non-loss
+server errors (02-L02 `:3522-3525`) IS the surface. 02-L02 R10 adds `55P03`
+to the R7.3 not-loss list and an F27 sub-leg (`57014` and `55P03` rethrown
+unchanged; the drain then runs normally). R13-7's first bullet is thereby
+resolved; no 02-L02 handoff beyond R10 is needed.
+
+**Closed pure input (binding).** The pure module
+`core/services/maintenance/preRetentionVacuumPlan.ts` owns the input type
+and never sees a raw seam rejection:
+
+```text
+type PreRetentionSeamFailure = Readonly<{
+  kind: "unavailable" | "lost" | "bound_invalid" | "reserve_timeout" | "sqlstate" | "other";
+  sqlstate?: "57014" | "55P03";          // present only when kind === "sqlstate"
+}>;
+```
+
+**Mapping (lazy-deps layer, binding).** `core/services/maintenance/preRetentionVacuum.ts`
+maps every seam rejection before the pure loop sees it:
+
+```text
+toPreRetentionSeamFailure(error: unknown): PreRetentionSeamFailure
+  code = (typeof error === "object" && error !== null && typeof error.code === "string") ? error.code : undefined
+  code === DATABASE_CLIENT_ERROR_CODES.maintenanceSessionUnavailable -> { kind: "unavailable" }
+  code === DATABASE_CLIENT_ERROR_CODES.dedicatedSessionLost          -> { kind: "lost" }
+  code === DATABASE_CLIENT_ERROR_CODES.maintenanceStatementBoundInvalid -> { kind: "bound_invalid" }   // added by 02-L02 R9.1
+  code === DATABASE_CLIENT_ERROR_CODES.reserveTimeout                -> { kind: "reserve_timeout" }
+  code === "57014" || code === "55P03"                               -> { kind: "sqlstate", sqlstate: code }
+  otherwise (no string code, or any other value)                    -> { kind: "other" }
+```
+
+- It reads ONLY the string `code` property. It never reads `message`,
+  `detail`, `hint`, `query`, `where`, `parameters` or any other property, and
+  it never logs, stores or rethrows the raw error. The raw error is dropped
+  after mapping.
+- The owner codes come from the static import of `DATABASE_CLIENT_ERROR_CODES`
+  (`core/db/client.ts:36-45`, plus the R9.1 key) in the lazy-deps layer, so no
+  owner literal is duplicated. The pure module holds no copy of those
+  strings; its only literals are the two PostgreSQL SQLSTATE values of the
+  input type and its own closed log codes (named by 06-L03 A8).
+
+**Classification (pure; replaces the R13-2 classification bullet,
+`:4396-4400`).** Input: the mapped value plus `signal.aborted` read at the
+settlement.
+
+| input | outcome |
+|---|---|
+| any kind, with `signal.aborted` | the abort propagates (checked FIRST) |
+| `unavailable` | skip: maintenance session unavailable; no further pre-step statement this run |
+| `sqlstate` `57014` | failed: statement timeout; the next family proceeds |
+| `sqlstate` `55P03` | skipped: concurrent (`skipped_concurrent`); the next family proceeds |
+| `lost` (not aborted) | failed: session lost; the next family proceeds |
+| `bound_invalid` | failed: caller-contract error, never a skip (D-4); the next family proceeds |
+| `reserve_timeout` | failed: reserve timeout; the next family proceeds |
+| `other` | failed with a redacted closed code; the next family proceeds |
+
+A failure never blocks the plan. Correctness does not depend on the
+visibility map (R10-3).
+
+**Tests.** The mapping is pinned in the Bun file
+`tests/integration/runtime/preRetentionVacuum.test.ts` (it imports the real
+owner codes): each owner code maps to its kind; `{ code: "57014" }` and
+`{ code: "55P03" }` map to `sqlstate`; an error-shaped object whose
+`message`, `detail` and `query` carry a sentinel string maps without the
+sentinel appearing in the mapped value or in any recorded log line; a
+non-object rejection and a non-string `code` map to `other`. The
+classification table is pinned in the Vitest file
+`tests/vitest/maintenance/preRetentionVacuumPlan.test.ts` over the closed
+input only. 06-L03 never parses server messages (R13-7 stands on that
+point).
+
+#### R14-2 (MEDIUM) — Abort bound restated on the 02-L02 R10 basis (D-2)
+
+**Seam behaviour relied on (02-L02 R10, D-2 and D-3).** The seam observes the
+signal from entry:
+
+- (a) while waiting for a slot, an abort removes the waiter and the seam
+  rejects `dedicated_database_session_lost` with zero factory calls;
+- (b) while `ready` is pending, `session.drainWithin("signal", now +
+  DEDICATED_DRAIN_DEADLINE_MS)` runs the local destroy and `ready` rejects
+  `dedicated_database_session_lost`;
+- (c) after `ready`, when `signal.aborted`, the `finally` drain skips the
+  graceful step (forced drain only).
+
+In every phase the seam settles within `DEDICATED_DRAIN_DEADLINE_MS`
+(4,500 ms, equal to `RETENTION_CANCEL_DRAIN_DEADLINE_MS`,
+`core/db/databaseLifecycle.ts:30`) of the abort. 02-L02 F27 sub-legs pin (a)
+and (b) on the fake clock (settlement at most 4,500 ms); R9.1 F27 already
+pins the abort during the statement.
+
+**Abort (binding; replaces the R13-1 Abort sentences quoted in R14-8).**
+
+- The run signal is checked synchronously before each seam call and passed
+  into it.
+- The seam contains every drain outcome and rejects
+  `dedicated_database_session_lost` after its drain (02-L02 `:3512-3513`). No
+  drain outcome, including `dedicated_database_drain_unconfirmed`, ever
+  reaches the pre-step. The pre-step logs that rejection code (closed, via the
+  R14-1 mapping) and re-throws the run's abort.
+- The pre-step awaits nothing but the seam, so it settles within 4,500 ms of
+  the abort, plus the synchronous work between the seam's settlement and the
+  re-throw. The run ends in the scheduler's `aborted` outcome
+  (`retentionScheduler.ts:531`) and the plan is not started. Abort is never
+  swallowed as a VACUUM failure.
+
+**Residual (D-2).** When the forced drain cannot confirm the backend gone
+within its deadline (the control statement fails, or cancel and terminate
+stay unconfirmed), the seam still settles on time, but the pre-step cannot
+prove the backend is gone. The containment is `closeAll`: the seam's session
+is a registry member from construction (02-L02 R9.1 **Shutdown**,
+`:3514-3515`), so process shutdown drains it. Until then that backend's
+statement is still bounded server-side by its startup `statement_timeout`
+(at most the VACUUM's bound, R14-4). The DB leg (R14-6 (e)) asserts the
+backend is gone for the lock-wait case only.
+
+#### R14-3 (LOW) — Bound rule, floor source, statement adapter, R9.1 anchors (D-4)
+
+**Bound (binding; replaces the R13-1 Bound sentences quoted in R14-8).**
+
+- The seam and the builder require a safe integer. A value `< 1` or
+  `> 120_000` rejects `database_maintenance_statement_bound_invalid` in BOTH
+  the builder and the seam, with zero factory calls (02-L02 R10 F27 pins `0`
+  and `120_001` builder throws). A value in `[1, floorMs)` is RAISED to the
+  L01 bound, never rejected.
+- The pre-step never calls the seam with a bound below `floorMs`. When the
+  computed bound would be below it, the pre-step records `budget_exhausted`
+  instead of calling (R14-4).
+- `bound_invalid` is a caller-contract error and never a skip (R14-1).
+- The pre-step NEVER aborts the run signal for budget reasons. Only the
+  scheduler aborts that signal (close or cancel). 02-L02 R10 replaces R9.1's
+  "(the 06-L02 D4 run budget does)" parenthetical (02-L02 `:3516-3518`) to say
+  that 06-L02 never calls below the floor and records `budget_exhausted`.
+- `lock_timeout` keeps the 02-L01 value (R13-1 stands on this point).
+
+**Floor source (binding).** `floorMs` is the value of
+`effectiveDedicatedStatementBoundMs()`, exported from `core/db/client.ts` by
+02-L02 R10 (D-4, a D1 addition). It honours
+`setDatabaseClientRuntimeForTests`, so the pre-step and the seam's clamp read
+one source. The lazy-deps layer calls it once at the start of each pre-step
+run and passes the number into the pure loop. No separate
+`parseDatabaseRuntimeConfig` call or env read supplies the floor.
+
+**Lazy-deps binding list (binding; replaces `:4365-4368`).** The lazy-deps
+layer binds: `getRevisionFamilyTableName` (R12-3);
+`normalizeRevisionRetentionPolicy` (`revisionRetentionService.ts:317`); the
+D1 seam `runDedicatedMaintenanceStatement`; `effectiveDedicatedStatementBoundMs`
+(floor source); `toPreRetentionSeamFailure` (R14-1); `CALL_OVERHEAD_MS`
+(R14-4); the integer clock (R14-4); and the logger. Static imports only (R13-2
+stands on that point).
+
+**Statement adapter (binding; replaces `:4383-4385`).** R9.1 types the
+seam's `statement` as `StaticDedicatedStatement<TRow>`, a builder over the
+R8.2 scoped handle (02-L02 `:3432`). The lazy-deps layer passes
+`(sql) => sql.unsafe(renderedText)` for the VACUUM and for each of the two
+catalog reads, where `renderedText` is exactly the pure renderer's output and
+no parameter array is passed. The bytes sent are the rendered bytes, which is
+what the abort leg's `query` match relies on. `unsafe` is an allowlisted trap
+of the scoped handle (02-L02 `:2121`, `:2864`). RD13's tagged-template form
+(02-L02 `:3553`) is a 02-L02 test detail and does not bind the pre-step.
+These three `sql.unsafe` call sites join the TASK-551-01-L01 inventory rebase
+kit through the growth rule when 06-L03 creates them.
+
+**R9.1 anchors (replaces `:4451-4452`).** 02-L02 R9.1 has landed at
+`:3406-3564`: signature `:3414-3434`, builder third argument `:3436-3449`,
+seam pseudocode `:3471-3493`, rules `:3495-3525`, test legs F27 and RD13
+`:3527-3564`. R10's additions are cited by D-number until they land.
+
+#### R14-4 (MEDIUM) — Budget: call reserve, integer clock, preconditions (D-5)
+
+**Pseudocode (binding; replaces the R13-2 block at `:4334-4344`).**
+
+```text
+input:  { now: Date, signal, intervalMs, maxRunMs }   // now = the scheduler's Date (retentionScheduler.ts:518), passed unchanged
+t()               = Math.floor(clock())               // clock = deps.clock ?? Date.now; integer ms
+floorMs           = effectiveDedicatedStatementBoundMs()                  // once per run (R14-3)
+CALL_OVERHEAD_MS  = POOL_ACQUISITION_DEADLINE_MS + DEDICATED_OPEN_DEADLINE_MS
+                  + DEDICATED_STATEMENT_GRACE_MS + DEDICATED_DRAIN_DEADLINE_MS   // 2_000 + 4_000 + 2_000 + 4_500 = 12_500
+runStartedAt      = now.getTime()
+runDeadlineAt     = runStartedAt + maxRunMs
+planFloorMs       = max(1_000, ceil(maxRunMs / 2))                        // R13 choice, accepted (Addendum A4)
+
+preconditions (once, before any seam call; each logs one code and skips the whole pre-step):
+  if intervalMs < 600_000:        log interval_too_short;                     go to plan call
+  if maxRunMs < 2 * floorMs:      log budget_exhausted for every enabled family; go to plan call
+
+before each seam call:
+  if signal.aborted: throw abort
+  callBudgetMs = runDeadlineAt - t() - planFloorMs - CALL_OVERHEAD_MS
+  if callBudgetMs < floorMs:
+    privilege read or a VACUUM: log budget_exhausted for this and every remaining family; stop the pre-step
+    effectiveness read:         skip it; the ran outcomes stay ran (R13-4 (a))
+  bound = VACUUM ? min(120_000, callBudgetMs) : floorMs
+
+plan call:
+  runRetentionPlan(now, signal, { maxRunMs: max(1_000, runDeadlineAt - t()) })   // the same Date object `now`
+```
+
+- `CALL_OVERHEAD_MS` is computed in the lazy-deps layer from the owner
+  constants (`POOL_ACQUISITION_DEADLINE_MS`, `core/db/queryTelemetry.ts:347`;
+  the three `DEDICATED_*` constants of 02-L02 R7, table at 02-L02
+  `:2338-2349`) and handed to the pure loop as a number. The pure module
+  imports none of them. The Bun test pins `CALL_OVERHEAD_MS === 12_500`; the
+  Vitest test passes `12_500` to the pure loop.
+- Every value handed to the seam or the plan is a safe integer: `t()` floors
+  the clock, `now.getTime()` is an integer (the scheduler builds it from an
+  integer, `:518`), and the arithmetic above adds and subtracts integers only.
+  `ceil` keeps `planFloorMs` integral.
+- The interval threshold is a named constant of the pure module,
+  `PRE_RETENTION_VACUUM_MIN_INTERVAL_MS = 600_000`. `interval_too_short` and
+  the precondition `budget_exhausted` are logged once per run.
+- `intervalMs` and `maxRunMs` are the scheduler's parsed values; the parser
+  invariant `maxRunMs < intervalMs` (`retentionScheduler.ts:222`) is untouched.
+
+**Claims restated (replace `:4346-4350` and `:4351-4354`).**
+
+- Plan budget, best-effort. A seam call's wall time is at most its bound plus
+  `CALL_OVERHEAD_MS` when the seam meets its own deadlines (slot wait
+  `POOL_ACQUISITION_DEADLINE_MS`, open `DEDICATED_OPEN_DEADLINE_MS`, watchdog
+  `bound + DEDICATED_STATEMENT_GRACE_MS`, drain `DEDICATED_DRAIN_DEADLINE_MS`).
+  Every call therefore ends by `runDeadlineAt - planFloorMs`, and the plan
+  starts with at least `planFloorMs` (never below the job's `MIN_RUN_MS`,
+  `retentionJobService.ts:605`). This is best-effort, not a guarantee: event
+  loop delay, logger time and a drain that overruns its deadline are not
+  reserved.
+- Run end, best-effort. A run including its pre-step ends within `maxRunMs`
+  plus the `max(1_000, ...)` clamp, under the same caveat. The scheduler's
+  non-overlap rule (`:561-562`) still drops any due tick that a run outlives.
+- The precondition `maxRunMs >= 2 × floorMs` is necessary but not
+  sufficient. With the reserve, the privilege read fits only when
+  `maxRunMs - planFloorMs - 12_500 >= floorMs` at the first call, that is `maxRunMs >= 55_000` at
+  the default 15,000 ms floor (`core/db/databaseConfig.ts:296`). Below that the
+  per-call check records `budget_exhausted` for every family. At the default
+  `maxRunMs` of 300,000 (`retentionScheduler.ts:93`) the first VACUUM gets
+  `min(120_000, 150_000 - elapsed - 12_500)`.
+- `budget_exhausted` and `interval_too_short` are skip classes. The plan still
+  runs.
+
+**Residual rows (added to the R13-1 table, which otherwise stands).**
+
+| shape | pre-step |
+|---|---|
+| any shape where retention runs, with `intervalMs < 600_000` (including the 60 s `MIN_INTERVAL_MS`) | does NOT run; `interval_too_short`; the plan runs |
+| any shape where retention runs, with `maxRunMs < 2 × floorMs` | does NOT run; `budget_exhausted` for every enabled family; the plan runs |
+| a run whose remaining budget does not admit the next call | the remaining families log `budget_exhausted`; the plan runs |
+
+In each of these rows the R12-1 **Residual** applies unchanged: the candidate
+read is bounded by the 4,000 ms tx-local cancel and surfaces as
+`retention_batch_failed` for that family and run.
+
+**A2 and B6, qualified (replaces the R13-1 sentence at `:4322-4324` and the
+R13-6 restatement at `:4694-4699`).** The pre-step runs in every deployment
+shape where retention runs, including the Render transaction-pooler shape
+through `DB_MAINTENANCE_MODE=direct`, but only when the run's interval is at
+least 600,000 ms and its budget admits the calls. Retention at the 60 s
+minimum interval runs WITHOUT the pre-step. Otherwise it moves production
+toward the VM-set state before every run, best-effort; the residual is
+bounded by the 4,000 ms cancel (R12-1 **Residual**, R13-1, the R14-4 rows).
+The gate does not close the gap.
+
+#### R14-5 (MEDIUM) — Autovacuum (D-6)
+
+**Holders (binding; replaces the R13-4 (d) holder sentence at `:4503-4506`).**
+A manual VACUUM that waits for `SHARE UPDATE EXCLUSIVE` held by a
+non-wraparound autovacuum makes PostgreSQL cancel that autovacuum after
+`deadlock_timeout` (default 1 s). The pre-step then proceeds and gets no
+`55P03`. `55P03` (lock timeout, `skipped_concurrent`) comes only from another
+manual VACUUM or ANALYZE (normally a concurrent replica's pre-step), a
+`CREATE INDEX CONCURRENTLY`, DDL or an explicit `LOCK` holder. (A
+wraparound-prevention autovacuum is not cancelled by PostgreSQL; a wait on it
+is bounded by `lock_timeout` like any other holder's.) The statement text
+stays as R12-D2 pins it; there is no `SKIP_LOCKED`.
+
+**Cost (joins R13-4 (d) Cost).** Autovacuum cancellation is part of the
+stated cost: every pre-step VACUUM that collides with a running
+non-wraparound autovacuum on the same family table cancels it, and the
+cancelled autovacuum's progress is lost. At short intervals that could starve
+autovacuum on a large revision table. The D-5 minimum spacing of 600,000 ms
+(R14-4) is the accepted mitigation: at most 144 pre-step runs per replica per
+day, and none at the 60 s minimum interval. It replaces the R13-4 (d)
+sentences at `:4514-4517` quoted in R14-8.
+
+#### R14-6 (LOW) — Housekeeping (D-7, Addendum A1)
+
+**(a) Ownership of `tests/integration/server/task551RetentionJobService.test.ts`
+(Addendum A1).** D5's assignment of the `:156` edit to 06-L02 is WITHDRAWN.
+06-L03 A8 (2026-09-26) makes that edit under 06-L03's envelope (06-L03
+allowlist `:326`); 06-L02 `:1001-1004` already records the file as
+06-L03-owned. In this leaf:
+
+- R13-5 **Scope** bullet 2 (`:4577-4578`) is withdrawn. R13 therefore adds ONE
+  edit: the `afterAll` hook option in
+  `tests/perf/database-revision-candidate-bounds.test.ts` (R13-4 (f)).
+- R13-5 **Gates** read:
+  1. `./node_modules/.bin/eslint --max-warnings=0 tests/perf/database-revision-candidate-bounds.test.ts`.
+  2. Airtight, unchanged:
+     `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551RetentionJobService.test.ts tests/perf/database-revision-candidate-bounds.test.ts`,
+     0 fail. The job-service file is run read-only; it is never edited here.
+  3. `wc -l` on `tests/perf/database-revision-candidate-bounds.test.ts` (at or
+     under 1,000) and `git diff --check`.
+- R13-5 **Stop rules**: both bullets (`:4600-4605`) are replaced by one rule:
+  never edit `tests/integration/server/task551RetentionJobService.test.ts`;
+  06-L03 A8 owns the `:156` edit.
+- R13-4 (i) (`:4551-4568`) stays as the text of the edit, but the edit is
+  06-L03 A8's (per R13-4 (i) text), not 06-L02's.
+- R13-7: the job-service suite is lane-safe once 06-L03 A8 lands the `:156`
+  edit (Addendum A1; per R13-4 (i) text). The orchestrator bullet's
+  "R13-4 (i) ownership gap" is resolved by Addendum A1.
+- R13-8 last row and R13-9 are re-pointed to 06-L03 A8 (quoted in R14-8). No
+  fence edit is made or needed in this leaf.
+
+**(b) Drain code.** `dedicated_database_drain_unconfirmed` and "the drain
+code is logged" are dropped from R13-1 **Abort** (R14-2).
+
+**(c) Effectiveness read count.** R12-1 `:3745-3746` (one catalog read after
+each VACUUM) is superseded by R13-4 (a): one read after all the family
+VACUUMs of the run, which the "N + 2 per run" count (`:4512-4513`) assumes.
+
+**(d) Receipt.** The R13-1 receipt is replaced by the R14-7 block, whose
+`skip` field lists the full closed skip set and which adds a `budget` field.
+
+**(e) Abort DB leg shape (replaces R13-1 steps 2 and 3, `:4270-4277`, and
+the lock-timeout paragraph, `:4284-4286`; steps 1, 4 and 5 stand).**
+
+2. Lock holder: its own `max: 1` client, used for nothing else. It sends the
+   literal `BEGIN`, then the literal
+   `LOCK TABLE <leg table> IN SHARE UPDATE EXCLUSIVE MODE`, which conflicts
+   with VACUUM, and holds the transaction open.
+3. The leg starts the pre-step with its own `AbortController` and the REAL D1
+   seam. An observer on a DIFFERENT connection (never the lock holder) polls
+   `pg_stat_activity` in autocommit, one statement per poll outside any
+   transaction, so the per-transaction statistics snapshot is fresh each time
+   (bounded, 50 ms interval). The match is: `datname = current_database()`,
+   `wait_event_type = 'Lock'`, `query` containing the leg table name, and
+   `application_name` equal to the maintenance `application_name` the seam's
+   client carries (02-L02 R8.1 startup parameters, read from the same owner,
+   never a copied literal). It records that backend's `pid` and
+   `backend_start`.
+
+`lock_timeout` for the leg is the owner-map value `DB_LOCK_TIMEOUT_MS=15000`
+(`M-fixture-lock`, 01-L01 `:3534`), under which 06-L03's closed
+`task551-db-test` form runs the DB legs. The wait is observed within a few
+polls, the abort is issued well inside 15,000 ms, and an aborted signal wins
+over any seam rejection (R14-1), so the lock timeout cannot change the
+asserted outcome.
+
+**(f) R13-4 (e) anchors by symbol (replaces the line anchors at `:4522-4526`
+and `:4529-4530`).** The pins are those of the test
+`author-audit preflight derives the current graph without returning source text`
+in `tests/unit/workflows/task551AuthorAudit.test.ts`: its `plan.inventory`
+pin (41/11/29/33), its `plan.dispatchOrder` size pin
+(`new Set(plan.dispatchOrder.map(...)).size`) and its
+`plan.dispatchOrder.at(-1)` pin (`TASK-551-10-L02:single`); plus the
+**Family preflight (literal; repo root)** bullet of
+`_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md`. The owner
+re-grounds them at allocation time; that file is under concurrent edit.
+
+**(g) Scheduler-ordering airtight leg (R13-2 Tests, `:4413-4414`).** The
+injection mechanism is stated by 06-L03 A8 (2026-09-26): the 02-L02 R9.9 fake
+`dedicatedClientFactory` whose results carry command tags (including
+`VACUUM`), under a placeholder URL. R14 cites it and adds nothing. The
+airtight form of R13-2 stands.
+
+#### R14-7 — Receipt (replaces the R13-1 block at `:4306-4318`; the old block is not edited)
+
+```text
+coldStatePolicy: {
+  policy: "pre_retention_vacuum_unconditional",
+  statement: "VACUUM (ANALYZE) <family table>",
+  channel: "runDedicatedMaintenanceStatement (TASK-551-02-L02 R9.1, R10) on the R7.2 dedicated/direct maintenance target; autocommit; own max:1 client, discarded on every path; statement = (sql) => sql.unsafe(renderedText); before the plan's dedicated session; outside any lease",
+  statementTimeoutMs: "VACUUM min(120000, callBudgetMs); catalog reads floorMs = effectiveDedicatedStatementBoundMs(); never below floorMs",
+  budget: "planFloorMs = max(1000, ceil(maxRunMs/2)); CALL_OVERHEAD_MS = 12500 reserved per call; runs only when intervalMs >= 600000 and maxRunMs >= 2 * floorMs; best-effort",
+  abort: "seam observes the signal from entry (slot wait, pending open, statement); settles within DEDICATED_DRAIN_DEADLINE_MS = RETENTION_CANCEL_DRAIN_DEADLINE_MS (4500); residual: closeAll containment",
+  skip: "maintenance session unavailable (rest of run), concurrent (55P03), budget_exhausted, interval_too_short, disabled, normalizer error, not permitted or absent",
+  failure: "statement timeout (57014), session lost, reserve timeout, bound invalid, other; logged by closed code; never blocks retention",
+  owner: "TASK-551-06-L03 scheduler pre-step (pre-retention vacuum)",
+  decidedBy: "TASK-551-06-L02 R11, amended R12, R13 and R14"
+}
+```
+
+The R10-9 addendum records `coldStatePolicy` in this shape (replaces R13-5
+**Receipt**).
+
+#### R14-8 — Superseded sentences (quoted; text authoritative)
+
+R13 (`:4156-4796`):
+
+- `:4175-4178`, "It adds one test file to the code scope,
+  `tests/integration/server/task551RetentionJobService.test.ts` (R13-4 (i)),
+  which is NOT in this leaf's envelope `allowlist`; R13-9 records the exact
+  entry that would be needed.": "It adds no test file to the code scope; the
+  job-service `:156` edit is 06-L03 A8's (Addendum A1, R14-6 (a))."
+- `:4232-4236`, "Each VACUUM passes `statementTimeoutMs` = `min(120_000,
+  remaining pre-step share)` (R13-2). The seam clamps and validates it against
+  `[config.statementTimeoutMs, 120_000]` and rejects an out-of-range value;
+  the pre-step therefore never calls it with a bound below
+  `config.statementTimeoutMs` and records `budget_exhausted` instead.": read as
+  R14-3 **Bound** and R14-4.
+- `:4237`, "The two catalog reads pass `config.statementTimeoutMs`.": "The two
+  catalog reads pass `floorMs` (R14-3 **Floor source**)."
+- `:4246-4248`, "When the signal is aborted, any seam rejection (normally
+  `dedicated_database_session_lost`, or `dedicated_database_drain_unconfirmed`)
+  is re-thrown as the run's abort; the drain code is logged.": "When the
+  signal is aborted, the seam rejects `dedicated_database_session_lost` after
+  its drain; the pre-step logs that rejection code and re-throws the run's
+  abort." (R14-2).
+- `:4250-4253`, "The run settles within `RETENTION_CANCEL_DRAIN_DEADLINE_MS`
+  (4,500 ms, `core/db/databaseLifecycle.ts:30`), which equals the R7.4 drain
+  deadline counted from the drain start.": read as R14-2 **Abort** and
+  **Residual** (settlement counted from the abort, in every seam phase).
+- `:4270-4277` (DB leg steps 2 and 3), "A second session (the leg's observer
+  client) opens a transaction and takes `LOCK TABLE <leg table> IN SHARE
+  UPDATE EXCLUSIVE MODE`, which conflicts with VACUUM." and "The leg starts
+  the pre-step with its own `AbortController` and the REAL D1 seam, then polls
+  `pg_stat_activity` (bounded, 50 ms interval) until a backend on the current
+  database shows `wait_event_type = 'Lock'` and a query starting with
+  `VACUUM`. It records that backend's `pid` and `backend_start`.": read as
+  R14-6 (e) steps 2 and 3.
+- `:4284-4286`, "The leg may run under the default 5,000 ms `lock_timeout`:
+  the wait is observed within a few polls, and an aborted signal wins over any
+  seam rejection, so the lock timeout cannot change the asserted outcome.":
+  read as the R14-6 (e) `lock_timeout` paragraph (`DB_LOCK_TIMEOUT_MS=15000`).
+- `:4311-4313` (R13-1 receipt), `statementTimeoutMs: "min(120000, remaining
+  pre-step share); budget_exhausted below config.statementTimeoutMs",`,
+  `abort: "R7.4 drain; the run settles within
+  RETENTION_CANCEL_DRAIN_DEADLINE_MS (4500)",` and `skip:
+  "database_maintenance_session_unavailable only (plus the D5 lock-timeout
+  class)",`: read as the R14-7 receipt.
+- `:4322-4324`, "the pre-step runs in every configuration where retention
+  runs, including the Render transaction-pooler shape, and its residual is
+  bounded as above.": read as R14-4 **A2 and B6, qualified**.
+- `:4338-4343` (R13-2 pseudocode), "shareMs = runDeadlineAt - now -
+  planFloorMs", "if shareMs < config.statementTimeoutMs:", "bound = VACUUM ?
+  min(120_000, shareMs) : config.statementTimeoutMs" and
+  "runRetentionPlan(now, signal, { maxRunMs: max(1_000, runDeadlineAt - now)
+  })": read as the R14-4 pseudocode.
+- `:4347-4350`, "The reservation is `planFloorMs`, so the plan always starts
+  with at least half the run budget (and never below the job's `MIN_RUN_MS`,
+  `retentionJobService.ts:605`), and a slow VACUUM cannot starve retention run
+  after run.": read as R14-4 **Claims restated**, first bullet (best-effort).
+- `:4351-4353`, "A run including its pre-step ends within `maxRunMs`, plus at
+  most one seam watchdog grace and one 4,500 ms drain when a VACUUM hit its
+  bound, plus the `max(1_000, ...)` clamp.": read as R14-4 **Claims
+  restated**, second bullet.
+- `:4365-4368`, "It binds the default dependencies: `getRevisionFamilyTableName`
+  (R12-3), `normalizeRevisionRetentionPolicy` (`revisionRetentionService.ts:317`),
+  the D1 seam, the clock and the logger.": read as the R14-3 **Lazy-deps
+  binding list**.
+- `:4383-4385`, "If 02-L02 R9 types the seam's `statement` as something other
+  than SQL text, the lazy-deps layer adapts the rendered text to that type
+  without changing its bytes.": read as R14-3 **Statement adapter**.
+- `:4396-4400`, "the classification: `database_maintenance_session_unavailable`
+  skips the rest of the run; SQLSTATE `57014` is a statement-timeout failure;
+  `55P03` is `skipped_concurrent` (R13-4 (d)); any rejection with an aborted
+  signal propagates the abort; anything else is a failure with a redacted
+  closed code;": "the classification over the closed R14-1 input (the R14-1
+  table);".
+- `:4451-4452`, "The 02-L02 R9 section is being written in this round; its
+  line anchors are recorded when it lands.": read as R14-3 **R9.1 anchors**.
+- `:4503-4506`, "The only holders that conflict with `SHARE UPDATE EXCLUSIVE`
+  are another VACUUM or ANALYZE (normally a concurrent replica's pre-step or
+  autovacuum), `CREATE INDEX CONCURRENTLY`, or DDL.": read as R14-5
+  **Holders**.
+- `:4514-4517`, "At the 60 s minimum interval (`MIN_INTERVAL_MS`, `:94`) the
+  same cost recurs every minute on every replica. That is an operator choice
+  this leaf does not forbid, and it is called out here as a known cost.":
+  "Below 600,000 ms, including the 60 s minimum interval (`MIN_INTERVAL_MS`,
+  `:94`), the pre-step does not run (`interval_too_short`, R14-4); the cost,
+  including autovacuum cancellation, recurs at most once per 10 minutes per
+  replica (R14-5)."
+- `:4522-4526`, "(`tests/unit/workflows/task551AuthorAudit.test.ts:324`, and
+  the TASK-551-11 family-preflight literal at `:1173`), together with the leaf
+  and occurrence counts and the dispatch-order size that one new `single`
+  occurrence moves (`:326-327`, `:336`);": read as R14-6 (f).
+- `:4529-4530`, "which must stay the last dispatch entry
+  (`task551AuthorAudit.test.ts:335`).": "which must stay the last dispatch
+  entry (the `plan.dispatchOrder.at(-1)` pin, R14-6 (f))."
+- `:4564`, "D5 assigns this edit to 06-L02.": "Addendum A1 withdraws D5's
+  assignment; the edit is 06-L03 A8's."
+- `:4567-4568`, "The implementer does not make the edit until the
+  orchestrator has resolved that ownership gap (R13-5 stop rule).": "The
+  06-L02 implementer never makes the edit (R14-6 (a))."
+- `:4572`, "R13 adds two edits:": "R13 adds one edit:" (R14-6 (a)).
+- `:4577-4578`, "`tests/integration/server/task551RetentionJobService.test.ts:156`,
+  which is not in the envelope: the schema-qualified predicate (R13-4 (i)).":
+  withdrawn (R14-6 (a)).
+- `:4585`, gate 1 naming both files: read as R14-6 (a) gate 1 (the
+  candidate-bounds file only).
+- `:4589`, "`wc -l` on both files (at or under 1,000) and `git diff
+  --check`.": read as R14-6 (a) gate 3.
+- `:4600-4605` (both stop-rule bullets), "the job-service test edit is due
+  while `tests/integration/server/task551RetentionJobService.test.ts` is still
+  outside this leaf's envelope and no orchestrator ownership decision is
+  recorded;" and "the `:156` predicate is not the only unqualified `relname`
+  lookup in that file when the edit is made.": "never edit
+  `tests/integration/server/task551RetentionJobService.test.ts`; 06-L03 A8
+  owns the `:156` edit."
+- `:4735-4738`, "The R13-4 (d) classification needs the seam to surface
+  SQLSTATE `57014` and `55P03` as a closed, redacted value. If R9 does not,
+  the orchestrator records that as a 02-L02 handoff before 06-L03 R1; 06-L03
+  never parses server messages.": "Resolved by D-1 (option (a)): R9.1's
+  unchanged rethrow is the surface, 02-L02 R10 adds `55P03` to the not-loss
+  list, and the 06-L03 lazy-deps layer maps the string `code` into the closed
+  R14-1 input; 06-L03 never parses server messages."
+- `:4740-4741`, "TASK-551-01-L01: the job-service suite is lane-safe once
+  R13-4 (i) lands (D6 (i)).": "TASK-551-01-L01: the job-service suite is
+  lane-safe once 06-L03 A8 lands the `:156` edit (Addendum A1; per R13-4 (i)
+  text; D6 (i))."
+- `:4743-4744`, "Orchestrator: the R13-4 (i) ownership gap (R13-9); the D5
+  06-L04 pin work at allocation (R13-4 (e)).": "Orchestrator: the D5 06-L04
+  pin work at allocation (R13-4 (e), anchored by symbol in R14-6 (f)); the
+  ownership gap is resolved by Addendum A1."
+- `:4773` (R13-8 last row), "R13-4 (i); edit gated on the R13-9 ownership
+  decision": "R13-4 (i) text; the edit is 06-L03 A8's (Addendum A1)".
+- `:4782-4788` (R13-9), "For the R13-4 (i) edit to be in scope, the
+  `allowlist` would need exactly
+  `"tests/integration/server/task551RetentionJobService.test.ts"`. The file is
+  also in 06-L03's `allowlist` (06-L03 `:326`), so granting it here makes two
+  envelopes list one file. The orchestrator decides between that fence entry
+  (with an explicit single-writer order against 06-L03 R1) and running the
+  edit under 06-L03. This leaf does not edit the fence.": "Resolved by
+  Addendum A1: the file stays out of this leaf's fence and is edited under
+  06-L03's envelope (06-L03 `:326`) by 06-L03 A8; no second envelope lists
+  it. This leaf does not edit the fence."
+- `:4694-4699` (R13-6 restatement of `:3811-3815`), "R13-1 runs the
+  unconditional pre-retention VACUUM on the R7.2 dedicated/direct target,
+  which exists in every configuration where retention runs, including the
+  Render transaction-pooler shape through `DB_MAINTENANCE_MODE=direct`. It
+  moves production toward the VM-set state before every run, best-effort; the
+  residual is bounded by the 4,000 ms cancel (R12-1 **Residual**, R13-1). The
+  gate does not close the gap.": read as R14-4 **A2 and B6, qualified**.
+
+R12 (`:3627-4154`):
+
+- `:3690-3692` (**Placement**), "immediately before the plan call
+  `runRetentionPlan(now, signal, { maxRunMs })`": "immediately before the plan
+  call `runRetentionPlan(now, signal, { maxRunMs: max(1_000, runDeadlineAt -
+  t()) })`, with the scheduler's Date `now` passed unchanged (R14-4)".
+- `:3745-3746` (**Effectiveness**), "After each VACUUM that returned, one
+  catalog read of that table's `pg_class.relpages` and `relallvisible`.":
+  read as R13-4 (a) (one read after all the family VACUUMs of the run;
+  R14-6 (c)).
+
+#### R14-9 — Finding-to-disposition table (R13 audits)
+
+Audit A (`af02748558c10e64b`: 0 HIGH, 3 MEDIUM, 8 LOW, 2 INFO) and audit B
+(`a5d98b3f3ffb0d529`: 0 HIGH, 5 MEDIUM, 9 LOW):
+
+| finding | severity | disposition |
+|---|---|---|
+| A-M1 A1 withdraws the `:156` edit but R13 still binds it (scope, gates, stop rule) | MEDIUM | Closed by R14-6 (a) (Addendum A1) |
+| A-M2 R9.1 rethrows raw errors; SQLSTATE mechanism undecided | MEDIUM | Closed by R14-1 (D-1 option (a)); 02-L02 R10 adds `55P03` and the F27 sub-leg |
+| A-M3 new 06-L03 amendment collides with the existing A4 | MEDIUM | Orchestrator: relabelled A8 (Addendum C2, D-9); R14 cites "06-L03 A8 (2026-09-26)" |
+| A-L1 drain code cannot reach the pre-step | LOW | Closed by R14-2 **Abort** and R14-6 (b) (D-7) |
+| A-L2 Bound misstates the seam clamp; budget abort via `signal` | LOW | Closed by R14-3 **Bound** (D-4); 02-L02 R10 replaces its parenthetical |
+| A-L3 clock and `now` types; overhead missing from "half" | LOW | Closed by R14-4 (D-5) |
+| A-L4 `statement` is a builder; adapter unnamed | LOW | Closed by R14-3 **Statement adapter** (D-4) |
+| A-L5 `:3745-3746` not superseded | LOW | Closed by R14-6 (c) and R14-8 (D-7) |
+| A-L6 receipt `skip` too narrow | LOW | Closed by R14-7 (D-7) |
+| A-L7 abort-leg observer polls from the lock-holder transaction | LOW | Closed by R14-6 (e) (D-7) |
+| A-L8 R13-4 (e) line anchors stale | LOW | Closed by R14-6 (f) (D-7) |
+| A-I1 R9.1 anchors unrecorded; small `maxRunMs` consequence unstated | INFO | R14-3 **R9.1 anchors**; R14-4 claims and residual rows (D-4, D-5) |
+| A-I2 R13-8 row count verified | INFO | No change |
+| B-M1 abort bound fails during slot wait or open | MEDIUM | Closed by R14-2 (D-2, 02-L02 R10 option (a)); residual `closeAll` containment |
+| B-M2 budget ignores per-call overhead; small `maxRunMs` | MEDIUM | Closed by R14-4 (`CALL_OVERHEAD_MS`, preconditions, residual rows, A2/B6 qualified) (D-5) |
+| B-M3 pure module cannot own codes owned by `core/db/client.ts` | MEDIUM | Closed by R14-1 (closed pure input; mapping in the lazy-deps layer) (D-1) |
+| B-M4 `:156` ownership (as A-M1) | MEDIUM | Closed by R14-6 (a) (Addendum A1) |
+| B-M5 autovacuum is cancelled, not a 55P03 holder; cost | MEDIUM | Closed by R14-5 (D-6); 600,000 ms minimum spacing (D-5) |
+| B-L1 `55P03` not pinned in R9 | LOW | Closed by R14-1; 02-L02 R10 not-loss list and F27 sub-leg (D-1) |
+| B-L2 abort leg: snapshot, match, `lock_timeout` | LOW | Closed by R14-6 (e) (D-7) |
+| B-L3 clamp wording; integer clock; `now` Date; `:3690-3692` | LOW | Closed by R14-3 **Bound** and R14-4; `:3690-3692` quoted in R14-8 (D-4, D-5) |
+| B-L4 floor source unnamed | LOW | Closed by R14-3 **Floor source** (`effectiveDedicatedStatementBoundMs()`, D-4) |
+| B-L5 R9 landed: adapter conditional and anchors | LOW | Closed by R14-3 (D-4) |
+| B-L6 drain code cannot reach the pre-step (as A-L1) | LOW | Closed by R14-2 and R14-6 (b) (D-7) |
+| B-L7 receipt `skip` narrow; no budget field | LOW | Closed by R14-7 (D-7) |
+| B-L8 R13-4 (e) anchors stale (as A-L8) | LOW | Closed by R14-6 (f) (D-7) |
+| B-L9 scheduler-ordering leg has no injection seam | LOW | Closed by R14-6 (g): 06-L03 A8 states the R9.9 fake-factory mechanism (D-7) |

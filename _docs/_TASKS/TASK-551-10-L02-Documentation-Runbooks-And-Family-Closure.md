@@ -1794,3 +1794,82 @@ this file is about 108 KB, and the largest family file,
 completion fields and receipts) fit under either cap. After the re-open
 lands, the dispatch preflight rejects a task file above 1,048,576 UTF-8
 bytes with `task551_dispatch_snapshot_file_text`.
+
+### Amendment (2026-09-26): 01-L01 FINAL preconditions and interim red set
+
+Source: orchestrator dispositions D5, D6 (i)/(ii) and D9 in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(01-L01 v5 audit round, HEAD `66203e22`). The D-text is authoritative; this
+section only mirrors it as family-closure preconditions. It is append-only:
+no earlier sentence of this file is superseded (the file names no worker
+database, lane-runner run or DB-gate concurrency rule before this section), and
+the envelope, json fence, allowlist, dependencies and **Exact Validation
+Commands** are unchanged. 01-L01 v6 owns the per-suite detail; the closure
+writer re-reads it there, never from this summary.
+
+#### Closure preconditions
+
+- **Worker database resolved (D6 (ii)).** The owner item
+  `lane-runner-worker-database` (01-L01 **V5-5**) is RESOLVED by the owner's
+  2026-09-24 grant: the 01-L01 FINAL lane-runner worker database is the
+  `DATABASE_URL` target of the root `.env`. The orchestrator sets
+  `DATABASE_DIRECT_URL` to that target for the FINAL run only, in the closed
+  `env -i` form; the `bun_worker_*` worker schemas are additive. It is not an
+  open blocker of this leaf. This leaf's closure command surface is unchanged:
+  it never runs the lane runner and consumes the 01-L01 FINAL result only
+  through its existing `TASK-551-10-L01:single` dependency.
+- **Interim red set is not a regression (D6 (i)).** Until the named fixes land,
+  an interim `bun run test` red set is expected and is recorded per suite in
+  01-L01 v6: `task551SearchVectorMigration` stays a BLOCKED row with an owner
+  item for its leaf until its `pg_class` lookup is schema-qualified, and
+  `task551RetentionJobService` is fixed by 06-L02 R13 (D5) and joins normally.
+  That interim red set relaxes no gate here: the 10-L01 receipts this leaf
+  consumes must still be green with no skips, as stated above.
+- **`coderso02` prohibition (D6 (i)).** `bun run test`, and any lane-runner
+  form, is FORBIDDEN against a `DATABASE_DIRECT_URL` that resolves to
+  `coderso02`. A closure receipt produced that way is invalid.
+- **One DB gate at a time (D9).** Family-wide, at most ONE `coderso02` DB gate
+  runs at a time; DB-free (airtight) gates may run concurrently; the 01-L01
+  **V5-4** checks re-run after any foreign DB gate. The FINAL lane-runner run
+  on the `DATABASE_URL` target is serialized with every runtime smoke on that
+  host. A receipt taken in breach of this rule is not current closure
+  evidence.
+
+#### 06-L04 reservation pointer (D5)
+
+`TASK-551-06-L04` ("Per-parent retention batching") is RESERVED by 06-L02
+(R12-2 follow-on). If it is allocated (the documented-limit branch of the
+`many_parents_k` budget, or an orchestrator decision at 06-L02 closure), an
+allocation step must land before this leaf's family closure: its task file,
+an envelope whose `dependencies` include at least `TASK-551-06-L03:single`,
+a land position before `TASK-551-10-L02:single`, and the update of the 41→42
+family pins (including this file's counts, which that step, not this leaf,
+edits). As a TASK-551-06 child it must then be terminal before TASK-551-06
+and TASK-551 close. If it is never allocated, it stays reserved-unallocated,
+this leaf closes over 41 files, and the closure receipt records that decision.
+
+### Amendment (2026-09-26, fix note): direct endpoint, 06-L03 A8, exclusions
+
+Source: Addendum C (C1, C2, C3 (b)/(e)/(j), C4) and Addendum A1 of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+Append-only; the envelope, json fence, allowlist, dependencies and **Exact
+Validation Commands** are unchanged. Only the four sentences quoted below are
+superseded; every other sentence of the section above stays binding.
+
+- **Worker database (C1).** The 01-L01 FINAL lane-runner worker database is
+  the direct (non-pooled) endpoint of the `DATABASE_URL` target of the root
+  `.env`, i.e. the root `.env` `DATABASE_DIRECT_URL`. The orchestrator sets
+  BOTH `DATABASE_URL` and `DATABASE_DIRECT_URL` to it (quoted shell
+  variables, values never printed) for the FINAL run and its attribution
+  re-runs only, in the closed `env -i` form, after the 01-L01 v7
+  pre-provisioning boolean check (same host, same database, port not 6432,
+  not `coderso02`; STOP on any FALSE). This leaf never runs that form.
+- **FORBIDDEN is never a skip (C3 (j)).** A FORBIDDEN `true` result is an owner
+  item to repoint `.env`, never a skipped gate.
+
+#### Superseded sentences (quoted; superseded from this date)
+
+1. `:1812-1815` "The owner item `lane-runner-worker-database` (01-L01 **V5-5**) is RESOLVED by the owner's 2026-09-24 grant: the 01-L01 FINAL lane-runner worker database is the `DATABASE_URL` target of the root `.env`." → "The owner item `lane-runner-worker-database` (01-L01 **V5-5**) is RESOLVED by the owner's 2026-09-24 grant: the 01-L01 FINAL lane-runner worker database is the direct (non-pooled) endpoint of the `DATABASE_URL` target of the root `.env` (C1)."
+2. `:1815-1817` "The orchestrator sets `DATABASE_DIRECT_URL` to that target for the FINAL run only, in the closed `env -i` form; the `bun_worker_*` worker schemas are additive." → the **Worker database (C1)** bullet above; the `bun_worker_*` worker schemas stay additive.
+3. `:1820-1825` "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in 01-L01 v6: `task551SearchVectorMigration` stays a BLOCKED row with an owner item for its leaf until its `pg_class` lookup is schema-qualified, and `task551RetentionJobService` is fixed by 06-L02 R13 (D5) and joins normally." → "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in 01-L01 v6 as amended by v7 (the V6-1 table and the V6-5/V6-8 blocked rows, per C3 (b)): six BLOCKED rows, namely the two catalog rendering rows, `task551SearchVectorMigration` and the three `result-shape:<path>` rows, each with the owner item named there; `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins normally."
+4. `:1833-1835` "The FINAL lane-runner run on the `DATABASE_URL` target is serialized with every runtime smoke on that host." → "While the FINAL lane-runner run on the direct endpoint of the `DATABASE_URL` target and its attribution re-runs are in progress, no other `run-bun-parallel.ts`, `bun run test`/`test:bun`/`test:full`, `bun-lane-provision.ts`, dev host, runtime smoke or DB gate may use that target (C3 (e), C4)."

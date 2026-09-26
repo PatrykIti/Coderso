@@ -6983,3 +6983,1758 @@ allowlisted (the hook, footer, envelope, pages/users/posts clients,
 the five suites incl. `smoke-evidence-inventory.test.ts`). The baseline
 `.txt` files are orchestrator evidence; the R5-12 argv is a prose
 orchestrator procedure. One JSON fence.
+
+## Dated Contract Corrections — 2026-09-26 (Round 6: two-generation clients, rekey v2 and closure; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round6-dispositions.md`
+(R6-01..R6-07 over the Round-5 auditors S1-A, S1-B, S2-A, S2-B, S3-A and
+S3-B; HEAD `66203e22a33ba4d783823d2fd5aa4b26c617a0ca`, with other leaves'
+files dirty). This section applies R6-01..R6-07. It also applies the
+TASK-551-11 ripple corrections that 03-L02 owes: 11 contract **V3-5**
+(`:1103-1110`), as amended by **V4-6** (`:1228-1229`), **V4-7** (`:1236`) and
+**V6-5** (`:1473-1477`). **This section wins** over every earlier part where
+they differ. No in-place edit: the fence, "Validation Commands" and all
+earlier text stay byte-identical, and there is no envelope delta. The section
+is appended after `contract :6985`, so no citation shifts. Anchors were
+re-read on 2026-09-26 at `66203e22`. Every sentence this round supersedes is
+quoted verbatim under "Superseded sentences (Round 6)" (text authoritative).
+Everything not quoted there stays binding.
+
+### R6-00 — The Round-6 freeze existed and is lifted
+
+**Freeze (history).** On 2026-09-25, after the TASK-551-11 v5 audit, the
+orchestrator froze every append to this file. The freeze is recorded in the
+Round-6 dispositions record ("Orchestrator freeze") and in the 11 contract
+(**V6-5** `:1476`; the **V7-5** stop rule at `:1567-1569`). At that point the
+file was 522,753 bytes, against the 524,288-byte
+`TASK551_MAX_TASK_FILE_BYTES` dispatch cap. Round 6 and the L11 ripple
+mirrors were therefore held until TASK-551-11 re-open step 2 was green.
+**Lifted.** Re-open step 2 is green and committed at
+`66203e22a33ba4d783823d2fd5aa4b26c617a0ca` ("test(task551-11): re-open step
+2 — task-file byte cap 1 MiB + dispatchContractCaps suite"). The cap is now
+`export const TASK551_MAX_TASK_FILE_BYTES = 1024 * 1024;` (1,048,576 bytes),
+at `_docs/_workflows/lib/task-551-dispatch-primitives.mjs:6`. `requireText`
+enforces it (`:76-78`). The boundary suite is
+`tests/unit/workflows/dispatchContractCaps.test.ts`: it accepts exactly
+1,048,576 bytes, rejects 1,048,577 and accepts the live 03-L02 file. This
+section is the first 03-L02 append after step 2, as **V6-5** requires.
+**Still in force.** The record's second freeze bullet stays in force: no
+01-L01 classifier precondition or regeneration run may start between an L11
+step's snapshot and that step's green receipt. That is an 11/01-L01
+collision guard, and 03-L02 starts no such run.
+
+### R6-01 — Two kinds of invalidation, two generations (MEDIUM; S2-B, S3-B)
+
+**Model.** Every paged Admin client keeps exactly two monotonic counters per
+client. They are never zeroed and never shared across clients.
+
+- `invalidationEpoch` is advanced ONLY by `invalidate`. `invalidate` runs from
+  the client's public `clear<Family>Cache` (mutation callers) and from the
+  client's lazy cacheBus subscription to its family keys (any origin, `local`
+  or `remote`; `core/admin/utils/cacheBus.ts:18-22`, consumed only).
+  `invalidate` does three things: it marks the page memory stale (entries
+  stay, each keeping the `fetchedAtEpoch` it was installed at), it clears the
+  in-flight dedupe map, and it clears the persisted first-page slot. It never
+  touches the per-key generation map, the latest-request map,
+  `resetGeneration` or the subscription. An in-flight read that an
+  invalidation overtakes installs nothing and resolves
+  `{ kind: "superseded" }` (R6-04). The hook then re-runs that request
+  silently in the background: there is no reset UI, and the current rows stay
+  rendered until the fresh page lands. This is the "background revalidation"
+  rule.
+- `resetGeneration` is advanced ONLY by the client's registered L04 reset
+  (`registerAdminModuleCacheReset`). `advanceAdminCacheInstallationAuthority`
+  runs that reset synchronously, right after it mints a new installation token
+  (`core/admin/utils/adminCacheAuthority.ts:72-79`, consumed only). This is
+  the only "family reset": an installation reset or an identity transition.
+  It clears everything: memory, dedupe, per-key generations, latest requests,
+  the slot, and the subscription (unsubscribed; lazily re-subscribed by the
+  next read, as in R4-08). An overtaken read resolves `{ kind: "reset" }`.
+  The hook shows the empty list, the R5-08 hint and exactly one recovery
+  read.
+
+**Check order.** Each completion checks after its own await, and again after
+every later await: (R) installation token not current, or `resetGeneration`
+moved → `{ kind: "reset" }`. (I) `invalidationEpoch` moved →
+`{ kind: "superseded" }`. (O) key generation moved → resolve through the
+latest request (R5-09, extended below). Otherwise the read installs with
+`fetchedAtEpoch = epoch` and resolves `{ kind: "page", page }`. Reset wins over
+superseded, and both win over an error (R6-02).
+
+```ts
+// core/admin/services/pagesClient.ts (the generic template; every client below instantiates it)
+let pagesGeneration = 1;        // resetGeneration: advanced ONLY by the registered reset
+let pagesInvalidationEpoch = 1; // invalidationEpoch: advanced ONLY by invalidatePagesList
+const pageCache = new Map<string, CachedAdminListPage<PageListItem, PageListSummary, PageListFacets>>(); // entries carry fetchedAtEpoch
+const pagePromises = new Map<string, Promise<PageListRead>>();    // in-flight dedupe (non-forced joins)
+const pageGenerations = new Map<string, number>();                // per-key request generation, +1 per network request
+const pageLatest = new Map<string, Promise<PageListRead>>();      // latest request per key, set with the +1
+let pagesSubscription: (() => void) | null = null;
+function invalidatePagesList(): void {                            // THE invalidate body
+  pagesInvalidationEpoch += 1; pagePromises.clear(); pagesFirstPage.clear(); // memory stays, now stale
+}
+function ensurePagesListSubscription(): void {                    // lazy on the first page read; idempotent
+  pagesSubscription ??= subscribeCacheEvents((event) => { if (event.key === cacheKeys.pagesList) invalidatePagesList(); });
+}
+registerAdminModuleCacheReset(() => {                             // THE reset body
+  pageCache.clear(); pagePromises.clear(); pageGenerations.clear(); pageLatest.clear(); pagesFirstPage.clear();
+  pagesSubscription?.(); pagesSubscription = null; pagesGeneration += 1;
+});
+export const clearPagesCache = (): void => {                      // name and signature unchanged
+  /* plus the non-list state it clears at HEAD (pagesClient.ts:274-277) while that state exists */
+  invalidatePagesList();
+};
+export function listPagesPageCached(filters: PageListFilters = DEFAULT_PAGE_LIST_FILTERS, cursor: string | null = null,
+  options: { force?: boolean } = {}): Promise<PageListRead> {
+  ensurePagesListSubscription();
+  const key = buildAdminListCacheKey(cacheKeys.pagesList, "page", filters, cursor);
+  const isDefaultFirst = cursor === null && canonicalJson(filters) === canonicalJson(DEFAULT_PAGE_LIST_FILTERS);
+  if (!options.force) {
+    const hit = readVerifiedAdminListPage(pageCache, key, filters, pagesInvalidationEpoch) // stale entry = miss
+      ?? (isDefaultFirst ? readPersistedFirstPage(pagesFirstPage, filters) : null);
+    if (hit) return Promise.resolve({ kind: "page", page: hit });
+    const inFlight = pagePromises.get(key); if (inFlight) return inFlight;
+  }
+  const token = captureAdminCacheInstallationToken();               // before any await
+  const generation = pagesGeneration; const epoch = pagesInvalidationEpoch;
+  const keyGeneration = (pageGenerations.get(key) ?? 0) + 1; pageGenerations.set(key, keyGeneration);
+  const isReset = () => !isCurrentAdminCacheInstallationToken(token) || generation !== pagesGeneration;
+  const isSuperseded = () => epoch !== pagesInvalidationEpoch;
+  let request: Promise<PageListRead>;
+  request = (async (): Promise<PageListRead> => {
+    let envelope: PageListEnvelope;
+    try { envelope = await listPagesPage(filters, cursor); } catch (error) {
+      if (isReset()) return ADMIN_LIST_RESET;                         // R6-02: reset wins over error
+      if (isSuperseded()) return ADMIN_LIST_SUPERSEDED;               // superseded wins over error
+      throw error;
+    }
+    if (isReset()) return ADMIN_LIST_RESET;                           // (R)
+    if (isSuperseded()) return ADMIN_LIST_SUPERSEDED;                 // (I) installs nothing
+    if (pageGenerations.get(key) !== keyGeneration) {                 // (O)
+      const latest = pageLatest.get(key);
+      if (latest === undefined || latest === request) throw new Error("admin_list_overtake_invariant");
+      return resolveOvertakenPageRead(latest, isReset, isSuperseded);
+    }
+    pageCache.set(key, { canonicalFilters: canonicalJson(filters), envelope, fetchedAtEpoch: epoch });
+    if (isDefaultFirst) pagesFirstPage.write({ v: 1, filters, items: envelope.items,
+      nextCursor: envelope.nextCursor, hasMore: envelope.hasMore });
+    return { kind: "page", page: envelope };
+  })();
+  const settle = () => { if (pagePromises.get(key) === request) pagePromises.delete(key); };
+  void request.then(settle, settle);                                  // no derived rejection escapes
+  pagePromises.set(key, request); pageLatest.set(key, request);
+  return request;
+}
+async function resolveOvertakenPageRead(latest: Promise<PageListRead>, isReset: () => boolean,
+  isSuperseded: () => boolean): Promise<PageListRead> {
+  let read: PageListRead;
+  try { read = await latest; } catch (error) {
+    if (isReset()) return ADMIN_LIST_RESET;
+    if (isSuperseded()) return ADMIN_LIST_SUPERSEDED;
+    throw error;                                                      // the newer caller's error (R5-09 (c))
+  }
+  if (isReset()) return ADMIN_LIST_RESET;                             // re-check after the await
+  if (isSuperseded()) return ADMIN_LIST_SUPERSEDED;
+  return read;                                                        // may itself be reset or superseded
+}
+```
+
+**`pageGenerations` / `pageLatest` / `pagesGeneration`.** `pagesGeneration`
+is the pages `resetGeneration`. `pageGenerations` is a per-key REQUEST
+generation: each new network request for a key increments it, and
+`pageLatest` is set to that request at the same point. Only the reset clears
+either map, and the reset always advances `pagesGeneration` in the same
+callback. So (R) catches every read that started before a reset, and
+`admin_list_overtake_invariant` stays unreachable (R5-09). An invalidation
+touches neither map. Key generations therefore stay monotonic across
+invalidations, and (I) runs before (O). Both reads involved in an overtake
+started under the same epoch, because `invalidationEpoch` only grows. If (I)
+passes for the older read, it passes for the newer one when that read starts.
+`pagePromises` is cleared by both `invalidate` and the reset. So a
+non-forced read after an invalidation never joins a request that will resolve
+`superseded`. **Hydration** (R3-17 lazy initializer) may read a stale memory
+entry. Every hydrated start is followed by one forced read (R5 H1).
+
+```ts
+// core/admin/services/adminListEnvelope.ts (R6-01 changes; R3-15 page types stand)
+export type CachedAdminListPage<I, S, F> = Readonly<{ canonicalFilters: string; envelope: AdminListEnvelope<I, S, F>;
+  fetchedAtEpoch: number }>;
+export function readVerifiedAdminListPage<I, S, F>(cache: ReadonlyMap<string, CachedAdminListPage<I, S, F>>,
+  key: string, filters: unknown, epoch: number | "hydrate"): AdminListEnvelope<I, S, F> | null;
+// canonicalFilters must match (I-05); a number returns a hit only when fetchedAtEpoch === epoch; "hydrate" ignores epochs
+```
+
+**Every public `clear<Family>Cache`** (and the client that owns it). Each
+paged client has ONE `resetGeneration` and ONE `invalidationEpoch`, which cover
+all of its paged families, so over-invalidating a sibling family costs one
+forced read at most. Each body is "what it clears at HEAD" + "the client's
+`invalidate`". Each reset body clears all of that client's paged state,
+unsubscribes, and then advances the generation.
+
+| Client (file) | Public clear (HEAD anchor) | Families invalidated | `resetGeneration` | `invalidationEpoch` | Subscription predicate on `event.key` |
+|---|---|---|---|---|---|
+| `pagesClient.ts` | `clearPagesCache()` (`:274`) | pages | `pagesGeneration` | `pagesInvalidationEpoch` | `=== cacheKeys.pagesList` |
+| `postsClient.ts` | `clearPostsCache()` (`:292`) | posts | installation token (R5-10) | `postsCacheAuthorityEpoch` (TASK-554) | `=== cacheKeys.postsList` |
+| `entriesClient.ts` (paged maps in `entriesClientPagination.ts` where C11 puts them) | `clearEntriesCache(typeSlug)` (`:528`), `clearAllEntriesCache()` (`:553`) | entries-type, custom-screen-entries, entries-all (all three for either call) | `entriesGeneration` | `entriesInvalidationEpoch` | `.startsWith(cacheKeys.entriesList(""))` (also matches `entriesAllList`) |
+| `formsClient.ts` | `clearFormsCache()` (`:269`) | forms, form-submissions | `formsGeneration` | `formsInvalidationEpoch` | `=== cacheKeys.formsList` |
+| `mediaClient.ts` | `clearMediaCache()` (`:144`) | media | `mediaGeneration` | `mediaInvalidationEpoch` | `=== cacheKeys.mediaList` |
+| `bookingClient.ts` | `clearBookingCache()` (`:195`) | booking-reservations, -resources, -services, -blackouts, plus the week cache (R3-07 `invalidateBookingWeekCache`, unchanged) | `bookingListsGeneration` | `bookingListsInvalidationEpoch` | one of the four `cacheKeys.booking*List` keys; the R3-07/R4-08 week subscription stays separate |
+| `adminUsersClient.ts` | `clearAdminUsersCache()` (NEW export) | users | `usersGeneration` (R3-18) | `usersInvalidationEpoch` | none: `cachePolicy.ts` has no users key and stays forbidden (R3-18) |
+
+- **Posts** stays the named TASK-554 exception. `clearPostsCache` keeps its
+  HEAD body (`postsClient.ts:292-306`) and the C9 v2 addition (`contract
+  :4051`, it clears `cachedPostsPromises` and the memory pages rather than
+  marking them stale). The hook's posts `fetchPage` is the new
+  `readPostsListPage(filters, cursor, options): Promise<PostListRead>`. Its
+  first-page path is the R5-10 path with discriminated outcomes: a non-current
+  token gives `{ kind: "reset" }`, and an authority-epoch advance gives
+  `{ kind: "superseded" }`. Cursor pages follow the generic template with
+  `postsCacheAuthorityEpoch` as the epoch. `listPostsCached(filters?,
+  options?)` stays the TASK-554-facing legacy projection of
+  `readPostsListPage(filters, null, options)`: `page` → the page;
+  `superseded` → `getCachedPosts(filters) ?? emptyAdminListPage()`
+  byte-for-byte (TASK-554 `:1574-1582`); `reset` → `emptyAdminListPage()`.
+  TASK-554 files are unchanged.
+- **Form submissions** have no separate public clear. They are
+  form-parented and `formsClient`-owned, so `clearFormsCache` is their public
+  `clear<Family>Cache`. No caller-less export is added.
+- **Users.** `clearAdminUsersCache = (): void => invalidateAdminUsersList();`
+  touches no storage (R3-18 stands). The in-client mutations
+  (create/invite/update/enable/disable/roles/delete) call it after success.
+  `UsersRolesPage`/`useUsersRolesCollections` call it after role mutations
+  that change user rows.
+- **Detail pages.** If `detailPagesClient.ts` holds paged maps (C9 v2
+  `DEFAULT_DETAIL_PAGE_LIST_FILTERS`), then `clearDetailPagesCache` and
+  `clearDetailPageListCache` follow the pages body with their own
+  `detailPagesGeneration`/`detailPagesInvalidationEpoch`.
+- **Week cache.** `listReservationsWeek` is not a hook read and not an
+  `AdminListRead`. R3-07 and R4-08 stand unchanged.
+- **Event order.** A family event can reach the client subscription and a
+  view's `revalidate()` in either registration order. Client first: the
+  forced revalidate starts under the new epoch, so there is ONE forced read.
+  View first: the forced read started under the old epoch resolves
+  `superseded` and is re-run, so there are TWO reads, and the rows are never
+  reset. The bound is ≤ 2 forced reads per event.
+
+**Hook rules (R6-01 side; the table rows are under R6-03/R6-04).** A
+`superseded` result re-runs `pending.request` (which equals `lastRequest`)
+with `force: true`, keeping `merge`, `recovery` and the chain depth. It also
+advances `familyEpoch` by 1: the outcome proves a family invalidation that a
+non-subscribing hook may not have been told about (R5-07). Rows, summary,
+facets and `status` stay unchanged, so no reset UI appears. A queued
+revalidate is subsumed, except when the re-run is an append `merge` page.
+There the queue survives, and `drain` then refreshes the whole chain. Every
+re-run needs a fresh invalidation during its await, so re-runs are bounded by
+invalidations and there is no retry counter.
+**Tests.** `tests/vitest/admin/task551PaginatedClients.test.ts`
+(`test.each` over the seven client rows above, plus detail pages when
+present):
+
+- "invalidate: an overtaken in-flight read resolves superseded and installs
+  nothing" (memory, slot and `pageLatest` are unchanged by that completion).
+- "reset: an overtaken in-flight read resolves reset".
+- "reset wins over superseded when both land during one await".
+- "invalidate keeps memory entries stale: a non-forced read of a stale entry
+  hits the network; hydrate still reads it".
+- "invalidate clears in-flight dedupe and the persisted slot".
+- "pageGenerations and pageLatest survive clear<Family>Cache; only the
+  registered reset clears them and advances the generation".
+- "a family event invalidates through the lazy subscription; client-first
+  gives one forced read, view-first gives two, the first superseded".
+- "the reset unsubscribes; the next read re-subscribes once".
+- "posts: listPostsCached keeps the TASK-554 reading after a bare
+  clearPostsCache while readPostsListPage resolves superseded".
+- "users: clearAdminUsersCache and every mutation touch no Storage".
+
+`tests/vitest/admin/task551PaginatedListViews.test.tsx` adds these rows:
+
+| # | Transition | Assertion |
+|---|---|---|
+| H15 | `superseded` result while a paged `next` is pending | old rows stay rendered, `status` never `reset`, no hint; exactly one `force: true` re-run of the same cursor; the fresh page replaces the rows |
+| H16 | `superseded` during an append `loadMore` with a queued event | the page re-runs forced, then one chain revalidate; otherwise a queued revalidate is subsumed (paged: exactly one call after the settle) |
+| H17 | `reset` result (discriminant) | empty list, `role="status"` hint "The list was reset.", one forced `null` recovery call (R5-08 stands) |
+
+### R6-02 — Pages/users rejection parity with posts p3 (MEDIUM; S2-B)
+
+The pages and users templates wrap their OWN network await in `try`/`catch`
+(the R6-01 block). After a rejection they re-check `isReset()` and then
+`isSuperseded()`. Reset wins over the error, exactly as posts p3 (R5-10).
+Superseded also wins over the error. With neither, the error propagates
+unchanged, and the hook shows `error` with its rows kept. The overtaken path
+(`resolveOvertakenPageRead`) applies the same order after awaiting the latest
+request. `adminUsersClient.listAdminUsersPageCached` instantiates the same
+template: `usersGeneration`, `usersInvalidationEpoch`, `userPageGenerations`,
+`userPageLatest`, `userPagePromises`, and no slot. The R5-09 static check
+stands.
+**Tests** (`task551PaginatedClients.test.ts`): "pages p3: a network
+rejection after an installation advance resolves reset"; "users p3: a network
+rejection after an installation advance resolves reset"; "pages p4 / users
+p4: a network rejection after clear<Family>Cache resolves superseded"; "pages
+p5 / users p5: a rejection with no reset and no invalidation rejects with the
+same error and installs nothing". R5-09 (a)-(c), (f), (h) and their users
+repeat (g) keep their meaning. "reset page" reads as `kind: "reset"`
+(R6-04).
+
+### R6-03 — `rekey`: epochs persist, new-scope initial filters (MEDIUM; S2-A, S2-B, S3-B)
+
+**Per hook instance.** `familyEpoch` (the hook's count of family events,
+R5-07) and the `fetchedAtEpoch` map belong to the hook instance. They PERSIST
+across `rekey`, `reset(next)` and a `reset` result. `familyEpoch` never goes
+back to 0. The map is keyed by
+`slotKey(fetchKey, filters, cursor) = canonicalJson([fetchKey, filters, cursor])`,
+so the slots of every key and filter set coexist. It keeps at most 256
+entries, in insertion order: a re-set moves an entry to the end, and the
+oldest entry is evicted. An evicted or never-read slot counts as epoch 0, so
+after any event it is forced (fail-safe).
+**Key plus initial filters.** Views pass
+`listKey: BoundedListKey<Fl> = { fetchKey, initialFilters }`, built by
+`boundedListKey(family, scope, initialFilters)` =
+`{ fetchKey: boundedListFetchKey(family, scope), initialFilters }`.
+`initialFilters` are the NEW scope's defaults, from a scope-owned builder
+(for example the screen's configured defaults). They never contain a filter
+of another scope. A `fieldFilter.*`/`systemFilter.*` key is bound to its
+screen/type scope (D3, `contract :2467-2470`). `rekey` clears items, summary,
+facets and the cursor stack, and takes `initialFilters` wholesale. It never
+merges `state.filters`, so filters of the old scope are dropped.
+
+```ts
+// core/admin/ui/shared/useBoundedAdminList.ts (v4 deltas over R5-04..R5-11)
+export type BoundedListKey<Fl> = Readonly<{ fetchKey: string; initialFilters: Fl }>;
+export const boundedListKey = <Fl>(family: string, scope: Readonly<Record<string, string | null>>, initialFilters: Fl):
+  BoundedListKey<Fl> => ({ fetchKey: boundedListFetchKey(family, scope), initialFilters });
+const MAX_EPOCH_SLOTS = 256;
+const slotKey = (fetchKey: string, filters: unknown, cursor: string | null) => canonicalJson([fetchKey, filters, cursor]);
+const stale = <I, S, F, Fl>(s: State<I, S, F, Fl>, c: string | null) =>
+  (s.fetchedAtEpoch.get(slotKey(s.fetchKey, s.filters, c)) ?? 0) < s.familyEpoch;
+// initState(mode, fetchKey, filters, hydrated, seq, familyEpoch, fetchedAtEpoch, force): R3-17 hydration fields,
+//   stack [null], the GIVEN epoch map and familyEpoch (never reset), status hydrated ? "ready" : "loading";
+//   then issue(page(null, [null], false, force || !!hydrated || familyEpoch > 0))
+// Actions: reset(filters, hydrated) | rekey(fetchKey, initialFilters) | next | previous | loadMore | revalidate
+//   | retry | loaded(token, result) | failed(token, message)
+// effect, key-change branch (deps stay [fetchKey, pending], R5-11; listKeyRef is written in the same
+//   useLayoutEffect as `io`, so it always holds the latest render's pair):
+void Promise.resolve().then(() => { if (live) { keyRef.current = fetchKey;
+  dispatch({ type: "rekey", fetchKey, initialFilters: listKeyRef.current.initialFilters }); } });
+```
+
+| Action | Guard | Next state (supersedes the R5 rows quoted below) |
+|---|---|---|
+| `reset(f, h)` | none (supersedes pending) | `initState(mode, fetchKey, f, h, seq, familyEpoch, fetchedAtEpoch, false)` |
+| `rekey(k, f0)` | `k !== fetchKey` | `initState(mode, k, f0, null, seq, familyEpoch, fetchedAtEpoch, true)` |
+| `loaded` page/chain | token = pending | R5 row, except the epoch map: page sets `slotKey(pending.fetchKey, pending.filters, cursor) → pending.epoch`; chain sets that for every `result.stack` cursor; other entries are kept |
+| `loaded` reset, not recovery | token = pending | rows/summary/facets cleared, stack `[null]`, `hasMore false`; `familyEpoch + 1` with the map KEPT (every earlier slot is now stale); `issue(page(null, [null], false, true, true), "reset")` |
+| `loaded` reset, recovery | token = pending | as above with `pending null`; no further read |
+| `loaded` superseded | token = pending | R6-01 hook rules |
+
+**Tests** (`task551PaginatedListViews.test.tsx`):
+
+| # | Transition | Assertion |
+|---|---|---|
+| H18 | A → B → A with an event in between | key A: page 1, `next` (page 2, `force: false`); rekey to B; one event; rekey back to A: the first page is `force: true`, and `next` to A's page 2 is `force: true`. The same walk without the event: that `next` is `force: false` |
+| H19 | screen switch | on screen S1 set `fieldFilter.color = "red"` through `reset(next)`; switch to S2: every `fetchPage` call after the rekey receives exactly S2's `initialFilters`, with no `fieldFilter.*` of S1 |
+| H20 | epochs persist | `familyEpoch` after an event, `reset(next)`, `rekey` and a `reset` result is ≥ its value before (never 0 again); `reset(f2)` then `reset(f1)`: navigation to an f1 slot read after the last event is `force: false` |
+| H21 | slot bound | 257 recorded slots: the oldest is evicted and, after an event, forced |
+
+H3 stands with the `listKey` object: a new object with the same `fetchKey` and
+a new closure makes zero calls.
+
+### R6-04 — Reset detection by discriminant (MEDIUM; S2-A)
+
+The identity sentinel (R4-07 `RESET_PAGE`, `adminListResetPage`,
+`isAdminListResetPage`) is removed. A view that maps a client page (for
+example to view rows) creates a new object, and identity detection then
+missed the reset. Every cached-client page method returns the discriminated
+read. `fetchPage` returns the client result UNCHANGED: a view passes the
+client method itself, or a closure that only binds scope arguments and
+returns the client promise as is. It never `.then`-maps it. View mapping
+happens after the hook has classified the result, through the `mapItems`
+option. `mapItems` is applied only to `kind: "page"` reads and to hydrated
+pages.
+
+```ts
+// core/admin/services/adminListEnvelope.ts (R6-04; AdminListPage/AdminListEnvelope/emptyAdminListPage stand)
+export type AdminListPageRead<I, S = never, F = never> = AdminListEnvelope<I, S, F> | AdminListPage<I>; // R3-15 union, renamed
+export type AdminListRead<I, S = never, F = never> =
+  | Readonly<{ kind: "page"; page: AdminListPageRead<I, S, F> }>
+  | Readonly<{ kind: "reset" }>
+  | Readonly<{ kind: "superseded" }>;           // AdminListRead<I> = a summary-less read (pickers)
+export const ADMIN_LIST_RESET: Readonly<{ kind: "reset" }> = Object.freeze({ kind: "reset" });
+export const ADMIN_LIST_SUPERSEDED: Readonly<{ kind: "superseded" }> = Object.freeze({ kind: "superseded" });
+export const hasAdminListSummary = <I, S, F>(page: AdminListPageRead<I, S, F>): page is AdminListEnvelope<I, S, F> =>
+  Object.hasOwn(page, "summary") && Object.hasOwn(page, "facets");
+// detection is ALWAYS `read.kind`; never `===` against a constant
+// per client: PageListRead = AdminListRead<PageListItem, PageListSummary, PageListFacets> (text unchanged, new meaning);
+//   PageListPageRead = AdminListPageRead<…> for getCached*/hydrate; likewise Post*, User*, Form*, Media*, Entry*, Booking*
+// getCachedPosts(filters?): PostListPageRead | null; listPostsCached(filters?, options?): Promise<PostListPageRead> (legacy)
+
+// core/admin/ui/shared/useBoundedAdminList.ts (R6-04)
+type FetchPage<R, S, F, Fl> = (filters: Fl, cursor: string | null, o: { force: boolean }) => Promise<AdminListRead<R, S, F>>;
+type LoadResult<I, S, F> = Readonly<{ kind: "page"; read: AdminListPageRead<I, S, F> }>
+  | Readonly<{ kind: "chain"; reads: readonly AdminListPageRead<I, S, F>[]; stack: Stack }>
+  | Readonly<{ kind: "reset" }> | Readonly<{ kind: "superseded" }>;
+const DROPPED = Symbol("dropped");               // R5 token-superseded chain: dispatches nothing (was SUPERSEDED)
+const mapPage = <R, I, S, F>(page: AdminListPageRead<R, S, F>, mapItems: (items: readonly R[]) => readonly I[]) =>
+  ({ ...page, items: mapItems(page.items) }) as AdminListPageRead<I, S, F>; // summary/facets untouched, own keys kept
+async function runRequest<R, I, S, F, Fl>(fetchPage: FetchPage<R, S, F, Fl>, mapItems: (items: readonly R[]) => readonly I[],
+  p: Pending<Fl>, isLatest: () => boolean): Promise<LoadResult<I, S, F> | typeof DROPPED> {
+  if (p.request.kind === "page") {
+    const read = await fetchPage(p.filters, p.request.cursor, { force: p.request.force });
+    return read.kind === "page" ? { kind: "page", read: mapPage(read.page, mapItems) } : read; // reset | superseded as is
+  }
+  const reads: AdminListPageRead<I, S, F>[] = []; const stack: (string | null)[] = []; let cursor: string | null = null;
+  for (let i = 0; i < p.request.depth; i += 1) {
+    if (!isLatest()) return DROPPED;
+    const read = await fetchPage(p.filters, cursor, { force: true });
+    if (read.kind !== "page") return read;       // one reset/superseded page ends the chain with that outcome
+    reads.push(mapPage(read.page, mapItems)); stack.push(cursor);
+    if (!read.page.hasMore || read.page.nextCursor === null) break;
+    cursor = read.page.nextCursor;
+  }
+  return isLatest() ? { kind: "chain", reads, stack } : DROPPED;
+}
+export function useBoundedAdminList<R extends { id: string }, S, F, Fl, I extends { id: string } = R>(o: Readonly<{
+  mode: BoundedListMode; listKey: BoundedListKey<Fl>; fetchPage: FetchPage<R, S, F, Fl>;
+  hydrate: (f: Fl) => AdminListPageRead<R, S, F> | null;
+  mapItems?: (items: readonly R[]) => readonly I[] }>) { // identity when omitted; required by an overload when I ≠ R
+  // mapItems is read through the same ref as fetchPage (new closure, no refetch); initState maps the hydrated page;
+  // the append dedupe runs on MAPPED ids; the effect dispatches `loaded` unless the result is DROPPED
+}
+```
+
+**Tests.** `task551PaginatedListViews.test.tsx` row H22 "mapping adapter".
+A client stub returns `{ kind: "reset" }` during a `loadMore`. The hook uses
+`mapItems: (rows) => rows.map(toViewRow)`. The result: status `reset`, the
+hint, exactly one forced `null` recovery call, `mapItems` never called with
+anything but a page's items, and the recovered rows rendered mapped. The
+same adapter with `{ kind: "superseded" }` gives H15's outcome.
+`task551PaginatedClients.test.ts`: "no identity sentinel remains". A static
+read of `core/admin/services/*.ts` and `core/admin/ui/shared/*.ts(x)` finds
+no `isAdminListResetPage`, `adminListResetPage` or `RESET_PAGE`, and no
+`=== ADMIN_LIST_RESET`/`=== ADMIN_LIST_SUPERSEDED`. In R3-16, R4-07 and R5-09
+(d), (e), (f), (h) and R5 H13, every assertion of `isAdminListResetPage(x)`
+reads as `x.kind === "reset"`, and every "resolves the reset page" reads as
+"resolves `{ kind: "reset" }`".
+
+### R6-05 — Baseline re-capture needs a clean wave state (MEDIUM; S3-A)
+
+This supersedes the R5-12 **Lost baseline** sentence (quoted below). A root-tsc
+baseline (INITIAL `…/audit-evidence/03-l02-root-tsc-baseline.txt`, FINAL
+`…-baseline-final.txt`) may be RE-captured only when the working tree has no
+03-L02 wave edits. That means every one of the 321 fence `allowlist` paths is
+byte-identical to that occurrence's pre-wave commit. For INITIAL, this is the
+commit the orchestrator records immediately before W0's first edit. For
+FINAL, it is the commit recorded immediately before FINAL's first edit
+(R5-13). Otherwise re-capture is BLOCKED. A tracked copy is then restored
+with `git show <commit>:<path>` only if its SHA-256 equals the receipt's.
+Without such a copy, the orchestrator STOPS and reports to the owner. It
+never captures over wave edits. The first capture (R5-12, R5-13) meets the
+same rule by construction.
+**Git-state receipt** (in the W0 receipt for INITIAL and the FINAL receipt
+for FINAL; one object per capture or re-capture):
+`{ occurrence: "initial" | "final", kind: "capture" | "re-capture",
+preWaveCommit, head, allowlistSha256, committedDiff: [], worktreeDiff: [],
+baselinePath, baselineSha256, previousBaselineSha256?, reason? }`.
+`head` = `git rev-parse HEAD`. `allowlistSha256` is the SHA-256 of the fence
+allowlist joined by `\n`. `committedDiff` = `git diff --name-only
+<preWaveCommit> HEAD -- <allowlist>` and `worktreeDiff` = `git status
+--porcelain=v1 --untracked-files=all -- <allowlist>`, with every path passed
+as a `:(literal)` pathspec. Both must be empty. `reason` and
+`previousBaselineSha256` are required for `re-capture`. The receipt holds
+commit ids, repository paths and digests only: no environment values and no
+compiler output.
+
+### R6-06 — File size after the cap raise (MEDIUM; S3-A, S3-B)
+
+The TASK-551-11 cap raise (R6-00) supersedes the R5 **Size note** "a further
+round needs a split first" (quoted below). No new task file is created and
+this file is not split. After Round 6, the file is
+573,282 bytes, so about 464 KiB of the 1,048,576-byte cap
+remains. Closure edits (`**Status:**`, `**Started:**`, `**Completed:**`, ≤
+200 bytes in total) and post-audit amendments fit. **Stop rule.** Before
+any later append, the writer measures `wc -c` on this file. If the append
+would end above 1,048,576 bytes, the writer stops and reports to the
+orchestrator: no split, no trim, and no cap change outside TASK-551-11.
+
+### R6-07 — Four pairwise-disjoint booking windows (LOW; S1-A)
+
+This refines R5-02 and R3-03's "What stands" legs. The owning suite is
+`tests/integration/server/task551AdminWriteConcurrency.test.ts`. The week-cap
+seed, the 50-way race window, the reactivation-leg windows and the year-2300
+blackout window are four pairwise-disjoint windows derived from the suite's
+`RUN` (`randomUUID()`). The R4-01 lock-wait proof also needs its own window.
+As a writer refinement it gets a fifth window, disjoint from the other four.
+
+```ts
+// tests/integration/server/task551AdminWriteConcurrency.test.ts (test-local helper; not exported)
+const HOUR_MS = 3_600_000;
+function bookingLegWindows(run: string) {
+  const k = Number.parseInt(run.slice(0, 8), 16) % 4096;       // RUN-derived slot 0..4095
+  const block = Date.UTC(2400, 0, 1) + k * 14 * 24 * HOUR_MS;   // 14-day marker block, years 2400..2557
+  const blackout = Date.UTC(2300, 0, 1) + k * HOUR_MS;          // year 2300 (R3-03, R5-02)
+  return Object.freeze({
+    weekCap: { from: block, to: block + 167 * HOUR_MS },                      // 501 × 20 min, status "pending"
+    race: { from: block + 168 * HOUR_MS, to: block + 169 * HOUR_MS },         // 50-way create race
+    reactivation: { from: block + 170 * HOUR_MS, to: block + 174 * HOUR_MS }, // both R2-02 reactivation legs
+    lockWait: { from: block + 175 * HOUR_MS, to: block + 176 * HOUR_MS },     // R4-01 proof (writer refinement)
+    blackout: { from: blackout, to: blackout + HOUR_MS / 2 },                 // global blackout leg
+  });
+}
+```
+
+- **Week cap.** The suite inserts 501 rows DIRECTLY (one multi-row INSERT on
+  the owner DB, not through `createBookingReservation`). They have status
+  `pending`, are on the marker resource/service only, and slot i =
+  `[weekCap.from + 20 min × i, +20 min)` for i = 0..500. The last slot ends at
+  `weekCap.to` (167 h). The route leg queries `{ from: weekCap.from, to:
+  weekCap.to, resourceId }` (167 h ≤ 196 h) and expects 500 items +
+  `truncated`. The R2-30 counters never count the seed.
+- **Race.** All 50 creates use `[race.from, race.from + 30 min)` on the
+  marker resource. The R5-02 precondition read (no global or marker blackout
+  overlaps `race`) stands.
+- **Reactivation.** Leg (a), cancelled over active, uses `[reactivation.from,
+  +1 h)`. Leg (b), two overlapping cancelled rows reactivated concurrently,
+  uses `[reactivation.from + 2 h, +3 h)`.
+- **Blackout.** The global blackout covers `blackout`, and the leg's own
+  active marker reservation lies inside it. The leg asserts exactly one
+  INSERT, no lock and no conflict SELECT, and deletes that blackout id in
+  `finally` (R3-03 stands).
+- **Lock wait.** Both marker resources use `lockWait`.
+
+**Test** (DB-free block): "booking leg windows are pairwise disjoint and
+RUN-derived". It uses RUN `00000000-0000-4000-8000-000000000000` (k = 0),
+`00000fff-0000-4000-8000-000000000000` (k = 4095) and 256 `randomUUID()`
+values. For each, the five windows are pairwise disjoint (`a.to <= b.from ||
+b.to <= a.from`), `blackout` lies in UTC year 2300 and every other window
+lies in year ≥ 2400, `weekCap` spans exactly 167 h, and equal RUN values give
+equal windows. The DB legs build every timestamp from `bookingLegWindows(RUN)`
+only.
+
+### R6-08 — TASK-551-11 ripple corrections (03-L02 side)
+
+**(1) Ripple anchors** (C17 v4 `:6574-6576`, verified 2026-09-26 at
+`66203e22`). The symbol stays authoritative wherever a line drifts.
+
+| C17 v4 anchor (quoted) | Today (step 2 green) | Final home |
+|---|---|---|
+| `task551WorkflowContracts.test.ts:121-125` `expectedL11SidecarTests` | `tests/unit/workflows/task551WorkflowContracts.test.ts:123-128` (4 entries since step 2) | `tests/unit/workflows/task551WorkflowContractsFixtures.ts` (`expectedL11SidecarTests`), landing at 11 re-open step 5 |
+| `task551EvidenceContract.test.ts:901` (reads all split files plus the helper) | the matrix test "keeps test-only declaration imports and the owner bridge closed", `tests/unit/workflows/task551EvidenceContract.test.ts:883` (reads at `:885-908`) | `tests/unit/workflows/evidenceContractMatrix.test.ts` (the matrix test), landing at 11 re-open step 6 |
+| `task-551-worktree-compatibility.mjs:111-115` `ownedTests` | `_docs/_workflows/lib/task-551-worktree-compatibility.mjs:113-118` (sidecar `ownedTests`) | `_docs/_workflows/lib/task-551-phase-provenance.mjs` (sidecar `ownedTests`) after step 3 (11 **V4-6**) |
+
+These edits belong to TASK-551-11. They are not binding on 03-L02, and 03-L02
+edits none of these files.
+**(1b) V4-6 stale-anchor notice.** The pre-split `task-551-dispatch-contract.mjs`
+anchors cited by this file now resolve as follows (verified at `66203e22`;
+the quoted text stays authoritative):
+
+| Cited at | Old anchor | Current anchor |
+|---|---|---|
+| `:6619` | `task-551-dispatch-contract.mjs:96`, "checked `:168-170`" | `task-551-dispatch-primitives.mjs:6`; `requireText` `:76-78` |
+| `:4497` | `:750-751` (self-collision) | `task-551-dispatch-envelope.mjs:376-377` (`normalizeEnvelope`, `:346`) |
+| `:4601` | `:776-785` (command references) | `task-551-dispatch-envelope.mjs:402-411` |
+| `:5899` | `:784-785` (unreferenced command) | `task-551-dispatch-envelope.mjs:410-411` |
+| `:3849` | `:873-875` (occurrence groups) | `task-551-dispatch-contract.mjs:186-188` (facade, `normalizeGraph` `:140`) |
+| `:2393` | `:956-959` (cross-owner allowlist) | `task-551-dispatch-contract.mjs:269-272` (facade, `reconcileTask551Dispatch` `:216`) |
+| `:4554` | `:977-987` (dependency union) | `task-551-dispatch-contract.mjs:290-300` (facade) |
+
+The `:3138` "`task-551-dispatch-contract.mjs` rules" now read as the rules
+of the facade, `task-551-dispatch-envelope.mjs` and
+`task-551-dispatch-primitives.mjs` together.
+**(2) "The split landed".** In R4-12 **Precondition 5 (C13 v4)**
+(`:6483-6485`) and in C13 v4 item 5 (`:6544-6547`), "the split landed" now
+means that TASK-551-11 re-open steps 1-7 are ALL green AND the receipt
+`_docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json` exists. This
+is 11 **V4-7** (`:1236`), which supersedes **V3-5**'s "v3 steps 1-5". State
+on 2026-09-26: steps 1 (`03d42b90`) and 2 (`66203e22`) are green; steps 3-7
+are pending, and the receipt does not exist yet. INITIAL W0 stays blocked
+until both conditions hold. The per-file line caps are the 11 contract's own
+(text authoritative there). The receipt is inventoried by R4-10
+`FAMILY_RECEIPT_GLOSS` entry 1 (`impl-[a-z0-9-]+\.json`), so there is no
+inventory delta. Anchor note: the 11 contract calls `:6545-6547` "the C14 v4
+row". The text is C13 v4 item 5 under "### C13 v4 — Pre-dispatch
+preconditions" (`:6542`). The C14 v4 table (`:6531-6535`) has no such row.
+**Self-cap figure.** The C17 v4 "≤ 1,300" for the 11 contract file is
+11-owned and superseded there (the 11 fence now reads `awk 'NR > 1900'`,
+`TASK-551-11…md:987`). It is informational here.
+
+### Superseded sentences (Round 6)
+
+Each quote is verbatim (text authoritative). The replacement is the named
+Round-6 item.
+
+1. C9 (`:2687-2689`): "`clear*` exports keep names and signatures and also
+   invoke the client's L04 reset; reset clears maps and promises and advances
+   (never zeroes) monotonic generation/epoch counters." → R6-01: a `clear*`
+   export runs the client's `invalidate` and never the L04 reset. The
+   registered reset alone advances `resetGeneration`.
+2. C9 (`:2727-2728`): "export const clearPagesCache = () => { /* unchanged
+   name */ pageCache.clear();
+     pagePromises.clear(); pagesGeneration += 1; };" → R6-01 `clearPagesCache`.
+3. R3-15 (`:5249`): "export type AdminListRead<I, S, F> = AdminListEnvelope<I,
+   S, F> | AdminListPage<I>;     // any cached-client result" → R6-04 (the
+   union is renamed `AdminListPageRead`; `AdminListRead` is the discriminated
+   read).
+4. R3-15 (`:5250-5251`): "export const hasAdminListSummary = <I, S, F>(read:
+   AdminListRead<I, S, F>):
+     read is AdminListEnvelope<I, S, F> => Object.hasOwn(read, "summary") &&
+   Object.hasOwn(read, "facets");" → R6-04 (it takes an `AdminListPageRead`).
+5. R3-15 (`:5266`): "// getCachedPosts(filters?): PostListRead | null;
+   listPostsCached(filters?, options?): Promise<PostListRead>" → R6-04
+   (`PostListPageRead`).
+6. R3-18 (`:5457-5458`): "// Mutations (create/invite/update/enable/disable/roles/delete)
+   clear userPageCache and advance
+   // usersGeneration after success; no createMemoryBackedLocalCache, no
+   localStorage/sessionStorage." → R6-01 (mutations call
+   `clearAdminUsersCache`; no storage, as before).
+7. R4-07 (`:6299-6301`): "const RESET_PAGE = Object.freeze({ items:
+   Object.freeze([]), nextCursor: null, hasMore: false });" / "export const
+   adminListResetPage = <I>(): AdminListPage<I> => RESET_PAGE as unknown as
+   AdminListPage<I>; // 3 own keys (R3-15)" / "export const
+   isAdminListResetPage = (read: unknown): boolean => read === RESET_PAGE;
+          // identity, not shape" → R6-04.
+8. R5 hook (`:6725`): "// LoadResult = R4-06 page | chain | reset. Actions:
+   reset(filters, hydrated) | rekey(fetchKey) | next | previous" → R6-04
+   `LoadResult`, R6-03 actions.
+9. R5 hook (`:6727`): "const slot = (c: string | null) => (c === null ?
+   "\u0000first" : c);" → R6-03 `slotKey`.
+10. R5 hook (`:6738-6739`): "// initState(mode, fetchKey, filters, hydrated,
+    seq, familyEpoch, force): R3-17 hydration fields, stack [null], empty
+    epoch
+    //   map, status hydrated ? "ready" : "loading"; then issue(page(null,
+    [null], false, force || !!hydrated || familyEpoch > 0))" → R6-03
+    `initState`.
+11. R5 table (`:6746`): "| `reset(f, h)` | none (supersedes pending) |
+    `initState(mode, fetchKey, f, h, seq, familyEpoch, false)` |" and
+    (`:6747`) "| `rekey(k)` | `k !== fetchKey` | `initState(mode, k, filters,
+    null, seq, 0, true)` |" → R6-03 table.
+12. R5 table (`:6755`): "| `loaded` reset | token = pending, not recovery |
+    rows/summary/facets/epochs cleared, stack `[null]`, `hasMore false`;
+    `issue(page(null, [null], false, true, true), "reset")` — one recovery
+    read, subsumes a queued revalidate |" → R6-03 table (epochs kept,
+    `familyEpoch + 1`; the recovery still subsumes a queued revalidate).
+13. R5 hook (`:6760`): "const SUPERSEDED = Symbol("superseded");", (`:6775`)
+    "return isLatest() ? { kind: "chain", reads, stack } : SUPERSEDED;" and
+    (`:6795`) "(result) => { if (result !== SUPERSEDED) dispatch({ type:
+    "loaded", token: pending.token, result }); }," → R6-04 `DROPPED` (same
+    semantics, renamed so that it cannot be confused with the client outcome
+    `superseded`).
+14. R5 hook (`:6764`): "return isAdminListResetPage(read) ? { kind: "reset" }
+    : { kind: "page", read };" and (`:6770`) "if (isAdminListResetPage(read))
+    return { kind: "reset" };" → R6-04 `runRequest`.
+15. R5 hook (`:6777-6780`): "export function useBoundedAdminList<I extends {
+    id: string }, S, F, Fl>(o: Readonly<{ mode: BoundedListMode;
+      fetchKey: string; filters: Fl; fetchPage: FetchPage<I, S, F, Fl>;
+    hydrate: (f: Fl) => AdminListRead<I, S, F> | null }>) {
+      const [state, dispatch] = useReducer(reducer<I, S, F, Fl>, null,
+        () => initState(o.mode, o.fetchKey, o.filters, o.hydrate(o.filters),
+    0, 0, false));" → R6-03/R6-04 options (`listKey`, `mapItems`); the lazy
+    initializer uses `o.listKey.fetchKey` and `o.listKey.initialFilters`.
+16. R5 hook (`:6788`): "void Promise.resolve().then(() => { if (live) {
+    keyRef.current = fetchKey; dispatch({ type: "rekey", fetchKey }); } });"
+    → R6-03 key-change branch.
+17. R5-11 (`:6821-6823`): "Views pass
+    `boundedListFetchKey(family, scope)` (`{ typeSlug }`, `{ screenId }`,
+    `{ resourceId }` or `{}`)." → R6-03: views pass `boundedListKey(family,
+    scope, initialFilters)` with the same scopes.
+18. R5-09 (`:6870`): "if (!isCurrentAdminCacheInstallationToken(token) ||
+    generation !== pagesGeneration) return adminListResetPage<PageListItem>();
+    // (R)", and the R5-09 `request = listPagesPage(filters,
+    cursor).then(async (envelope): Promise<PageListRead> => {` form (`:6869`)
+    together with its `resolveOvertakenPageRead(latest, token, generation)`
+    (`:6874`, `:6878-6887`) → R6-01/R6-02 template.
+19. R5-10 (`:6907-6909`): "`if
+    (!isCurrentAdminCacheInstallationToken(token)) return
+    adminListResetPage<PostListItem>();` FIRST" → R6-01 posts bullet
+    (`readPostsListPage` resolves `{ kind: "reset" }`; `listPostsCached`
+    resolves `emptyAdminListPage()`); and (`:6917-6918`) "(p1)
+    `advanceAdminCacheInstallationAuthority()` during the await →
+    `isAdminListResetPage`, slot and memory empty" → the same with
+    `readPostsListPage(...).kind === "reset"`. (p2) and (p3) stand for
+    `listPostsCached` and `readPostsListPage` respectively, the latter
+    asserting `kind: "reset"`.
+20. R5-12 (`:6941-6942`): "**Lost baseline:** re-captured only with an
+    explicit receipt note (reason, new sha256, tree state), never silently."
+    → R6-05.
+21. R5 preamble (`:6618-6620`): "**Size note.** This file is now within ~1.5
+    KB of the 512 KiB `TASK551_MAX_TASK_FILE_BYTES` cap
+    (`task-551-dispatch-contract.mjs:96`, checked `:168-170`); a further
+    round needs a split first." → R6-06.
+22. C17 v4 (`:6573-6577`): "The three extra split edits are binding:
+    `task-551-worktree-compatibility.mjs:111-115` `ownedTests`,
+    `task551WorkflowContracts.test.ts:121-125` `expectedL11SidecarTests`, and
+    `task551EvidenceContract.test.ts:901` (reads all split files plus the
+    helper). The split lands before 03-L02 W0." → R6-08 (1) and (2): the
+    anchors are re-homed; "lands before 03-L02 W0" means steps 1-7 green plus
+    the receipt.
+23. R4-12 (`:6483-6485`): "**Precondition 5 (C13 v4).** The TASK-551-11
+    split of `tests/unit/workflows/task551AuthorAudit.test.ts` (1,241 lines on
+    2026-09-25) into three files of ≤ 700 lines each lands before W0." and C13
+    v4 (`:6545-6547`): "**TASK-551-11 split (R4-12, R4-16).**
+    `task551AuthorAudit.test.ts` and its split siblings are each ≤ 700 lines,
+    and the TASK-551-11 receipt records the split. Otherwise INITIAL W0 is
+    blocked." → R6-08 (2) (the receipt is `impl-11-reopen-20260925.json`; the
+    caps are the 11 contract's).
+
+**Stands** (non-exhaustive reminders): R3-16's "installs nothing"; R4-07's
+**Newer rejects** (when there is no reset and no invalidation); R4-08 (week);
+R5-04..R5-08 and R5-11 except the quotes above; R5-09's static check and
+(R)-before-(O); R5-12's argv, file, diff and inventory rules; R5-13.
+
+### Security Contract rows (Round 6)
+
+No route, schema, auth, RBAC, CSRF or rate-limit change: endpoint visibility,
+auth model and buckets stay as in Rounds 2-5. **Reset isolation.** A read
+overtaken by a reset or identity transition resolves `{ kind: "reset" }`,
+before or after any await and even after a rejection. It never resolves
+memory, slot or other-audience rows (R6-01, R6-02). Detection is by
+discriminant, so view mapping cannot hide a reset (R6-04). **Invalidation.**
+A superseded completion installs nothing, and a pre-invalidation in-flight
+request is never joined (R6-01). **Scope-bound filters.** A rekey never
+sends another scope's `fieldFilter.*`/`systemFilter.*` (R6-03), so a screen's
+filter values never reach another screen's request. **Users.** The list
+stays memory-only, and `clearAdminUsersCache` touches no Storage (R3-18,
+R6-01). **Evidence.** The R6-05 git-state receipts hold commit ids, paths and
+digests only.
+
+### Handoffs (Round 6)
+
+- **TASK-551-10-L02 (owed mirror).** The `ADMIN_CACHE`/`ADMIN_CACHE_MAP`
+  delta: the two-counter model per paged client (`invalidationEpoch` vs
+  `resetGeneration`), the lazy family subscriptions (R6-01 table), the new
+  export `clearAdminUsersCache` (memory-only), `clearFormsCache` covering form
+  submissions, and the `readPostsListPage`/`listPostsCached` split. 10-L02
+  records these in its next append-only section (another writer's file).
+- **TASK-554.** Unchanged. `listPostsCached` keeps every TASK-554 pin
+  byte-for-byte (R6-01 posts bullet).
+- **TASK-551-11.** Nothing owed. R6-08 is the 03-L02 side of **V3-5**,
+  **V4-6**, **V4-7** and **V6-5**.
+- **TASK-551-01-L01.** Unchanged. Round 6 adds no server statement (the
+  clients and hook are browser-side; R6-07 is test-only).
+- **Orchestrator.** R6-05 receipts. The R6-06 stop rule. INITIAL W0 waits for
+  R6-08 (2).
+
+### Envelope record (Round 6)
+
+No edit: the fence (`:1441-2172`) stays byte-identical, with allowlist 321,
+forbidden 52, commands 34, `initial` 30 and `final` 11. Every path this round
+names was checked against the fence on 2026-09-26. These are allowlisted:
+`core/admin/services/{pagesClient,postsClient,entriesClient,entriesClientPagination,formsClient,mediaClient,bookingClient,adminUsersClient,detailPagesClient,adminListEnvelope}.ts`,
+`core/admin/ui/shared/useBoundedAdminList.ts`,
+`core/admin/ui/shared/BoundedListFooter.tsx`, the views
+(`PageListPage.tsx`, `PostsListPage.tsx`, `EntryList.tsx`,
+`CustomScreenEntriesPage.tsx`, `useCustomScreenEntryList.ts`,
+`FormListPage.tsx`, `FormSubmissionsPage.tsx`, `MediaLibraryPage.tsx`,
+`MediaPicker.tsx`, `BookingPage.tsx`, `UsersRolesPage.tsx`,
+`useUsersRolesCollections.ts`),
+`tests/vitest/admin/task551PaginatedClients.test.ts`,
+`tests/vitest/admin/task551PaginatedListViews.test.tsx` (the mandate's
+`.test.ts` spelling is corrected; the file is `.tsx`),
+`tests/vitest/admin/{bookingClient,adminUsersClient,postsClient}.test.ts` and
+`tests/integration/server/task551AdminWriteConcurrency.test.ts`. These are
+forbidden and consumed only: `core/admin/services/cachePolicy.ts`,
+`core/admin/utils/cacheBus.ts` and `core/admin/utils/adminCacheAuthority.ts`.
+No new key or edit is needed there. The R6-05 receipts are orchestrator
+evidence under the existing family gloss. One JSON fence.
+
+## Dated Contract Corrections — 2026-09-26 (Round 7: posts epoch isolation, self-emitted events, layout effect, bounds per mode, baselines; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round7-dispositions.md`
+(R7-01..R7-13 over the Round-6 auditors S1-A, S1-B, S2-A, S2-B and S3-A;
+HEAD `420bb24ad9973ded1a5cdc93561c8bf502a09238`, TASK-551-11 re-open step 4
+in flight, other leaves' files dirty). This section applies R7-01..R7-13.
+**This section wins** over every earlier part where they differ. No in-place
+edit: the fence (`:1441-2172`), "Validation Commands" and all earlier text
+stay byte-identical, and there is no envelope delta. The section is appended
+after `contract :7736`, so no citation shifts. Anchors were re-read on
+2026-09-26 at `420bb24a`. Every sentence this round supersedes is quoted
+verbatim under "Superseded sentences (Round 7)" (text authoritative; a hard
+line wrap inside a quote is rendered as one space). Everything not quoted
+there stays binding.
+
+### R7-01 — Posts: a list-only invalidation epoch; TASK-554 state isolated (HIGH; S2-A, S2-B)
+
+**Finding (verified).** `postsClient.ts:293` is the only advancer of
+`postsCacheAuthorityEpoch`, and every post mutation broadcasts
+`cacheKeys.postsList` to local handlers inside its settle
+(`publishPostMutationCacheEvents`, `:333-336`; also `:494`, `:712`).
+`cacheBus.ts:151-153` delivers local handlers synchronously. Under the R6-01
+posts row, a posts subscription that ran the posts `invalidate` through the
+authority epoch or `clearPostsCache` would wipe the slot that
+`upsertCachedPost` had just patched and would turn an in-flight
+`listPostsCached` into `getCachedPosts() ?? empty`, breaking
+`tests/vitest/admin/postsClientCacheAuthority.test.ts:725-750` and
+`:769-781`.
+
+**Rule.** The posts lazy subscription NEVER calls `clearPostsCache` and NEVER
+advances `postsCacheAuthorityEpoch`. Posts hook pages (every
+`readPostsListPage` read, first page and cursor pages) get their own
+list-only `postsInvalidationEpoch`. Two things advance it: the
+subscription's `invalidatePostsList` and `clearPostsCache`. It is never read
+by a TASK-554 path. The TASK-554 ticket/epoch paths, `cachedPostsPromises`,
+the default slot `postsListCache`, the detail/tombstone/publication maps and
+the body of `listPostsCached` (C9 v2 `:4027-4048` with the R5-10 token
+check) are unchanged. `listPostsCached` is no longer a projection of
+`readPostsListPage`. The direction is inverted: `readPostsListPage` calls
+`listPostsCached(filters, { force: true })` for its first-page network read
+and classifies the result.
+
+```ts
+// core/admin/services/postsClient.ts (R7-01; supersedes the R6-01 posts row and posts bullet quoted below)
+let postsInvalidationEpoch = 1;                                   // list-only; advanced ONLY by invalidatePostsList
+const postPageCache = new Map<string, CachedAdminListPage<PostListItem, PostListSummary, PostListFacets>>(); // C9 v2 map
+const postPagePromises = new Map<string, Promise<PostListRead>>(); // readPostsListPage dedupe; never cachedPostsPromises
+const postPageGenerations = new Map<string, number>();             // per-key request generation (+1 per network request)
+const postPageLatest = new Map<string, Promise<PostListRead>>();   // latest request per key, set with the +1
+const postFirstPageEpochs = new Map<string, number>();             // first-page key -> postsInvalidationEpoch of its last `page`
+let postsSubscription: (() => void) | null = null;
+const postsSelfEmit = createAdminListSelfEmitGuard(() => { postPagePromises.clear(); }); // R7-02
+function invalidatePostsList(): void {                             // THE posts invalidate body
+  postsInvalidationEpoch += 1; postPagePromises.clear();           // memory stays (stale); slot, authority epoch, TASK-554 maps untouched
+}
+function ensurePostsListSubscription(): void {                     // lazy on the first readPostsListPage; idempotent
+  postsSubscription ??= subscribeCacheEvents((event, origin) => {
+    if (origin === "local" && postsSelfEmit.isEmitting()) return;  // R7-02: the client's own emission
+    if (event.key === cacheKeys.postsList) invalidatePostsList();  // never clearPostsCache, never postsCacheAuthorityEpoch
+  });
+}
+export const clearPostsCache = () => {                             // name and signature unchanged
+  /* HEAD body postsClient.ts:292-306, unchanged and first (advances postsCacheAuthorityEpoch) */
+  /* C9 v2 addition (contract :4051): cachedPostsPromises.clear(); postPageCache.clear(); — CLEARED, not stale */
+  invalidatePostsList();                                           // every authority advance also advances the list epoch
+};
+registerAdminModuleCacheReset(() => {                              // THE posts reset body (R5-10 `:123` rule, extended)
+  clearPostsCache();
+  postPageGenerations.clear(); postPageLatest.clear(); postFirstPageEpochs.clear(); // postPagePromises: cleared above
+  postsSubscription?.(); postsSubscription = null;                 // lazily re-subscribed by the next readPostsListPage
+});
+export function readPostsListPage(filters: PostListFilters = DEFAULT_POST_LIST_FILTERS, cursor: string | null = null,
+  options: { force?: boolean } = {}): Promise<PostListRead> {
+  ensurePostsListSubscription();
+  const key = buildAdminListCacheKey(cacheKeys.postsList, "page", filters, cursor);
+  if (!options.force) {
+    const hit = cursor === null
+      ? (postFirstPageEpochs.get(key) === postsInvalidationEpoch ? getCachedPosts(filters) : null) // TASK-554 read
+      : readVerifiedAdminListPage(postPageCache, key, filters, postsInvalidationEpoch);           // stale entry = miss
+    if (hit) return Promise.resolve({ kind: "page", page: hit });
+    const inFlight = postPagePromises.get(key); if (inFlight) return inFlight;
+  }
+  const token = captureAdminCacheInstallationToken();              // before any await
+  const epoch = postsInvalidationEpoch; const mutation = postsSelfEmit.ownMutationEpoch();
+  const keyGeneration = (postPageGenerations.get(key) ?? 0) + 1; postPageGenerations.set(key, keyGeneration);
+  const isReset = () => !isCurrentAdminCacheInstallationToken(token);           // posts (R): the token only (R5-10)
+  const isSuperseded = () => epoch !== postsInvalidationEpoch || mutation !== postsSelfEmit.ownMutationEpoch(); // (I)
+  let request: Promise<PostListRead>;
+  request = (async (): Promise<PostListRead> => {
+    let firstPage: PostListPageRead | null = null; let envelope: PostListEnvelope | null = null;
+    try {
+      if (cursor === null) firstPage = await listPostsCached(filters, { force: true }); // TASK-554 ticket, reconcile, install
+      else envelope = await listPostsPage(filters, cursor);                           // network envelope
+    } catch (error) {
+      if (isReset()) return ADMIN_LIST_RESET;                       // reset wins over error
+      if (isSuperseded()) return ADMIN_LIST_SUPERSEDED;             // superseded wins over error
+      throw error;
+    }
+    if (isReset()) return ADMIN_LIST_RESET;                         // (R)
+    if (isSuperseded()) return ADMIN_LIST_SUPERSEDED;               // (I): also every authority-epoch advance
+    if (postPageGenerations.get(key) !== keyGeneration) {           // (O)
+      const latest = postPageLatest.get(key);
+      if (latest === undefined || latest === request) throw new Error("admin_list_overtake_invariant");
+      return resolveOvertakenPostRead(latest, isReset, isSuperseded); // the R6-01 resolveOvertakenPageRead body
+    }
+    if (firstPage !== null) { postFirstPageEpochs.set(key, epoch); return { kind: "page", page: firstPage }; }
+    if (envelope === null) throw new Error("admin_list_overtake_invariant"); // unreachable: exactly one branch assigned
+    postPageCache.set(key, { canonicalFilters: canonicalJson(filters), envelope, fetchedAtEpoch: epoch });
+    return { kind: "page", page: envelope };
+  })();
+  const settle = () => { if (postPagePromises.get(key) === request) postPagePromises.delete(key); };
+  void request.then(settle, settle);
+  postPagePromises.set(key, request); postPageLatest.set(key, request);
+  return request;
+}
+// getCachedPosts(filters) (C9 v2 :4007-4010) passes "hydrate": slot for the default filters, memory otherwise.
+// Memory entries that the TASK-554 path installs (primePostsFirstPage, non-default filters) carry fetchedAtEpoch: 0.
+// readPostsListPage never reads them through an epoch compare; its first-page freshness is postFirstPageEpochs.
+```
+
+**Why the TASK-554 reading holds.**
+
+- `clearPostsCache` is the only advancer of `postsCacheAuthorityEpoch` (HEAD
+  `:293`), and it always ends in `invalidatePostsList`. So an authority-stale
+  first page always resolves `superseded` in `readPostsListPage`, and `reset`
+  wins before it.
+- `listPostsCached` never reads `postsInvalidationEpoch`,
+  `postFirstPageEpochs` or any `postPage*` map. Its outcomes stay those of
+  R5-10: a non-current token gives `emptyAdminListPage()`; an authority
+  advance gives `getCachedPosts(filters) ?? emptyAdminListPage()`
+  byte-for-byte (`TASK-554_Post_Metadata_Publish_RBAC_Hardening.md:1574-1582`);
+  otherwise the reconciled envelope.
+- A local `postsList` event from the client's own mutation is ignored (R7-02).
+  A foreign or remote event runs `invalidatePostsList` only. Neither path
+  touches the slot, the tickets, `inFlightPostListReads` or the authority
+  epoch. So an in-flight `listPostsCached` resolves exactly as at HEAD.
+
+**State per operation (posts).**
+
+| Operation | `postsCacheAuthorityEpoch` | `postsInvalidationEpoch` | slot `postsListCache` | `postPageCache` | `postPageGenerations` / `postPageLatest` / `postFirstPageEpochs` | subscription |
+|---|---|---|---|---|---|---|
+| foreign/remote `postsList` event | unchanged | +1 | unchanged | kept, stale | kept | kept |
+| own mutation (`postsSelfEmit.emit`) | unchanged | unchanged | TASK-554 patch stays | TASK-554 patch stays | kept; `ownMutationEpoch` +1, `postPagePromises` cleared | kept |
+| `clearPostsCache()` | +1 (first) | +1 | cleared (HEAD body) | CLEARED (not stale) | kept | kept |
+| registered reset | +1 (via `clearPostsCache`) | +1 | cleared | cleared | cleared | unsubscribed |
+
+**Pinned test** (`tests/vitest/admin/task551PaginatedClients.test.ts`,
+posts block): "posts: TASK-554 pins hold with the list subscription
+installed". It first resolves one `readPostsListPage()` with a stubbed
+`fetch`, which installs the subscription. It then replays the scenarios of
+`postsClientCacheAuthority.test.ts:725-750` ("a stale list read initiated by
+a cache event merges a later metadata mutation before cache and return") and
+`:769-781` ("a stale list read merges the forced publish detail instead of
+its older scheduled row") with the same fetch stubs and byte-identical
+assertions. It also asserts that `postsCacheAuthorityEpoch` is unchanged,
+observed through a `listPostsCached` read that is not authority-stale. The
+TASK-554 file `postsClientCacheAuthority.test.ts` is NOT edited. It keeps
+running unmodified in fence commands `w2-client-vitest` and
+`admin-pagination-vitest-1` (it is not changed by this contract; its
+`afterEach` `clearPostsCache()` advances both epochs and does not
+unsubscribe, which is harmless because `invalidatePostsList` touches no
+TASK-554 state). A second row: "posts: clearPostsCache alone keeps the page
+maps and the subscription; the registered reset clears them and
+unsubscribes". Observable: after `clearPostsCache()`, a later overtaking pair
+of cursor reads resolves the older one through the newer result (never
+`admin_list_overtake_invariant`), and a foreign `postsList` event still
+supersedes an in-flight cursor read (the subscription survived). After
+`advanceAdminCacheInstallationAuthority()`, a foreign event before the next
+read supersedes nothing (unsubscribed), and the next `readPostsListPage`
+re-subscribes once.
+
+### R7-02 — A client ignores the list events it emits itself (MEDIUM; S2-A; LOW S2-B)
+
+**Finding (verified).** Mutations patch first and then broadcast their own
+family key (`pagesClient.ts:340-341`, `mergeCachedPageIntoList` then
+`pagesList` update; `mediaClient.ts:194`, `:216`, `:242`, `:260`, `:275`).
+Local delivery is synchronous (`cacheBus.ts:151-153`). Under R6-01 the
+client's own subscription would then clear the slot it had just patched and
+mark the patched memory stale. **Choice (pinned).** The writer uses a
+module-local emitting flag, not the cacheBus operation token. The operation
+token is caller-owned: editor leases pass it through
+(`PostClassicEditorShell.tsx:568`, `useCustomScreenEditorPersistence.ts:481`,
+`customScreensClient.ts:516`). A client cannot substitute its own token
+without breaking those filters, so it passes `options` through unchanged.
+
+```ts
+// core/admin/services/adminListEnvelope.ts (R7-02; consumes core/admin/utils/cacheBus.ts, forbidden, unchanged)
+import { broadcastCacheEvent, type CacheEvent, type CacheEventBroadcastOptions } from "@/utils/cacheBus";
+export type AdminListSelfEmitGuard = Readonly<{
+  emit: (input: Readonly<Pick<CacheEvent, "key" | "action">>, options?: CacheEventBroadcastOptions) => void;
+  isEmitting: () => boolean;         // true only inside the synchronous local delivery of an own emission
+  ownMutationEpoch: () => number;    // +1 per own emission, BEFORE broadcasting; never reset, never zeroed
+}>;
+export function createAdminListSelfEmitGuard(onOwnEmit: () => void): AdminListSelfEmitGuard {
+  let depth = 0; let mutations = 0;
+  return Object.freeze({
+    emit: (input, options = {}) => {
+      mutations += 1; onOwnEmit();                     // fence: in-flight reads resolve superseded; dedupe cleared
+      depth += 1;
+      try { broadcastCacheEvent({ key: input.key, action: input.action }, options); } finally { depth -= 1; }
+    },
+    isEmitting: () => depth > 0,
+    ownMutationEpoch: () => mutations,
+  });
+}
+
+// every paged client (pages shown; the R6-01 template otherwise stands)
+const pagesSelfEmit = createAdminListSelfEmitGuard(() => { pagePromises.clear(); });
+function ensurePagesListSubscription(): void {
+  pagesSubscription ??= subscribeCacheEvents((event, origin) => {
+    if (origin === "local" && pagesSelfEmit.isEmitting()) return; // own emission: patched slot and memory stay
+    if (event.key === cacheKeys.pagesList) invalidatePagesList(); // foreign local or remote: THE invalidate
+  });
+}
+// listPagesPageCached: capture `const mutation = pagesSelfEmit.ownMutationEpoch();` beside `epoch`, and
+//   const isSuperseded = () => epoch !== pagesInvalidationEpoch || mutation !== pagesSelfEmit.ownMutationEpoch();
+// resolveOvertakenPageRead receives that isSuperseded unchanged (R6-01 signature).
+```
+
+**Rules.**
+
+- Every broadcast of a client's OWN family list key (the R6-01/R7-12
+  predicate keys) goes through `<client>SelfEmit.emit(input, options)`, with
+  the caller's `options` passed through unchanged. Detail-key broadcasts
+  (`pageDetail`, `postDetail`, `detailPageDetail`, …) may stay bare
+  `broadcastCacheEvent` calls, because no list predicate matches them.
+  Anchors at HEAD: pages `:323`, `:341`, `:383`, `:397`, `:432`, `:451`,
+  `:473`; posts `:334` (inside `publishPostMutationCacheEvents`), `:494`,
+  `:712`; media `:194`, `:216`, `:242`, `:260`, `:275`; detail pages `:206`,
+  `:283`, `:308`, `:335` and their per-content-type list keys (`:210-213`,
+  `:284-287`, `:309-312`, `:339-342`). For entries, forms and booking it is
+  every `broadcastCacheEvent` whose `key` is one of that client's predicate
+  keys. The symbol is authoritative where a line drifts.
+- **Precondition of the ignore.** Each own emission is preceded, in the same
+  synchronous mutation path, by the client's own local effect: a patch
+  (merge, upsert, remove) or `clear<Family>Cache()`. HEAD already does this
+  (for example `createPage` runs `clearPagesCache()` before its `invalidate`
+  broadcast, `pagesClient.ts:322-323`, and `deletePage` runs
+  `removeCachedPage(id)` before it, `:472-473`). A site with neither calls
+  `clear<Family>Cache()` before `emit`.
+- **Fence.** `emit` advances `ownMutationEpoch` and runs `onOwnEmit` (clears
+  the client's page dedupe map) BEFORE broadcasting. A read in flight across
+  the mutation therefore resolves `{ kind: "superseded" }` and installs
+  nothing, so it can never overwrite the patch with pre-mutation rows.
+  Memory freshness still compares only `invalidationEpoch`, so the patched
+  memory entries and the patched slot stay fresh. This is a writer
+  refinement that keeps "the patched slot and memory stay" true under
+  concurrency. It makes the R6-01 same-epoch argument for (I)-before-(O)
+  cover both counters, because both only grow.
+- **Scope of the ignore.** `isEmitting()` is true only during the synchronous
+  local handler loop of the client's own `emit`. Remote echoes of the client's
+  own events never arrive, because cacheBus drops `sourceId === cacheBusId`
+  (`cacheBus.ts` `deliverRemote`). A foreign broadcast of the same key that
+  another module issues synchronously from inside a handler of that loop is
+  also ignored. That is unreachable at HEAD (only `postsClient` emits
+  `postsList`, only `mediaFoldersClient.ts:281` emits `mediaList` from
+  outside `mediaClient`, and neither does so from a handler). If it is ever
+  reached, the view hook still forces its read (R5-07).
+- The hook side is unchanged: a view subscription still dispatches
+  `revalidate()` for every event, own or foreign, so every rendered list
+  forces one read after its own mutation.
+
+**Affected existing pins (all stay green unmodified).** Each asserts the
+patched cache after the client's own mutation. The ignore keeps exactly that
+reading. Each broadcasts the same key/action sequence as at HEAD, so every
+event-count pin stays intact.
+
+- `tests/vitest/admin/mediaClient.test.ts:467` "media mutations patch the
+  cached list and broadcast update events" (`:498-516`: `getCachedMedia()`
+  after update, recover, replace, upload and delete; 5 `mediaList` events).
+- `tests/vitest/admin/pagesClient.test.ts:293` (`:329`), `:701` (`:731`) and
+  `:751` (`:823-841`), the page-merge and invalidate-on-create pins.
+- `tests/vitest/admin/entriesClientMutationReconciliation.test.ts:73-89` and
+  `tests/vitest/admin/entriesClient.test.ts:499-507`.
+- `tests/vitest/admin/detailPagesClient.test.ts:274-282`.
+- `tests/vitest/admin/formsClient.test.ts` and
+  `tests/vitest/admin/bookingClient.test.ts`: no `getCached*` pin at HEAD
+  (grep count 0). Their mutation and event-order tests stay green.
+- `tests/vitest/admin/postsClient.test.ts` and
+  `postsClientCacheAuthority.test.ts` (R7-01).
+
+These suites run in fence commands `w2-client-vitest` and
+`admin-pagination-vitest-1`. None is edited for R7-02.
+
+### R7-03 — One layout effect writes every latest-render input (MEDIUM; S2-A, S2-B; security row)
+
+The R5 layout effect (`:6782`) re-ran only when `o.fetchPage` changed
+identity. A view whose `fetchPage` is stable across scopes (a client method
+passed directly, as R6-04 allows) would keep `listKeyRef` at the old scope,
+and `rekey` would dispatch the old scope's `initialFilters`. **Rule:** one
+layout effect is the only writer of the three latest-render refs, with all
+three inputs as deps.
+
+```ts
+// core/admin/ui/shared/useBoundedAdminList.ts (R7-03; replaces R5 :6782-6784 quoted below; :6781 `io` stands)
+const identityItems = <T,>(items: readonly T[]): readonly T[] => items; // module level; used when mapItems is omitted
+// inside useBoundedAdminList (after the useReducer lazy initializer of R6-03/R6-04):
+const io = useRef(o.fetchPage);
+const mapItemsRef = useRef(o.mapItems);
+const listKeyRef = useRef(o.listKey);
+useLayoutEffect(() => { io.current = o.fetchPage; mapItemsRef.current = o.mapItems;
+  listKeyRef.current = o.listKey; }, [o.fetchPage, o.mapItems, o.listKey]); // the ONLY writer of the three refs
+const fetchKey = o.listKey.fetchKey;
+const keyRef = useRef(o.listKey.fetchKey); const latestTokenRef = useRef(0); // effects/callbacks only
+const pending = state.pending;
+// data effect (deps stay [fetchKey, pending], R5-11): runRequest(io.current, mapItemsRef.current ?? identityItems,
+//   pending, isLatest); the key-change branch reads listKeyRef.current.initialFilters inside the microtask (R6-03)
+```
+
+- A view may build `listKey` inline, so the object is new on every render.
+  The layout effect then runs on every render. It only writes refs: it never
+  dispatches and never fetches. H3 stands, with zero calls for a new object
+  with the same `fetchKey` and a new closure.
+- `identityItems` is used only when `mapItems` is omitted. The R6-04 overload
+  makes `I = R` in that case, so the fallback is sound (one function-level
+  type assertion; no data cast).
+- Layout effects run before passive effects in the same commit. So the
+  microtask of the key-change branch always reads the `listKey` of the render
+  that changed `fetchKey`.
+
+**Test** (`task551PaginatedListViews.test.tsx`), row **H19b** "stable
+fetchPage across screens". A module-level `fetchPage` spy keeps one identity
+across renders, with the same `mapItems`. Two custom screens S1 and S2 are
+over ONE content type: `listKey` S1 =
+`boundedListKey("custom-screen-entries", { screenId: "s1" }, s1Initial)`, and
+S2 likewise with `s2Initial`. On S1, `reset(next)` sets
+`fieldFilter.color = "red"`. The test then re-renders with S2's `listKey` and
+the same `fetchPage`. Every `fetchPage` call after the rekey receives filters
+deep-equal to `s2Initial`, with no `fieldFilter.*` key of S1. The reverse
+switch (S2 → S1) receives exactly `s1Initial`.
+
+### R7-04 — Superseded-quote completion (MEDIUM; S2-A, S3-A)
+
+Every sentence named by the disposition, plus every other sentence this
+round changes, is quoted verbatim in "Superseded sentences (Round 7)" below:
+
+- `:6724` and `:6728`, which go to R6-03 `stale`/`slotKey`;
+- `:6754`, which goes to the R6-03 `loaded` row ("other entries are kept");
+- `:6766` and `:6769-6773`, which go to R6-04 `runRequest` over the
+  discriminated type;
+- `:6782-6784`, which go to R7-03;
+- `:6816-6818`, which go to the per-instance `slotKey` map;
+- `:5256`, which goes to `CachedAdminListPage` with `fetchedAtEpoch`;
+- `:5303` and the 3-argument `readVerifiedAdminListPage` calls at `:2715`,
+  `:3954`, `:4010` and `:5315`, which go to the 4-argument form;
+- `:2760-2762` F-40, which goes to R7-06;
+- `:6841` H9, which goes to R7-07;
+- `:6937-6938` and `:6946`, which go to R7-08.
+
+**4-argument rule.** `readVerifiedAdminListPage(cache, key, filters, epoch)`
+(R6-01 signature, `epoch: number | "hydrate"`, no default) is the only form.
+Every `getCached*` accessor and every hook `hydrate` passes `"hydrate"`.
+Every network-path hit check passes the client's current
+`invalidationEpoch`. A 3-argument call is a type error, so `tsc` rejects it
+and no extra test is needed.
+
+### R7-05 — Test applicability matrix for `task551PaginatedClients.test.ts` (MEDIUM; S2-A)
+
+This replaces "`test.each` over the seven client rows above, plus detail
+pages when present" (quoted below). Each cell is one case, or "n/a
+(reason)". Booking is one case per family (reservations, resources,
+services, blackouts), because each family has its own slot and key under
+the one booking epoch. Entries is one case per family (type,
+custom-screen, all). "clear" means the column's public
+`clear<Family>Cache` from the R6-01/R7-01/R7-12 table. "event" means a
+foreign `broadcastCacheEvent` of a predicate key issued by the test itself,
+not through the client's guard. "advance" means
+`advanceAdminCacheInstallationAuthority()`. Each outcome is asserted through
+public reads only: the resolved read, `getCached*` ("hydrate"), the stubbed
+`fetch` call log and `Storage` spies.
+
+| # | Test | Pages | Posts (`readPostsListPage`) | Entries ×3 | Forms (+ submissions) | Media | Booking ×4 | Users | Detail pages |
+|---|---|---|---|---|---|---|---|---|---|
+| T1 | clear during the await: resolves `superseded`, installs nothing | ✓ | ✓ for both `clearPostsCache()` and event; with event, `getCachedPosts()` before = after | ✓ each of `clearEntriesCache(slug)`, `clearAllEntriesCache()` | ✓ forms and submissions | ✓ | ✓ | ✓ `clearAdminUsersCache()` | ✓ `clearDetailPagesCache()` and `clearDetailPageListCache(id)` |
+| T2 | advance during the await: resolves `reset` | ✓ | ✓ (token, R5-10) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| T3 | clear then advance in one await: `reset` wins | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| T4 | after clear/event, a non-forced read of a stale memory entry fetches, and a `"hydrate"` read still returns it | ✓ | event: cursor entry stale (fetches); first page fetches (`postFirstPageEpochs` mismatch) while `getCachedPosts(f)` still returns it. `clearPostsCache()`: memory CLEARED, not stale (`getCachedPosts(nonDefault)` is `null`) | ✓ | ✓ | ✓ | ✓ | stale entry fetches ✓; hydrate n/a (memory-only, no `getCached*` export, R3-18) | ✓ |
+| T5 | clear/event clears the in-flight dedupe and the persisted slot | ✓ | event: `postPagePromises` cleared, slot UNCHANGED (TASK-554-owned); `clearPostsCache()`: slot cleared by the HEAD body | ✓ every family slot | ✓ every slot the client holds | ✓ | ✓ each family slot | dedupe ✓; slot n/a (no slot, R3-18) | ✓ both key shapes |
+| T6 | overtake observables: A, B for one key, B resolves, A resolves through B's result; A started before a clear and B after: A `superseded`, never B's rows installed by A; `admin_list_overtake_invariant` never thrown | ✓ | ✓ first page and cursor pages | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| T7 | lazy subscription: client-first gives one forced read; view-first gives two, the first `superseded` (R7-12 harness) | ✓ `pagesList` | ✓ `postsList`; `listPostsCached` outcome unchanged | ✓ `entriesList(slug)` and `entriesAllList` | ✓ `formsList` | ✓ `mediaList`, including a `mediaFoldersClient`-style foreign emission | ✓ each of the four list keys; the week key never invalidates a list | n/a (no users key in `cachePolicy.ts`, no subscription, R3-18) | ✓ `detailPagesList` and `detailPagesListByContentType(id)` |
+| T8 | own emission (R7-02): the patched slot and memory stay; an in-flight read started before the mutation resolves `superseded` and does not overwrite the patch; a later foreign event of the same key does invalidate | ✓ `updatePage` | ✓ `publishPost`; the slot keeps the published row | ✓ | ✓ | ✓ `updateMedia` | ✓ | n/a (users broadcast no list key) | ✓ |
+| T9 | static: every broadcast of an own predicate key goes through `<client>SelfEmit.emit` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | n/a (no list key) | ✓ |
+| T10 | the reset unsubscribes; the next read re-subscribes once (observable: an event between reset and read supersedes nothing) | ✓ | ✓ (R7-01 second row); `clearPostsCache()` alone keeps the subscription | ✓ | ✓ | ✓ | ✓ | n/a (no subscription) | ✓ |
+| T11 | R6-02 p3/p4/p5 rejection parity (reset > superseded > error; plain rejection installs nothing) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| T12 | TASK-554 reading: after a bare `clearPostsCache()`, `listPostsCached` resolves `getCachedPosts() ?? emptyAdminListPage()` while `readPostsListPage` resolves `superseded` | n/a (posts only) | ✓ | n/a | n/a | n/a | n/a | n/a | n/a |
+| T13 | TASK-554 pins with the subscription installed (R7-01) | n/a (posts only) | ✓ | n/a | n/a | n/a | n/a | n/a | n/a |
+| T14 | folder rename then facet refresh (R7-06) | n/a (media only) | n/a | n/a | n/a | ✓ | n/a | n/a | n/a |
+| T15 | zero `Storage` calls across list, forced list, every mutation, clear and reset | n/a (persists by contract) | n/a | n/a | n/a | n/a | n/a | ✓ | n/a |
+
+The R6-01 test titles map as follows: "installs nothing" → T1; "resolves
+reset" → T2; "reset wins" → T3; "stale" → T4; "dedupe and slot" → T5;
+"pageGenerations and pageLatest survive" → T6 (restated as observables,
+R7-12); "family event" → T7; "unsubscribes" → T10; "posts: listPostsCached"
+→ T12; "users: … no Storage" → T15. The R6-02 rows are T11. The R6-04 "no
+identity sentinel remains" static row stands outside the matrix.
+
+### R7-06 — F-40 is subsumed by the single media subscription (MEDIUM; S2-A; LOW S2-B)
+
+C9 F-40 (`:2760-2762`, quoted below) is superseded. `mediaClient.ts` holds
+exactly ONE lazy `subscribeCacheEvents` subscription, the R6-01 media row
+with predicate `event.key === cacheKeys.mediaList`. A folder event from
+`mediaFoldersClient.ts:281` (forbidden, consumed only) is a foreign local
+event, so it runs `invalidateMediaList`. That is the only media
+`invalidate`. It advances `mediaInvalidationEpoch` and clears the media
+dedupe and slot. It thereby makes stale EVERY media memory entry for any
+non-forced read, whether rows, `summary` or `facets`. It also covers any
+summary/facet family the client holds, because one `invalidationEpoch`
+covers all of a client's paged families (R6-01). This is the F-40 "clears
+its summary/facet families on any event" under the two-counter model: stale
+for the network path, readable only through `"hydrate"`. No second media
+subscription and no separate facet clear exist. `mediaGeneration` is not
+touched (an event is not a reset).
+
+**Test** (matrix T14, "media: folder rename then facet refresh"):
+
+1. A media page with facets F1 is installed. A forced read A for the same
+   key is in flight.
+2. The test broadcasts `{ key: cacheKeys.mediaList, action: "update" }` as
+   `mediaFoldersClient` does (foreign; `renameMediaFolder` itself when the
+   test stubs its fetch).
+3. A resolves `superseded` and installs nothing.
+4. The next non-forced `listMediaPageCached` for that key fetches, because
+   the entry is stale, and resolves the fresh facets F2 (renamed folder
+   label and count).
+5. `getCachedMedia*` in `"hydrate"` returned F1 until the fetch landed.
+6. A registered-reset probe shows that `mediaGeneration` did not move: a
+   read started before the event resolves `superseded`, never `reset`.
+7. Static: `mediaClient.ts` contains exactly one `subscribeCacheEvents(`
+   call.
+
+### R7-07 — Fetch bound per mode; an append `superseded` queues one chain (MEDIUM; S2-B)
+
+**Bound.**
+
+- **Paged mode**, and every non-merge page request in either mode (initial,
+  `reset(next)`, recovery): at most 2 forced reads per event. A `superseded`
+  page is re-run once, forced, under the new epoch (R6-01, H15). Client-first
+  order gives one read.
+- **Append mode, chain or `loadMore` merge page:** a `superseded` outcome
+  never restarts anything immediately. The chain ends at that page: the
+  already-fetched pages of that chain are discarded, and the hook's current
+  rows, summary, facets and stack are kept. The outcome sets
+  `revalidateQueued`, and when the pending request settles, exactly ONE
+  forced chain from `null` follows. For a chain, it runs at depth
+  `d = min(stack.length, 20)`. For a `loadMore` page, it runs at
+  `min(stack.length + 1, 20)`, so the requested page is folded into the
+  chain.
+- Every view `revalidate()` that arrives while the request is pending
+  coalesces into the same flag, and `issue` subsumes it. So N invalidations
+  during one depth-d chain cost at most `d` fetches (the chain stops at its
+  first superseded page and fetches nothing after it; R6-04 `runRequest`)
+  plus `d` (the one re-run): at most `2 × d`, independent of N.
+- Invalidations that land during the re-run start one more such cycle. Each
+  cycle needs a fresh invalidation during its own await, so there is no
+  retry counter.
+
+```ts
+// core/admin/ui/shared/useBoundedAdminList.ts (R7-07; the `loaded` superseded rows; MAX_APPEND_DEPTH = 20)
+const onSuperseded = <I, S, F, Fl>(s: State<I, S, F, Fl>, p: Pending<Fl>): State<I, S, F, Fl> => {
+  const next: State<I, S, F, Fl> = { ...s, familyEpoch: s.familyEpoch + 1, pending: null }; // rows/summary/facets/stack/status kept
+  if (p.request.kind === "chain") return drain({ ...next, revalidateQueued: true });        // ONE chain, depth min(stack, 20)
+  if (p.request.merge)                                                                       // append loadMore page
+    return issue(next, { kind: "chain", depth: Math.min(s.cursorStack.length + 1, MAX_APPEND_DEPTH) }, "loadingMore");
+  return issue(next, { ...p.request, force: true }, s.status);                              // paged / non-merge page
+};
+// issue(...) reads the NEW familyEpoch, so pending.epoch === familyEpoch after the re-run is issued (R7-12),
+// and issue() clears revalidateQueued, which subsumes every queued view revalidate.
+```
+
+| Action | Guard | Next state (supersedes the R6-01 "Hook rules" re-run sentence quoted below) |
+|---|---|---|
+| `loaded` superseded, page request, `merge = false` (paged or append) | token = pending | `onSuperseded` → one forced re-run of `pending.request` (`recovery` kept); status unchanged; no reset UI |
+| `loaded` superseded, `chain` (append) | token = pending | `onSuperseded` → `pending null`, `revalidateQueued = true`, then `drain` issues ONE chain, depth `min(stack.length, 20)`, every fetch forced |
+| `loaded` superseded, page request, `merge = true` (append `loadMore`) | token = pending | `onSuperseded` → the page is neither re-run nor appended; ONE chain, depth `min(stack.length + 1, 20)`, status `loadingMore`; the chain's `loaded` row replaces the rows atomically (R6-03 row) |
+
+**Tests** (`task551PaginatedListViews.test.tsx`):
+
+| # | Transition | Assertion |
+|---|---|---|
+| H9 (restated) | chain burst, stub never `superseded` | depth 3, a `fetchPage` stub that never resolves `superseded`; one event starts the chain and N more arrive during it: 3 + 3 forced calls for N = 1 and N = 10 (at most 2 × depth, independent of N) |
+| H16 (rewritten) | `superseded` during an append `loadMore` | with or without a queued event: no re-run of the page; exactly one forced chain from `null` with depth `stack.length + 1`; the rows are replaced once with the chain's pages (old pages + the requested page); status never `reset`, no hint |
+| H23 | storm with real client invalidations | `append` mode over the real `listPagesPageCached` (stubbed `fetch` with deferred responses), 3 pages rendered. One foreign `pagesList` event starts a depth-3 chain (the test's subscriber calls `revalidate()` per event). During page 2's await the test fires N more foreign events (N = 1 and N = 10), each also calling `revalidate()`. GET `/pages…` count = 2 (chain up to the superseded page 2) + 3 (the one re-run) = 5 for both N, which is ≤ 2 × 3. Exactly one atomic replace. `status` never `reset`, no hint. `lastRequest` is the chain |
+
+H15 (paged) stands. H22's `superseded` variant now gives the H16
+(rewritten) outcome.
+
+### R7-08 — Root-tsc baselines leave `audit-evidence/`; TASK-551-11 obligations (MEDIUM; S3-A)
+
+**Paths.** `audit-evidence/` is the TASK-551-11 closed canonical root
+(`_docs/_workflows/lib/task-551-evidence-contract.mjs:17`
+`TASK551_CANONICAL_EVIDENCE_ROOT`). It admits only the eleven manifest
+destinations, and any foreign direct entry blocks recovery (11 contract
+`:512`, V7-1 `:1535`). The INITIAL and FINAL root-tsc baselines therefore
+move to:
+
+- INITIAL: `_docs/_workflows/_smoke/task-551/03-l02-baselines/03-l02-root-tsc-baseline.txt`
+- FINAL: `_docs/_workflows/_smoke/task-551/03-l02-baselines/03-l02-root-tsc-baseline-final.txt`
+
+Every other R5-12/R5-13/R6-05 rule is unchanged: tracked, orchestrator-written
+only, the argv, the key, the multiset diff, the sha256 in the W0/FINAL
+receipt, and the R6-05 git-state receipt (whose `baselinePath` holds the new
+path). No baseline has been captured yet (INITIAL W0 is blocked, R6-08 (2)),
+so nothing moves on disk.
+
+**Inventory (R5-12 update; owner TASK-551-03-L02; written at W0).** The two
+`FAMILY_RECEIPT_EXACT_PATHS` entries that R5-12 appended become:
+
+```ts
+// tests/unit/runtime-smoke/smoke-evidence-inventory.test.ts (W0; replaces the two R5-12 audit-evidence entries)
+  "_docs/_workflows/_smoke/task-551/03-l02-baselines/03-l02-root-tsc-baseline.txt",       // owner: TASK-551-03-L02
+  "_docs/_workflows/_smoke/task-551/03-l02-baselines/03-l02-root-tsc-baseline-final.txt", // owner: TASK-551-03-L02
+```
+
+No R4-10 gloss matches `03-l02-baselines/`. The `task-551-admin-lists
+sessions` regex needs the `03-l02/` directory followed by a session
+directory and `.png`. So the exact paths are the only classification, and
+the R4-10 "Every exact path matches" test covers both. The FINAL path is
+declared ahead of capture, as before.
+
+**TASK-551-11 obligations** (these replace the Round-6 Handoffs row
+"TASK-551-11. Nothing owed.", quoted below):
+
+- (a) **Relocation (11 V7-1 `:1539`).** The orchestrator's untracked
+  `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-faza0-dispositions.md`
+  and `…/03-l02-round{2,3,4,5,6,7}-dispositions.md` are foreign direct
+  entries under the canonical root. They must be relocated out of
+  `audit-evidence/` before TASK-551-10-L02 closure. Owner: orchestrator
+  follow-up, cited from 03-L02. 03-L02 edits no evidence file. When they
+  move, the citations of Rounds 2-7 in this file (their `Source:` lines,
+  for example `:6612`, `:6988` and this section's own) are re-pointed by
+  ONE append-only "relocation map" section in this file (old path → new
+  path), never by an in-place edit. If the destination is tracked, it also
+  needs an R4-10 gloss or exact path. That is an edit to
+  `smoke-evidence-inventory.test.ts` (03-L02 W0-owned), so the relocation
+  lands before W0 or its entry joins the W0 edit.
+- (b) **V11-2 `./` argv.** Adopted for every Round-6/7 gate that names a
+  `tests/unit/workflows/*.test.ts` path. See "Gate argv (Round 7)" below.
+
+### R7-09 — RUN shape for the write-concurrency suite (MEDIUM; S1-B)
+
+The C-section idiom "copy … a `randomUUID()` RUN marker (`:118`)" (`:2944`,
+quoted below) cites
+`tests/integration/server/task551RevisionConcurrency.test.ts:118`,
+``const RUN = `task551-06l02-concurrency-${randomUUID()}`;``. That RUN has a
+non-hex prefix, so `Number.parseInt(run.slice(0, 8), 16)` is `NaN`. For
+`tests/integration/server/task551AdminWriteConcurrency.test.ts` ONLY, the
+RUN shape is pinned as below. The other new suites keep the `:118` idiom.
+
+```ts
+// tests/integration/server/task551AdminWriteConcurrency.test.ts (R7-09; test-local, not exported)
+const RUN = randomUUID();                                      // bare lowercase UUID (node:crypto)
+const MARKER = `t551-03l02-write-${RUN}`;                      // every fixture slug, email and name; afterAll deletes MARKER rows only
+const BOOKING_LEG_RUN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+function bookingLegWindows(run: string) {
+  if (!BOOKING_LEG_RUN_PATTERN.test(run)) throw new Error("booking_leg_run_invalid"); // fail closed, never NaN windows
+  /* the R6-07 body, unchanged: k, block, blackout and the five frozen windows */
+}
+```
+
+**DB-free vectors** (added to the R6-07 test "booking leg windows are
+pairwise disjoint and RUN-derived"): `bookingLegWindows("task551-x")`
+throws `booking_leg_run_invalid`, and so does
+`bookingLegWindows(\`task551-06l02-concurrency-${randomUUID()}\`)`. The
+bare-UUID vectors of R6-07 still pass.
+
+### R7-10 — Booking-window wording (LOW; S1-A, S1-B)
+
+- **Citations.** R4-01 superseded R3-03 in full (`:5940`). The "What stands"
+  list belongs to R4-01 (`:5959-5962`), as extended by R5-02 (`:6639-6649`).
+  So R6-07 "This refines R5-02 and R3-03's "What stands" legs." now reads
+  "This refines R5-02 and R4-01's "What stands" legs (`:5959-5962`)." The
+  blackout bullet's "(R3-03 stands)" now reads "(R5-02 stands)". The helper
+  comment `// year 2300 (R3-03, R5-02)` now reads `// year 2300 (R4-01,
+  R5-02)`. Nothing of R3-03 is revived: no `40P01` retry and no
+  `withReservationExclusion`.
+- **Heading.** R6-07 is read as "Five pairwise-disjoint booking windows
+  (four + the R4-01 lock-wait window)".
+- **Reactivation legs.** Leg (a) uses
+  `[reactivation.from, reactivation.from + 1 h)`. Leg (b) uses
+  `[reactivation.from + 2 h, reactivation.from + 3 h)`. Both lie inside
+  `reactivation` (`[block + 170 h, block + 174 h)`).
+- **Seed client.** "one multi-row INSERT on the owner DB" now reads "one
+  multi-row INSERT through the suite's `db` client (`<db-env>`
+  `DATABASE_URL`)".
+- **Global-blackout precondition.** Before the blackout leg creates its own
+  reservation, one bounded read runs:
+  `db.select({ id: bookingBlackouts.id }).from(bookingBlackouts).where(and(isNull(bookingBlackouts.resourceId), lt(bookingBlackouts.startsAt, new Date(w.blackout.to)), gt(bookingBlackouts.endsAt, new Date(w.blackout.from)))).limit(1)`.
+  It must return zero rows. Otherwise the leg fails with the explicit
+  message `booking_leg_blackout_window_occupied: a global blackout overlaps
+  the RUN blackout window` (for example one leaked by a killed earlier run).
+  It never deletes a row it did not create.
+- **DB-free test addition.** "every leg timestamp lies inside its declared
+  window". It checks all 501 week-cap slots in `weekCap`, the race slot in
+  `race`, legs (a) and (b) in `reactivation`, the lock-wait reservations in
+  `lockWait` and the blackout leg's reservation in `blackout`, each as
+  `from <= start && end <= to`.
+
+### R7-11 — R6-08 state refreshed (LOW; S3-A)
+
+The R6-08 (1) table and the (2) state line are refreshed as of `420bb24a`
+(the symbol stays authoritative wherever a line drifts):
+
+| C17 v4 anchor (quoted) | Today (step 4 in flight, sha_3 `420bb24a`) | Final home |
+|---|---|---|
+| `task551WorkflowContracts.test.ts:121-125` `expectedL11SidecarTests` | `tests/unit/workflows/task551WorkflowContracts.test.ts:126-131` (4 entries at `420bb24a`; the uncommitted step-4 tree extends the list) | `tests/unit/workflows/task551WorkflowContractsFixtures.ts`, step 5 (unchanged) |
+| `task551EvidenceContract.test.ts:901` | `tests/unit/workflows/task551EvidenceContract.test.ts:883` (unchanged) | `tests/unit/workflows/evidenceContractMatrix.test.ts`, step 6 (unchanged) |
+| `task-551-worktree-compatibility.mjs:111-115` `ownedTests` | `_docs/_workflows/lib/task-551-phase-provenance.mjs:116-121` (sidecar `ownedTests`, landed at step 3) | reached at step 3 (11 **V4-6**) |
+
+**State (replaces the R6-08 (2) state line, quoted below).** Steps 1-3 are
+committed (`03d42b90`, `66203e22`, `420bb24a`). Step 4 is in flight. Steps
+5-7 are pending. The receipt
+`_docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json` is absent.
+INITIAL W0 stays blocked (R6-08 (2) rule unchanged).
+**Not adopted:** the S3-A LOW proposal to add
+`_docs/_workflows/_smoke/task-551/11-reopen/.gitignore` to
+`FAMILY_RECEIPT_EXACT_PATHS`. 11 **V8-1** (`:1608`) supersedes the V7-1 "tracked
+`.gitignore`" sentence, and `git ls-files _docs/_workflows/_smoke/task-551/11-reopen/`
+is empty on 2026-09-26. So the `git ls-files`-based inventory never sees
+that directory.
+
+### R7-12 — Detail pages row, H21 rewrite, observable pins, event-order harness (LOW; S2-A, S2-B)
+
+**Eighth client row (unconditional).** C9 v2 already fixes
+`DEFAULT_DETAIL_PAGE_LIST_FILTERS` (`:3994`), so the R6-01 condition is
+true, and the conditional bullet (quoted below) is replaced by a table row:
+
+| Client (file) | Public clear (HEAD anchor) | Families invalidated | `resetGeneration` | `invalidationEpoch` | Subscription predicate on `event.key` |
+|---|---|---|---|---|---|
+| `detailPagesClient.ts` | `clearDetailPagesCache()` (`:188`), `clearDetailPageListCache(contentTypeId?)` (`:176`) | detail-pages (the global list and every per-content-type list, for either call) | `detailPagesGeneration` | `detailPagesInvalidationEpoch` | `.startsWith(cacheKeys.detailPagesList)` (matches `detailPagesListByContentType(id)`, `cachePolicy.ts:45-47`; never `detailPageDetail(id)`) |
+
+Both clears keep their HEAD bodies and then run the client's `invalidate`.
+The client's reset body follows the pages body with its own maps and
+`detailPagesSelfEmit` (R7-02). The client has a matrix column (R7-05).
+
+**H21 (rewritten; supersedes the R6-03 H21 row quoted below).** Paged mode,
+`fetchPage` stub:
+
+1. Mount, then one event: `familyEpoch` is 1, and the current `null` slot is
+   re-read forced and recorded at 1.
+2. Record 256 more slots with `next`, 257 slots in total, all at epoch 1,
+   with no further event.
+3. Walk back with `previous`. Every retained slot is `force: false`. The
+   evicted oldest (the `null` first-page slot) is `force: true`.
+
+Control, with 256 slots in total: the same walk ends with the `null` slot at
+`force: false`.
+
+**Observable pins (replacing private-state pins).**
+
+- R6-01 "memory, slot and `pageLatest` are unchanged by that completion" is
+  asserted through `getCached*` ("hydrate") before and after, and through the
+  fetch log.
+- "pageGenerations and pageLatest survive clear<Family>Cache" is matrix T6:
+  an overtaken read resolves through the newer result and never throws
+  `admin_list_overtake_invariant`.
+- H20's "`familyEpoch` … is ≥ its value before (never 0 again)" is asserted
+  as: after an event followed by `reset(next)`, `rekey`, or a `reset` result,
+  navigation to a slot read before that event is `force: true`. The H20
+  `reset(f2)`/`reset(f1)` clause stands.
+
+**Event-order harness (R6-01 "Event order", R7-05 T7).** "View-first" is a
+subscriber registered BEFORE the client's lazy subscription. The test runs
+the registered reset (unsubscribe), registers the harness subscriber, and
+only then makes the first client read, so the client subscribes after the
+harness. The harness handler calls
+`list<X>PageCached(filters, cursor, { force: true })` synchronously and
+keeps the promise; on `superseded` it re-runs the same call forced, as the
+hook does. A foreign `broadcastCacheEvent` of a predicate key gives: the
+first forced read `superseded`, the re-run `page`, 2 network reads.
+"Client-first" registers the harness after the first read: 1 network read,
+`page`. The rendered hook never starts a read inside a handler (it only
+dispatches `revalidate()`), so the hook-level count for one local event is
+1. The hook pin for a `superseded` re-run: it is `issue(...)` AFTER
+`familyEpoch + 1` (R7-07 `onSuperseded`), so `pending.epoch` equals the new
+`familyEpoch`. Observable: after the re-run's page lands and no further
+event arrives, navigating away and back to that slot is `force: false`.
+Own-mutation slot clearing is closed by R7-02 (matrix T8).
+
+### R7-13 — Labels and ranges (INFO; S3-A)
+
+- Round-6 quote 1 is labelled "C9". `:2687-2689` lies under "### C8 —
+  Preservation clauses (O13)" (`:2658`), so the label reads "C8"; the quote
+  text is unchanged.
+- The Round-6 preamble's **V3-5** range `:1103-1110` reads `:1103-1106`
+  (V3-6 starts at `:1108`).
+- The R6-06 figure is confirmed: Round 6 ended at 573,282 bytes. The Round-7
+  size is under "Envelope record (Round 7)".
+- The R6-08 L11 paths are named in the "Envelope record (Round 7)".
+
+### Gate argv (Round 7; TASK-551-11 V11-2, `:1854-1865`)
+
+`bun test` treats a bare argument as a substring filter and a `./`-prefixed
+one as an exact path (11 **V11-1** `:1858`). Every Round-6/7 gate that names
+a `tests/unit/workflows/*.test.ts` path is therefore written with `./`:
+
+- R6-00 boundary suite and the R6-06 stop-rule companion:
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/unit/workflows/dispatchContractCaps.test.ts`
+  (3 pass, 0 fail; T3 accepts the live 03-L02 file).
+- Writer check of a 03-L02 append (optional, when present):
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/unit/workflows/task551AuthorAudit.test.ts`.
+
+The fence is not edited. Its one bare `tests/unit/workflows` path is
+`tests/unit/workflows/task554WorkflowContracts.test.ts` in command
+`owned-module-consumers-bun` (argv of 41 test paths). It gets a
+precondition instead: before running that command, the orchestrator checks
+that `find . -path ./node_modules -prune -o -name 'task554WorkflowContracts.test.ts' -print`
+prints exactly `./tests/unit/workflows/task554WorkflowContracts.test.ts`.
+Any other match (for example a dry-run copy under `11-reopen/`) STOPS the
+gate before it runs, and the orchestrator reports it. This is a procedure
+note with no envelope delta. The `./` form joins the argv the next time the
+fence is legitimately edited.
+
+### Superseded sentences (Round 7)
+
+Each quote is verbatim (text authoritative; a hard wrap is one space). The
+replacement is the named Round-7 item.
+
+1. R5 hook state (`:6724`): "fetchedAtEpoch: ReadonlyMap<string, number> }>;
+   // slot(cursor) -> epoch captured at issue" → R6-03: the per-instance map
+   keyed by `slotKey(fetchKey, filters, cursor)`, at most 256 entries.
+2. R5 hook (`:6728`): "const stale = <I, S, F, Fl>(s: State<I, S, F, Fl>, c:
+   string | null) => (s.fetchedAtEpoch.get(slot(c)) ?? 0) < s.familyEpoch;"
+   → R6-03 `stale` over `slotKey`.
+3. R5 table (`:6754`): "| `loaded` page/chain | token = pending | R4-06
+   merge/dedupe/summary/stack, `ready`, `pending null`; page: `slot(cursor)
+   → pending.epoch`; chain: map rebuilt from `result.stack`; then `drain` |"
+   → R6-03 `loaded` page/chain row (page sets its `slotKey`; chain sets every
+   `result.stack` cursor; other entries are kept).
+4. R5 hook (`:6766`): "const reads: AdminListRead<I, S, F>[] = []; const
+   stack: (string | null)[] = []; let cursor: string | null = null;" and
+   (`:6769-6773`): "const read = await fetchPage(p.filters, cursor, { force:
+   true }); // a rejection rejects the chain" / "if
+   (isAdminListResetPage(read)) return { kind: "reset" };" / "reads.push(read);
+   stack.push(cursor);" / "if (!read.hasMore || read.nextCursor === null)
+   break;" / "cursor = read.nextCursor;" → R6-04 `runRequest` over the
+   discriminated `AdminListRead` (`read.kind`, `read.page.*`, `mapPage`).
+5. R5 hook (`:6782-6784`): "useLayoutEffect(() => { io.current =
+   o.fetchPage; }, [o.fetchPage]); // R5-11: new closure, no refetch" / "const
+   keyRef = useRef(o.fetchKey); const latestTokenRef = useRef(0);   //
+   effects/callbacks only" / "const { fetchKey } = o; const pending =
+   state.pending;" → R7-03.
+6. R5-07 (`:6816-6818`): "The epoch record lives in hook state per cursor
+   slot because `familyEpoch` is per hook and client maps cannot compare it."
+   → R6-03: per hook instance, keyed by `slotKey(fetchKey, filters, cursor)`,
+   persisting across `rekey`, `reset(next)` and a `reset` result.
+7. R3-15 (`:5256`): "export type CachedAdminListPage<I, S, F> = Readonly<{
+   canonicalFilters: string; envelope: AdminListEnvelope<I, S, F> }>;" →
+   R6-01 `CachedAdminListPage` with `fetchedAtEpoch`.
+8. R3-16 (`:5303`): "pageCache.set(key, { canonicalFilters:
+   canonicalJson(filters), envelope });" → R6-01 install with
+   `fetchedAtEpoch: epoch`.
+9. The 3-argument reads: C9 (`:2715`) "const hit =
+   readVerifiedAdminListPage(pageCache, key, filters);", C9 v2 (`:3954`)
+   "const hit = readVerifiedAdminListPage(pageCache, key, filters)", C9 v2
+   (`:4010`) ": readVerifiedAdminListPage(postPageCache,
+   postFirstPageKey(filters), filters);" and R3-16 (`:5315`) "return
+   readVerifiedAdminListPage(pageCache, key, filters)           // 2.
+   verified memory" → R7-04 4-argument rule (`"hydrate"` for every
+   `getCached*`/hydrate call, including `getCachedPosts`; the client's
+   `invalidationEpoch` on the network path).
+10. C9 F-40 (`:2760-2762`): "**Folders (F-40).** `mediaClient` subscribes to
+    `cacheKeys.mediaList` (sent by `mediaFoldersClient.ts:281`, read-only)
+    and clears its summary/facet families on any event. Test: folder rename
+    then facet refresh." → R7-06 (one media subscription;
+    `invalidateMediaList`; T14).
+11. R5 H9 (`:6841`): "| H9 | chain burst | depth 3, one event starts the
+    chain, N more during it: 3 + 3 forced calls for N = 1 and N = 10 (≤ 2 ×
+    depth, independent of N) |" → R7-07 H9 (restated for a stub that never
+    resolves `superseded`; the bound is now written as a rule and holds with
+    real invalidations, H23).
+12. R5-12 (`:6935-6939`): "**File:** the sorted error lines
+    (`file(line,col): error TSxxxx: message`, continuation lines joined) go
+    to `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-root-tsc-baseline.txt`
+    (tracked; sha256 in the W0 receipt; orchestrator-written only)." and
+    (`:6945-6948`) "W0 appends both baseline paths
+    (`…/audit-evidence/03-l02-root-tsc-baseline.txt` and
+    `…-baseline-final.txt`, owner TASK-551-03-L02) to
+    `FAMILY_RECEIPT_EXACT_PATHS` (`:6428-6433`);" → R7-08 (`03-l02-baselines/`
+    paths and the two replacement entries).
+13. R5-13 (`:6954-6955`): "captures its OWN baseline immediately before its
+    first edit, same argv/cwd, to
+    `…/audit-evidence/03-l02-root-tsc-baseline-final.txt`" → R7-08 (FINAL
+    path).
+14. C-section new DB suites (`:2943-2945`): "a `randomUUID()` RUN marker
+    (`:118`); every fixture slug/email carries the marker" → R7-09 for
+    `task551AdminWriteConcurrency.test.ts` only (bare `RUN`, separate
+    `MARKER`); the other suites keep it.
+15. R6 preamble (`:6993-6994`): "11 contract **V3-5** (`:1103-1110`)" → R7-13
+    (`:1103-1106`).
+16. R6-01 (`:7031-7034`): "`invalidate` runs from the client's public
+    `clear<Family>Cache` (mutation callers) and from the client's lazy
+    cacheBus subscription to its family keys (any origin, `local` or
+    `remote`; `core/admin/utils/cacheBus.ts:18-22`, consumed only)." →
+    R7-02 (any origin except the client's own local emission).
+17. R6-01 (`:7035-7037`): "`invalidate` does three things: it marks the page
+    memory stale (entries stay, each keeping the `fetchedAtEpoch` it was
+    installed at), it clears the in-flight dedupe map, and it clears the
+    persisted first-page slot." → R7-01 (posts: the TASK-554 slot is not
+    cleared by `invalidatePostsList`); unchanged for every other client.
+18. R6-01 (`:7041-7043`): "The hook then re-runs that request silently in
+    the background: there is no reset UI, and the current rows stay rendered
+    until the fresh page lands." → R7-07 (paged and non-merge pages re-run;
+    an append chain or `loadMore` page queues one chain; no reset UI in any
+    case).
+19. R6-01 template (`:7077`): "pagesSubscription ??=
+    subscribeCacheEvents((event) => { if (event.key === cacheKeys.pagesList)
+    invalidatePagesList(); });" → R7-02 handler (`origin` plus
+    `pagesSelfEmit.isEmitting()`).
+20. R6-01 table (`:7177`): "| `postsClient.ts` | `clearPostsCache()` (`:292`)
+    | posts | installation token (R5-10) | `postsCacheAuthorityEpoch`
+    (TASK-554) | `=== cacheKeys.postsList` |" → R7-01. The row now reads:
+    `postsClient.ts` | `clearPostsCache()` (`:292`) | posts hook pages
+    (TASK-554 state by its own HEAD body) | installation token (R5-10) |
+    `postsInvalidationEpoch` (list-only; never `postsCacheAuthorityEpoch`) |
+    `=== cacheKeys.postsList`.
+21. R6-01 posts bullet (`:7188-7197`): "Its first-page path is the R5-10 path
+    with discriminated outcomes: a non-current token gives `{ kind: "reset"
+    }`, and an authority-epoch advance gives `{ kind: "superseded" }`.
+    Cursor pages follow the generic template with `postsCacheAuthorityEpoch`
+    as the epoch. `listPostsCached(filters?, options?)` stays the
+    TASK-554-facing legacy projection of `readPostsListPage(filters, null,
+    options)`: `page` → the page; `superseded` → `getCachedPosts(filters) ??
+    emptyAdminListPage()` byte-for-byte (TASK-554 `:1574-1582`); `reset` →
+    `emptyAdminListPage()`." → R7-01 (`readPostsListPage` wraps
+    `listPostsCached(filters, { force: true })` for the first page; every
+    page uses `postsInvalidationEpoch`; `listPostsCached` keeps its own
+    C9 v2 + R5-10 outcomes and is no projection).
+22. R6-01 detail bullet (`:7206-7209`): "**Detail pages.** If
+    `detailPagesClient.ts` holds paged maps (C9 v2
+    `DEFAULT_DETAIL_PAGE_LIST_FILTERS`), then `clearDetailPagesCache` and
+    `clearDetailPageListCache` follow the pages body with their own
+    `detailPagesGeneration`/`detailPagesInvalidationEpoch`." → R7-12 (the
+    unconditional eighth row).
+23. R6-01 event order (`:7217`): "The bound is ≤ 2 forced reads per event."
+    → R7-07 (bound per mode).
+24. R6-01 hook rules (`:7219-7221`): "A `superseded` result re-runs
+    `pending.request` (which equals `lastRequest`) with `force: true`,
+    keeping `merge`, `recovery` and the chain depth." and (`:7224-7226`) "A
+    queued revalidate is subsumed, except when the re-run is an append
+    `merge` page. There the queue survives, and `drain` then refreshes the
+    whole chain." → R7-07 `onSuperseded` and its three rows. The
+    `familyEpoch + 1`, "Rows, summary, facets and `status` stay unchanged"
+    and "no retry counter" sentences stand.
+25. R6-01 tests (`:7229-7231`): "(`test.each` over the seven client rows
+    above, plus detail pages when present):" → R7-05 matrix; (`:7233-7234`)
+    "(memory, slot and `pageLatest` are unchanged by that completion)" and
+    (`:7240-7241`) "pageGenerations and pageLatest survive
+    clear<Family>Cache; only the registered reset clears them and advances
+    the generation" → R7-12 observables (T1, T6).
+26. R6-01 H16 (`:7254`): "| H16 | `superseded` during an append `loadMore`
+    with a queued event | the page re-runs forced, then one chain
+    revalidate; otherwise a queued revalidate is subsumed (paged: exactly
+    one call after the settle) |" → R7-07 H16 (rewritten).
+27. R6-03 H20 (`:7335`): "`familyEpoch` after an event, `reset(next)`,
+    `rekey` and a `reset` result is ≥ its value before (never 0 again)" →
+    R7-12 (observable `force: true` on a pre-event slot); the rest of H20
+    stands.
+28. R6-03 H21 (`:7336`): "| H21 | slot bound | 257 recorded slots: the oldest
+    is evicted and, after an event, forced |" → R7-12 H21 (rewritten).
+29. R6-04 hook comment (`:7399`): "// mapItems is read through the same ref
+    as fetchPage (new closure, no refetch);" → R7-03 (`mapItemsRef`, written
+    by the same single layout effect; new closure, no refetch).
+30. R6-04 H22 (`:7408-7409`): "The same adapter with `{ kind: "superseded"
+    }` gives H15's outcome." → R7-07 (the H16 rewritten outcome: one chain
+    at depth `stack.length + 1`, rows mapped).
+31. R6-05 (`:7420-7422`): "A root-tsc baseline (INITIAL
+    `…/audit-evidence/03-l02-root-tsc-baseline.txt`, FINAL
+    `…-baseline-final.txt`) may be RE-captured only when the working tree
+    has no 03-L02 wave edits." → R7-08 (the `03-l02-baselines/` paths; the
+    re-capture rule is unchanged).
+32. R6-07 (`:7458`): "### R6-07 — Four pairwise-disjoint booking windows
+    (LOW; S1-A)", (`:7460`) "This refines R5-02 and R3-03's "What stands"
+    legs.", (`:7473`) "// year 2300 (R3-03, R5-02)", (`:7484-7485`) "one
+    multi-row INSERT on the owner DB", (`:7494-7496`) "Leg (a), cancelled over
+    active, uses `[reactivation.from, +1 h)`. Leg (b), two overlapping
+    cancelled rows reactivated concurrently, uses `[reactivation.from + 2 h,
+    +3 h)`." and (`:7499-7500`) "(R3-03 stands)" → R7-10.
+33. R6-08 (1) header (`:7517`): "Today (step 2 green)", with the cells
+    (`:7519`) "`tests/unit/workflows/task551WorkflowContracts.test.ts:123-128`
+    (4 entries since step 2)" and (`:7521`)
+    "`_docs/_workflows/lib/task-551-worktree-compatibility.mjs:113-118`
+    (sidecar `ownedTests`)"; and R6-08 (2) (`:7546-7548`) "State on
+    2026-09-26: steps 1 (`03d42b90`) and 2 (`66203e22`) are green; steps 3-7
+    are pending, and the receipt does not exist yet." → R7-11.
+34. Superseded sentences (Round 6), item 1 label (`:7564`): "1. C9
+    (`:2687-2689`):" → R7-13 ("C8"; the quote text is unchanged).
+35. Handoffs (Round 6) (`:7708-7709`): "**TASK-551-11.** Nothing owed. R6-08
+    is the 03-L02 side of **V3-5**, **V4-6**, **V4-7** and **V6-5**." →
+    R7-08 and "Handoffs (Round 7)".
+
+**Stands** (non-exhaustive reminders): R6-01's two-counter model, (R) → (I)
+→ (O), the rejection order and the reset bodies (with the R7-01 posts and
+R7-12 detail-pages rows); R6-02; R6-03 except H20's quoted clause and H21;
+R6-04 except the two quoted sentences; R6-05's rule and receipt shape;
+R6-06 and its stop rule; R6-07 except the quoted wording; R6-08 (1b) and the
+(2) rule; R5-10 (p1)-(p3); H15, H17, H18, H19, H22's reset variant.
+
+### Security Contract rows (Round 7)
+
+No route, schema, auth, RBAC, CSRF or rate-limit change. Endpoint
+visibility, the auth model and rate-limit buckets stay as in Rounds 2-6.
+
+- **TASK-554 authority isolation.** The posts list subscription never
+  advances `postsCacheAuthorityEpoch`, never calls `clearPostsCache`, and
+  never touches the TASK-554 slot, tickets, detail, tombstone or publication
+  state (R7-01). A post mutation's cache publication and its epoch checks
+  (`postsClient.ts:506`, `:522`, `:534`, `:707`) therefore cannot be skipped
+  because of a list event.
+- **Reset isolation.** Unchanged and extended to posts hook pages. A read
+  overtaken by an installation advance resolves `{ kind: "reset" }` before
+  the TASK-554 branch and even after a rejection (R7-01 `readPostsListPage`,
+  R6-01, R6-02).
+- **Own-emission ignore.** This is scoped to the synchronous local delivery
+  of the client's own `emit`. Remote and foreign events still invalidate.
+  The `ownMutationEpoch` fence keeps an in-flight pre-mutation read from
+  installing over a patch (R7-02). The caller-owned cacheBus operation token
+  passes through unchanged, so editor lease filtering is unaffected.
+- **Scope-bound filters.** One layout effect writes `listKeyRef` for every
+  render, so a rekey never sends another screen's `fieldFilter.*` or
+  `systemFilter.*`, even with a stable `fetchPage` (R7-03, H19b).
+- **Anti-amplification.** Fetches per event are bounded per mode: paged ≤ 2;
+  append ≤ 2 × depth per storm window, independent of the event count
+  (R7-07, H23).
+- **Test fixtures.** The write-concurrency suite's windows fail closed on a
+  malformed `RUN` (`booking_leg_run_invalid`). The global-blackout
+  precondition read is bounded and never deletes foreign rows (R7-09,
+  R7-10).
+- **Evidence.** The baselines live outside the TASK-551-11 closed root, and
+  the R6-05 receipts hold commit ids, paths and digests only (R7-08).
+
+### Handoffs (Round 7)
+
+- **TASK-551-10-L02 (owed mirror; another writer's file).** The
+  `ADMIN_CACHE`/`ADMIN_CACHE_MAP` delta, in addition to the Round-6 items:
+  - the posts list-only `postsInvalidationEpoch`, kept separate from the
+    TASK-554 `postsCacheAuthorityEpoch`, and the inverted
+    `readPostsListPage` → `listPostsCached` direction;
+  - own-emission ignore through `createAdminListSelfEmitGuard` (emitting
+    flag plus `ownMutationEpoch` fence);
+  - detail pages as the eighth paged client;
+  - F-40 subsumed by the single media subscription;
+  - the per-mode fetch bound.
+
+  10-L02 records these in its next append-only section.
+- **TASK-554.** Unchanged, with no file edited. The proof is R7-01:
+  `listPostsCached` never reads the list-only state, the subscription never
+  touches TASK-554 state, own emissions are ignored, and
+  `postsClientCacheAuthority.test.ts:725-750` and `:769-781` pass
+  unmodified with the subscription installed (matrix T13, plus the
+  unmodified file in `w2-client-vitest`).
+- **TASK-551-11.** This row replaces "Nothing owed." (quote 35):
+  - (a) the V7-1 relocation obligation (R7-08 (a); owner: orchestrator
+    follow-up, cited from 03-L02; before TASK-551-10-L02 closure;
+    `03-l02-faza0-dispositions.md` and `03-l02-round{2..7}-dispositions.md`);
+  - (b) the V11-2 `./` argv is adopted for every Round-6/7 gate that names a
+    `tests/unit/workflows/*.test.ts` path ("Gate argv (Round 7)"), plus the
+    `owned-module-consumers-bun` precondition in place of a fence edit.
+
+  R6-08, as refreshed by R7-11, remains the 03-L02 side of **V3-5**,
+  **V4-6**, **V4-7** and **V6-5**. L11 edits none of 03-L02's files.
+- **TASK-551-09-L04.** None. `cacheBus.ts` and `adminCacheAuthority.ts` stay
+  forbidden and consumed only. R7-02 adds no cacheBus field and uses the
+  existing `origin` argument.
+- **TASK-551-01-L01.** Unchanged. Round 7 adds no server statement. The
+  R7-10 precondition read is test-only.
+- **Orchestrator.** The R7-08 relocation follow-up and baseline paths. The
+  `owned-module-consumers-bun` precondition. The R6-06 stop rule (measured
+  below). INITIAL W0 still waits for R6-08 (2).
+
+### Envelope record (Round 7)
+
+No edit: the fence (`:1441-2172`) stays byte-identical, with allowlist 321,
+forbidden 52, commands 34, `initial` 30 and `final` 11. Every path this
+round names was checked against the fence on 2026-09-26 at `420bb24a`.
+
+- **Allowlisted:**
+  - `core/admin/services/{pagesClient,postsClient,entriesClient,entriesClientPagination,formsClient,mediaClient,bookingClient,adminUsersClient,detailPagesClient,adminListEnvelope}.ts`
+  - `core/admin/ui/shared/useBoundedAdminList.ts`
+  - `core/admin/ui/custom-screens/{CustomScreenEntriesPage.tsx,useCustomScreenEntryList.ts}`
+  - `tests/vitest/admin/{task551PaginatedClients,postsClientCacheAuthority,postsClient,mediaClient,pagesClient,entriesClient,entriesClientMutationReconciliation,formsClient,bookingClient,detailPagesClient,adminUsersClient}.test.ts`
+  - `tests/vitest/admin/task551PaginatedListViews.test.tsx`
+  - `tests/integration/server/task551AdminWriteConcurrency.test.ts`
+  - `tests/unit/runtime-smoke/smoke-evidence-inventory.test.ts`
+- **Forbidden and consumed only:** `core/admin/utils/cacheBus.ts`,
+  `core/admin/services/cachePolicy.ts`, `core/admin/utils/adminCacheAuthority.ts`
+  and `core/admin/services/mediaFoldersClient.ts`.
+- **TASK-554-owned and not edited here:** `postsClientCacheAuthority.test.ts`
+  is allowlisted for the fence's own runs, but R7-01 forbids editing it.
+- **Outside the envelope:**
+  - The R6-08/R7-11 paths are TASK-551-11-owned, outside this envelope and
+    read-only anchors here: `tests/unit/workflows/{task551WorkflowContracts,task551EvidenceContract,dispatchContractCaps,task551AuthorAudit}.test.ts`,
+    `_docs/_workflows/lib/{task-551-phase-provenance,task-551-worktree-compatibility,task-551-evidence-contract}.mjs`,
+    `_docs/_workflows/_smoke/task-551/11-reopen/` and
+    `impl-11-reopen-20260925.json`.
+  - The `03-l02-baselines/` files and the dispositions records are
+    orchestrator evidence, not allowlisted paths.
+  - `core/db/tables/bookings.ts` (`bookingBlackouts`) is consumed through an
+    import in the test only.
+
+No NEW allowlisted path is needed. The Gate-argv precondition is a prose
+orchestrator procedure. One JSON fence. **Size (R6-06 stop rule).** This
+file is 640,024 bytes after the Round-7 append (`wc -c`), well below the
+1,048,576-byte cap.

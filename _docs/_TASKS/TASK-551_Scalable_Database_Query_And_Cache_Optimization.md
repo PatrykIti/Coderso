@@ -1308,3 +1308,123 @@ line anchor drifts.
    item 4 at :1249-1250: "`TASK-551-03-L03:single` keeps
    `dependsOn: ["TASK-551-08-L03:final"]` (its envelope is not touched)." The
    header wording itself belongs to the TASK-551-03-L03 file's own mirror.
+
+## Dated Contract Corrections — 2026-09-26 (orchestrator rules and open items; append-only)
+
+Source: `_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(D5, D6 (ii), D9; HEAD `66203e22`). This section appends orchestrator rules and
+family-level open items. It edits nothing above, and the
+Canonical Workflow Dispatch Graph (v1) fence stays byte-identical. Quoted text
+is authoritative when a line anchor drifts.
+
+1. **D9: one `coderso02` DB gate at a time, family-wide.** At most ONE
+   DB-touching gate runs against `coderso02` (the `DATABASE_URL3` lane
+   database) at any time, across every TASK-551 leaf. This covers owner-map
+   gates, migration tests, lane runs, runtime smokes and manual sessions on
+   that database. DB-free (airtight) gates, meaning builtin `bun test`/Vitest
+   with a non-routable `DATABASE_URL` and `--env-file=/dev/null`, may run
+   concurrently with it and with each other. After any foreign DB gate has run
+   on `coderso02`, the orchestrator re-runs the TASK-551-01-L01 **V5-4**
+   read-only pre-run checks before the next **V5-3** suite starts. The
+   01-L01 **V5-3** serialization list stays the per-suite detail; this rule
+   generalizes it to the whole family.
+2. **D9: FINAL lane-runner run serialized with runtime smoke.** The 01-L01
+   FINAL lane-runner run on the `DATABASE_URL` target (item 3) is serialized
+   with every runtime smoke on that host. No smoke starts while it runs, and it
+   does not start while a smoke runs.
+3. **D6 (ii): owner item `lane-runner-worker-database` is RESOLVED.** The item
+   (TASK-551-01-L01 **V5-5**, "an OPEN OWNER ITEM
+   (`lane-runner-worker-database`). Until the owner names the database, the
+   01-L01 FINAL regeneration STOPs after step 3 of **V5-1**.") is answered by
+   the owner's 2026-09-24 grant ("DATABASE_URL i DATABASE_URL3 ... oba sa
+   wolne i nie uzywane"). The FINAL lane-runner worker database is the
+   `DATABASE_URL` target of the root `.env`. For that run only, the
+   orchestrator sets `DATABASE_DIRECT_URL` to it in the closed `env -i` form.
+   The `bun_worker_*` worker schemas it creates are additive. The run is
+   serialized with runtime smoke per item 2. Any lane-runner form, including
+   `bun run test`, remains forbidden against a `DATABASE_DIRECT_URL` that
+   resolves to `coderso02` (D6 (i)).
+   - **Family-closure precondition.** The 01-L01 FINAL lane-runner run on that
+     target is a precondition of family closure. In the graph above,
+     `TASK-551-10-L01:single` depends on `TASK-551-01-L01:final`, and
+     `TASK-551-10-L02:single` depends on `TASK-551-10-L01:single`. A FINAL
+     STOP therefore stops closure. TASK-551-01-L01 FINAL owns the run and its
+     receipt. TASK-551-10-L02 mirrors the precondition in its own dated
+     section. The 01-L01 V5-5 target sentence ("Never
+     `coderso02`/`DATABASE_URL3`, and never the shared `DATABASE_URL`.") is
+     superseded in the 01-L01 file by its own v6 correction (D6), not here.
+   - The local ordinary-lane rule above ("Outside TASK-551 envelope dispatch,
+     load `.env` before ordinary DB/settings lanes") is unchanged. The D6 (ii)
+     run is an orchestrator closed-form run, not an ordinary lane.
+4. **D5: `TASK-551-06-L04` reserved, NOT allocated in this round.** 06-L02
+   R12 reserves the id `TASK-551-06-L04` ("Per-parent retention batching") for
+   the `many_parents_k` budget follow-on. It is active work, never a
+   `TASK-9999` deferral. As a TASK-551-06 child it blocks the TASK-551-06
+   parent and TASK-551 from closing until it is terminal, once allocated. No
+   task file is created in this round. The graph fence, the node count and the
+   family preflight inventory
+   `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`
+   are unchanged. The allocating correction, when it happens, must:
+   - update the 41→42 `taskFileCount` inventory pin in
+     `tests/unit/workflows/task551AuthorAudit.test.ts` (:324 at HEAD
+     `66203e22`) and in the fixtures that pin the family file set. It must
+     re-measure and re-pin every other inventory or dispatch-order pin that
+     the allocation moves, through TASK-551-11, which owns that test;
+   - give the leaf a dispatch envelope whose `dependencies` include at least
+     `TASK-551-06-L03:single`;
+   - place its graph occurrence before `TASK-551-10-L02:single` in dispatch
+     order, through a dated graph correction in this parent;
+   - add the board row and the statistics delta through the closure owner
+     (06-L02 R12 handoff to the TASK-551-06 parent and the board).
+
+### Superseded sentences
+
+None. Items 1-4 add rules and record open or resolved items; no earlier
+sentence in this file is replaced.
+
+## Dated Contract Corrections — 2026-09-26 (fix note after the v6 mirror audit; append-only)
+
+Source: dispositions Addendum C (C1, C3 (e), C3 (j), C4) in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+This note refines the 2026-09-26 section above; it edits nothing, the graph
+fence stays byte-identical and the family inventory stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+Every sentence not quoted below stays binding. No "06-L03 A4" label appears in
+this file (C2); none is added.
+
+1. **Item 1 (C4).** `coderso02` is the `DATABASE_URL3` fixture database. The
+   one-gate-at-a-time rule covers owner-map gates, migration tests, plain
+   per-suite runs, runtime smokes and manual sessions on that database.
+   Lane-runner runs on `coderso02` are FORBIDDEN (01-L01 V6-1; item 3).
+2. **Item 2 (C3 (e), C4).** While the 01-L01 FINAL lane-runner run on the
+   worker database of item 3 and its attribution re-runs are in progress, no
+   runtime smoke, no dev host, no other lane/provisioning run
+   (`run-bun-parallel.ts`, `bun run test`/`test:bun`/`test:full`,
+   `bun-lane-provision.ts`) and no other DB gate uses that database target, and
+   the FINAL run does not start while any of them runs.
+3. **Item 3 (C1, C3 (j)).** The FINAL lane-runner worker database is the direct
+   (non-pooled) endpoint of the `DATABASE_URL` target: the root `.env`
+   `DATABASE_DIRECT_URL` (`<ROOT_DIRECT_URL>`), not its pooled `DATABASE_URL`
+   (port 6432). For that run only, the orchestrator sets BOTH `DATABASE_URL`
+   and `DATABASE_DIRECT_URL` to `<ROOT_DIRECT_URL>` in the closed `env -i` form,
+   as quoted shell variables, and builds the attribution worker URL from it.
+   Because `provisionWorkers` runs DDL before `assertDirectUrl`, a
+   pre-provisioning step (01-L01 V6-7) records four booleans and nothing else,
+   values never printed: same host as root `DATABASE_URL` TRUE, same database
+   TRUE, direct port ≠ 6432 TRUE, database is `coderso02` FALSE; any other value
+   STOPs before provisioning. A FORBIDDEN `true` (a `DATABASE_DIRECT_URL` that
+   resolves to `coderso02`) is an owner item to repoint `.env`, never a skipped
+   gate.
+4. **Item 4 (C4).** The 41→42 pin in
+   `tests/unit/workflows/task551AuthorAudit.test.ts` is located by its literal
+   `taskFileCount: 41,`, not by a line number.
+
+### Superseded sentences
+
+- :1320-1322 "At most ONE DB-touching gate runs against `coderso02` (the `DATABASE_URL3` lane database) at any time, across every TASK-551 leaf." → item 1 ("fixture database"; the one-gate rule itself stands).
+- :1322-1324 "This covers owner-map gates, migration tests, lane runs, runtime smokes and manual sessions on that database." → item 1.
+- :1331-1333 "The 01-L01 FINAL lane-runner run on the `DATABASE_URL` target (item 3) is serialized with every runtime smoke on that host." → item 2.
+- :1333-1334 "No smoke starts while it runs, and it does not start while a smoke runs." → item 2.
+- :1340-1341 "The FINAL lane-runner worker database is the `DATABASE_URL` target of the root `.env`." → item 3.
+- :1341-1342 "For that run only, the orchestrator sets `DATABASE_DIRECT_URL` to it in the closed `env -i` form." → item 3.
+- :1368-1370 "update the 41→42 `taskFileCount` inventory pin in `tests/unit/workflows/task551AuthorAudit.test.ts` (:324 at HEAD `66203e22`) and in the fixtures that pin the family file set." → same duty; anchor per item 4.

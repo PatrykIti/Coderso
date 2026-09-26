@@ -1219,3 +1219,767 @@ owning occurrence: no reformatting, no renamed identifiers, no other line of
 those files may change, and no producer of these rows outside the files above is
 authorized by this correction. If a listed site turns out to be insert-typed
 rather than select-typed, it is left untouched and reported.
+
+## Dated Contract Corrections — 2026-09-26 (re-open note: manifest index rendering and worker-schema online indexes)
+
+**Authority and scope.** This append-only note implements orchestrator
+decision **D8** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(with **D6 (i)**, **D6 (ii)** and **D9** of the same file cited, not
+re-decided). It answers the TASK-551-01-L01 v5 items that name this leaf: the
+**V5-6** rendering rows and owner item **V5-5 (a)** (`TASK-551-01-L01…md`,
+Amendment v5, `:3647-3720` at HEAD `66203e22`). It is text only. This round
+edits no source, test, migration or fence byte. The dispatch envelope above is
+unchanged: both suites and the manifest are already in the `allowlist`
+(`:1054`, `:1058`, `:1061`), and the follow-on items below land as writer
+surface of the `single` occurrence. `**Status:**` is unchanged.
+
+### Verified facts (read from source at `66203e22`; nothing executed)
+
+- **F1 — rendering.** The manifest stores quoted, unqualified bytes, for
+  example `tests/perf/fixtures/task551OnlineIndexManifest.ts:43`:
+  `CREATE UNIQUE INDEX CONCURRENTLY "page_revisions_page_version_idx" ON "page_revisions" USING btree ("page_id","version")`.
+  Both live legs compare `pg_get_indexdef` byte-for-byte with that text minus
+  ` CONCURRENTLY`: `tests/integration/server/task551IndexAndConstraintCatalog.test.ts:165-175`
+  (strip `:166`, compare `:173`) and
+  `tests/integration/server/task551SchemaMigrationParity.test.ts:331-340`
+  (helper `:106-107`, compare `:338`). PostgreSQL renders unquoted identifiers,
+  `ON <schema>.<table>` and `(a, b)`, as the preserved-member pin at catalog
+  `:184` shows:
+  `CREATE INDEX content_revisions_entry_version_idx ON public.content_revisions USING btree (entry_id, version)`.
+  The gap is wider than quoting and qualification. The two server renderings
+  pinned in `tests/integration/server/task551OnlineIndexDeployment.test.ts:570-575`
+  also show upper-case `DESC` (27 members carry `" desc` keys), parenthesised
+  predicates with literal casts (`WHERE (status = 'success'::text)`; 13 members
+  are partial) and `IN (...)` rewritten as `= ANY (ARRAY[...])` (2 members). A
+  rule that only unquotes identifiers and qualifies the relation therefore
+  still fails for at least 27 of the 89 members.
+- **F2 — result shape.** `db` is drizzle over postgres-js
+  (`core/db/client.ts:18`, `:91`). `db.execute` resolves to the postgres.js
+  `Result` array itself (`node_modules/drizzle-orm/pg-core/db.js:273-287`,
+  `node_modules/drizzle-orm/postgres-js/session.js:31-34`,
+  `node_modules/postgres/src/result.js:1-15`), which has no `rows` property.
+  Every DB leg of the two blocked suites reads
+  `(result as unknown as { rows: … }).rows` (catalog `:171`, `:181`, `:206`,
+  `:222`, `:226`, `:235`; parity `:336`), gets `undefined`, and fails before
+  any comparison. The repository convention is `Array.isArray(result)`
+  (`tests/utils/db.ts:19`, `core/services/maintenance/partitionReadinessService.ts:344`).
+  Fixing F1 alone cannot clear either **V5-6** row.
+- **F3 — the canonical form already exists.** This leaf's rollout tool exports
+  `canonicalIndexShape(definition): IndexShape`
+  (`scripts/task-551-online-indexes.ts:1221-1268`; shape `:298-306`). It parses
+  either the manifest bytes or `pg_get_indexdef` text into
+  `{ unique, name, schema, table, method, columns, predicate }`: identifiers
+  unquoted and upper-cased, `::casts` and comments dropped, `IN` lists
+  rewritten to the `ANY (ARRAY[...])` form, AND/OR flattened and sorted
+  (`:1027-1028`, `:1143-1162`, `:1201-1219`). It is the rollout member gate
+  (`assertMemberDefinition`, `:1273-1291`). Importing the module performs no
+  I/O (header `:1`, `import.meta.main` guard `:2952`). The deployment suite
+  already proves it for all 89 members against generated server renderings
+  (`task551OnlineIndexDeployment.test.ts:566-601`). One detail matters: an
+  unqualified definition parses with `schema: "public"` (`:1242`).
+- **F4 — worker schemas.** The lane runner provisions `bun_worker_0..K-1`
+  before each run by dropping and re-migrating them
+  (`scripts/run-bun-parallel.ts:271`; `scripts/bun-lane-provision.ts:54`,
+  `:74`). `scripts/bun-lane-migrate.ts:9-10` applies only `_journal.json`
+  entries. The journal holds the transactional
+  `0081_task551_search_indexes_constraints_outbox` (`meta/_journal.json:562`)
+  and never the companion. A worker session's `search_path` is only
+  `bun_worker_<i>` (`scripts/bun-lane-worker-url.ts:63-65`). No TASK-551 fence
+  `allowlist` contains `scripts/bun-lane-migrate.ts` or
+  `scripts/bun-lane-provision.ts` (a fence scan of all 41 files found 0). This
+  leaf names `rollout-forward` as the only executor of the companion and
+  forbids direct SQL (`:115-122`). The 89 members on `coderso02` exist only as
+  orchestrator environment provisioning (06-L02 **G3**,
+  `TASK-551-06-L02…md:1233-1246`).
+
+### R1 — Owned follow-on: live-catalog rendering fix (D8; clears the two V5-6 rows)
+
+**Decision.** Compare on a canonical form, and use this leaf's own
+`canonicalIndexShape` (F3) as the canonicalizer. The session schema comes from
+`current_schema()`. The alternative, rendering `createSql` schema-qualified,
+is rejected for three reasons:
+
+- `createSql` is the executable byte truth. The companion must be byte-identical
+  to it (parity suite), and G3 pinned its SHA-256.
+- A literal `public.` would bind the rollout to one schema.
+- F1 shows qualification alone still misses `DESC`, predicate and `ANY`
+  rendering.
+
+A second, test-local string normalizer is rejected as a DRY violation of the
+rollout member gate.
+
+**Test change (both suites; test files only).**
+
+1. Add a local `rowsOf<T>(result: unknown): T[]`. It returns the array and
+   throws `catalog_result_not_array` otherwise, so there is no `.rows`
+   fallback. Every DB leg of both files reads through it (F2 sites).
+2. Add a local `sessionSchema()`: `select current_schema() as schema`. A null
+   or empty value throws `catalog_session_schema_missing`, which is a failure
+   and never a skip.
+3. Qualify every catalog lookup by the session schema. This delivers the
+   01-L01 **V4-3a** handoffs for these two files in the same edit:
+   `c.relnamespace = current_schema()::regnamespace` for `pg_class` (catalog
+   `:169`, `:179`, `:198-200`; parity `:334`) and
+   `connamespace = current_schema()::regnamespace` for `pg_constraint`
+   (catalog `:224`, `:231-233`). The `pg_extension` lookup (`:220`) stays
+   database-wide.
+4. The online-index leg (catalog `:165-175`, parity `:331-340`) runs ONE
+   bounded read:
+   `select c.relname as name, pg_get_indexdef(c.oid) as indexdef from pg_class c where c.relkind = 'i' and c.relnamespace = current_schema()::regnamespace and c.relname = any(<the 89 manifest names>)`.
+   Outside a worker schema (R2), the name set must equal the manifest set
+   exactly. For each member,
+   `expect(canonicalIndexShape(live.indexdef), member.name).toEqual({ ...canonicalIndexShape(member.createSql), schema })`.
+   The `schema` override is the session schema, because PostgreSQL resolves
+   the unqualified manifest relation through the first `search_path` entry.
+   Casts are outside the live leg, as in the rollout gate. Column types stay
+   pinned by `schemaColumnTypeContracts.test.ts` and by the static snapshot
+   legs, which keep exact predicate bytes.
+5. The preserved-member leg (catalog `:177-186`) keeps a byte pin. The expected
+   text is `CREATE INDEX content_revisions_entry_version_idx ON ${q}.content_revisions USING btree (entry_id, version)`,
+   where `q` is `select quote_ident(current_schema())`. In `public` this is
+   byte-identical to today's `:184`. The index is journaled
+   (`core/db/migrations/0076_content_revisions_version_uniq.sql`), so it exists
+   in every schema.
+6. Rewrite the docblocks that promise raw equality (catalog `:26`, parity
+   `:41-42`, `:101-105`) to say "equals its manifest bytes in canonical shape".
+   Delete the helpers `transactional` (`:166`) and `transactionalDefinition`
+   (`:106-107`) once they have no callers. Test files cannot import each other
+   without registering the other file's tests, and no helper file is in the
+   `allowlist`, so the roughly 20 shared lines are duplicated per file. Both
+   files stay far below 1,000 lines (240 and 340 today).
+
+```ts
+// Shape only; names are binding, formatting is prettier's.
+import { canonicalIndexShape } from "../../../scripts/task-551-online-indexes";
+const LANE_WORKER_SCHEMA = /^bun_worker_[0-9]+$/;
+const rowsOf = <T>(result: unknown): T[] => {
+  if (!Array.isArray(result)) throw new Error("catalog_result_not_array");
+  return result as T[];
+};
+testIfDb("every member's catalog definition equals its manifest bytes in canonical shape", async () => {
+  const schema = await sessionSchema();
+  const live = rowsOf<{ name: string; indexdef: string }>(await db.execute(sql`…one bounded read (item 4)…`));
+  if (LANE_WORKER_SCHEMA.test(schema)) {
+    expect(live).toEqual([]); // R2: the unjournaled companion is never in a worker schema
+    return;
+  }
+  expect(live.map((row) => row.name).sort()).toEqual(TASK551_ONLINE_INDEX_MEMBERS.map((m) => m.name).sort());
+  for (const member of TASK551_ONLINE_INDEX_MEMBERS) {
+    const row = live.find((entry) => entry.name === member.name)!;
+    expect(canonicalIndexShape(row.indexdef), member.name).toEqual({ ...canonicalIndexShape(member.createSql), schema });
+  }
+});
+```
+
+**Gates for the R1 edit (implementer, fast).** Run
+`./node_modules/.bin/eslint --max-warnings=0` on both files. Run the DB-free
+proof
+`env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <both files>`:
+the static legs pass and the DB legs skip. Run `wc -l` and `git diff --check`.
+The DB proof is the orchestrator's 01-L01 **V5-1** part-1 run under
+`M-ambient` on `coderso02`, serialized per **D9**.
+
+### R2 — Online indexes in worker schemas (D8 with D6 (ii); answers 01-L01 V5-5 (a))
+
+**Decision.** The 89 online indexes do NOT have to exist in lane worker
+schemas for these two suites. Nobody replays them there: no provisioning code,
+and no orchestrator step between provisioning and the run. This takes the
+**V5-5 (a)** option "name those legs lane-incompatible", but as a pinned
+invariant rather than a skip. When `current_schema()` matches
+`^bun_worker_[0-9]+$`, the online-index leg asserts that zero manifest members
+exist in the session schema. In every other schema it runs the full R1
+comparison, and a missing member fails.
+
+Why:
+
+- Worker schemas are dropped and re-migrated from the journal on every run
+  (**D6 (ii)**, F4).
+- A replay would need either an unowned provisioning edit (no fence owns
+  `scripts/bun-lane-*.ts`) or a per-run orchestrator step. A per-run step
+  would leave every ordinary local `bun run test` red.
+- A replay would also bypass the only-executor rule (`:115-122`).
+- In a worker session `gin_trgm_ops` is not on the `search_path` (F4), so even
+  a replay would render opclasses differently.
+
+The branch is selected by schema name, never by index presence, so a
+provisioned schema with a missing member still fails. If a later change
+journals the companion or replays it into workers, the worker branch fails
+loudly, which forces this decision to re-open. That is intended. Every other
+leg of the two suites (preserved member, exclusion, `btree_gist`, unique
+constraints, and all static legs) runs unchanged in worker schemas, because
+0076 and the transactional 0081 are journaled.
+
+**Consequence for the 01-L01 initial regeneration (V5-5 (a), V5-6, V5-9).**
+
+- Nothing in the initial regeneration waits on **V5-5 (a)**: R2 needs no
+  environment provisioning. It waits only on R1 landing plus the two part-1
+  rows.
+- Both suites stay class B with map `M-ambient`, because the branch reads
+  `current_schema()` and no environment key. The 01-L01 **V5-2** tables need no
+  edit.
+- **V5-4** check 1 (0 worker schemas on `coderso02`) keeps part 1 in `public`,
+  where the full R1 branch runs. **V5-4** check 3 stays mandatory: those 89
+  members come only from G3, and a missing or invalid member is an environment
+  STOP, not a suite verdict.
+- The map-free run keeps DB legs skipped (connect probe), as before.
+- The worker branch first executes in the 01-L01 FINAL lane-runner run on the
+  **D6 (ii)** target. It closes **V5-5 (a)** there; it is not an initial
+  precondition.
+- Prediction from source, not a receipt: after R1 and R2 land, neither suite is
+  part of the **D6 (i)** interim lane red set.
+
+### R3 — Owner-item home for D6 (i) (`task551SearchVectorMigration`)
+
+**D6 (i)** keeps `tests/integration/server/task551SearchVectorMigration.test.ts`
+a BLOCKED row with an owner item for this leaf until it is schema-qualified.
+The item is:
+
+- qualify `:204-207` with `c.relnamespace = current_schema()::regnamespace`;
+- read `:209`, `:221`, `:238` and `:247` through the same `rowsOf` (F2
+  applies; without it the row cannot clear).
+
+The `to_regprocedure`/`to_regoperator` lookups stay unqualified (01-L01
+**V4-3a**, `:216-245`). The R1 gates and part-1 clearing rule apply.
+
+### Handoff rows consumed by the 01-L01 initial regeneration (V5-6, V5-8 `handoffs[]`)
+
+| Handoff reason (01-L01 receipt) | Delivered by | Clears when | Consumed at |
+| --- | --- | --- | --- |
+| `catalog-indexdef-rendering:tests/integration/server/task551IndexAndConstraintCatalog.test.ts` | R1 | the R1 edit has landed and the suite's **V5-1** part-1 row under `M-ambient` is `pass` with 0 failed and 0 skipped tests, after green **V5-4** checks | initial, **V5-9** step 6 |
+| `catalog-indexdef-rendering:tests/integration/server/task551SchemaMigrationParity.test.ts` | R1 | same | initial, **V5-9** step 6 |
+| `catalog-schema-qualification:` plus each of the two paths above (**V4-3a**) | R1 item 3 (same edit) | same edit | recorded as delivered; owner item, not a precondition (**V5-6** decision 4) |
+| `catalog-schema-qualification:tests/integration/server/task551SearchVectorMigration.test.ts` (**D6 (i)** BLOCKED row) | R3 | the R3 edit has landed and its part-1 row is `pass` | initial, **V5-9** step 6 |
+| **V5-5 (a)** owner item (online indexes in worker schemas) | R2 (decided here; lands with the R1 edit) | the worker branch passes in the FINAL lane-runner run | FINAL only (**V5-5**); not an initial precondition |
+
+Land order: R1, R2 and R3 are one 05-L01 test-only edit to these three test
+files (the manifest is read, not changed). It lands before 01-L01 initial
+**V5-9** step 4. It reopens no product, migration or rollout contract.
+
+### Observations for orchestrator disposition (not decided here)
+
+- **O1 (F2 elsewhere).** The same `.rows` read occurs in 05-L01 suites outside
+  **D8**: `task551CacheInvalidationOutboxSchema.test.ts:248`, `:274` and
+  `tests/perf/database-index-write-overhead.test.ts:151` (there `.rows[0]`
+  throws a `TypeError`). From source, their part-1 rows fail and join
+  **V5-6** by its growth rule. Proposal: fold the same `rowsOf` change into the
+  R1 edit.
+- **O2 (line gate).** Two files this leaf owns exceed the 1,000-line gate at
+  this tree: `scripts/task-551-online-indexes.ts` (2,959 lines) and
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts` (3,513
+  lines). R1 imports the script read-only and does not touch either file. They
+  still block this leaf's closure under the root file-size rule.
+
+### Superseded sentences
+
+None. No earlier sentence of this file is contradicted. The following stay
+binding, refined as stated:
+
+- `:862-864`: "the already-committed
+  `content_revisions_entry_version_idx` is a preserved catalog member asserted
+  byte-identical, never a manifest build." This is refined by R1 item 5: the
+  pin is byte-identical with the schema taken from `current_schema()`, and
+  identical to the old literal in `public`.
+- `:871-872`: "Catalog tests pin exact index column order, sort/null order,
+  predicates, opclasses, …". This is refined by R1 item 4: exact bytes stay in
+  the static snapshot legs, and the live legs pin the canonical shape.
+
+## Dated Contract Corrections — 2026-09-26 (second note: catalog legs, UNIQUE member, SearchVector deparse, five-file edit)
+
+**Authority and scope.** This append-only note implements orchestrator
+decisions **B4** and **C6** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+in full. It also cites **A4**, **A5**, **B1**, **C1**, **C3 (b)** and **C7**
+and does not re-decide them. It corrects the re-open note directly above
+(`:1223-1485`, "the first note"). The corrections come from two read-only
+audits of the first note, and every anchor below was re-read from source at
+HEAD `420bb24a` (nothing executed). It is text only: this round edits no
+source, test, migration or fence byte. The dispatch envelope is unchanged,
+and every file named below is already in this leaf's `allowlist`
+(`:1053`, `:1058`-`:1064`). `**Status:**` is unchanged (`⏳ To Do`).
+Everything in the first note that is not quoted under "Superseded sentences"
+stays binding.
+
+### Verified facts (read from source at `420bb24a`)
+
+- **G1 — the preserved member is UNIQUE.** It is unique in migration
+  `core/db/migrations/0076_content_revisions_version_uniq.sql:1`
+  (`CREATE UNIQUE INDEX "content_revisions_entry_version_idx" …`), in the
+  schema (`core/db/tables/content.ts:138`, `uniqueIndex(…)`) and in the
+  snapshot (`core/db/migrations/meta/0081_snapshot.json:3459`,
+  `"isUnique": true`). Live `pg_get_indexdef` therefore prints
+  `CREATE UNIQUE INDEX …`. The literal at catalog `:184` is a wrong test
+  pin, not a server rendering.
+  The same wrong literal feeds the rollout tool:
+  - `PRESERVED_MEMBER_SHAPE` is built from `"CREATE INDEX …"`
+    (`scripts/task-551-online-indexes.ts:1270-1272`), which gives
+    `unique: false`.
+  - `assertCatalogSeams` compares it with the live row (`:2281-2287`). Its
+    `catalogMismatch` check ("the preserved revision index drifted") would
+    fail on every real database.
+  - The deployment suite pins the same shape
+    (`tests/integration/server/task551OnlineIndexDeployment.test.ts:639-643`:
+    literal `:640`, `unique: false` `:643`).
+  - The failure never surfaced because 06-L02 **G3** provisioned the members
+    without running the tool (`TASK-551-06-L02…md:1242-1243`).
+- **G2 — the remaining catalog legs fail from source once `.rows` stops
+  masking them** (`tests/integration/server/task551IndexAndConstraintCatalog.test.ts`):
+  - (a) The exclusion leg joins `pg_am am on am.oid = c.conindid` (`:199`).
+    `conindid` is the supporting index's `pg_class` OID, not an access-method
+    OID, so the query returns 0 rows.
+  - (b) The same leg expects source bytes (`:211`
+    `tsrange(starts_at, ends_at, '[)') WITH &&`; `:212` the predicate
+    `status IN ('pending', 'confirmed')`). `pg_get_constraintdef` prints
+    literal casts and `= ANY (ARRAY[...])`, in the same way as the pinned
+    server renderings at deployment `:570-575`.
+  - (c) The "no other constraint" probe (`:224`, `contype <> 'c'`) returns
+    the outbox primary key (contype `p`, from 0081 `:2`
+    `"id" uuid PRIMARY KEY`). On PG 18 it also returns the catalogued
+    NOT NULL constraints (contype `n`).
+  - (d) The unique-constraint leg writes `conname = any(${[...]})` (`:233`).
+    Drizzle's `sql` tag expands a JS array to a parenthesised list,
+    `($1, $2, …)` (`node_modules/drizzle-orm/sql/sql.js:93-102`), so
+    PostgreSQL rejects the query ("op ANY/ALL (array) requires array on
+    right side"). The rollout tool is not affected: it uses the postgres.js
+    tag, which binds arrays.
+- **G3 — SearchVector.** Three defects remain after the first note's R3:
+  - The `pg_attrdef` join has no `a.attnum = ad.adnum`
+    (`tests/integration/server/task551SearchVectorMigration.test.ts:204-207`).
+    It returns one row per column default, so `toHaveLength(1)` fails.
+  - `pg_get_expr` returns the deparsed form (`COALESCE`,
+    `'simple'::regconfig`, `''::text`, `'A'::"char"`, extra parentheses),
+    which never equals the frozen `SEARCH_VECTOR_SQL` bytes
+    (`core/db/searchVectorDefinitions.ts:51`; compare at `:211`).
+  - `to_regoperator` takes `name(left,right)`, but `:229-231` pass
+    `"text || text"`-style strings, so `:236` resolves nothing.
+- **G4 — O1 readers.** Two more files read `.rows`:
+  - `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`
+    at `:248` and `:274`. Its plan leg (`:268-277`) also reads `row.plan`,
+    but the EXPLAIN output column is `QUERY PLAN`.
+  - `tests/perf/database-index-write-overhead.test.ts` at `:151`, where
+    `.rows[0]` throws a `TypeError`.
+
+  The whole-tree count of `as unknown as { rows` is 13 matches across
+  exactly five files: catalog 5, parity 1, SearchVector 4, outbox 2, perf 1.
+- **G5 — online-member dependents.** The manifest has 89 member names. A grep
+  of those names across `tests/`, plus a behavioural check of each DB leg
+  whose outcome needs an online-only index, gives the inventory in R2.4.
+  At least the outbox plan leg (`OLDEST_AGE_INDEX`,
+  `task551CacheInvalidationOutboxSchema.test.ts:77`, manifest
+  `tests/perf/fixtures/task551OnlineIndexManifest.ts:103`) cannot pass in a
+  `bun_worker_*` schema.
+
+### R1 — corrected and extended (the ONE five-file test-only edit)
+
+**Five-file list (A5, B4, C6).** R1 is one 05-L01 test-only edit to exactly:
+
+1. `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`
+2. `tests/integration/server/task551SchemaMigrationParity.test.ts`
+3. `tests/integration/server/task551SearchVectorMigration.test.ts` (R3
+   items land in this same edit)
+4. `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`
+5. `tests/perf/database-index-write-overhead.test.ts`
+
+The R2.3 legs (below) add
+`tests/integration/server/task551ConcurrencyConstraints.test.ts` (allowlist
+`:1062`) to the same change, but that file is edited only for its R2
+branch. The manifest and `scripts/task-551-online-indexes.ts` are read only
+(import of `canonicalIndexShape`). No production file changes in this edit.
+
+**R1 item 1 (extended).** Each of the five files gets its own local
+`rowsOf<T>(result: unknown): T[]` with the same body. It throws
+`catalog_result_not_array` when the result is not an array, and it has no
+`.rows` fallback. All 13 sites read through it: catalog `:171`, `:181`,
+`:202-206`, `:222`, `:226`, `:235`; parity `:336`; SearchVector `:209`,
+`:221`, `:238`, `:247`; outbox `:248`, `:274`; perf `:151`. After the edit,
+none of the five files contains `?? []`, `?? { bytes: 0 }` or
+`?.proname ?? ""` at those sites. Do not copy the 05-L03 helper of the same
+name (`task551SolutionKitRollbackAuthoritySchema.test.ts:1013`), which reads
+`.rows` (**B1**).
+
+**R1 item 3 (corrected alias for the exclusion leg).**
+- The preserved leg (`:179`) keeps `c.relnamespace = current_schema()::regnamespace`,
+  where `c` is `pg_class`.
+- In the exclusion leg (`:198-200`), `c` is `pg_constraint`. There the
+  qualifier is `c.connamespace = current_schema()::regnamespace`.
+- Catalog `:169` and parity `:334` are subsumed by item 4.
+
+**R1 item 4 (corrected binding form).** The one bounded read under the
+drizzle `sql` tag is:
+
+`select c.relname as name, pg_get_indexdef(c.oid) as indexdef from pg_class c where c.relkind = 'i' and c.relnamespace = current_schema()::regnamespace and c.relname in ${TASK551_ONLINE_INDEX_MEMBERS.map((member) => member.name)}`
+
+**Ban (all six files).** Never write `any(${array})` under the drizzle `sql`
+tag. Drizzle renders `in ${array}` as `in ($1, …)` (sql.js `:93-102`). This
+applies to item 4 and item 9, and to any new query in these files.
+
+**R1 item 5 (corrected expected text).**
+- The expected text is
+  `CREATE UNIQUE INDEX content_revisions_entry_version_idx ON ${q}.content_revisions USING btree (entry_id, version)`,
+  where `q` is `select quote_ident(current_schema())`, read through
+  `rowsOf`.
+- The lookup keeps `c.relnamespace = current_schema()::regnamespace` and
+  expects exactly one row.
+- In `public`, the expected string differs from today's `:184` by the
+  `UNIQUE ` keyword. `:184` is corrected (**G1**), not preserved.
+
+**R1 item 6 (anchor).** The parity docblock to rewrite is `:41-43` (the
+raw-equality sentence ends at `:43`). Catalog `:26` and parity `:101-105`
+are unchanged from the first note.
+
+**R1 item 7 (new; exclusion leg).** The query is:
+
+`select c.contype, pg_get_constraintdef(c.oid) as pg_get_constraintdef, am.amname from pg_constraint c join pg_class rel on rel.oid = c.conrelid join pg_class i on i.oid = c.conindid join pg_am am on am.oid = i.relam where c.conname = ${TASK551_EXCLUSION_CONSTRAINT_NAME} and rel.relname = 'bookings' and c.connamespace = current_schema()::regnamespace`
+
+It is read through `rowsOf` and must return exactly one row. Assertions:
+
+- `contype` is `"x"` and `amname` is `"gist"`.
+- The definition contains the server renderings (**B4**):
+  - `toContain("resource_id WITH =")`
+  - `toContain("tsrange(starts_at, ends_at, '[)'::text) WITH &&")`
+  - `toContain("status = ANY (ARRAY['pending'::text, 'confirmed'::text])")`
+- The predicate matches in canonical form (**C6**). Split the definition on
+  `" WHERE "`. Anything other than exactly two parts throws
+  `exclusion_predicate_missing`. Then
+  `expect(canonicalPredicateOf(livePredicate)).toBe(canonicalPredicateOf(BOOKING_RESERVATION_EXCLUSION_SQL.predicate))`.
+- `canonicalPredicateOf(predicate: string): string | null` is local to the
+  catalog file. It returns
+  `canonicalIndexShape(\`CREATE INDEX task551_predicate_probe ON bookings USING gist (resource_id) WHERE ${predicate}\`).predicate`.
+  It reuses the rollout canonicalizer (DRY), which strips outer parentheses,
+  drops single-identifier casts and folds `IN` into `= ANY (ARRAY[...])`
+  (`:1143-1219`).
+- The element list is NOT passed through `canonicalIndexShape`: its
+  tokenizer has no `&&` operator (`:1098`), so the element fragments stay
+  pinned by the `toContain` rendering checks above.
+- The source `:211`/`:212` expectations are deleted. The source bytes stay
+  pinned by the static `addSql` leg (`:161`).
+
+**R1 item 8 (new; `btree_gist` / constraint probe).**
+- The extension read stays database-wide. It goes through `rowsOf` and
+  expects `.length` 1, with no `?? []`.
+- The probe becomes
+  `select conname, contype from pg_constraint where conname like 'cache_invalidation_outbox%' and contype not in ('c', 'p', 'n') and connamespace = current_schema()::regnamespace`,
+  and `rowsOf(...)` must equal `[]`.
+
+**R1 item 9 (new; unique-constraint leg `:229-239`).**
+- The predicate becomes
+  `conname in ${[...TASK551_ASSERTED_UNIQUE_CONSTRAINTS]} and connamespace = current_schema()::regnamespace`,
+  read through `rowsOf`.
+- The sorted-name and `contype === "u"` assertions are unchanged.
+
+**R1 item 10 (new; outbox).**
+- `:248` becomes `rowsOf<{ event_key: string }>(result)`, and its assertions
+  are unchanged.
+- At `:268-277`, `db.execute<{ "QUERY PLAN": string }>(…)` is followed by
+  `rowsOf<{ "QUERY PLAN": string }>(result).map((row) => row["QUERY PLAN"]).join("\n")`,
+  with no `?? []`.
+- The `toContain(OLDEST_AGE_INDEX)` and `toContain("Limit")` assertions are
+  unchanged.
+- The leg also takes the R2.2 branch. The row clears only after both edits.
+
+**R1 item 11 (new; perf `:151`).** `relationBytes` reads
+`const [row] = rowsOf<{ bytes: string }>(result)`. If `row === undefined` it
+throws `relation_size_row_missing`, then returns `Number(row.bytes)`. The
+`?? { bytes: 0 }` fallback is removed, so a missing row can no longer record
+a silent zero storage delta.
+
+**R1 gates (unchanged form, six files).**
+- `./node_modules/.bin/eslint --max-warnings=0 <the six files>`.
+- The DB-free proof
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <the six files>`.
+  Static legs pass and DB legs skip.
+- `wc -l` (every file stays at or below 1,000 lines) and `git diff --check`.
+- The DB proof stays the orchestrator's 01-L01 **V5-1** part-1 run under
+  `M-ambient` on `coderso02`, serialized per **D9**.
+
+**R1 item 12 (owned follow-on; the UNIQUE correction, gated on the O2
+split).**
+- Edits:
+  - `scripts/task-551-online-indexes.ts:1271` becomes
+    `"CREATE UNIQUE INDEX content_revisions_entry_version_idx ON public.content_revisions USING btree (entry_id, version)"`.
+  - `tests/integration/server/task551OnlineIndexDeployment.test.ts:640`
+    carries the same literal.
+  - `:643` becomes `unique: true`.
+- A grep at HEAD finds no other copy of the non-unique literal in `scripts/`,
+  `tests/` or `core/` outside migrations. The only other copy is catalog
+  `:184`, which item 5 corrects.
+- Both files exceed the line gate (2,959 and 3,513 lines; **O2**). Root
+  `AGENTS.md` (File Size and Modularity) requires a legacy file above 1,000
+  lines to be split "by cohesive responsibility as part of the same
+  substantive change before adding further behavior". So the follow-on lands
+  as ONE 05-L01 change, in this order:
+  1. Split both files below 1,000 lines each, keeping `canonicalIndexShape`
+     and the other public exports import-stable.
+  2. Make the two edits above.
+- The follow-on is NOT part of the five-file R1 edit and is NOT a
+  precondition of the 01-L01 initial regeneration: the deployment suite is
+  static, with 0 `testIfDb(` legs.
+- It IS a precondition of any `rollout-forward` execution (**G1**) and of
+  05-L01 closure (**O2**).
+- Until it lands, the static pin (`unique: false`) and R1 item 5
+  (`UNIQUE`) disagree by design. That window is recorded, not a defect of
+  the R1 edit.
+
+### F3 limits (qualification of the first note's F3; recorded, no change)
+
+`canonicalIndexShape` is exact for today's 89 members in `public`, with
+these limits:
+
+- **Casts.** A cast is dropped only when its type is a single identifier
+  (`/^[A-Za-z_][\w$]*/`, `:1091-1096`). `::character varying`, `::text[]`
+  and schema-qualified types leave residue. Every current partial-index
+  predicate column is `text`. A future member that hits this fails loudly;
+  it never passes falsely.
+- **Column items.** Column items are joined raw (`:1253`), not through
+  `canonicalOperand`. A schema-qualified opclass (`public.gin_trgm_ops`) or
+  a parenthesised expression therefore does not match. The `public` branch
+  assumes `pg_trgm` is visible on the session `search_path`.
+- **Schema case.** The parsed schema is lower-cased (`:1245`), but
+  `current_schema()` is used raw. The override matches only lower-case
+  schema names. `public` and `bun_worker_<n>` qualify; anything else fails
+  loudly.
+- **`$user` schema.** `current_schema()` is the first existing
+  `search_path` schema. If a `$user` schema exists without the TASK-551
+  tables, the unqualified manifest relation resolves to a later schema, and
+  the leg fails (zero rows in `current_schema()`). This fails closed; the
+  precondition below (`current_schema()` is `public`) excludes it for part 1.
+- **New environment precondition (01-L01 v7 records it next to V5-4
+  check 3).** Before part 1:
+  - `gin_trgm_ops` is visible to the part-1 session
+    (`pg_opclass_is_visible` true for the `gin_trgm_ops` opclass);
+  - `current_schema()` is `public`.
+
+  Either one false is an environment STOP, not a suite verdict.
+
+### R2 — extended to every 05-L01 DB leg that reads an online member (C6)
+
+**R2.1 Rule (unchanged in kind).**
+- The branch is selected by schema name. When
+  `LANE_WORKER_SCHEMA.test(await sessionSchema())`, the leg asserts that
+  none of ITS online guard members exists in the session schema, then
+  returns. In every other schema it runs in full, and a missing member
+  fails.
+- Presence check (drizzle form):
+  `select c.relname as name from pg_class c where c.relkind = 'i' and c.relnamespace = current_schema()::regnamespace and c.relname in ${guards}`,
+  read through `rowsOf`; the worker branch expects `[]`.
+- A static test in each file asserts that every guard name is a member of
+  `TASK551_ONLINE_INDEX_MEMBERS`, so a renamed member cannot silently empty
+  a guard.
+- `LANE_WORKER_SCHEMA`, `sessionSchema` and `rowsOf` are file-local
+  duplicates, as the first note item 6 already allows.
+
+**R2.2 Outbox plan leg**
+(`task551CacheInvalidationOutboxSchema.test.ts:262-284`).
+- Guards: `[OLDEST_AGE_INDEX]`.
+- The worker branch returns BEFORE `seedQuarters(100_000)`.
+- The non-worker branch first asserts that the guard is present (one row),
+  then runs the R1 item 10 plan check.
+- The health leg (`:239-260`) reads only the journaled table and runs in
+  every schema.
+
+**R2.3 Concurrency legs**
+(`tests/integration/server/task551ConcurrencyConstraints.test.ts`). These
+were found by the behavioural check, not by name.
+- The revision race (`:189-235`) needs the online unique members
+  `page_revisions_page_version_idx` and
+  `widget_template_revisions_template_version_idx` (manifest members).
+  Without them, more than one duplicate commits.
+  - The whole leg takes the worker branch, because `familiesRaced` must
+    equal the digest-bound `TASK551_L05_CONCURRENCY_RECEIPT.counts.families`
+    (`:232`). A partial race would break the receipt.
+  - Guards: those two names.
+- The apply-owner race (`:279-306`) needs
+  `solution_kit_starter_apply_owners_active_idx`. Guards: that name.
+- The booking exclusion leg (`:237-277`) depends only on the journaled
+  transactional 0081 and runs in every schema.
+- The file imports the manifest read-only for the static guard test. It
+  stays far below 1,000 lines (349 today).
+
+**R2.4 Inventory (grep of the 89 member names across `tests/` plus the
+behavioural check; HEAD `420bb24a`).**
+
+| File (owner) | Member-reading legs | Class |
+| --- | --- | --- |
+| catalog (05-L01) | online-index leg `:165-175` | R2 (first note) |
+| catalog (05-L01) | `:68-119` | static snapshot legs; no DB |
+| parity (05-L01) | `:331-340` | R2 (first note) |
+| outbox (05-L01) | plan leg `:262-284` | R2.2 |
+| outbox (05-L01) | `:86-191` | static companion-byte legs |
+| concurrency (05-L01) | `:189`, `:279` | R2.3 (behavioural) |
+| perf index-write-overhead (05-L01) | builds its own copies in shadow schema `task551_overhead` | not an R2 leg (reads no session-schema member) |
+| deployment (05-L01) | none | static; 0 DB legs |
+| `tests/vitest/db/searchVectorDefinitions.test.ts` (05-L01) | none | Vitest, names as data |
+| `task551SolutionKitRollbackAuthoritySchema.test.ts` (05-L03; forbidden `:1073`) | `:1979`, `:2016`, `:2062` expect SQLSTATE 23505 naming online unique members | out of reach; **O3** |
+| `tests/perf/database-explain-plans.test.ts`, `tests/perf/task489-solution-kit-run-predecessor-plans.test.ts` (05-L02 et al.) | live halves bind an injected fixture map (headers `:13-16`; `:1270-1340`), not the session schema | not decided here; **O4** |
+| `tests/perf/fixtures/task551QueryPlanContracts.ts`, the manifest | data | none |
+
+### R3 — SearchVector, restated in full (clears the D6 (i) row)
+
+R3 lands in the five-file R1 edit. Items:
+
+- **R3.1 (retained).** Qualify `:204-207` with
+  `c.relnamespace = current_schema()::regnamespace`.
+- **R3.2 (new).** The join becomes
+  `join pg_attribute a on a.attrelid = c.oid and a.attnum = ad.adnum and a.attname = ${SEARCH_VECTOR_COLUMN}`,
+  so exactly one row per member is returned.
+- **R3.3 (retained and extended).** `:209`, `:221`, `:238` and `:247` read
+  through `rowsOf`. At `:247` the `?.proname ?? ""` fallback becomes a
+  length-1 assertion, followed by the unchanged `startsWith` check.
+- **R3.4 (new; deparse on both sides).**
+  - The live expression is compared with the SERVER's deparse of the frozen
+    source bytes, never with the raw bytes.
+  - Helper: file-local `deparsedExpected(table: string, bytes: string):
+    Promise<string>`. In ONE `db.transaction`, it runs:
+    1. `create temp table task551_sv_probe (like ${sql.identifier(schema)}.${sql.identifier(table)}) on commit drop`
+    2. `alter table task551_sv_probe add column task551_sv_expected tsvector generated always as (${sql.raw(bytes)}) stored`
+    3. `select pg_get_expr(ad.adbin, ad.adrelid) as expression from pg_attrdef ad join pg_attribute a on a.attrelid = ad.adrelid and a.attnum = ad.adnum where ad.adrelid = 'pg_temp.task551_sv_probe'::regclass and a.attname = 'task551_sv_expected'`
+    4. It reads that one row through `rowsOf`.
+  - `bytes` is the frozen `SEARCH_VECTOR_SQL` constant, never input.
+    `LIKE` without `INCLUDING GENERATED` copies the columns as plain columns
+    with identical types.
+  - Assertion: `expect(live.expression).toBe(await deparsedExpected(member.table, bytes))`,
+    with no whitespace collapsing.
+  - The source bytes stay pinned by the static legs (`:117`).
+- **R3.5 (new).** The operator signatures at `:229-231` become `"||(text,text)"`,
+  `"||(tsvector,tsvector)"` and `"->>(jsonb,text)"`. The expected
+  implementations and `:236`'s `to_regoperator(${signature})` are
+  unchanged.
+- The `to_regprocedure`/`to_regoperator` lookups stay database-wide
+  (01-L01 **V4-3a**).
+
+### Handoff rows for 01-L01 v7 (replaces the first note's table)
+
+Every "Clears when" below is reachable only after EVERY listed item has
+landed in the one test-only edit. A part-1 row is a `pass` with 0 failed and
+0 skipped tests, under the suite's map, after green **V5-4** checks
+(including the F3 environment precondition).
+
+| Handoff reason (copy verbatim) | Delivered by | Clears when | Consumed at |
+| --- | --- | --- | --- |
+| `catalog-indexdef-rendering:tests/integration/server/task551IndexAndConstraintCatalog.test.ts` | R1 items 1-9 and R2 (first note) | items 1, 2, 3 (as corrected), 4, 5, 6, 7, 8, 9 landed; part-1 row under `M-ambient` passes | initial, **V5-9** step 6 |
+| `catalog-indexdef-rendering:tests/integration/server/task551SchemaMigrationParity.test.ts` | R1 items 1, 2, 3, 4, 6 and R2 | those items landed; part-1 row under `M-ambient` passes | initial, **V5-9** step 6 |
+| `catalog-schema-qualification:tests/integration/server/task551SearchVectorMigration.test.ts` (**D6 (i)** BLOCKED row) | R3.1-R3.5 | R3.1-R3.5 landed; part-1 row passes | initial, **V5-9** step 6 |
+| `result-shape:tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts` (**A5**, **C3 (b)**) | R1 items 1, 10 and R2.2 | those items landed; part-1 row under `M-ambient` passes | initial, **V5-9** step 6 |
+| `result-shape:tests/perf/database-index-write-overhead.test.ts` (**A5**, **C3 (b)**) | R1 items 1, 11 | those items landed; part-1 row under `M-ambient` passes | initial, **V5-9** step 6 |
+| `catalog-schema-qualification:` plus the catalog and parity paths (**V4-3a**) | R1 item 3 (as corrected) | same edit | recorded as delivered; owner item, not a precondition (**V5-6** decision 4) |
+| `result-shape:tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` | NOT delivered here: 05-L03 owner item (**B1**, **C7**) | 05-L03's own dated note | per 01-L01 v7 |
+| **V5-5 (a)** owner item, 05-L01 share | R2 (first note), R2.2, R2.3 | all five worker branches pass in the FINAL lane-runner run: catalog and parity online-index legs, outbox plan leg, concurrency revision race, concurrency apply-owner race | FINAL only; not an initial precondition |
+
+The FINAL target is the direct (non-pooled) endpoint of the `DATABASE_URL`
+target (**C1**). **V5-5 (a)** as a whole also needs the orchestrator's
+dispositions of **O3** and **O5**. 05-L01 cannot close those.
+
+**Land order (restated).**
+- The five-file R1/R2/R3 edit, plus the R2.3 branch in
+  `task551ConcurrencyConstraints.test.ts`, is one 05-L01 test-only change.
+  It lands before 01-L01 initial **V5-9** step 4.
+- R1 item 12 (O2 split, then the UNIQUE edits) is a later 05-L01 change.
+  It reopens the rollout tool's preserved-member pin and nothing else.
+
+### Observations for orchestrator disposition (not decided here)
+
+- **O3.** In `task551SolutionKitRollbackAuthoritySchema.test.ts`
+  (05-L03-owned), the DB legs at `:1979`, `:2016` and `:2062` expect
+  SQLSTATE 23505 with online unique member names. They fail in any
+  `bun_worker_*` schema. This is the same class of issue as R2.3, outside
+  05-L01's reach.
+- **O4.** The injection-gated live halves of the two plan perf suites bind a
+  fixture map, not the lane session schema. Whether they ever run against a
+  worker schema is for their owner.
+- **O5.** 06-L02-owned
+  `tests/integration/server/task551RevisionConcurrency.test.ts:634`
+  ("the unique (page, version) constraint is the final guard behind a lock
+  bypass") depends on the online member `page_revisions_page_version_idx`
+  whenever its owner map is present in a worker schema. This is from
+  source; the map/worker combination was not verified.
+
+### Superseded sentences (first note; verbatim, with replacements)
+
+1. `:1246-1249` — "PostgreSQL renders unquoted identifiers,
+   `ON <schema>.<table>` and `(a, b)`, as the preserved-member pin at
+   catalog `:184` shows:
+   `CREATE INDEX content_revisions_entry_version_idx ON public.content_revisions USING btree (entry_id, version)`."
+   → **G1**. Server rendering evidence is deployment `:570-575`. `:184` is a
+   wrong test pin.
+2. `:1270-1275` (F3) — "It parses either the manifest bytes or
+   `pg_get_indexdef` text into
+   `{ unique, name, schema, table, method, columns, predicate }`:
+   identifiers unquoted and upper-cased, `::casts` and comments dropped,
+   `IN` lists rewritten to the `ANY (ARRAY[...])` form, AND/OR flattened and
+   sorted (`:1027-1028`, `:1143-1162`, `:1201-1219`)." → The same, with only
+   single-identifier casts dropped and column items compared raw (F3
+   limits).
+3. `:1320-1325` — "This delivers the 01-L01 **V4-3a** handoffs for these two
+   files in the same edit: `c.relnamespace = current_schema()::regnamespace`
+   for `pg_class` (catalog `:169`, `:179`, `:198-200`; parity `:334`) and
+   `connamespace = current_schema()::regnamespace` for `pg_constraint`
+   (catalog `:224`, `:231-233`)." → R1 item 3 (corrected alias).
+4. `:1327-1329` — "The online-index leg (catalog `:165-175`, parity
+   `:331-340`) runs ONE bounded read:
+   `select c.relname as name, pg_get_indexdef(c.oid) as indexdef from pg_class c where c.relkind = 'i' and c.relnamespace = current_schema()::regnamespace and c.relname = any(<the 89 manifest names>)`."
+   → R1 item 4 (`in ${…}` form and the ban).
+5. `:1333-1334` — "The `schema` override is the session schema, because
+   PostgreSQL resolves the unqualified manifest relation through the first
+   `search_path` entry." → The same, under the F3 `$user` and schema-case
+   limits and their precondition.
+6. `:1338-1340` — "The expected text is
+   `CREATE INDEX content_revisions_entry_version_idx ON ${q}.content_revisions USING btree (entry_id, version)`,
+   where `q` is `select quote_ident(current_schema())`." → R1 item 5.
+7. `:1340-1341` — "In `public` this is byte-identical to today's `:184`." →
+   R1 item 5 (`:184` is corrected).
+8. `:1344-1345` — "Rewrite the docblocks that promise raw equality (catalog
+   `:26`, parity `:41-42`, `:101-105`) to say "equals its manifest bytes in
+   canonical shape"." → R1 item 6 (`:41-43`).
+9. `:1408-1411` — "Every other leg of the two suites (preserved member,
+   exclusion, `btree_gist`, unique constraints, and all static legs) runs
+   unchanged in worker schemas, because 0076 and the transactional 0081 are
+   journaled." → These legs run in worker schemas only as edited by R1
+   items 5, 7, 8 and 9. The static legs are unchanged.
+10. `:1416-1417` — "It waits only on R1 landing plus the two part-1 rows." →
+    It waits on the one test-only edit and the five part-1 rows in the
+    handoff table.
+11. `:1426-1428` — "The worker branch first executes in the 01-L01 FINAL
+    lane-runner run on the **D6 (ii)** target." → The worker branches
+    first execute in that run on the **C1** target (the direct endpoint).
+12. `:1428` — "It closes **V5-5 (a)** there; it is not an initial
+    precondition." → The handoff table's **V5-5 (a)** row (05-L01 share;
+    **O3**/**O5** for the orchestrator).
+13. `:1429-1430` — "Prediction from source, not a receipt: after R1 and R2
+    land, neither suite is part of the **D6 (i)** interim lane red set." →
+    Withdrawn. No prediction is made until every item lands and the part-1
+    rows are receipts.
+14. `:1436` — "The item is:" → The item is R3.1-R3.5 (the two original
+    bullets survive as R3.1 and R3.3).
+15. `:1449` (and "same" at `:1450`) — Clears when: "the R1 edit has landed
+    and the suite's **V5-1** part-1 row under `M-ambient` is `pass` with 0
+    failed and 0 skipped tests, after green **V5-4** checks" → The
+    handoff-table rows above.
+16. `:1452` — Clears when: "the R3 edit has landed and its part-1 row is
+    `pass`" → R3.1-R3.5 landed (not achievable before R3.2, R3.4 and R3.5),
+    then the part-1 row.
+17. `:1453` — Delivered by: "R2 (decided here; lands with the R1 edit)" and
+    Clears when: "the worker branch passes in the FINAL lane-runner run" →
+    The **V5-5 (a)** row above.
+18. `:1455-1456` — "Land order: R1, R2 and R3 are one 05-L01 test-only edit
+    to these three test files (the manifest is read, not changed)." → The
+    land order restated above.
+19. `:1457` — "It reopens no product, migration or rollout contract." →
+    The R1/R2/R3 edit reopens none. R1 item 12 reopens the rollout tool's
+    preserved-member pin.
+20. `:1480-1482` — "This is refined by R1 item 5: the pin is byte-identical
+    with the schema taken from `current_schema()`, and identical to the old
+    literal in `public`." → The pin is the server's `CREATE UNIQUE INDEX …`
+    rendering with the schema from `current_schema()`. It is not identical
+    to the old `:184` literal.
+
+**Retained and refined, not superseded.**
+- `:1363-1365`: the worker-branch pseudocode applies unchanged, and R2.2 and
+  R2.3 repeat its shape.
+- Base `:862-864` ("asserted byte-identical"): refined by item 5 as
+  corrected.
+- Base `:871-872` ("constraint names/definitions, generated search
+  expressions"): refined. The live legs pin the constraint definition by
+  server-rendering fragments plus the canonical predicate (item 7), and pin
+  generated expressions by server-deparse equality (R3.4). Exact source
+  bytes stay in the static legs.
+- First-note O1's proposal is adopted (**A5**) as R1 items 10-11.

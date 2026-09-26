@@ -973,3 +973,38 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
   lifecycle 4/4, eslint 0, prettier, core+root tsc 0. Post-audyt 2
   obiektywy PASS/PASS. Addendum w `impl-03-l01.json`
   (`reopen_2026-09-25_K1_K8`). Obowiązki dla 03-L02 zapisane w K5.
+
+## 2026-09-25 — checkpoint ee4c7f93 (contract layer after first real DB execution)
+- DATABASE_URL3 (coderso02) provisioned: journal 0081 + 89 online indexes (env only; not a 05-L01 rollout receipt); 0 foreign rows.
+- 03-L02: rounds R1..R5 audited (6 auditors/round); envelope 321/52/34, occurrences initial/final; FROZEN (522,753 B vs 512 KiB cap) until TASK-551-11 re-open step 2 lands; Round 6 dispositions written (audit-evidence/03-l02-round6-dispositions.md), writer held.
+- 06-L02: R6 (email) + R7 (published anchor, allocated row, fixtures) IMPLEMENTED (uncommitted code: revisionRetentionService.ts, revisionService.ts, 3 tests); grouped DB gate: concurrency+retention+budgets 79/0 with DB_LOCK_TIMEOUT_MS=15000; R8 (detail-page legs) + R10 (F2 floor-join candidate read, supersedes R9) contracts written, audits running.
+- 06-L03: revunit re-seed IMPLEMENTED (uncommitted); R1 + per-file commands + A1-A3 contracts; first real run showed partition-readiness/analytics/scheduler defects → R1 fixes pending implementation (after 02-L02).
+- 02-L02: re-open R6 (reserved-session guard) FAILED audit (2 HIGH) → pivot design running: dedicated max:1 direct client instead of reserve(); 02-L01 pool bounds 2→3 mirror written.
+- 01-L01: static contracted lane list (v1-v3) written, audits running; classifier regeneration deferred until it lands.
+- 11: re-open v3-v9 (sidecar splits, byte cap 1 MiB, move-proof fence 45 self-tests); v9 audit running; then 7 sequential steps with checkpoint commits.
+- Family debts recorded: smoke-evidence inventory red at HEAD (27 tracked receipts) → 03-L02 W0 gloss; bunLaneManifest red (475 vs 454) → 01-L01; bun run precommit green at ee4c7f93.
+
+## Checkpoint 2026-09-26 ~06:10 UTC (orchestrator; worktree HEAD 420bb24a)
+- TASK-551-11 re-open: step 1 `03d42b90`, step 2 `66203e22` (cap 1 MiB), step 3 `420bb24a` (worktree-compatibility split) — all green + committed; step 4 REDO in flight (first attempt killed by the 05:30 UTC session limit between (g) and (m); voided dir `11-reopen/step-4.void-20260926T055719Z`, paths restored to sha_3, ledger has the redo entry). Steps 5-7 pending.
+- 03-L02: Round 6 written (:6987-7736, freeze lifted); audit S1-A pass 0/0/2 LOW; S1-B/S2-A/S2-B/S3-A/S3-B re-running after the limit.
+- After the R12/v5/R8 audits (6 auditors): dispositions D1-D9 + Addendum A in `_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`; written: 06-L02 R13 (:4156-4796), 02-L02 R9 (:3384-3893; D1 seam `runDedicatedMaintenanceStatement`), 01-L01 v6 (:3849-4278), 02-L01 note (:439-755), 05-L01 re-open note (:1223-1485), parent (:1312-1383), 10-L02 (:1798-1849). In flight: 06-L03 A4 writer; audits R13 ×2, R9 ×2, v6 ×2, 02-L01 ×2, 05-L01 ×2.
+- Owner-relevant decisions taken by the orchestrator (flag in the report): lane-runner worker DB = the root `.env` DATABASE_URL target (owner grant 2026-09-24), DATABASE_DIRECT_URL set only for the 01-L01 FINAL run; one coderso02 DB gate at a time family-wide; `:156` fix reassigned to 06-L03 A4.
+- Implementation order after the audits go clean: 02-L02 R7/R8/R9 code (+ seam) → 02-L01 step 2 (own implementer) → 06-L02 R8/R10-R13 → 06-L03 R1/A1-A4 (+ pre-step) → 01-L01 classifier correction + initial regeneration; 03-L02 waves W0-W4 after Round 6 is clean.
+
+## Checkpoint 2026-09-26 ~11:30 UTC (orchestrator; owner rule: max ONE /workflows run at a time)
+- Queue (one at a time): (1) v14 audit resume [running] → step-4 resume at (h) → T/commit sha_4 → docs commit v11-v14 → steps 5-7; (2) 03-L02 Round-7 audit resume (5 agents; S1-A returned pass 0/0/2); (3) R14/R10/A8 audit resume (r14b, r10b); (4) fix2 writers (01-L01 v8, 05-L01 third note, 05-L03 note, 10-L02 fix 2, parent fix 2; script .claude/scratch/task-551/wf-fix2.js); (5) writers R15 / R11 / 06-L03 A8-k per Addendum F; (6) 03-L02 Round 8 per Round-7 audit + S3-B R8-a..d; then audits of each.
+- TASK-551-11: v11-v14 written (cap 2000 in place at :987; `.dryrun/` hidden root — the dry-run test copies contaminated every bare `bun test`; V14 literal gates G-f/G-m/G-d; G-d 8/8 + G-m ok recorded in 11-reopen/ledger.jsonl). Step 4 attempt stands (files unchanged since the stop; spec/ranges/.dryrun green).
+- Dispositions record: audit-evidence/2026-09-26-r12-v5-r8-dispositions.md D1-D9 + Addenda A-F; 03-l02-round7-dispositions.md (+ S3-B addendum).
+- Owner-facing items: (a) DATABASE_DIRECT_URL (direct endpoint of the DATABASE_URL target) is the FINAL lane-runner worker DB (C1); (b) an auditor echoed a credential line from root .env into its local transcript (C8) — rotation is the owner's call; (c) 05-L01 owns two >1,000-line files (O2) and its second/third notes carry 6+ source defects found by audit; (d) `lane-worker-dedicated-schema-binding` (E1) is a real production-safety gap for lane runs (pruners in `public`).
+
+## Checkpoint 2026-09-26 ~14:30 UTC (orchestrator)
+- TASK-551-11 re-open: step 4 GREEN + committed `2ee1c1a9` (V21-1 commit form, G-c ok); docs commit `6845ace2` (amendments v11-v24: ./ argv, hidden .dryrun root, literal gates G-f/G-m/G-d/G-c/G-v, evidence loss rules; cap 2,100). Step 5 dispatched (workflow-contracts split; enumerated-edits 36 export + 9 line). Steps 6-7 pending.
+- Queue after step 5 (one workflow at a time): step-5 close (T, (q)-(s), G-c) → step 6 → step 7 (G-v, receipt) → then the 03-L02 Round-7 audit resume (5 auditors) → R14/R10/A8 audit resume (r14b, r10b) → fix2 writers (v8, 05-L01, 05-L03, 10-L02, parent) → R15/R11/A8-k writers (Addendum F) → 03-L02 Round 8 → audits.
+
+## Checkpoint 2026-09-26 ~16:00 UTC (orchestrator)
+- TASK-551-11 re-open: steps 5 and 6 GREEN + committed (`e9373a26`, `5cf53490`; V21-1 commit form, G-c ok each). G-v over sha_4..sha_6: 3× ok + ledger-ok (ledger line 36; (12) sha equals the pin; (13) cited at N=36). Step 7 dispatched (receipt writer: impl-11-reopen-20260925.json; no source edit). After step 7: (q)-(s) for the receipt + G-c → the L11 re-open receipt addendum → then the queue: 03-L02 Round-7 audit resume, R14/R10/A8 audit resume, fix2 writers, R15/R11/A8-k writers, Round 8.
+
+## Checkpoint 2026-09-26 ~16:40 UTC — TASK-551-11 re-open COMPLETE
+- Steps 1-7 green and committed: 03d42b90, 66203e22, 420bb24a, 2ee1c1a9 (+ docs 6845ace2 v11-v24), e9373a26, 5cf53490, 051e36bc (receipt impl-11-reopen-20260925.json, 2,273 lines). Sidecar provenance 19/14; parity K1 K3-K9; A 90/0/0 over 10 test files; every file ≤ its cap; G-c/G-v green; ledger 40 lines.
+- Contract 11 now at v24 (2,052 lines; cap 2,100). Owner-visible debts: bun-lane manifest red (01-L01), audit-evidence relocation (10-L02 closure), v24 LOWs.
+- Running: 03-L02 Round-7 audit (resumed). Queue: R14/R10/A8 audit resume (r14b, r10b) → fix2 writers (01-L01 v8, 05-L01 third, 05-L03, 10-L02 fix 2, parent fix 2) → R15/R11/A8-k writers (Addendum F) → 03-L02 Round 8 → audits → implementations (02-L02 R7-R11 code first).

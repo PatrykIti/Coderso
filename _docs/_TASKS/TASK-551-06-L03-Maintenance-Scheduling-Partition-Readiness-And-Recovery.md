@@ -327,7 +327,7 @@ categories described in the file-ownership contract.
     "tests/perf/database-retention-jobs.test.ts",
     "tests/perf/database-partition-readiness.test.ts",
     "tests/perf/database-partition-readiness-catalog.test.ts",
-    "tests/integration/runtime/retentionScheduler-real-db.test.ts"
+    "tests/integration/runtime/retentionScheduler-real-db.test.ts", "core/services/maintenance/preRetentionVacuumPlan.ts", "core/services/maintenance/preRetentionVacuum.ts", "tests/vitest/maintenance/preRetentionVacuumPlan.test.ts", "tests/integration/runtime/preRetentionVacuum.test.ts"
   ],
   "forbiddenPaths": [
     "core/db/client.ts",
@@ -347,11 +347,11 @@ categories described in the file-ownership contract.
       "id": "partition-readiness-vitest",
       "lane": "vitest",
       "environmentProfile": "none",
-      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/maintenance/partitionReadinessService.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/maintenance/partitionReadinessService.test.ts", "tests/vitest/maintenance/preRetentionVacuumPlan.test.ts"],
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/vitest/maintenance/partitionReadinessService.test.ts"],
-        "minimum": 1
+        "paths": ["tests/vitest/maintenance/partitionReadinessService.test.ts", "tests/vitest/maintenance/preRetentionVacuumPlan.test.ts"],
+        "minimum": 2
       }
     },
     {
@@ -369,11 +369,11 @@ categories described in the file-ownership contract.
       "id": "retention-scheduler-real-db-test",
       "lane": "bun-test",
       "environmentProfile": "task551-db-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/retentionScheduler-real-db.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/runtime/retentionScheduler-real-db.test.ts", "tests/integration/runtime/preRetentionVacuum.test.ts"],
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/integration/runtime/retentionScheduler-real-db.test.ts"],
-        "minimum": 1
+        "paths": ["tests/integration/runtime/retentionScheduler-real-db.test.ts", "tests/integration/runtime/preRetentionVacuum.test.ts"],
+        "minimum": 2
       }
     },
     {
@@ -1621,3 +1621,866 @@ Each of the six files runs in its own process in two forms:
 On the owner map, any skip in any file is a failed gate, never a pass (R1-c5, A1-c). Each file is
 counted from its own run, and the R1-e receipt records per-file pass/fail/skip counts for each
 command. The Vitest file (R1-e gate 1) also needs 0 fail and 0 skip.
+
+### A8 — 2026-09-26: pre-step channel, retentionScheduler.test.ts dispositions, RetentionJobService :156, envelope additions
+
+Relabel note (2026-09-26, orchestrator Addendum C2 / D-9): this section was first written as `A4`; it is `A8` because `A4` already names the round-2 amendment at `:1442`, and the relabel changed labels only.
+
+Append-only, apart from the fence edit recorded in A8-a. This amendment implements Addendum A2 of
+the orchestrator dispositions of 2026-09-26
+(`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`, cited as
+D1-D9 and A1-A6 of that file). It consumes:
+
+- D1, the maintenance-statement seam, owned by `TASK-551-02-L02` R9.1
+  (`TASK-551-02-L02-…md:3406-3565`: signature `:3414-3434`, pseudocode `:3471-3493`, rules
+  `:3495-3525`, test legs F27/RD13 `:3527-3564`), and the R9.11 handoff to this leaf (`:3790-3791`);
+- D2, D4 and D5 as written into `TASK-551-06-L02` R13 (`TASK-551-06-L02-…md:4156-4796`): R13-1
+  (`:4180-4326`), R13-2 (`:4327-4427`), R13-3 prerequisite 2 (`:4456-4476`, the text block
+  `:4461-4473`), R13-4 (d) (`:4498-4517`), R13-4 (i) (`:4551-4568`) and R13-7 (`:4733-4744`);
+- 02-L02 R9.9 (`:3722-3758`), the executable `tests/integration/runtime/retentionScheduler.test.ts`
+  dispositions;
+- Addendum A1: the `task551RetentionJobService.test.ts:156` edit is this leaf's, not 06-L02's.
+
+Naming. This `### A8` is a new amendment. It is not the round-2 `#### A4 — (H) One Bun process per
+test file` (`:1442`) or its `A4-0`/`A4-1` items; those keep their names. Items below are lettered
+(`A8-a` … `A8-i`) so they never collide with `A4-0`/`A4-1`. Where an A8 item quotes an earlier
+sentence of this file, the A8 item wins and the quoted sentence is read as replaced; every quote is
+listed in **Superseded sentences (A8)**. Everything not quoted stays binding, including C4
+(`:549-627`), which stays byte-identical.
+
+Grounding. Anchors were grounded on 2026-09-26 against `/home/coder/project/Coderso-551` at HEAD
+`420bb24a` plus the uncommitted working tree (dirty in 06-L02 source/tests,
+`tests/integration/server/task551RetentionJobService.test.ts` and sibling task files; none of the
+06-L03 source anchors below is in a file that A8 found dirty except that test file, whose anchor is
+the working-tree line). Counts: `core/server/jobs/retentionScheduler.ts` 786,
+`core/services/maintenance/retentionJobService.ts` 947,
+`tests/integration/runtime/retentionScheduler.test.ts` 998,
+`tests/integration/server/task551RetentionJobService.test.ts` 837. Neither A1 split file and none of
+the four A8 paths exists yet. `**Status:**` and `**Changelog:**` stay byte-identical.
+
+#### A8-a — Envelope additions (edited in place; inventory pinned)
+
+The fence edit moves no line of this file: the four paths share the last `allowlist` line, and the
+two command edits change values on existing lines. Every earlier anchor to this file stays valid.
+
+1. `allowlist` (`:330`) gains, after `tests/integration/runtime/retentionScheduler-real-db.test.ts`:
+   `"core/services/maintenance/preRetentionVacuumPlan.ts"`,
+   `"core/services/maintenance/preRetentionVacuum.ts"`,
+   `"tests/vitest/maintenance/preRetentionVacuumPlan.test.ts"` and
+   `"tests/integration/runtime/preRetentionVacuum.test.ts"`. None of them is in any other TASK-551
+   fence (06-L02 R13-9, `:4789-4793`), so `allowlist_cross_owner` cannot fire.
+2. `partition-readiness-vitest` (`:346-356`): `argv` gains
+   `"tests/vitest/maintenance/preRetentionVacuumPlan.test.ts"` as its last token (6 tokens);
+   `positiveDiscovery.paths` gains the same path and `minimum` becomes `2` (= path count). Vitest
+   isolates each file's module graph, so the round-2 A4 (H) process hazard does not apply to it.
+3. `retention-scheduler-real-db-test` (`:368-378`): `argv` gains
+   `"tests/integration/runtime/preRetentionVacuum.test.ts"` as its last token (5 tokens);
+   `positiveDiscovery.paths` gains the same path and `minimum` becomes `2`. The id is kept (renaming
+   it would change `occurrences`). The two files share one Bun process under the co-residency rules
+   of A8-e.
+4. NOT added: the two commands and the `occurrences[single].commandIds` line of 06-L02 R13-3
+   prerequisite 2 (`:4466-4472`). Addendum A2 fixes "command argv additions; NO new occurrence", and
+   the envelope parser rejects a command that no occurrence references
+   (`envelope_command_unreferenced`, `_docs/_workflows/lib/task-551-dispatch-envelope.mjs:410-411`).
+   `occurrences` (`:466-472`), `forbiddenPaths` (`:332-343`, `core/db/client.ts` stays at `:333`),
+   `dependencies` and every other command stay byte-identical. The dispatch still lists 13 commands.
+5. Checks run after the edit: the fence parses as JSON; the family preflight literal of
+   `TASK-551-11-…md:1173` with `sourceHead` `420bb24ad9973ded1a5cdc93561c8bf502a09238` prints exactly
+   `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+#### A8-b — Scheduler pre-step (pre-retention vacuum): channel, target, bound, abort (D1, D2)
+
+This is the "scheduler pre-step (pre-retention vacuum)" item that 06-L02 R13-3 item 3 (`:4477-4479`)
+and R12-5 (e) hand to this leaf. It carries 06-L02 R12-1 (`:3663-3810`) as amended by R13-1, R13-2
+and R13-4. The 06-L02 text is authoritative for the design; this item makes it executable here.
+
+- **Call site.** Only the scheduler's default runner, `createDefaultRunRetentionPlan`
+  (`core/server/jobs/retentionScheduler.ts:397-398`, built at `:478`). A runner injected through
+  `RetentionSchedulerDeps.runRetentionPlan` (`:368`) runs no pre-step. `retentionJobService.ts`
+  gets no pre-step code.
+- **Channel and target.** Every pre-step statement (the privilege read, each VACUUM, the
+  effectiveness read) is one call of D1's
+  `runDedicatedMaintenanceStatement({ signal, statementTimeoutMs, statement })` from
+  `core/db/client.ts` (02-L02 R9.1). The seam resolves the R7.2 dedicated/direct maintenance target
+  at call time, builds its own short-lived `max: 1` client, runs exactly one autocommit `execute`
+  outside any BEGIN and discards the client on every path. The pre-step never uses `db`, a reserved
+  handle, the plan's dedicated session, `set_config`, `reset`, a terminate branch or
+  `query.cancel()`. `core/db/client.ts` stays forbidden; this leaf only imports the seam.
+- **Skip.** Only a seam rejection `database_maintenance_session_unavailable` skips: the current and
+  every remaining family get `skipped_session_unavailable`, no further pre-step statement is
+  issued, and the plan runs. `database_maintenance_statement_bound_invalid` is never a skip (02-L02
+  R9.11 `:3786-3788`); it is a `failed` outcome. The lock-timeout class is A8-d.
+- **Bound.** Each VACUUM passes `min(120_000, shareMs)` (A8-c). The two catalog reads pass the
+  statement floor (`config.statementTimeoutMs`). The pre-step never passes a bound below the floor
+  (it records `budget_exhausted` instead), so the seam's lower clamp never extends a pre-step
+  statement. `lock_timeout` stays the 02-L01 startup value.
+- **Abort.** `signal.aborted` is checked before every seam call and the signal is passed into it.
+  On abort the seam's `finally` runs the R7.4 drain and releases its slot. When the signal is
+  aborted, any seam rejection is rethrown unchanged (normally `dedicated_database_session_lost`);
+  a pre-call check throws `new Error("retention_pre_vacuum_aborted")`. The abort propagates to
+  `executeRun` (`:513`), which logs the scheduler's `aborted` outcome (`:531-539`); the plan is not
+  started. The run settles within `RETENTION_CANCEL_DRAIN_DEADLINE_MS` (4,500 ms,
+  `core/db/databaseLifecycle.ts:30`). An abort is never classified as a pre-step failure or skip.
+- **Connection budget.** Seam calls are sequential and each client is closed before the next call
+  and before `runRetentionPlan` opens the plan's dedicated session; the pre-step adds no
+  concurrent dedicated connection (06-L02 R13-1 `:4254-4259`).
+- **C4.** Unchanged. The seam's client is not the plan's dedicated session and the pre-step is not
+  a C4 statement.
+- **Mode.** The pre-step runs for dry-run and apply alike (R12-1 **Mode**). A family whose owner
+  normalizer reports it disabled gets no SQL. When no family is enabled, the pre-step issues zero
+  seam calls (no privilege read either).
+
+#### A8-c — Shared run deadline, modules, statements and outcomes (D4, D5)
+
+**Modules (binding; 06-L02 R13-2 `:4357-4376`).**
+
+- `core/services/maintenance/preRetentionVacuumPlan.ts` — pure and Bun-free. It imports nothing
+  from `core/db/*`, `core/services/content/*` or any runtime adapter. It owns the renderers, the
+  closed outcome set, the classification, the budget arithmetic and the loop, which takes its
+  dependencies as an argument. Target ≤ 400 lines.
+- `core/services/maintenance/preRetentionVacuum.ts` — the lazy-deps layer, STATIC imports only (no
+  dynamic `import()` of `core/db/client`; `scripts/task551QueryInventory/literalDynamicClientImports.ts:331-332`,
+  `:533`, `:551`). It binds: `families` = `REVISION_RETENTION_FAMILY_ORDER`
+  (`revisionRetentionService.ts:115-121`); `isEnabled(family)` =
+  `normalizeRevisionRetentionPolicy(family, undefined, process.env).enabled` (`:317`);
+  `tableNameOf` = `getRevisionFamilyTableName` (06-L02 R12-3; landed by 06-L02 R8-R13);
+  `statementFloorMs` = `parseDatabaseRuntimeConfig(process.env).statementTimeoutMs`
+  (`core/db/databaseConfig.ts:270`, `:293-299`), evaluated once on first use (the same pure owner
+  parser `client.ts:21` runs at import, so the value equals the seam's clamp floor); `runStatement`
+  = the D1 seam with the adapter `(sql) => sql.unsafe(text)`, where `text` is exactly the pure
+  renderer's output and no parameter array is passed (R13-2: the bytes do not change). It exports
+  `runPreRetentionVacuum(input, overrides?)`; `overrides` exists for the Bun test file only and may
+  replace `families`, `isEnabled`, `tableNameOf` and `runStatement`. Target ≤ 200 lines.
+- `retentionScheduler.ts` receives only the call (A8-c pseudocode) and must stay ≤ 1,000 lines.
+
+**Statements (closed).** `renderVacuum(name)` accepts only `^[a-z_][a-z0-9_]{0,62}$`, otherwise it
+throws `retention_pre_vacuum_identifier_invalid`, and returns `VACUUM (ANALYZE) "<name>"`. The two
+catalog reads render the same validated names as string literals:
+
+```sql
+-- privilege read (config floor bound)
+select c.relname as relname, pg_has_role(current_user, c.relowner, 'USAGE') as permitted
+from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = current_schema() and c.relkind = 'r' and c.relname in ('<name>', ...)
+-- effectiveness read (config floor bound), families that ran
+select c.relname as relname, c.relpages as relpages, c.relallvisible as relallvisible
+from pg_class c join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = current_schema() and c.relkind = 'r' and c.relname in ('<name>', ...)
+```
+
+**Closed outcomes (one per family per run).** `ran`, `ineffective`, `skipped_disabled`,
+`skipped_normalizer_error`, `skipped_session_unavailable`, `skipped_not_permitted` (also a table
+absent from the privilege read, R13-4 (h)), `skipped_concurrent`, `budget_exhausted`,
+`failed_statement_timeout`, `failed`. A `failed` outcome carries one closed `code`: the rejection's
+`DATABASE_CLIENT_ERROR_CODES` value when it is one (`database_pool_reserve_timeout`,
+`dedicated_database_session_lost`, `database_maintenance_statement_bound_invalid`, …), else
+`retention_pre_vacuum_error`. Logs: one `log.info("retention_pre_vacuum_completed", { families:
+[{ family, outcome }] })` per run with at least one enabled family, and one
+`log.warn("retention_pre_vacuum_failed", { family, code })` per failed family, through the
+scheduler's `RetentionSchedulerLogger`. No log carries SQL text, a table name, an OID, a bind
+value, a URL or a server message (Security Contract `:248-250`).
+
+**Pseudocode (binding shape).**
+
+```ts
+// retentionScheduler.ts — the only scheduler change
+export function createDefaultRunRetentionPlan(
+  maxRunMs: number,
+  clock: () => number,
+  log: RetentionSchedulerLogger,
+  steps: DefaultRetentionRunSteps = { runPreRetentionVacuum, runRetentionPlan }
+): RetentionPlanRunner {
+  return async ({ now, signal }) => {
+    const { planMaxRunMs } = await steps.runPreRetentionVacuum({
+      runStartedAtMs: now.getTime(), maxRunMs, signal, clock, log,
+    });
+    return steps.runRetentionPlan(now, signal, { maxRunMs: planMaxRunMs });
+  };
+}
+// engine (:478): deps.runRetentionPlan ?? createDefaultRunRetentionPlan(config.maxRunMs, now, log)
+
+// preRetentionVacuumPlan.ts — pure loop
+async function runPreRetentionVacuumLoop(input, deps): Promise<{ planMaxRunMs; outcomes }> {
+  const runDeadlineAt = input.runStartedAtMs + input.maxRunMs;
+  const planFloorMs = Math.max(1_000, Math.ceil(input.maxRunMs / 2)); // R13-2; 1_000 = MIN_RUN_MS
+  const shareMs = () => runDeadlineAt - input.clock() - planFloorMs;
+  const enabled = [];
+  for (const family of deps.families) {
+    let on: boolean;
+    try { on = deps.isEnabled(family); } catch { record(family, "skipped_normalizer_error"); continue; }
+    if (!on) { record(family, "skipped_disabled"); continue; }
+    enabled.push({ family, name: deps.tableNameOf(family) }); // renderer validates the name
+  }
+  if (enabled.length === 0) return finish(); // zero seam calls
+  const call = (text, boundMs) => {
+    if (input.signal.aborted) throw new Error("retention_pre_vacuum_aborted");
+    return deps.runStatement({ signal: input.signal, statementTimeoutMs: boundMs, text });
+  };
+  // privilege read
+  if (shareMs() < deps.statementFloorMs) { exhaust(enabled); return finish(); }
+  try { permitted = rowsToPermitted(await call(renderPrivilegeRead(enabled), deps.statementFloorMs)); }
+  catch (error) { onPrivilegeReadError(error, enabled); return finish(); } // abort rethrows; unavailable -> skip all; else failed all
+  for (const item of enabled) {
+    if (!permitted.has(item.name)) { record(item.family, "skipped_not_permitted"); continue; }
+    const share = shareMs();
+    if (share < deps.statementFloorMs) { exhaustFrom(item); break; }
+    try { await call(renderVacuum(item.name), Math.min(120_000, share)); record(item.family, "ran"); }
+    catch (error) {
+      const kind = classify(error, input.signal);   // A8-d
+      if (kind === "abort") throw error;
+      if (kind === "unavailable") { skipUnavailableFrom(item); break; }
+      record(item.family, kind === "sqlstate_55P03" ? "skipped_concurrent"
+        : kind === "sqlstate_57014" ? "failed_statement_timeout" : "failed", closedCode(error));
+    }
+  }
+  // effectiveness read, only when some family ran and the share admits it; failure keeps "ran"
+  if (ranFamilies().length > 0 && shareMs() >= deps.statementFloorMs) {
+    try { applyEffectiveness(await call(renderEffectivenessRead(ranFamilies()), deps.statementFloorMs)); }
+    catch (error) { if (classify(error, input.signal) === "abort") throw error; warnEffectiveness(closedCode(error)); }
+  }
+  return finish(); // planMaxRunMs = Math.max(1_000, runDeadlineAt - input.clock()); logs per A8-c
+}
+// effectiveness: relpages = 0 -> "ran"; relallvisible / relpages < 0.9 -> "ineffective" (R13-4 (a))
+```
+
+A privilege-read rejection that is neither an abort nor `unavailable` marks every enabled family
+`failed` with its closed code and issues no VACUUM; the plan still runs. `budget_exhausted` marks
+the current and every remaining enabled family. A failure never stops the plan.
+
+#### A8-d — SQLSTATE closed values and replica concurrency (06-L02 R13-4 (d), R13-7)
+
+- `classify(error, signal)`: `signal.aborted` → `abort` (checked first, whatever the rejection);
+  `error.code === "database_maintenance_session_unavailable"` → `unavailable`; the rejection's
+  SQLSTATE property `error.code === "57014"` → `sqlstate_57014`; `error.code === "55P03"` →
+  `sqlstate_55P03`; anything else → `other`. Only the `code` property is read, and only compared
+  against these closed literals. `message`, `detail`, `hint`, `query`, `parameters` and `where` are
+  never read or logged; 06-L03 never parses server messages.
+- Handoff check. 02-L02 R9.1 **Error surface** (`:3522-3525`) rethrows non-loss server errors
+  unchanged (R7.3), so a server `57014`/`55P03` reaches the pre-step as the driver error with its
+  SQLSTATE `code`. That satisfies R13-7's closed-value condition (`:4735-4738`); no 02-L02 handoff
+  is recorded. If the landed seam wraps a non-loss server error so that `code` no longer carries the
+  SQLSTATE, the implementer STOPS (A8-h).
+- `55P03` (lock timeout under `SHARE UPDATE EXCLUSIVE`, normally a concurrent replica's pre-step,
+  autovacuum, ANALYZE, `CREATE INDEX CONCURRENTLY` or DDL) is `skipped_concurrent`, never a
+  failure. There is no `SKIP_LOCKED`; the statement text stays `VACUUM (ANALYZE) "<name>"`.
+- The pre-step runs outside the advisory-lock lease on every replica and every tick, including a
+  tick whose plan ends `skipped_locked`. The per-run cost (one VACUUM pass plus one ANALYZE sample
+  per enabled family and replica, N + 2 seam connections) is accepted at the daily default and
+  called out at the 60 s minimum interval (`retentionScheduler.ts:91`, `:94`), as R13-4 (d)
+  records.
+
+#### A8-e — Tests and the co-resident Bun process
+
+**Vitest, DB-free** — `tests/vitest/maintenance/preRetentionVacuumPlan.test.ts` (command
+`partition-readiness-vitest`, profile `none`). It imports only `preRetentionVacuumPlan.ts`. Legs:
+
+1. the renderer for the five literal names passed as parameters (`page_revisions`,
+   `widget_template_revisions`, `detail_page_revisions`, `content_revisions`, `post_revisions`),
+   and rejection (`retention_pre_vacuum_identifier_invalid`) of a quoted, upper-case, empty and a
+   64-character name;
+2. the closed outcome set and closed failure codes;
+3. `classify`: abort wins over every rejection; `database_maintenance_session_unavailable` skips
+   the current and remaining families and issues no further call; `57014` →
+   `failed_statement_timeout`; `55P03` → `skipped_concurrent`;
+   `database_maintenance_statement_bound_invalid` → `failed` (never a skip); a rejection carrying a
+   server `message` logs none of it;
+4. effectiveness: `relpages = 0` → `ran`; ratio `< 0.9` → `ineffective`; `>= 0.9` → `ran`; a failed
+   or budget-excluded effectiveness read keeps `ran`;
+5. budget arithmetic with a fake clock: `planFloorMs` at `maxRunMs` 1,000 / 3,001 / 300,000; each
+   VACUUM bound = `min(120_000, shareMs)`; `budget_exhausted` below the floor; the returned
+   `planMaxRunMs` = `max(1_000, runDeadlineAt - now)`;
+6. the loop with fake dependencies: disabled and normalizer-error families get no call; zero
+   enabled families → zero calls and no log; the abort check runs before each call; a failure does
+   not stop the next family; the privilege-read failure path issues no VACUUM.
+
+Target ≤ 600 lines. Airtight: 0 fail, 0 skip.
+
+**Bun** — `tests/integration/runtime/preRetentionVacuum.test.ts` (command
+`retention-scheduler-real-db-test`, profile `task551-db-test`). Legs:
+
+1. five-family identifier assertion through the real accessor:
+   `renderVacuum(getRevisionFamilyTableName(family)) === 'VACUUM (ANALYZE) "<literal>"'` for every
+   family in `REVISION_RETENTION_FAMILY_ORDER`, against the file's own literal map (it does not
+   import 06-L02's `R10_FAMILY_TABLE`);
+2. scheduler ordering (DB-free): `createDefaultRunRetentionPlan` with injected `steps` — the plan
+   fake is not called until the pre-step fake settles, receives the returned `planMaxRunMs`, and is
+   never called when the pre-step rejects with an aborted signal;
+3. DB leg "ran": an EMPTY leg-owned table `t551pv_ran_<run marker>` in `current_schema()`,
+   `overrides` = one enabled family whose `tableNameOf` returns that table, the REAL seam. The
+   outcome is exactly `ran` (`relpages = 0`, so the xmin horizon cannot make it flaky), which proves
+   the VACUUM ran outside a block (inside one PostgreSQL raises `25001`). The observer then sees
+   `vacuum_count >= 1` for that table in `pg_stat_user_tables` with `schemaname = current_schema()`,
+   polling up to 3,000 ms at 100 ms;
+4. DB leg "abort" — 06-L02 R13-1 **DB leg for the abort** (`:4264-4286`) verbatim: a leg-owned table
+   with a few rows; the observer holds `LOCK TABLE <leg table> IN SHARE UPDATE EXCLUSIVE MODE` in an
+   open transaction; the pre-step starts with its own `AbortController` and the REAL seam; bounded
+   50 ms polling of `pg_stat_activity` until a backend on the current database shows
+   `wait_event_type = 'Lock'` and a query starting with `VACUUM`, recording its `pid` and
+   `backend_start`; abort; the promise rejects with the abort within 4,500 ms of the abort call and,
+   by settlement, no row matches that `pid` plus `backend_start`; `finally` rolls back the holder
+   and drops the table. No leg VACUUMs or locks a shared family table.
+
+Its DB gate is its own (A1-a/A1-b shape): owner-map fixture variables plus a routability probe;
+every DB leg is skipped by name when absent. Every leg-owned name carries a per-run marker, and
+`afterAll` drops only the tables this file created and ends only its own observer client. Target
+≤ 500 lines.
+
+**Co-residency (binding; exception to round-2 A4 (H) for exactly this pair).** The command runs
+`retentionScheduler-real-db.test.ts` and `preRetentionVacuum.test.ts` in one Bun process. File order
+inside one `bun test` invocation is not a contract, so each file must pass in either order:
+
+- neither file calls `closeAllDatabaseClientsWithin`, `closeDatabase`, `closeRuntimeLifecycle` or
+  `resetMaintenanceSessionAffinityForTests` (for the real-db file this restates A4-1);
+- `preRetentionVacuum.test.ts` calls no `setDatabaseClientRuntimeForTests`,
+  `assertMaintenanceSessionAffinity` or `startRetentionScheduler`, so it leaves the affinity memo,
+  the lifecycle generation and the client overrides exactly as it found them (the seam does not
+  await the affinity proof, 02-L02 R9.1 `:3503-3505`);
+- each file's own clients and tables are its own; nothing is shared through module state.
+
+Proof: each file alone in both forms, and the command's two-file argv in both forms. Counts per
+file are read from the command run's per-file output.
+
+| File | Airtight | Owner map |
+| --- | --- | --- |
+| `retentionScheduler-real-db.test.ts` (in the command) | 0 fail, 3 skips by name | 0 fail, 0 skip |
+| `preRetentionVacuum.test.ts` (in the command) | 0 fail, 2 skips by name (legs 3-4); legs 1-2 pass | 0 fail, 0 skip |
+| `preRetentionVacuumPlan.test.ts` (Vitest) | 0 fail, 0 skip | n/a (profile `none`) |
+
+Airtight form of the command:
+`env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/runtime/retentionScheduler-real-db.test.ts tests/integration/runtime/preRetentionVacuum.test.ts`.
+The owner-map form is A7's closed `env -i` form with the same two paths. On the owner map any skip
+is a failed gate. The no-leak check of R12-1 **Tests** is moot here (06-L02 R13-2 `:4423-4426`);
+02-L02 RD13 owns it.
+
+#### A8-f — `tests/integration/runtime/retentionScheduler.test.ts` dispositions (02-L02 R9.9)
+
+These are intended contract changes that follow 02-L02 R7-R9, not weakenings. They build on the
+02-L02 R8.9 re-baselines (`TASK-551-02-L02-…md:3104-3251`, which stand except where R9.9 amends
+them). HEAD anchors; the A1-b split may move them, so the implementer re-anchors by leg title.
+
+1. Ordering (`:613-646`, affinity-gating region): the capped-primary PASS leg runs AFTER the
+   rejection legs (transaction-primary, outage, key/pid mismatch) of its lifecycle generation, OR in
+   its own `test` (the per-test `beforeEach` `closeAllDatabaseClientsWithin` bumps the generation),
+   OR calls `resetMaintenanceSessionAffinityForTests()` right after it. The transaction-primary leg
+   may stay anywhere (it rejects by the mode matrix before any cache read). The PASS leg keeps
+   exactly one factory call, one scheduled timer and `controller.stop()` in `finally` (R9.9
+   `:3757-3758`).
+2. Ordering-law banner (`:19-21`): the law is unchanged (only a generation bump clears a cached
+   proof). The text names both bumps (the `beforeEach` `closeAll` and
+   `resetMaintenanceSessionAffinityForTests()`) and states that every rejection leg on a mode that
+   passes the matrix precedes the one counting PASS leg of its generation. After A1-b the
+   "real-DB legs first on the empty memo" clause moves out with those legs.
+3. Clock: `client.ts` captures `setTimeout`/`clearTimeout`/`performance.now` at module evaluation
+   (02-L02 side, R9.9 `:3739-3746`), so `withTimers` (`:148-192`) records no dedicated-path timer;
+   the index-based `fireTurn(recorder, 0)` (`:666`) and the `toHaveLength(0|1)` counts stay. A leg
+   may instead assert scheduler timers by `delayMs`. `DatabaseClientRuntimeOverrideForTests.clock?`
+   is 02-L02's; this file uses it only if a leg needs a fake dedicated-path clock.
+4. `:395-412` (configuration failures): the override becomes
+   `{ config: CHANNEL.direct, maintenanceUrl: <placeholder>, dedicatedClientFactory: <fake> }`;
+   `expect(pool.reservations()).toBe(0)` becomes factory calls `0`; `recorder.scheduled` stays
+   length 0.
+5. `:900-945` (default job binding): `pool()` becomes a fake `dedicatedClientFactory` whose identity
+   result carries `state.pid === <identity pid>` and `{ pid, started }`; every result carries that
+   `state.pid` and a `command` tag equal to the upper-cased first keyword of the statement text
+   (`BEGIN`, `COMMIT`, `SELECT`, and `VACUUM` should the pre-step reach it); a graceful `end` and
+   `end({ timeout: 0 })` resolve. The override adds the `maintenanceUrl` placeholder. The
+   assertions at `:927-936` stay and the factory-call count is not pinned. With
+   `ALL_FAMILIES_DISABLED_DRY_ENV` the A8-b **Mode** rule means the pre-step issues zero seam calls
+   in this leg, so it needs no new pre-step assertion.
+6. No pre-step leg is added to this file (it is at 998 lines before A1-b); the pre-step's scheduler
+   ordering leg lives in `preRetentionVacuum.test.ts` (A8-e leg 2). The file stays ≤ 1,000 lines
+   (soft target 950, C9.1).
+
+#### A8-g — `tests/integration/server/task551RetentionJobService.test.ts:156` (Addendum A1, 06-L02 R13-4 (i))
+
+This file is 06-L03-owned (`allowlist` `:326`); the edit is this leaf's. Working-tree line `:156`
+reads:
+
+> `select coalesce((select n_tup_del::int from pg_stat_user_tables where relname = ${relname}), 0) as n`
+
+It becomes:
+
+```ts
+select coalesce((select n_tup_del::int from pg_stat_user_tables where relname = ${relname} and schemaname = current_schema()), 0) as n
+```
+
+With one `bun_worker_*` schema per lane worker the unqualified scalar subquery can return several
+rows ("more than one row returned"). It is the only `relname` lookup in the file (`:154-156`;
+`grep -c relname` = 2, both inside `deletedTupleCount`). No test title, assertion or count changes;
+the airtight form keeps 9 skips by name and the owner map 0 fail, 0 skip (A7).
+
+#### A8-h — Land order, gates, stop rules and receipt
+
+Land order (02-L02 R9.12 `:3799-3813`): step 1 (02-L02 R7 + R8 + R9 code, including the D1 seam) and
+step 3 (06-L02 R8-R13, including `getRevisionFamilyTableName`) land before this leaf. A8 lands in
+step 4, in the same 06-L03 dispatch as R1, AFTER the R1 code and both A1 splits (the co-resident
+host file must exist). The pre-step code starts only when D1's F27 and RD13 receipts are green
+(06-L02 R13-3 prerequisite 1, `:4452-4455`).
+
+Gates (implementer, fast forms):
+
+1. `./node_modules/.bin/eslint --max-warnings=0` on every A8-touched file.
+2. `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/maintenance/partitionReadinessService.test.ts tests/vitest/maintenance/preRetentionVacuumPlan.test.ts` — 0 fail, 0 skip.
+3. Airtight Bun, one invocation each: `preRetentionVacuum.test.ts` alone;
+   `retentionScheduler.test.ts` alone; `task551RetentionJobService.test.ts` alone; and the
+   two-file command form of A8-e. Counts as A8-e and A7.
+4. `wc -l` on every touched file (each ≤ 1,000) and `git diff --check`.
+
+Orchestrator (between phases): `bun --cwd core lint:types`; the owner-map forms of gate 3 and of the
+Vitest pair, serialized under D9 (at most one `coderso02` DB gate at a time, family-wide).
+
+Stop rules. The implementer STOPS and reports when:
+
+- `runDedicatedMaintenanceStatement` is not exported by `core/db/client.ts`, or its F27/RD13
+  receipts are not green;
+- `getRevisionFamilyTableName` is not exported by `revisionRetentionService.ts`;
+- a non-loss server rejection from the landed seam does not carry the SQLSTATE in `code` (A8-d);
+- the `:156` predicate is not the only unqualified `relname` lookup when the edit is made;
+- the co-resident pair cannot pass in both orders without a close/reset call forbidden by A8-e;
+- any touched file would exceed 1,000 lines, or `retentionScheduler.test.ts` would after the A8-f
+  edits.
+
+Receipt: the R1-e receipt addendum in `_docs/_workflows/_smoke/task-551/impl-06-l03.json` also
+records the A8 files (bytes, lines, sha256), the per-file counts of gates 2-3 in both forms, and
+`coldStatePolicy` in the 06-L02 R13-1 shape (`TASK-551-06-L02-…md:4306-4318`). This task file
+records the contract only.
+
+#### Superseded sentences (A8)
+
+1. `:30-39`, **Exact File Ownership** lists: "**Production/tooling:**
+   `core/services/maintenance/retentionJobService.ts`,
+   `core/services/maintenance/partitionReadinessService.ts`,
+   `core/server/jobs/retentionScheduler.ts`, and
+   `scripts/task-551-partition-readiness.ts`." and "**Tests:**
+   `tests/vitest/maintenance/partitionReadinessService.test.ts`,
+   `tests/integration/runtime/retentionScheduler.test.ts`,
+   `tests/integration/server/task551RetentionJobService.test.ts`,
+   `tests/perf/database-retention-jobs.test.ts`, and
+   `tests/perf/database-partition-readiness.test.ts`." Now read with the A1 splits and the four A8
+   paths (A8-a item 1) added to their lists.
+2. `:41`, "No other path may be edited." Now reads: no path outside the envelope `allowlist`
+   (`:319-331`) may be edited.
+3. `:1284-1285` (R1 amendments preamble), "The Workflow Dispatch Envelope is edited in place ONLY as
+   recorded in A1-0." and `:1437-1438` (round-2 preamble), "The Workflow Dispatch Envelope is
+   edited in place ONLY as recorded in A4-0." Each is read as scoped to its own round; the
+   2026-09-26 fence edit is recorded in A8-a.
+4. `:1411-1412` (A2), "`TASK-551-06-L04` is not allocated. No file under `_docs/_TASKS/` references
+   it apart from R1-d above." Now reads: `TASK-551-06-L04` is not allocated; the id is reserved for
+   "Per-parent retention batching" (06-L02 R12-2 (a), R12-5 (e) `:4105-4111`), a different purpose
+   from the superseded R1-d proposal, and 06-L02 references it; reserving it reuses no retired
+   number.
+5. `:1256`, R1-e gate 1,
+   "`env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/maintenance/partitionReadinessService.test.ts`."
+   Now: A8-h gate 2 (both Vitest files).
+6. `:1460` (round-2 A4), "Decision: one command and one Bun process per test file." Now: one
+   command and one Bun process per test file, except the A8-e co-resident pair in
+   `retention-scheduler-real-db-test`.
+7. `:1466-1469` (A4-0 item 1), "Each has `lane` `bun-test`, `environmentProfile` `task551-db-test`,
+   and argv `["bun", "--env-file=/dev/null", "test", "<file>"]` (4 tokens, no shell
+   metacharacters). Each `positiveDiscovery` is `test-paths` with `paths` `["<file>"]` and `minimum`
+   `1`, which equals the path count:" Now: true for five of the six commands;
+   `retention-scheduler-real-db-test` has 5 argv tokens, two paths and `minimum` `2` (A8-a item 3).
+8. `:1480` (A4-0 item 2), "`partition-readiness-vitest` keeps its id, lane, `none` profile and
+   discovery." Now: it keeps its id, lane and `none` profile; its argv and discovery gain the pure
+   pre-step suite, `minimum` `2` (A8-a item 2).
+9. `:1501-1502` (A4-0 item 5), "Checks: the fence is valid JSON; every argv has 5 tokens or fewer;
+   every non-`none` command starts `bun --env-file=/dev/null`; every `minimum` equals its path
+   count." Now: every argv has 6 tokens or fewer (the Vitest command has 6); the other checks
+   stand.
+10. `:1516-1517` (A4-1, A1-b "Order independence" replacement), "Now reads: each file runs in its
+    own process, so no file can inherit another file's ended clients or affinity memo." Now: true
+    for every Bun file except the A8-e pair, which shares one process under the A8-e co-residency
+    rules.
+11. `:1605`, "Each of the six files runs in its own process in two forms:" Now: each of the seven
+    Bun files runs in two forms, one process per command; the A8-e pair shares its command's
+    process.
+12. `:1623`, "The Vitest file (R1-e gate 1) also needs 0 fail and 0 skip." Now: both Vitest
+    files (A8-h gate 2) need 0 fail and 0 skip.
+
+Superseded count: 12 items, 14 quoted sentences (items 1 and 3 quote two each).
+
+#### A8-i — Cross-file notes (each belongs to its owner; none is edited here)
+
+- `TASK-551-06-L02` R13-3 prerequisite 2 (`:4456-4476`): realized by A8-a with argv additions
+  instead of two new commands and an `occurrences` change (Addendum A2). R13-9 (`:4775-4796`) and
+  R13-5's stop rule resolve to "not 06-L02's edit" (Addendum A1).
+- `TASK-551-01-L01`: the four new paths, the seam call sites in `preRetentionVacuum.ts` and the
+  `sql.unsafe` adapter join the inventory and the lane tables through the growth rule when they
+  land; `task551RetentionJobService` becomes lane-safe by A8-g ("fixed by 06-L03 A8", Addendum A1).
+- `TASK-551-10-L02`: the runbook and env handoff gain the pre-step outcomes, log names, cost note
+  (A8-d) and the "fixed by 06-L03 A8" wording (Addendum A1).
+- `TASK-551-10-L01` (`:1321`) still runs `retentionScheduler.test.ts` with the later files in one
+  process (round-2 A4-1 handoff); A8 does not change that finding.
+- `TASK-551-02-L02`: no new handoff; R9.1's error surface already meets R13-7 (A8-d).
+
+#### A8-j — 2026-09-26 fix pass (orchestrator Addendum D-9)
+
+Append-only. This item executes Addendum D-9 of the orchestrator dispositions
+(`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`) together
+with the decisions it names there (C2, D5, D-1, D-4, D-5, D-7); it re-decides nothing. Anchors to
+this file are working-tree lines after the relabel (the note at `:1627` added two lines, so each
+A8 line sits two lines below the writer's first numbering). 02-L02 anchors are HEAD `420bb24a`
+plus the working tree. 06-L02 R14 and 02-L02 R10 are being written concurrently and are cited by
+item id only. Where a J item quotes a sentence, the J item wins; every quote is listed in
+**Superseded sentences (A8-j)**. Everything not quoted stays binding.
+
+**J1 — A8-g wording (D-9).** On a lane-runner worker database the unqualified scalar subquery
+returns one row per `bun_worker_*` schema (one per lane worker) plus `public`, because every schema
+that holds the table has its own `pg_stat_user_tables` row for that `relname`. With more than one
+such row it raises "more than one row returned by a subquery used as an expression" (SQLSTATE
+`21000`). The `schemaname = current_schema()` predicate leaves at most one row, and `coalesce`
+maps no row to `0`. The A8-g edit itself is unchanged.
+
+**J2 — Logger path (D-9).** The pre-step logs reach the scheduler's `RetentionSchedulerLogger` only
+as the `log` argument of `createDefaultRunRetentionPlan` (J6):
+
+1. The engine passes its resolved logger. `const log = deps.log ?? defaultLogger;`
+   (`retentionScheduler.ts:479`) moves above the `runPlan` line (`:478`), so the value exists
+   when the default runner is built.
+2. The default runner forwards `log` unchanged in the `runPreRetentionVacuum` input. The lazy-deps
+   layer passes it through unchanged to the pure loop's input.
+3. The pure module types the logger structurally (`info` and `warn`, each
+   `(message: string, details: Record<string, unknown>) => void`). It does not import from
+   `core/server/*`.
+
+A runner injected through `RetentionSchedulerDeps.runRetentionPlan` runs no pre-step and emits no
+pre-step log (A8-b **Call site**).
+
+**J3 — Land order (supersedes A3's steps and the first A8-h sentence).** The binding order is
+02-L02 R9.12 (`TASK-551-02-L02-…md:3799-3807`). R9.12 replaced R8.9 `:3242-3250`, which replaced
+R7.11 `:2608-2614`.
+
+0. Prerequisite: the 02-L01 dated note (docs; R9.10, D7) lands before any 02-L02 R7/R8/R9 code is
+   dispatched.
+1. 02-L02 R7 + R8 + R9 code, including the R9.1 seam (D1), with the 02-L02 R10 amendments (D-1 to
+   D-4, D-8) that apply to that code.
+2. The 02-L01 source change (default 3, `2..6`, fleet formula, ceiling comment), executed by a
+   02-L01 implementer mandate (dispositions Addendum A3: allowlist `core/db/databaseConfig.ts` and
+   `tests/vitest/db/databaseConfig.test.ts`).
+3. 06-L02 R8-R13 as amended by R14, including `getRevisionFamilyTableName`.
+4. 06-L03 R1 (R1-a … R1-c4 and both A1 splits), together with:
+   - the **R7.11 re-point** (`TASK-551-02-L02-…md:2565-2591`): the R1-c helper is
+     `drizzleForDedicatedTransaction`, not `withPoolOptions`; the `:190`/`:201`/`:214` builders
+     retype to `DedicatedDatabaseTransaction`; the `:170-179` collision comment says no probe key
+     exists; the boundary maps `transaction_aborted`, `transaction_nested` and
+     `drain_unconfirmed`; the `retentionScheduler.test.ts` overrides and pool fakes move to
+     `dedicatedClientFactory`; the `session` leg expects `database_maintenance_session_unavailable`
+     with zero factory calls; the inventory row `[0, 551551551]` is removed;
+   - the **R8.9 flips** (`:3108-3174`): the superseded startup sentences of this file (`:123-132`,
+     `:187-195`), the A6 import pin list (`:3143-3148`) and the `retentionScheduler.test.ts`
+     re-baselines (`:3149-3174`);
+   - R9.9 (`:3722-3758`), as dispositioned in A8-f and amended by J7;
+   - A8, after the R1 code and both A1 splits. The pre-step code starts only when D1's F27 and
+     RD13 receipts and the 02-L02 R10 F27 sub-legs for D-1 (57014/55P03 rethrown unchanged) and
+     D-2 (a)/(b) are green.
+5. The combined gates: the A8-h implementer gates, then the orchestrator's owner-map forms on
+   `DATABASE_URL3` (`coderso02`) with `DB_LOCK_TIMEOUT_MS=15000`, one command per A4-0/A8-a entry,
+   serialized under D9 (at most one `coderso02` DB gate at a time, family-wide).
+6. At least two post-auditors per scope; A8 gets its own pair (dispositions Addendum A6).
+
+No step-5 gate starts before steps 0-4 have landed. Before then, a red leg of 02-L02, 06-L02 or
+this leaf is expected and is not a finding.
+
+**J4 — Statement floor source (D-4).** The lazy-deps layer binds
+`statementFloorMs = effectiveDedicatedStatementBoundMs()`, exported by `core/db/client.ts`
+(02-L02 R10; it honours `setDatabaseClientRuntimeForTests`). It is read per run, not memoized, and
+is the single floor for three uses: the two catalog-read bounds, the per-call `budget_exhausted`
+check, and the D-5 `2 ×` precondition (J8). The seam rejects a bound `< 1` or `> 120_000` with
+`database_maintenance_statement_bound_invalid` (never a skip) and raises a bound in
+`[1, floor)` to the floor. The pre-step never passes a bound below the floor (A8-b **Bound**
+stands). The statement adapter is `(sql) => sql.unsafe(renderedText)`, used for the VACUUM and
+both catalog reads, with no parameter array and the rendered bytes unchanged. Those call sites
+also join `_docs/_workflows/_smoke/task-551/inventory-rebase-kit/` (D-4); this leaf adds no
+inventory-test expectation.
+
+**J5 — Seam-rejection mapping (D-1, option (a)).** R9.1's unchanged rethrow is the error surface.
+02-L02 R10 owns the related 02-L02 change: `55P03` joins the R7.3 not-loss list, and an F27
+sub-leg pins `57014` and `55P03` as rethrown unchanged. That is 02-L02's own item, not a 06-L03
+handoff.
+
+- The pure module `preRetentionVacuumPlan.ts` owns the closed input and the result shape:
+
+  ```ts
+  export type PreRetentionVacuumRejection = Readonly<
+    | { kind: "unavailable" | "lost" | "bound_invalid" | "reserve_timeout" | "other" }
+    | { kind: "sqlstate"; sqlstate: "57014" | "55P03" }
+  >;
+  export type PreRetentionVacuumStatementResult =
+    | Readonly<{ ok: true; rows: readonly Readonly<Record<string, unknown>>[] }>
+    | Readonly<{ ok: false; rejection: PreRetentionVacuumRejection }>;
+  ```
+
+- The lazy-deps module `preRetentionVacuum.ts` exports `mapSeamRejection(error: unknown)`. It reads
+  ONLY the `code` property, and only when `error` is a non-null object whose `code` is a string.
+  It never reads `message`, `detail`, `hint`, `query`, `parameters` or `where`. It returns a
+  fresh frozen object whose only keys are `kind`, plus `sqlstate` for the `sqlstate` kind:
+
+  | `code` | Input |
+  | --- | --- |
+  | `DATABASE_CLIENT_ERROR_CODES.maintenanceSessionUnavailable` | `{ kind: "unavailable" }` |
+  | `DATABASE_CLIENT_ERROR_CODES.dedicatedSessionLost` | `{ kind: "lost" }` |
+  | the R9.1 `database_maintenance_statement_bound_invalid` constant | `{ kind: "bound_invalid" }` |
+  | `DATABASE_CLIENT_ERROR_CODES.reserveTimeout` | `{ kind: "reserve_timeout" }` |
+  | `"57014"` or `"55P03"` | `{ kind: "sqlstate", sqlstate: <code> }` |
+  | anything else, a non-string `code`, no `code`, or a non-object | `{ kind: "other" }` |
+
+- The adapter is the only caller of the seam, and it never lets a mapped rejection escape as a
+  throw:
+
+  ```ts
+  const runStatement = async ({ signal, statementTimeoutMs, text }) => {
+    try {
+      const rows = await runDedicatedMaintenanceStatement({
+        signal, statementTimeoutMs, statement: (sql) => sql.unsafe(text),
+      });
+      return { ok: true, rows };
+    } catch (error) {
+      if (signal.aborted) throw error; // A8-b: rethrown unchanged
+      return { ok: false, rejection: mapSeamRejection(error) };
+    }
+  };
+  ```
+
+- The pure `classify(rejection, signal)` works on that input only. `signal.aborted` → abort
+  (throw `new Error("retention_pre_vacuum_aborted")`), checked first. `unavailable` → the current
+  and every remaining family get `skipped_session_unavailable`. `sqlstate` `55P03` →
+  `skipped_concurrent`. `sqlstate` `57014` → `failed_statement_timeout`. `lost`, `bound_invalid`,
+  `reserve_timeout` and `other` → `failed` with the closed code `dedicated_database_session_lost`,
+  `database_maintenance_statement_bound_invalid`, `database_pool_reserve_timeout` or
+  `retention_pre_vacuum_error`, respectively. These four are the complete `failed` code set. The
+  pure module owns them as literals because it imports nothing from `core/db/*`.
+- Bun pin, `preRetentionVacuum.test.ts` leg 2 (DB-free; replaces the ordering leg, which moves per
+  J7):
+  - every table row above;
+  - an error object whose `message`, `detail`, `hint`, `query`, `parameters` and `where` are
+    throwing getters maps without throwing (proof that only `code` is read);
+  - `{ message: "database_maintenance_session_unavailable" }`, `{ code: 57014 }`, `null`,
+    `undefined` and the string `"57014"` each map to `other`;
+  - `Object.keys(result)` is exactly `["kind"]`, or `["kind", "sqlstate"]` for the `sqlstate`
+    kind;
+  - the pure module's four `failed` code literals equal their `core/db/client.ts` constants.
+- Vitest leg 3 runs on the closed input only: with every kind and `signal.aborted` true, abort
+  wins; otherwise every kind gets its outcome and code as above. The "logs none of the server
+  `message`" check moves to the Bun pin, because the pure input has no message.
+- The A8-h stop rule on a non-carrying `code` stands. The implementer also STOPS when the 02-L02
+  R10 F27 sub-leg for `57014`/`55P03` is not green.
+
+**J6 — Default runner shape (D-7 mechanism, D-5 precondition).** With the J7 mechanism, the
+runner needs no `steps` injection and no export:
+
+```ts
+// retentionScheduler.ts — the only scheduler change (module-private, as today at :397)
+function createDefaultRunRetentionPlan(
+  maxRunMs: number,
+  intervalMs: number,
+  clock: () => number,
+  log: RetentionSchedulerLogger
+): RetentionPlanRunner {
+  return async ({ now, signal }) => {
+    const { planMaxRunMs } = await runPreRetentionVacuum({
+      runStartedAtMs: now.getTime(), maxRunMs, intervalMs, signal, clock, log,
+    });
+    return runRetentionPlan(now, signal, { maxRunMs: planMaxRunMs });
+  };
+}
+// engine: `const log = deps.log ?? defaultLogger;` first (J2), then
+// deps.runRetentionPlan ?? createDefaultRunRetentionPlan(config.maxRunMs, config.intervalMs, now, log)
+```
+
+`now` (the scheduler-supplied `Date`) is passed unchanged as the plan's first argument, and
+`runStartedAtMs = now.getTime()` (D-5). The pure loop reads the clock as integer milliseconds
+(`Math.floor(input.clock())`; `Date.now` by default, D-5).
+
+**J7 — Scheduler-ordering leg: injection mechanism (D-7).** The airtight ordering leg uses the
+R9.9 fake `dedicatedClientFactory` under a placeholder URL. Installing it needs
+`setDatabaseClientRuntimeForTests`, which A8-e forbids in the co-resident file. The leg therefore
+lives in `tests/integration/runtime/retentionScheduler.test.ts`, as a sibling of the
+default-binding leg (`:900-945`), using the file's `withFakeClient` idiom:
+
+- Override:
+  `{ config: CHANNEL.direct, maintenanceUrl: "postgres://task551-sched.invalid:5432/task551sched", dedicatedClientFactory: <fake> }`
+  (the R8.9 placeholder). For every factory call, the fake records the ordered `command` tags
+  (the upper-cased first keyword of each statement: `SELECT`, `VACUUM`, `BEGIN`, `COMMIT`). Its
+  answers:
+  - privilege read: `[{ relname: <table>, permitted: true }]`;
+  - VACUUM: `[]`;
+  - effectiveness read: `[{ relname: <table>, relpages: 0, relallvisible: 0 }]`;
+  - the plan's session: the R9.9 fake shape (identity pid, `OWNER_LOCK` responder per D-8).
+- Environment: exactly one family enabled in dry-run, with `process.env` saved and restored as in
+  the `:900-945` leg. Scheduler env: interval `600000`, and `maxRun` at least
+  `2 × effectiveDedicatedStatementBoundMs()` under the override (for example `300000`).
+- Leg "ordering": the pre-step makes the first three factory calls, with tags `[SELECT]`,
+  `[VACUUM]` and `[SELECT]`, each client ended before the next call. Every plan factory call comes
+  after them. `retention_pre_vacuum_completed` reports `ran` for the family and is logged before
+  the plan's `runCompleted`.
+- Leg "interval too short": the same setup with interval `60000`. It makes zero pre-step factory
+  calls (no `VACUUM` tag anywhere), the family's outcome is `interval_too_short`, and the plan
+  runs.
+- Leg "abort before plan": the fake's VACUUM result stays pending until `end({ timeout: 0 })`
+  rejects it, as postgres.js does (D-3). `controller.stop()` during the pending VACUUM ends in the
+  scheduler's `aborted` outcome, and no plan factory call happens.
+- These legs land together with, or after, the A1-b split (the file is at 998 lines before it;
+  D-8). The ≤ 1,000 check applies in that step, and the A8-h stop rule stands.
+- `preRetentionVacuum.test.ts` keeps its four legs. Leg 2 is now the J5 mapping pin, so the A8-e
+  count row ("legs 1-2 pass", two DB legs skipped by name airtight) stands unchanged.
+
+**J8 — Pre-step precondition and budget (D-5; mirrored from 06-L02 R14).** Zero enabled families
+still means zero seam calls and no log. Otherwise, before the privilege read:
+
+1. `input.intervalMs < 600_000` → every enabled family gets `interval_too_short`, and no seam call
+   is made.
+2. Otherwise, `input.maxRunMs < 2 × statementFloorMs` → every enabled family gets
+   `budget_exhausted`, and no seam call is made.
+3. Otherwise, the per-call budget applies. The named reserve `CALL_OVERHEAD_MS`
+   (`POOL_ACQUISITION_DEADLINE_MS + DEDICATED_OPEN_DEADLINE_MS + DEDICATED_STATEMENT_GRACE_MS +
+   DEDICATED_DRAIN_DEADLINE_MS`) is subtracted before each bound is computed. The lazy-deps layer
+   supplies the reserve to the pure loop as a dependency. The "at least half the run budget" goal
+   for the plan is best-effort by that overhead.
+
+In all three cases the plan still runs with the unchanged `finish()` rule. `interval_too_short`
+joins the closed outcome set of A8-c, and the completion log lists it. Retention at the 60 s
+minimum interval therefore runs WITHOUT the pre-step (the D-5 residual row, owned by R14). The
+literal names, their placement and the arithmetic belong to 06-L02 R14. If R14 as landed differs
+from J8, R14 wins, and the implementer STOPS and reports the mismatch before coding. Vitest leg 5
+gains these cases:
+
+- `intervalMs` `599_999` → `interval_too_short`, zero calls; `600_000` → proceeds;
+- `maxRunMs` `2 × floor − 1` → all `budget_exhausted`, zero calls; `2 × floor` → proceeds;
+- every bound includes the `CALL_OVERHEAD_MS` reserve.
+
+**J9 — Abort DB leg shape (D-7; replaces A8-e Bun leg 4).** The leg runs in
+`tests/integration/runtime/preRetentionVacuum.test.ts`:
+
+1. Leg table `t551pv_abort_<run marker>` in `current_schema()`, with a few rows. One enabled family
+   is injected through `overrides.tableNameOf`, and the leg uses the REAL seam. No leg VACUUMs or
+   locks a shared family table.
+2. Lock holder: the leg's own `max: 1` client on the fixture URL. It is not `db`, not the seam and
+   not the observer. It issues the literal statements `begin` and then
+   `lock table "<leg table>" in share update exclusive mode` through `unsafe`, each awaited, so
+   both run on its single backend and the transaction stays open. `sql.begin(callback)` is not
+   used.
+3. Observer: a different connection (the file's own observer client), in autocommit. It polls
+   every 50 ms, with a 5,000 ms cap (reaching the cap fails the leg):
+   `select pid, backend_start::text as started from pg_stat_activity where datname = current_database() and application_name = $1 and wait_event_type = 'Lock' and position($2 in query) > 0`.
+   - `$1` is `buildDatabaseApplicationName("maintenance", parseDatabaseApplicationIdentity(process.env, parseDatabaseRuntimeConfig(process.env).fleet).replicaId)`,
+     the same inputs as `core/db/client.ts:48` and `:111`.
+   - `$2` is the leg table name.
+   - Exactly one row must match; otherwise the leg fails.
+4. `lock_timeout`: the leg runs on the owner map with `DB_LOCK_TIMEOUT_MS=15000`, which is the
+   seam's startup `lock_timeout`. The VACUUM therefore keeps waiting past both the 5,000 ms cap and
+   the 4,500 ms settle bound. The airtight form skips this leg by name.
+5. Abort. The pre-step promise rejects with the abort: either the raw seam rejection (A8-b) or
+   `retention_pre_vacuum_aborted`, and never a failure or skip outcome. It must settle within
+   4,500 ms of the abort call. At settlement the observer finds no row with the recorded `pid` plus
+   `backend_start`.
+6. `finally`, in this order: the holder runs `rollback`, then the holder client ends, then the
+   observer drops the leg table (the drop needs the holder's lock released).
+
+**J10 — 06-L04 reservation (D5).** `TASK-551-06-L04` is not allocated. Dispositions D5 reserves the
+id, and the parent records the reservation under D9. It is reserved for "Per-parent retention
+batching" (06-L02 R12-2 (a), R12-5 (e)), a different purpose from the superseded R1-d proposal, and
+06-L02 references it. Reserving it reuses no retired number. Allocating it later:
+
+- updates the family inventory pins from 41 to 42 (the literal `taskFileCount: 41,`);
+- requires a Workflow Dispatch Envelope whose `dependencies` include `TASK-551-06-L03:single` or a
+  later step, and whose dispatch position precedes `TASK-551-10-L02:single`.
+
+Until then the family preflight stays 41/11/29/33.
+
+**J11 — Remaining consequences.**
+
+- Naming: A8's items now run from `A8-a` to `A8-j`.
+- A8-h stop rules gain three cases. The implementer STOPS when:
+  - `effectiveDedicatedStatementBoundMs` is not exported by `core/db/client.ts`;
+  - the 02-L02 R10 F27 sub-legs named in J3 step 4 are not green;
+  - 06-L02 R14 as landed differs from J8.
+- A8-i, `TASK-551-02-L02` bullet: 02-L02 needs no new handoff from this leaf. D-1's 02-L02 items
+  (55P03 in the not-loss list, the F27 sub-leg) belong to 02-L02 R10 (J5).
+- Cross-references read "06-L03 A8 (2026-09-26)", never "06-L03 A4" (dispositions C2).
+
+**Superseded sentences (A8-j)** (quoted verbatim; line = current working-tree anchor)
+
+1. `:1418-1420` (A3 item 1), "**02-L02 re-open code**: `TASK-551-02-L02` "Dated Contract
+   Corrections — 2026-09-25 (re-open: reserved-session transactions)", `:1025`, R2-R4. It fixes
+   the `ReservedSql` `begin` calls and exports the options-attaching helper." Now: J3 steps 0-1.
+2. `:1421` (A3 item 2), "**06-L02 R8 + R9 code**: R8-1 test defects, plus the R9 candidate-SQL
+   semi-join pre-filter (A2)." Now: J3 step 3.
+3. `:1422` (A3 item 3), "**06-L03 R1 code**: R1-a, R1-a2, R1-a3, R1-b, R1-c, R1-c4, including the
+   two A1 splits." Now: J3 step 4, with the R7.11 re-point, the R8.9 flips, R9.9 and A8.
+4. `:1423` (A3 item 4), "**Gates for all three**". Now: J3 step 5 (gates for every step). Its
+   environment sentence stands, as amended by A4-1.
+5. `:1428`, "Nothing in step 4 starts before steps 1-3 have all landed." Now: no step-5 gate
+   starts before steps 0-4 have landed (J3).
+6. `:1411-1412` (A2), "`TASK-551-06-L04` is not allocated. No file under `_docs/_TASKS/`
+   references it apart from R1-d above." Now: J10.
+7. `:2067-2071` (Superseded sentences (A8) item 4), "Now reads: `TASK-551-06-L04` is not
+   allocated; the id is reserved for "Per-parent retention batching" (06-L02 R12-2 (a), R12-5 (e)
+   `:4105-4111`), a different purpose from the superseded R1-d proposal, and 06-L02 references it;
+   reserving it reuses no retired number." Now: J10, which adds the D5 allocation terms.
+8. `:1645-1646` (A8 Naming), "Items below are lettered (`A8-a` … `A8-i`) so they never collide
+   with `A4-0`/`A4-1`." Now: lettered `A8-a` … `A8-j` (J11).
+9. `:1747-1749` (A8-c), "`statementFloorMs` = `parseDatabaseRuntimeConfig(process.env).statementTimeoutMs`
+   (`core/db/databaseConfig.ts:270`, `:293-299`), evaluated once on first use (the same pure owner
+   parser `client.ts:21` runs at import, so the value equals the seam's clamp floor);" Now: J4.
+10. `:1749-1751` (A8-c), "`runStatement` = the D1 seam with the adapter `(sql) => sql.unsafe(text)`,
+    where `text` is exactly the pure renderer's output and no parameter array is passed (R13-2:
+    the bytes do not change)." Now: the J5 adapter (same bytes, with a mapped result).
+11. `:1774-1777` (A8-c), "A `failed` outcome carries one closed `code`: the rejection's
+    `DATABASE_CLIENT_ERROR_CODES` value when it is one (`database_pool_reserve_timeout`,
+    `dedicated_database_session_lost`, `database_maintenance_statement_bound_invalid`, …), else
+    `retention_pre_vacuum_error`." Now: the four-code set of J5.
+12. `:1777-1780` (A8-c), "Logs: one `log.info("retention_pre_vacuum_completed", { families:
+    [{ family, outcome }] })` per run with at least one enabled family, and one
+    `log.warn("retention_pre_vacuum_failed", { family, code })` per failed family, through the
+    scheduler's `RetentionSchedulerLogger`." Now: the same logs, reaching the loop per J2.
+13. `:1787-1791` (A8-c pseudocode), "`export function createDefaultRunRetentionPlan(`" and
+    "`steps: DefaultRetentionRunSteps = { runPreRetentionVacuum, runRetentionPlan }`". Now: J6
+    (module-private, with no `steps`).
+14. `:1795` (A8-c pseudocode), "`runStartedAtMs: now.getTime(), maxRunMs, signal, clock, log,`".
+    Now: J6 (the input gains `intervalMs`).
+15. `:1800` (A8-c pseudocode), "`// engine (:478): deps.runRetentionPlan ?? createDefaultRunRetentionPlan(config.maxRunMs, now, log)`".
+    Now: J6 (`config.intervalMs` added; `log` declared first, J2).
+16. `:1806` (A8-c pseudocode), "`const shareMs = () => runDeadlineAt - input.clock() - planFloorMs;`".
+    Now: the J8 precondition, the `CALL_OVERHEAD_MS` reserve and the integer clock (J6), per 06-L02
+    R14.
+17. `:1852-1857` (A8-d), "`classify(error, signal)`: `signal.aborted` → `abort` (checked first,
+    whatever the rejection); `error.code === "database_maintenance_session_unavailable"` →
+    `unavailable`; the rejection's SQLSTATE property `error.code === "57014"` → `sqlstate_57014`;
+    `error.code === "55P03"` → `sqlstate_55P03`; anything else → `other`." Now: `classify` takes
+    the J5 closed input; `mapSeamRejection` does the `code`-only read. The sentences "Only the
+    `code` property is read …" and "06-L03 never parses server messages" stand for the mapping.
+18. `:1860-1861` (A8-d), "That satisfies R13-7's closed-value condition (`:4735-4738`); no 02-L02
+    handoff is recorded." Now: the condition is met by D-1 option (a); the 02-L02 side is
+    02-L02 R10's own item (J5).
+19. `:1882-1886` (A8-e Vitest leg 3), "`classify`: abort wins over every rejection;
+    `database_maintenance_session_unavailable` skips the current and remaining families and issues
+    no further call; `57014` → `failed_statement_timeout`; `55P03` → `skipped_concurrent`;
+    `database_maintenance_statement_bound_invalid` → `failed` (never a skip); a rejection carrying
+    a server `message` logs none of it;" Now: the J5 Vitest leg 3 over closed inputs, with the
+    message check in the Bun pin.
+20. `:1905-1907` (A8-e Bun leg 2), "scheduler ordering (DB-free): `createDefaultRunRetentionPlan`
+    with injected `steps` — the plan fake is not called until the pre-step fake settles, receives
+    the returned `planMaxRunMs`, and is never called when the pre-step rejects with an aborted
+    signal;" Now: leg 2 is the J5 mapping pin; the ordering legs are J7's, in
+    `retentionScheduler.test.ts`.
+21. `:1914-1921` (A8-e Bun leg 4), "DB leg "abort" — 06-L02 R13-1 **DB leg for the abort**
+    (`:4264-4286`) verbatim: a leg-owned table with a few rows; the observer holds `LOCK TABLE
+    <leg table> IN SHARE UPDATE EXCLUSIVE MODE` in an open transaction; the pre-step starts with
+    its own `AbortController` and the REAL seam; bounded 50 ms polling of `pg_stat_activity` until
+    a backend on the current database shows `wait_event_type = 'Lock'` and a query starting with
+    `VACUUM`, recording its `pid` and `backend_start`; abort; the promise rejects with the abort
+    within 4,500 ms of the abort call and, by settlement, no row matches that `pid` plus
+    `backend_start`; `finally` rolls back the holder and drops the table." Now: J9.
+22. `:1990-1992` (A8-f item 6), "No pre-step leg is added to this file (it is at 998 lines before
+    A1-b); the pre-step's scheduler ordering leg lives in `preRetentionVacuum.test.ts` (A8-e leg
+    2)." Now: the J7 legs are added to this file, together with or after A1-b, under the ≤ 1,000
+    check. The file's other A8-f rules stand.
+23. `:2007-2008` (A8-g), "With one `bun_worker_*` schema per lane worker the unqualified scalar
+    subquery can return several rows ("more than one row returned")." Now: J1.
+24. `:2014-2016` (A8-h), "Land order (02-L02 R9.12 `:3799-3813`): step 1 (02-L02 R7 + R8 + R9 code,
+    including the D1 seam) and step 3 (06-L02 R8-R13, including `getRevisionFamilyTableName`) land
+    before this leaf." Now: J3 (all of R9.12 steps 0-6; anchor `:3799-3807`).
+25. `:2114` (A8-i), "`TASK-551-02-L02`: no new handoff; R9.1's error surface already meets R13-7
+    (A8-d)." Now: J11.
+
+Superseded count (A8-j): 25 items, 26 quoted sentences (item 13 quotes two).
