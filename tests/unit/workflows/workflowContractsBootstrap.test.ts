@@ -124,13 +124,13 @@ describe("TASK-551 L11 compatibility bootstrap and generic barrier", () => {
     expect([
       expectedL11SidecarPaths.length + expectedL11SidecarTests.length,
       receipt.sidecarPaths.length,
-    ]).toEqual([31, 19]);
+    ]).toEqual([33, 19]);
     expect(
       TASK551_PHASE_PROVENANCE.reduce(
         (count, phase) => count + phase.ownedFiles.length + phase.ownedTests.length,
         0
       )
-    ).toBe(93);
+    ).toBe(95);
     expect(receipt.sidecarPaths).toEqual(expectedL11SidecarPaths);
     expect(receipt.plannedBunPaths).toEqual(exactManifestPaths);
     expect(receipt.sidecarClosureSha256).toBe(shaBytes(framed));
