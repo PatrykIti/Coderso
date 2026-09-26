@@ -1008,3 +1008,8 @@ runnera — nie blokuje ręcznego wykonania tej spiny.
 - Steps 1-7 green and committed: 03d42b90, 66203e22, 420bb24a, 2ee1c1a9 (+ docs 6845ace2 v11-v24), e9373a26, 5cf53490, 051e36bc (receipt impl-11-reopen-20260925.json, 2,273 lines). Sidecar provenance 19/14; parity K1 K3-K9; A 90/0/0 over 10 test files; every file ≤ its cap; G-c/G-v green; ledger 40 lines.
 - Contract 11 now at v24 (2,052 lines; cap 2,100). Owner-visible debts: bun-lane manifest red (01-L01), audit-evidence relocation (10-L02 closure), v24 LOWs.
 - Running: 03-L02 Round-7 audit (resumed). Queue: R14/R10/A8 audit resume (r14b, r10b) → fix2 writers (01-L01 v8, 05-L01 third, 05-L03, 10-L02 fix 2, parent fix 2) → R15/R11/A8-k writers (Addendum F) → 03-L02 Round 8 → audits → implementations (02-L02 R7-R11 code first).
+
+## 2026-09-26 ~14:55 UTC — branch pushed (owner request: continue in Claude Code cloud)
+- `origin/feat/task-551-db-cache` = `8f84fe0a` (docs snapshot `2aef9f68` + 06-L02 code snapshot `8f84fe0a` above the completed 11 re-open at `051e36bc`). Untracked by design: `11-reopen/` evidence + ledger (receipt cites them; loss after the step-7 commit = receipt is the record).
+- Running: 03-L02 Round-8 writer. Queue: R8 audit → fix2 writers (v8, 05-L01, 05-L03, 10-L02, parent) → audits → R15/R11/A8-k → audits → implementation order 02-L02 R7-R11 → 02-L01 step 2 → 06-L02 R8-R14 → 06-L03 R1/A8 → 01-L01 → 03-L02 W0-W4.
+- NOTE for a cloud session: `.claude/` (CLAUDE.md overlay, agents contract-auditor/implementer/closure-scribe/smoke-runner, skills, hooks) is gitignored; the durable workflow scripts live in `.claude/scratch/task-551/`; orchestrator memory lives in ~/.claude/projects/…/memory. Owner decision pending on committing `.claude/` config to the branch.
