@@ -2,27 +2,13 @@
 // Lane convention for tests/unit/workflows/* is Bun (`bun test`). These tests
 // read the live task files and the dispatch sources; they write nothing.
 import { describe, expect, test } from "bun:test";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { preflightTask551AuthorAuditDispatch } from "../../../_docs/_workflows/task-551-author-audit.mjs";
+import { currentTask551DispatchSnapshot } from "./task551AuthorAuditFixtures.js";
 
 const LIVE_03_L02_SUFFIX = "TASK-551-03-L02-Bounded-Admin-Lists-And-Oversized-Service-Splits.md";
 const TASK_FILE_CAP_BYTES = 1_048_576;
 
-async function currentTask551DispatchSnapshot() {
-  const taskDirectory = new URL("../../../_docs/_TASKS/", import.meta.url);
-  const names = (await readdir(taskDirectory))
-    .filter((name) => /^TASK-551(?:[-_].*)?\.md$/u.test(name))
-    .sort();
-  return {
-    sourceHead: "7bc41f75b9de972ce3ee4d794cf5fce14e08c5cb",
-    taskFiles: await Promise.all(
-      names.map(async (name) => ({
-        path: `_docs/_TASKS/${name}`,
-        text: await readFile(new URL(name, taskDirectory), "utf8"),
-      }))
-    ),
-  };
-}
 type DispatchSnapshot = Awaited<ReturnType<typeof currentTask551DispatchSnapshot>>;
 function padTask551TaskFileToBytes(
   snapshot: DispatchSnapshot,

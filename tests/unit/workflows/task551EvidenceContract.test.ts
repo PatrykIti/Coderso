@@ -888,6 +888,9 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
       fixDeclaration,
       evidenceDeclaration,
       authorTest,
+      authorDriftTest,
+      authorBoundedTest,
+      authorFixtures,
       workflowTest,
       evidenceTest,
       capsTest,
@@ -900,6 +903,9 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
       readFile(new URL(`${base}task-551-fix.d.mts`, import.meta.url), "utf8"),
       readFile(new URL(`${base}lib/task-551-evidence-contract.d.mts`, import.meta.url), "utf8"),
       readFile(new URL("./task551AuthorAudit.test.ts", import.meta.url), "utf8"),
+      readFile(new URL("./authorAuditDriftRounds.test.ts", import.meta.url), "utf8"),
+      readFile(new URL("./authorAuditBoundedChild.test.ts", import.meta.url), "utf8"),
+      readFile(new URL("./task551AuthorAuditFixtures.ts", import.meta.url), "utf8"),
       readFile(new URL("./task551WorkflowContracts.test.ts", import.meta.url), "utf8"),
       readFile(new URL("./task551EvidenceContract.test.ts", import.meta.url), "utf8"),
       readFile(new URL("./dispatchContractCaps.test.ts", import.meta.url), "utf8"),
@@ -970,11 +976,17 @@ describe("TASK-551 evidence decoder and L10 projection", () => {
         .sort();
     expect([
       privateImports(authorTest),
+      privateImports(authorDriftTest),
+      privateImports(authorBoundedTest),
+      privateImports(authorFixtures),
       privateImports(workflowTest),
       privateImports(evidenceTest),
       privateImports(capsTest),
     ]).toEqual([
-      [`${base}task-551-author-audit.mjs`, `${base}task-551-fix.mjs`].sort(),
+      [`${base}task-551-author-audit.mjs`],
+      [`${base}task-551-author-audit.mjs`],
+      [`${base}task-551-fix.mjs`],
+      [],
       [
         `${base}task-551-author-audit.mjs`,
         `${base}task-551-fix.mjs`,
