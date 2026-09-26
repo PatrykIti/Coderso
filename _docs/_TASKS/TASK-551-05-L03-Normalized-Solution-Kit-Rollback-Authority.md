@@ -799,7 +799,9 @@ modify schema, migration, rollout, or service ownership.
     "subtaskId": "TASK-551-05"
   },
   "allowlist": [
-    "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts"
+    "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts",
+    "tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts",
+    "tests/integration/server/task551SolutionKitRollbackAuthoritySchema-support.ts"
   ],
   "forbiddenPaths": [
     "core/db/schema.ts",
@@ -813,12 +815,12 @@ modify schema, migration, rollout, or service ownership.
     {
       "id": "rollback-authority-schema-test",
       "lane": "bun-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts"],
       "environmentProfile": "task551-db-test",
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts"],
-        "minimum": 1
+        "paths": ["tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts"],
+        "minimum": 2
       }
     },
     {
@@ -1214,3 +1216,405 @@ Like that edit, it lands before 01-L01 initial **V5-9** step 4.
    schema. In a `bun_worker_*` schema, the absence of the online guard
    members is asserted instead (Item 2), and duplicate evidence identity is
    still rejected by the journaled primary key.
+
+## Dated Contract Corrections — 2026-09-26 (note 2: O-L03-1 split, O-L03-2 constraint_name, restrict-leg order, labels)
+
+This note writes out orchestrator disposition **H5** (and, for the row
+labels, **H2**/**H4**) of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum H). It does not re-decide them. It is append-only, apart from the
+one in-place fence amendment that **H5** authorizes (Item N2-3). Every
+earlier sentence of this file stays binding except those quoted under
+"Superseded sentences" below.
+
+**Anchor rule.** The in-place fence amendment adds two lines after HEAD
+`c237e05d` line `:802`. A cite of this file at a HEAD line `:N` with
+`N ≥ 804` is now at `:N+2`. Lines `:1-801` do not move. Cites of this file
+in the first note and in this note are HEAD `c237e05d` lines unless marked
+"now". Test anchors are for
+`tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+("the suite") at HEAD `c237e05d`. That file is byte-identical to `74fe8f4e`
+(`git diff --stat 74fe8f4e HEAD` is empty for it) and has 2,182 lines.
+
+### Verified facts (read from source at `c237e05d`; nothing executed)
+
+- **N1 — `constraint_name` (O-L03-2).** postgres.js is 3.4.9
+  (`node_modules/postgres/package.json:3`). Its ErrorResponse field map has
+  `110 : 'constraint_name'` (`node_modules/postgres/src/connection.js:46`).
+  `PostgresError` copies the fields onto itself as own data properties with
+  `Object.assign(this, x)` (`node_modules/postgres/src/errors.js:1-6`).
+  `DrizzleQueryError` stores the driver error as the own property `cause`
+  (`node_modules/drizzle-orm/errors.js:10-19`). The repository precedent
+  reads own data values through `readOwnDataValue` (`:27-36`) on the error
+  and its `cause` chain, then compares `constraint_name`
+  (`core/services/media/mediaFoldersService.ts:60-64`). The suite's
+  `pgConstraint` (`:1003-1006`) reads `.constraint`, which the driver never
+  sets. `pgCode` (`:1001-1002`) reads `code` on the error, then on `cause`.
+- **N2 — restrict-leg trigger order.** Six FKs reference
+  `solution_kit_install_runs.id` from the authority tables in the
+  transactional 0081, in this creation order: progress `:157`, `:158`,
+  `:159`; evidence `:161` (single-column `source_run_id`) and `:162`
+  (`plan_fk`); owners `:163` (single-column `source_run_id`) and `:165`
+  (`source_identity_fk`). `:166` is the self FK on `rollback_of_run_id`.
+  RESTRICT triggers on one table fire in creation order (**H5**). The
+  restrict leg (`:1926-1943`) inserts the owner row (`:1920-1925`), then the
+  evidence row (`:1926-1931`), and only then deletes the source run
+  (`:1933-1943`). At that point the evidence FK `:161` fires before the
+  owners FK `:163`. So the first 23503 names
+  `solution_kit_legacy_template_evidence_source_run_id_solution_kit_install_runs_id_fk`,
+  not the owners key that `:1941` expects. The `:1932` comment reasons only
+  about the owners' two keys. With only the owner row present, the owners
+  keys `:163` and `:165` are the only RESTRICT candidates that hold a
+  referencing row, and `:163` precedes `:165`. The first note lists `:1939`
+  among the sites that fail only because of the field name
+  (O-L03-2, HEAD `:1177-1178`). That is incomplete: the site also needs this
+  reorder.
+- **N3 — split seams (O-L03-1, as corrected by H5).** Suite regions:
+  imports and header docblock `:1-47`; path, snapshot and SQL helpers
+  `:49-110`; the exported exact projection `:111-566` (the value export is
+  at `:444`); surface extractors (module, snapshot, 0081 bytes, companion)
+  `:567-773`; in-file pure models `:774-990`; live gating and driver
+  helpers `:991-1014`; static legs `:1015-1632` (14 `test(`); live
+  `testIfDb` legs `:1633-2182` (6 `testIfDb(`, from the `SCOPE` fixture
+  block on). The live half reads `CLASSIFIER_CAPS`,
+  `modelBoundedNewerApplies`, `normalizedSql` and `dialect` from above
+  `:991`. The static legs read the projection, the models, the surface
+  extractors and the path helpers. The static legs make no `db`/`hasDb`
+  call (0 matches in `:1015-1632`).
+- **N4 — importers (import stability).** Two files outside this leaf's
+  allowlist import from the suite path:
+  `tests/perf/database-explain-plans.test.ts:68` (value
+  `EXACT_L01_SOLUTION_KIT_ROLLBACK_AUTHORITY`) and
+  `tests/perf/fixtures/task551QueryPlanContracts.ts:37` (type
+  `ExactL01SolutionKitRollbackAuthority`). No other file in `tests`,
+  `scripts` or `core` names the suite path.
+- **N5 — catalog rows (O-L03-3).** Ten of the fourteen mandatory index rows
+  occur once in the companion `0081_task551_online_indexes.sql` and never in
+  the transactional 0081. The other four,
+  `solution_kit_runs_id_package_actor_key`,
+  `solution_kit_runs_id_rollback_relation_key`,
+  `solution_kit_runs_id_legacy_template_plan_key` and
+  `solution_kit_legacy_template_evidence_identity_key`, never occur in the
+  companion. They are unique CONSTRAINTS in the transactional 0081 (`:154`,
+  `:155`, `:156`, `:68`), and the manifest asserts them without building
+  them (`TASK551_ASSERTED_UNIQUE_CONSTRAINTS`,
+  `tests/perf/fixtures/task551OnlineIndexManifest.ts:943-947`; table-module
+  comment `core/db/tables/solutionKitRollbackAuthority.ts:136-139`).
+
+### Items
+
+**Item N2-1 — O-L03-2: `pgConstraint` reads `constraint_name` only (H5).**
+Replace `:1003-1006` with this helper, in the file that hosts the live legs
+(Item N2-3). It reads the own data value on the error, then on its `cause`,
+which is the same two-level shape as `pgCode`. There is no `.constraint`
+fallback and no deeper walk:
+
+```ts
+/** Own data property only: postgres.js copies ErrorResponse field `n` onto the error as `constraint_name`. */
+const ownDataValue = (candidate: unknown, key: string): unknown => {
+  if (typeof candidate !== "object" || candidate === null) return undefined;
+  const descriptor = Object.getOwnPropertyDescriptor(candidate, key);
+  return descriptor && "value" in descriptor ? descriptor.value : undefined;
+};
+const constraintNameOf = (candidate: unknown): string | null => {
+  const value = ownDataValue(candidate, "constraint_name");
+  return typeof value === "string" ? value : null;
+};
+/** The driver error, or drizzle's `DrizzleQueryError` whose own `cause` is the driver error. */
+const pgConstraint = (error: unknown): string | null =>
+  constraintNameOf(error) ?? constraintNameOf(ownDataValue(error, "cause"));
+```
+
+- `pgCode` (`:1001-1002`) is unchanged.
+- Every caller keeps its call shape: `:1817`, `:1939`, `:1949`, `:1968`,
+  `:1994`, `:2000`, `:2004`, `:2037` and the race writer `:2082`.
+- Done-checks (untruncated): `grep -c 'constraint?: string'` is `0`.
+  `grep -c '"constraint_name"'` is `1` across the split files.
+
+**Item N2-2 — the restrict leg probes `sourceDelete` before the evidence row
+exists (H5).** This replaces `:1920-1943`. The owner insert and the
+source-run probe run first. The evidence insert follows the probe. Nothing
+after `:1943` changes: the actor probe `:1944-1950`, the rollback-run and
+progress inserts `:1951-1963`, the evidence probe `:1964-1970`, and the
+`finally` (receipt `assertReceipt("restrict", 6)`: two seed inserts, owner,
+evidence, rollback run, progress).
+
+```ts
+    await seedFixture("restrict");
+    try {
+      await run(
+        "restrict",
+        "insert",
+        "solution_kit_starter_apply_owners",
+        insertOwner(fixture.sourceRun, "before_captured")
+      );
+      // Probe before any evidence row exists: the evidence FKs (0081 :161-162) are created before the owners FK (:163)
+      // and would fire first. With only the owner row present, the owners' single-column FK (:163) precedes the
+      // composite source_identity_fk (:165), so its trigger decides.
+      const sourceDelete = db.execute(
+        sql`delete from solution_kit_install_runs where id = ${fixture.sourceRun}`
+      );
+      await expect(sourceDelete).rejects.toThrow();
+      expect([
+        pgCode(await rejection(sourceDelete)),
+        pgConstraint(await rejection(sourceDelete)),
+      ]).toEqual([
+        "23503",
+        "solution_kit_starter_apply_owners_source_run_id_solution_kit_install_runs_id_fk",
+      ]);
+      await run(
+        "restrict",
+        "insert",
+        "solution_kit_legacy_template_evidence",
+        insertEvidence(fixture.evidenceId, 0, "kept")
+      );
+      // … `:1944-1970` unchanged (actor probe, rollback run, progress, evidence probe).
+```
+
+- The expected constraint names stay as they are. A different name in the
+  part-1 run is a finding for the orchestrator. The implementer must not
+  re-baseline it.
+- The leg runs in every schema. It depends only on journaled FKs (first
+  note, Item 2, last bullet).
+
+**Item N2-3 — O-L03-1: the split, with import stability (H5).** The same
+test-only edit that lands Items 1, 2, N2-1 and N2-2 splits the suite into
+three cohesive files:
+
+| Path | Content (HEAD suite regions) | Budget (hard cap 1,000) |
+| --- | --- | --- |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-support.ts` (new; not a test file) | the path/snapshot/SQL helpers that the projection and the live half need (`ROOT`, `SNAPSHOT`, the `Snapshot*` types, `parseSnapshot`, `snapshotTable`, `normalizedSql`, `dialect`, `renderSql`; from `:49-110`); the exact projection `:111-566` with every `export` kept; the in-file pure models `:774-990` with every `export` kept. It imports no `core/db/client`, no `bun:test`, and registers no test. | ≤ 820 |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts` (new) | the DB-free static legs `:1015-1632` (14 tests); the surface extractors `:567-773`; the static-only helpers from `:49-110` (`TRANSACTIONAL_MIGRATION`, `COMPANION_MIGRATION`, `PREVIOUS_SNAPSHOT`, `migrationBytes`, `companionBytes`, `renderDefault`, `walk`). It imports the support module and never imports `core/db/client`. | ≤ 950 |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (original path, kept) | the live gating and driver helpers `:991-1014` with Item 1 (`rowsOf`) and Item N2-1 (`pgConstraint`); the Item 2 helpers (`LANE_WORKER_SCHEMA`, `sessionSchema`, `presentGuards`), the three guard lists, and the Item 2 static guard-membership test (it imports `TASK551_ONLINE_INDEX_MEMBERS`); the live `testIfDb` legs `:1633-2182` with Items 2 and N2-2; the re-exports below. | ≤ 780 |
+
+- **Import stability.** The original path keeps exporting both symbols that
+  N4 names, with these two lines:
+  `export { EXACT_L01_SOLUTION_KIT_ROLLBACK_AUTHORITY } from "./task551SolutionKitRollbackAuthoritySchema-support";`
+  and
+  `export type { ExactL01SolutionKitRollbackAuthority } from "./task551SolutionKitRollbackAuthoritySchema-support";`.
+  The two importers stay byte-identical. They are outside this allowlist.
+- **Independence.** Each test file runs on its own in its lane:
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <file>`.
+  The static suite then passes with 0 skipped. The original path passes its
+  static guard-membership test and skips its six DB legs through the `hasDb`
+  probe. The header docblock `:20-47` is split with its content: the
+  static paragraph goes to the static suite and the live paragraph stays.
+  Both keep the "modelled IN THIS FILE ONLY" sentence, re-pointed to
+  "in these test files only".
+- **Balance.** The budgets are targets. Each file's hard cap is 1,000
+  physical lines. The implementer may move the surface extractors
+  (`:567-773`) to the support module only if both files then stay at or
+  below 1,000. A fourth path, or a need to edit a file outside the
+  allowlist, is a STOP and a further fence amendment. It is never a
+  silent overflow.
+- **No behaviour change.** Test names, assertions, fixture values and the
+  static legs' bodies move byte-for-byte, apart from import lines and the
+  items of the first note and this note.
+- **In-place fence amendment (done in this change).** The dispatch
+  envelope (now `:793-861`) was edited in place, and only in these keys:
+  - `allowlist` (now `:801-805`) lists the original path, then
+    `…Schema-static.test.ts`, then `…Schema-support.ts`.
+  - The `rollback-authority-schema-test` `argv` (now `:818`) ends with the
+    original path and then the static suite path.
+  - Its `positiveDiscovery.paths` (now `:822`) holds the same two test
+    paths, and `minimum` (now `:823`) is `2`.
+  - `forbiddenPaths`, `dependencies`, the other three commands and
+    `occurrences` are byte-identical. No occurrence was added.
+  - The family preflight literal
+    (`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md:1173`), run with
+    `$(git rev-parse HEAD)`, prints
+    `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+**Item N2-4 — race leg `worker` declaration and step labels (H5, H2).**
+
+- In the race leg (`:2062`), `worker` is declared as `let worker = false;`
+  immediately before `try` and assigned inside `try` as the first statement
+  after the gate setup: `worker = LANE_WORKER_SCHEMA.test(await sessionSchema());`.
+  The `finally` reads it in `assertReceipt("race", worker ? 2 : 3)`.
+- A `sessionSchema()` failure fails the leg. The leg never skips on it. In
+  that case `finally` asserts the non-worker count `3` against two inserts,
+  and that assertion failure may be the one reported. Either failure is a
+  failed leg.
+- The identity (`:1979`) and owner-slot (`:2016`) legs keep
+  `const worker = …` inside `try`, as the first note says. Their `finally`
+  does not read `worker`.
+- Label corrections. "**E3** check 4" is now "**V5-4** check 4 (**V8-6**)".
+  "**V7-7** step 8 as rewritten by **E2**" is now "**V8-8** step 7"
+  (01-L01 v8 FINAL table).
+
+**Item N2-5 — L5 reworded (H5).** PostgreSQL checks a unique index when it
+inserts the row. It checks a foreign key in an AFTER ROW trigger at the end
+of the statement. So a row that violates both a committed unique key and
+the FK is refused with 23505, never 23503. In the owner fixtures of this
+suite:
+
+- Two owners on ONE `source_run_id` are refused by the owners' primary key
+  (`:99`, 23505), and the active index never decides.
+- An owner whose run has `kit_id <> package_key`, or another actor, and that
+  meets no unique conflict, is refused with 23503 by
+  `solution_kit_starter_apply_owners_source_identity_fk` when its statement
+  ends.
+
+The first note's Item 3 fixture rule stays binding as written.
+
+**Item N2-6 — O-L03-3 decided: a wording correction, no behaviour change
+(H5 scope).** The replacement sentence for HEAD `:236-238` is: "Ten of these
+rows (every row except the four unique CONSTRAINTS
+`solution_kit_runs_id_package_actor_key`,
+`solution_kit_runs_id_rollback_relation_key`,
+`solution_kit_runs_id_legacy_template_plan_key` and
+`solution_kit_legacy_template_evidence_identity_key`) are emitted
+byte-for-byte by the closed online-index manifest and created by the
+non-transactional companion. The four constraints are created by the
+transactional 0081 (`:68`, `:154-156`), because a foreign key can only
+reference an existing unique key, and the manifest asserts them without
+rebuilding them (`TASK551_ASSERTED_UNIQUE_CONSTRAINTS`); both paths follow
+L01's general index contract." The catalog, the tests and the fence do not
+change. The static legs already pin both sets (N5).
+
+### Handoff rows for 01-L01 v9 (row texts; 01-L01's writer copies them)
+
+Shared literal. This paragraph and 01-L01 v9 both write it byte-for-byte:
+
+Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped.
+
+**Clearing rule (H5).** The **V7-3** blocked row for this leaf (**V8-5**
+table, the SolutionKit row) clears only per the Shared literal. The split
+test paths are `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+and `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts`.
+The support module is not a test path. A part-1 row for the original path
+alone never clears the row, because it runs only the live legs. The part-1
+rows come after green **V5-4** checks, check 4 included (**V8-6**). Part 1
+runs in `public`, so it proves only the non-worker branches. The worker
+branches first run in the FINAL lane-runner run. Item 3 (the FK fixture
+rule) is a rule, not a clearing item (**H4**).
+
+| Handoff reason (copy verbatim) | Delivered by | Clears when | Consumed at |
+| --- | --- | --- | --- |
+| `result-shape:tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (**B1**, **C7**; **V7-3** row, clearing per **V8-5**) | 05-L03 first note Items 1 and 2 and this note's Items N2-1 to N2-4, one test-only edit over the three allowlisted paths | Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped. | initial, **V5-9** step 6 |
+| **V5-5 (a)** owner item, 05-L03 share (**O3**, **E2**) | 05-L03 first note Item 2, in the original path | the three worker branches (`:1979`, `:2016`, `:2062`) pass in the FINAL lane-runner run | FINAL only (**V8-8** step 7); not an initial precondition |
+
+Post-join row (**V8-7** table, replacing the first note's **V7-4** row; insert as written):
+
+| Suite | Lane prediction | Cause (anchor) | Clears when |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` and `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts` | absent while their **V7-3** row stands; after joining, expected green: the static suite in every schema, and the original path in worker schemas through the Item 2 worker branches; a red is a finding | online members `…_source_position_key`, `…_source_key`, `…_apply_owners_active_idx`, `…_active_rollback_source_idx` are never in `bun_worker_*` (first note L3); worker branches at `:1979`, `:2016`, `:2062` | Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped. |
+
+### Gates for the implementer (fast; replaces the first note's list for this edit)
+
+- `./node_modules/.bin/eslint --max-warnings=0` on the three allowlisted
+  paths.
+- DB-free proof of each test file on its own:
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <file>`.
+  The static suite passes 14 tests with 0 skipped. The original path passes
+  the guard-membership test and skips six DB legs.
+- `wc -l` on the three paths: each ≤ 1,000 and within Item N2-3's budgets,
+  or a recorded reason for any budget overrun under 1,000.
+- `git diff --check`; the Item 1 and Item N2-1 done-checks.
+- `grep -c 'EXACT_L01_SOLUTION_KIT_ROLLBACK_AUTHORITY\|ExactL01SolutionKitRollbackAuthority'`
+  on the original path is `≥ 2` (the two re-exports). The two importers
+  (N4) are unchanged in `git diff`.
+- The DB proof is the orchestrator's 01-L01 **V5-1** part-1 run under
+  `M-fixture` over both test paths. The worker branches are proven only by
+  the 01-L01 FINAL lane-runner run.
+
+**Land order.** Unchanged from the first note. The edit is test-only, and
+the fence `dependencies` still reads `TASK-551-05-L01:single`.
+
+### Consequences outside this file (orchestrator follow-up; not decided here)
+
+- **TASK-551-10-L01 fence.** Its `argv` and `positiveDiscovery.paths`
+  (`TASK-551-10-L01…md:1272`, `:1274`) name only the original path. After
+  the split, that gate would run the live legs but not the static suite.
+  This is an owed mirror for the 10-L01 writer. It is the same shape as the
+  O6 widening in **H6**.
+- **TASK-551-05-L01 `forbiddenPaths`** (`TASK-551-05-L01…md:1077`) names
+  only the original path. Adding the two new paths is optional hardening
+  for the 05-L01 writer.
+- **TASK-551-05-L02 rider comment.** The docblock at
+  `tests/perf/database-explain-plans.test.ts:39-43` says that importing the
+  suite registers "20 tests" (14 pass + 6 skip) in that file's run. After
+  the split, the import registers only the original path's tests: the six
+  `testIfDb` legs plus the Item 2 guard-membership test. The comment's
+  counts go stale. The import itself is unaffected (N4). The file is
+  outside this allowlist and the owner is 05-L02.
+
+### Superseded sentences (verbatim, line breaks shown as single spaces; superseded from this date)
+
+1. HEAD `:37-39` (Exact File Ownership): "**Tests:**
+   `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+   (sole writer; catalog/migration/snapshot parity, state-matrix,
+   named-check, preflight, and source-guard tests)." Replacement: the three
+   allowlisted paths of Item N2-3 (sole writers, with the content split
+   there).
+2. HEAD `:236-238`: "Every row above is emitted byte-for-byte by the closed
+   online-index manifest and created by the non-transactional companion,
+   exactly as L01's general index contract requires." Replacement: Item
+   N2-6.
+3. HEAD `:256-258` (Implementation Pseudocode): "The implementation writer
+   is the sole
+   `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+   suite." Replacement: "The implementation writers are the three
+   allowlisted paths of note 2, Item N2-3."
+4. HEAD `:580` (Validation Commands): "`set -a && source .env && set +a &&
+   bun test tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`"
+   Replacement: the same command with both test paths.
+5. HEAD `:747`: "**Authority/schema parity suite:**
+   `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+   (L03's sole authority test writer)." Replacement: the static suite holds
+   the parity legs, and the original path holds the live legs (Item N2-3).
+6. HEAD `:761` (table row): "| Authority/schema parity and focused
+   concurrency tests | L03, in
+   `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+   | Production barriers, duplicate suites, or weakened assertions |"
+   Replacement: the same row with "L03, in the three allowlisted paths of
+   note 2, Item N2-3".
+7. HEAD `:789`: "The leaf's only executable writer is its focused
+   authority-schema suite." Replacement: "The leaf's executable writers are
+   its focused authority-schema test files and their support module (note
+   2, Item N2-3)."
+8. HEAD `:907-908`: "L03's allowlist stays at the one test file and no
+   production preflight code is authored by this leaf." Replacement: "L03's
+   allowlist is the three test paths of note 2, and no production preflight
+   code is authored by this leaf."
+9. HEAD `:923-924` (first note): "The dispatch envelope (json fence
+   `:787-860`) is unchanged." Replacement: Item N2-3's in-place fence
+   amendment.
+10. HEAD `:984-985` (first note, L5): "An owner row whose run has `kit_id <>
+    package_key`, or another actor, is refused with 23503 by this FK. That
+    happens before any unique index is consulted." Replacement: Item N2-5.
+11. HEAD `:990-992` (first note, L6): "The suite is the only path in this
+    leaf's `allowlist` (`:801-803`). Every edit below is test-only inside
+    that allowlist. No fence byte changes." Replacement: "The allowlist
+    (now `:801-805`) holds the three Item N2-3 paths. Every edit is
+    test-only inside that allowlist."
+12. HEAD `:1048-1049` (first note, Item 2), for the race leg only:
+    "`const worker = LANE_WORKER_SCHEMA.test(await sessionSchema());` is
+    read once per leg, inside `try`, right after `seedFixture`."
+    Replacement: Item N2-4.
+13. HEAD `:1113-1117` (first note, Item 4): "The **V7-3** blocked row clears
+    only when Items 1 AND 2 have landed in the one edit, the orchestrator's
+    disposition of **O-L03-2** below has landed, and the suite's part-1 row
+    meets the class table (**V5-6** rule). Part 1 runs in `public`
+    (**V5-4** check 1, and **E3** check 4), so it proves only the
+    non-worker branches." Replacement: this note's clearing rule and the
+    Shared literal.
+14. HEAD `:1122` and `:1123` (first note, Item 4 table rows, both cells
+    beginning `result-shape:…` and `**V5-5 (a)** owner item`). They are
+    replaced by this note's two handoff rows. The row texts are not
+    repeated here. They stand unchanged in the file as history.
+15. HEAD `:1129` (first note, post-join **V7-4** row for the suite path).
+    It is replaced by this note's post-join row.
+16. HEAD `:1131-1132` (first note, Item 5): "The suite is the only
+    allowlisted path (L6). No fence edit, no source edit, no other test
+    file." Replacement: "The three Item N2-3 paths are the allowlist. The
+    fence edit is Item N2-3's. No source edit and no other test file."
+17. HEAD `:1164-1167` (first note, O-L03-1): "A suggested seam, not a
+    decision, is the suite's own boundary: the DB-free static half
+    (`:1015-1632`, including the in-file models) and the `testIfDb` live
+    half (`:1633-2182`, from the `SCOPE` fixture block on). Shared fixtures
+    and models would go into one test-support module." Replacement: Item
+    N2-3 (projection `:111-566` and models `:774-990` are outside
+    `:1015-1632`).
+18. HEAD `:1183-1184` (first note, O-L03-2): "This note does not decide
+    it." Replacement: decided by **H5**; see Items N2-1 and N2-2.

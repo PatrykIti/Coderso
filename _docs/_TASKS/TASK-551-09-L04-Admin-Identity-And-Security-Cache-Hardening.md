@@ -566,7 +566,9 @@ env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_m
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx \
-  tests/vitest/admin/admin-cache-authority.test.ts
+  tests/vitest/admin/admin-cache-authority.test.ts \
+  tests/vitest/admin/task551PaginatedClients.test.ts \
+  tests/vitest/admin/task551PaginatedClientsSlots.test.ts
 set -a && source .env && set +a
 SERVER_CACHE_BACKEND=memory bun test tests/unit/security/securitySettings.test.ts \
   tests/integration/routes/settings.test.ts \
@@ -724,11 +726,11 @@ private namespace under `task551-db-redis-test`.
       "id": "final-admin-cache-tests",
       "lane": "vitest",
       "environmentProfile": "none",
-      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx", "tests/vitest/admin/admin-cache-authority.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx", "tests/vitest/admin/admin-cache-authority.test.ts", "tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedClientsSlots.test.ts"],
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx", "tests/vitest/admin/admin-cache-authority.test.ts"],
-        "minimum": 1
+        "paths": ["tests/vitest/admin/storageCache.test.ts", "tests/vitest/admin/cacheBusHardening.test.ts", "tests/vitest/admin/readThroughCache.test.ts", "tests/vitest/admin/cacheBus.test.ts", "tests/vitest/admin/cacheBusCorrelation.test.ts", "tests/vitest/admin/cacheRefresh.test.ts", "tests/vitest/admin/admin-cache-identity.test.ts", "tests/vitest/admin/read-through-cache-generation.test.ts", "tests/vitest/admin/admin-cache-client-authority-matrix.test.ts", "tests/vitest/admin/authClient.test.ts", "tests/vitest/authUi/authClient.test.ts", "tests/vitest/ui/admin-auth-identity.test.tsx", "tests/vitest/admin/admin-cache-authority.test.ts", "tests/vitest/admin/task551PaginatedClients.test.ts", "tests/vitest/admin/task551PaginatedClientsSlots.test.ts"],
+        "minimum": 15
       }
     },
     {
@@ -1306,3 +1308,167 @@ findings were applied in place in the sections above (no duplicate headings):
     `env DATABASE_URL='postgresql://127.0.0.1:1/none'` prefix (before/after in I4).
   - I8: the 03-L02 "lines 966-967" reference is marked as HEAD numbering.
   - The envelope JSON stays byte-unchanged.
+
+## Dated Contract Corrections — 2026-09-26 (03-L02 consumer mirror; append-only section with an in-place fence edit)
+
+Source: TASK-551-03-L02 Round 10 item R10-13 (the executable spec of this
+mirror; 03-L02 records the same text under its `### C17 v6` heading), as
+re-disposed by orchestrator decision Addendum I, items I2 and I3
+(`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+and `.../audit-evidence/03-l02-round10-dispositions.md`). This section wins
+over the body and over the 2026-09-24 sections wherever they differ, for the
+FINAL occurrence only; INITIAL is unchanged.
+
+Anchor rule: line references in this section use HEAD `c237e05d` numbering.
+The only in-place edits in this round are the Testing Requirements FINAL
+vitest line pair and the envelope fence hunk recorded in item (2). HEAD lines
+1-568 keep their numbers; HEAD line 569 keeps its number and gains a trailing
+` \`; every HEAD line from 570 onward (including the whole envelope and every
+earlier dated section) sits two lines lower in the working tree.
+
+### (1) 03-L02 consumer constraints this leaf's FINAL must preserve
+
+TASK-551-03-L02 (R7-02, R7-06, R8-04; restated in its `### C17 v6` heading
+and R10-13) builds its paginated-client invalidation on the following admin
+cache seams that this leaf owns at FINAL. They are binding constraints on any
+FINAL change to `core/admin/utils/cacheBus.ts`, `adminCacheAuthority.ts`, or
+the reset registry:
+
+- **Synchronous local delivery.** `broadcastCacheEvent`
+  (`core/admin/utils/cacheBus.ts:131-154`) delivers to every local handler
+  synchronously inside the call, with `origin` `"local"` and the caller's
+  `options.operationToken` passed through unchanged (`:151-153`). Handlers are
+  registered through `localHandlers.add(handler)` in `subscribeCacheEvents`
+  (`:157`).
+- **Own-sourceId drop.** Remote deliveries whose `sourceId` equals the tab's
+  own `cacheBusId` are dropped (`:170`), so a client never sees its own
+  emission twice (once local, once remote).
+- **Media-folder emissions.** `core/admin/services/mediaFoldersClient.ts`
+  emits `mediaFolders` only on create (`:236`), update (`:251`) and reorder
+  (`:268`); delete emits `mediaFolders` then `mediaList` (`:280-281`). FINAL
+  must keep the key set per mutation (03-L02's media subscription clears its
+  slot on both keys).
+- **03-L02 module-level state is reset-owned.** The module-level state that
+  03-L02 introduces — per-client lazy cacheBus subscription handles, the
+  `postFirstPageEpochs` map, and the `<client>SelfEmit` guards (for example
+  `postsSelfEmit`) — is cleared or unsubscribed by the reset callbacks 03-L02
+  registers through `registerAdminModuleCacheReset`. FINAL identity
+  transitions must keep invoking every registered reset (the I2 registry
+  semantics, one throwing callback not blocking the rest).
+
+A 09-L04 FINAL change to any of the four items above re-opens TASK-551-03-L02
+R7-02, R7-06 and R8-04 (cite: 03-L02 `### C17 v6` and R10-13); it is not a
+local 09-L04 edit.
+
+Explicitly NOT a constraint: the cacheBus handler ORDER. 03-L02 R10-03 made
+the media fail-closed guarantee order-independent (every `mediaList` and
+`mediaFolders` event forces the view's `revalidate()`), so no handler-order
+pin is owed to this leaf and FINAL may reorder local handler delivery without
+re-opening 03-L02 on that ground.
+
+### (2) In-place fence edit — `final-admin-cache-tests` (15 paths)
+
+Both 03-L02 paginated-client suites join this leaf's FINAL admin-cache lane,
+because they prove the item (1) constraints against the FINAL cacheBus and
+reset registry. Edits made in place (C1/I4 precedent):
+
+- Envelope `final-admin-cache-tests` `argv` (HEAD :727) and
+  `positiveDiscovery.paths` (HEAD :730):
+  - Before: the 13 paths ending with
+    `"tests/vitest/admin/admin-cache-authority.test.ts"]`.
+  - After: the same 13 paths in the same order, then
+    `"tests/vitest/admin/task551PaginatedClients.test.ts"` and
+    `"tests/vitest/admin/task551PaginatedClientsSlots.test.ts"` (15 paths).
+- `positiveDiscovery.minimum` (HEAD :731):
+  - Before: `"minimum": 1`.
+  - After: `"minimum": 15` (the full path count).
+- Every other envelope key is byte-identical: `lane`, `environmentProfile`,
+  the other eight commands (including `line-count`), `dependencies` (HEAD
+  :710) and both occurrences (`initial` HEAD :794, `final` `dependsOn` HEAD
+  :800).
+- Testing Requirements FINAL vitest invocation (HEAD :557-569):
+  - Before: HEAD :569 `  tests/vitest/admin/admin-cache-authority.test.ts`
+    ended the invocation.
+  - After: HEAD :569 gains a trailing ` \`, followed by the two new prose
+    lines `  tests/vitest/admin/task551PaginatedClients.test.ts \` and
+    `  tests/vitest/admin/task551PaginatedClientsSlots.test.ts`. The prose
+    invocation agrees with the envelope argv; the envelope stays
+    authoritative.
+- Both files run WHOLE (no `-t`/name filter, no per-test subset); a skipped
+  or filtered-out test in either file is a failed FINAL gate.
+- Neither file exists at HEAD. TASK-551-03-L02 creates both at its INITIAL
+  occurrence (its allowlist and `admin-pagination-vitest-*` fences own them;
+  the Slots suite joins `admin-pagination-vitest-2` per Addendum I1). This
+  leaf never writes them; they stay out of this leaf's allowlist and its
+  `line-count` command (03-L02's own line gate covers them).
+- Ordering: this leaf's FINAL runs after `TASK-551-03-L02:initial`. The
+  ordering is transitively enforced by the parent graph chain (parent :992 →
+  :1004): `TASK-551-03-L02:initial` (:992) → 07-L02 → 08-L01 → 08-L02 →
+  08-L03:final → 03-L02:final → 03-L03 → 04-L01 → 04-L02 → 09-L01 → 09-L02 →
+  09-L03 → `TASK-551-09-L04:final` (:1004). Per Addendum I2, NO explicit edge
+  is added: the envelope `dependencies` and the `final` occurrence `dependsOn`
+  stay byte-identical, and the parent graph is not edited. The R10-13 item
+  (3) instruction to add `TASK-551-03-L02:initial` to the `final` `dependsOn`
+  is superseded by I2, including where 03-L02 `### C17 v6` still names that
+  edge.
+
+### (3) Superseded 13-path sentences (quoted verbatim)
+
+Each sentence below is superseded; its replacement follows. Line numbers are
+HEAD numbering (working tree +2).
+
+- I4 round-2 (HEAD :1168-1171), superseded:
+  "The FINAL vitest invocation becomes the env-free direct runner
+  `bun --env-file=/dev/null node_modules/vitest/vitest.mjs run <13 paths>`,
+  with the thirteen paths in exactly the order of the envelope
+  `final-admin-cache-tests` argv"
+  - Replacement: the FINAL vitest invocation is the env-free direct runner
+    `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run <15 paths>`,
+    with the fifteen paths in exactly the order of the envelope
+    `final-admin-cache-tests` argv (the twelve original HEAD paths,
+    `tests/vitest/admin/admin-cache-authority.test.ts`,
+    `tests/vitest/admin/task551PaginatedClients.test.ts`,
+    `tests/vitest/admin/task551PaginatedClientsSlots.test.ts`).
+- I8 (HEAD :1247), superseded:
+  "FINAL uses the 13-path direct runner of `final-admin-cache-tests`."
+  - Replacement: FINAL uses the 15-path direct runner of
+    `final-admin-cache-tests`.
+- Round-2 record (HEAD :1285-1286), superseded:
+  "FINAL uses the env-free 13-path direct runner in envelope order."
+  - Replacement: FINAL uses the env-free 15-path direct runner in envelope
+    order (item (2) of this section).
+- 2026-09-24 FAZA-0 preamble (HEAD :841-843), superseded:
+  "The only in-place body edits are the ones recorded in I4 (envelope JSON and
+  the Testing Requirements command block)."
+  - Replacement: the in-place body edits are the ones recorded in I4 and in
+    item (2) of this section (envelope JSON and the Testing Requirements
+    command block). The I4 line arithmetic in that preamble applies to HEAD
+    `c9d1e808`; the anchor rule of this section applies to HEAD `c237e05d`.
+
+No other sentence of this leaf pins the 13-path list (untruncated
+`grep -c "13-path\|thirteen"` at HEAD `c237e05d`: 3 matching lines, all quoted
+above; the preamble is quoted because its "only in-place body edits" claim is
+no longer true).
+
+### (4) Owed mirror — TASK-551-10-L01 (orchestrator follow-up)
+
+TASK-551-10-L01 mirrors this leaf's FINAL `final-admin-cache-tests` list and
+now drifts from it (13 → 15 paths). Owed per Addendum I3 (c), edited by the
+TASK-551-10-L01 writer (orchestrator follow-up, not this leaf's writer):
+
+- its mirrored 09-L04 FINAL vitest invocation (the block that ends with
+  `tests/vitest/admin/admin-cache-authority.test.ts`) gains the two
+  paginated-client paths in envelope order;
+- its envelope summary "command `final-admin-cache-tests` (thirteen paths)"
+  becomes fifteen paths;
+- its FINAL prose "followed by the thirteen `final-admin-cache-tests` paths in
+  the envelope's …" becomes fifteen paths ending with the two
+  paginated-client suites.
+
+Anchors verified by untruncated grep at HEAD `c237e05d`: TASK-551-10-L01
+:995-1010, :1498 and :1522-1524.
+
+### (5) Family inventory
+
+No task file is added, renamed or removed; no occurrence is added. The family
+preflight stays `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.

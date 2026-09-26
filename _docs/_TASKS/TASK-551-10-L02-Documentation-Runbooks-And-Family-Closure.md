@@ -1903,3 +1903,33 @@ superseded; every other sentence of both sections above stays binding.
 2. `:1861-1866` (the E5 `:1862-1865` passage) "The orchestrator sets BOTH `DATABASE_URL` and `DATABASE_DIRECT_URL` to it (quoted shell variables, values never printed) for the FINAL run and its attribution re-runs only, in the closed `env -i` form, after the 01-L01 v7 pre-provisioning boolean check (same host, same database, port not 6432, not `coderso02`; STOP on any FALSE)." → "The orchestrator sets the keys of the **Attribution URLs (E4)** bullet of fix note 2 for the FINAL run and its attribution re-runs only, in the closed `env -i` form, after the 01-L01 **V7-1** pre-provisioning boolean check (same host, same database, port not 6432, not `coderso02`; STOP on any FALSE)."
 3. `:1874` (fix note replacement 3) "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in 01-L01 v6 as amended by v7 (the V6-1 table and the V6-5/V6-8 blocked rows, per C3 (b)): six BLOCKED rows, namely the two catalog rendering rows, `task551SearchVectorMigration` and the three `result-shape:<path>` rows, each with the owner item named there; `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins normally." → "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in the 01-L01 **V7-4** table (as amended by v8): six suites are BLOCKED (absent from the manifest, so never red; **V5-6**/**V6-5**/**V7-3** rows), and the red rows are those the **V7-4** table names; any other red is a finding. `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins the manifest; its lane prediction is its **V7-4** row."
 4. `:1874` (fix note quote-3 anchor) "`:1820-1825`" → "`:1821-1825`" (the quoted sentence starts on `:1821`; its text is verbatim and unchanged).
+
+### Amendment (2026-09-26, fix note 3): seven blocked rows, V8-7 table, closure preconditions
+
+Source: Addendum H (H2, H3) of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+and R10-01/R10-11 of `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round10-dispositions.md`.
+Append-only; the envelope, json fence, allowlist, dependencies and **Exact
+Validation Commands** are unchanged. Only the three passages quoted below are
+superseded; every other sentence of the three sections above stays binding.
+
+- **Worker schema binding (H3).** The E1 (d) hazard is bounded: from the
+  landing of 02-L02 R7 until `lane-worker-dedicated-schema-binding` (02-L02
+  R11) lands, every lane run on the target is red on both 01-L01 **V8-7**
+  rows it names, `task551RetentionJobService` and `preRetentionVacuum` (the
+  latter once joined); 01-L01 FINAL STOPs at **V8-8** step 8a until then.
+- **V5-5 (a) family-closure precondition (H2, H3).** 01-L01 **V5-5** owner
+  item (a) closes only when 05-L01 R2, R2.2 and R2.3, 05-L03 O3 and 06-L02
+  O5 have landed. Proof per 01-L01 **V8-4**: the FINAL lane run proves the
+  five 05-L01 branches and O3; O5 is proven only by the landed 06-L02 R15
+  edit plus its part-1 evidence. The landed-check is **V8-8** step 7. This
+  leaf consumes the precondition only through `TASK-551-10-L01:single`.
+- **C17 copy authority (R10-01, R10-11).** 03-L02's copy authority is now
+  its dated `### C17 v6` heading (Round 10), selected by the unchanged rule
+  at `:1628-1633`; no rule change is owed to this leaf.
+
+#### Superseded sentences (quoted; superseded from this date)
+
+1. `:1904` (fix note 2 replacement 3) "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in the 01-L01 **V7-4** table (as amended by v8): six suites are BLOCKED (absent from the manifest, so never red; **V5-6**/**V6-5**/**V7-3** rows), and the red rows are those the **V7-4** table names; any other red is a finding. `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins the manifest; its lane prediction is its **V7-4** row." → "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in the 01-L01 **V8-7** table (which replaces **V7-4**): seven suites are BLOCKED (absent from the manifest; **V5-6**/**V6-5**/**V7-3**/**V8-5** rows), and the red rows are those the **V8-7** table names; any other red is a finding. `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins the manifest; its lane prediction is its **V8-7** row."
+2. `:1890-1892` "Until the 02-L02 owner item `lane-worker-dedicated-schema-binding` lands, a lane run on the target executes production pruners against its `public` schema:" → "From the landing of 02-L02 R7 until the 02-L02 owner item `lane-worker-dedicated-schema-binding` lands, a lane run on the target executes production pruners against its `public` schema:"
+3. `:1894-1896` "01-L01 FINAL STOPs at the new **V7-7** step that 01-L01 v8 inserts between steps 8 and 9 ("`lane-worker-dedicated-schema-binding` decided and landed, else STOP")." → "01-L01 FINAL STOPs at **V8-8** step 8a ("`lane-worker-dedicated-schema-binding` (**V8-3**; 02-L02 R11) decided and landed, else STOP")."

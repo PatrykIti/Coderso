@@ -5138,3 +5138,290 @@ The quoted text is authoritative for what is superseded.
   (`package.json:28`, `:29`, `:30`)." Refined by **V8-9**: `test` `:28`,
   `test:full` `:29` and `test:bun` `:30`; `test` and `test:full` reach the
   runner through `test:bun`. The rest of the paragraph stays.
+
+### Amendment v9 (2026-09-26)
+
+Recorded at HEAD `c237e05d` from orchestrator decisions **H1**, **H2**,
+**H3**, **H4** and the **O6** widening of **H6** (Addendum H of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`),
+which were taken on the Round-9 / fix2 audit results (`wf_4844ed38-c42`).
+The dispositions decide; this section records them as contract text and does
+not re-decide them. Every anchor into this file, into source and into
+committed task text was re-read at this tree. Owner texts written in the
+same round are cited by Addendum item and heading, never by line: the
+05-L03 second dated note (**H5**), the 05-L01 fourth note (**H6**), the
+02-L02 R11 item `lane-worker-dedicated-schema-binding` (**H1**, Addendum F9)
+and the parent and 10-L02 fix notes 3 (**H2**, **H3**). 05-L01 rows are
+cited by heading and row number only (**H4**), because the 05-L01 fourth
+note may amend that file's fence in place and shift its lines. v9 is
+append-only. It supersedes v8 (and the earlier clauses v8 kept) only where
+**V9-8** quotes a sentence verbatim with its current line. Every clause not
+quoted there stays binding. No fence byte of this file changes, and no
+source or test file changes. Environment facts are match counts only; no
+environment value was read, printed or recorded.
+
+#### V9-1 E1 (a) restated (H1)
+
+- **Fact (from source and count-only greps; not executed).** The root
+  `.env` has one `DATABASE_DIRECT_URL` line. A count-only grep finds 1 match
+  for a `?` on that line, 1 for `sslmode`, and 0 for `options`. The worktree
+  `.env` line also contains a `?` (1 match). `buildWorkerDatabaseUrl`
+  (`scripts/bun-lane-worker-url.ts:61-66`, documented at `:56-60`) picks
+  `&` when the direct URL already has a query (`:64`) and appends
+  `options=<encodeURIComponent("-csearch_path=bun_worker_<i>")>` (`:65`).
+  The lane spawn env sets `DATABASE_URL` from it (`:155`) and sets
+  `BUN_TEST_WORKER_INDEX` to the same index (`:158`). So every lane worker
+  `DATABASE_URL`, and every **V7-6** `"$WORKER_URL"` built from
+  `"$ROOT_DIRECT_URL"`, has at least two query keys, and its `options` value
+  is URL-encoded (`=` travels as `%3D`).
+- **(a) as H1 restates it.** The R10.7 guarded-key list is unchanged
+  (TASK-551-02-L02 `### R10.7 — URL-query guard in both builders (D-8)`: the
+  six keys, `options` among them). The R11 exception applies only when
+  `options` is the only GUARDED key in the target URL's query. Unguarded
+  keys such as `sslmode` stay allowed as today. The exception also requires
+  that the URL-DECODED `options` value matches
+  `^-csearch_path=bun_worker_(\d+)$`, and that `BUN_TEST_WORKER_INDEX` is set
+  and equals the captured `<n>`. Any other query holding a guarded key is
+  still rejected with `database_maintenance_session_unavailable`, as R10.7
+  says. (b) is unchanged: when `BUN_TEST_WORKER_INDEX` is set, the R7.2
+  `off + primary` dedicated target takes the worker `DATABASE_URL`, not
+  `DATABASE_DIRECT_URL`.
+- **(c) F-leg as H1 restates it.** The R11 F-leg pins two outcomes.
+  Accepted: a worker URL of the form `…?sslmode=…&options=…`, with an
+  encoded `options` value and a matching `BUN_TEST_WORKER_INDEX`. Rejected:
+  `options` with any other decoded value, and `options` without
+  `BUN_TEST_WORKER_INDEX`.
+- **Attribution forms.** v8's claim that the **V7-6** attribution forms
+  "already satisfy (a)" is withdrawn (**V9-8**). From source, those forms
+  produce the root query keys plus the encoded `options` value, with the
+  same `<i>` that they set as `BUN_TEST_WORKER_INDEX`. E1 (a) as v8 wrote it
+  ("a query whose only key is `options`") would reject them. Their
+  acceptance is proven by the R11 F-leg above, not asserted by this file.
+- The 02-L02 R11 writer works from **H1**, not from E1 (a) (Addendum F9,
+  **H1**). This file mirrors that wording and does not edit 02-L02. The
+  **V8-3** hazard, the **V8-8** step 8a STOP and the **V8-10** `handoffs[]`
+  entry are unchanged.
+
+#### V9-2 Blocked-row count and step labels (H2)
+
+- **Count.** Seven blocked rows hold the 01-L01 initial regeneration. Six
+  wait on TASK-551-05-L01 and one on TASK-551-05-L03 (the **V5-6**,
+  **V6-5**, **V7-3** and **V8-5** rows). This is the **V8-5** count. The two
+  v7 replacement texts that still said "six rows, five on TASK-551-05-L01"
+  are superseded (**V9-8**).
+- **Step labels.** Mirrors cite the FINAL steps by their v8 numbers. The
+  **V5-5** (a) landed-check is "V8-8 step 7"; the E1 (d) STOP is "V8-8
+  step 8a"; the pre-provisioning check keeps its v8 number and is cited as
+  "the 01-L01 V7-1 pre-provisioning boolean check at its V8-8 step" (step 9).
+  The parent and 10-L02 fix notes 3 carry these labels, and cite "the 01-L01
+  V8-7 table (which replaces V7-4)" (**H2**). This file does not edit them.
+- **Swap bullet, restated (H4).** v7 steps 7 and 8 are swapped (Addendum
+  E2), so the scratch manifest is written only after the owner items that
+  can change classification have landed. The inserted step is numbered 8a so
+  that steps 9-13 keep their v7 numbers. The parent cites the booleans as
+  "the 01-L01 V7-1 pre-provisioning boolean check at its V8-8 step"
+  (**H2**), which resolves to **V8-8** step 9.
+
+#### V9-3 O5 proof and the E1 (d) hazard (H3; no change)
+
+- The **V8-4** **Proof** wording is authoritative, and the parent item 4
+  mirrors it (**H3**). The FINAL lane-runner run proves the five 05-L01
+  worker branches and the O3 branch. O5 (class-A suite
+  `task551RevisionConcurrency`, whose DB legs skip in the lane) is proven
+  only by the landed 06-L02 R15 edit, checked at **V8-8** step 7, plus that
+  suite's **V5-1** part-1 evidence. A green lane run is never O5 evidence.
+- The E1 (d) hazard is bounded "from the landing of 02-L02 R7" (**V8-3**,
+  kept). It covers both **V8-7** rows it changes:
+  `tests/integration/server/task551RetentionJobService.test.ts` and
+  `tests/integration/runtime/preRetentionVacuum.test.ts`.
+
+#### V9-4 05-L01 anchors by heading; row literals (H4)
+
+- **Rule.** From v9 on, this file cites 05-L01 handoff rows as
+  "`### Handoff rows for 01-L01 v8`, row N". That table is in the 05-L01
+  third note and its heading reads "(replaces the second note's table)". It
+  never cites a bare 05-L01 line. The table was read at this tree: row 8 is
+  the **V5-5 (a)** 05-L01 share, row 9 the environment precondition, row 10
+  the concurrency source row. Rows 1-5 are the rendering, SearchVector,
+  outbox and perf rows. When a **V8-5** or **V8-7** cell and its row
+  disagree, the row decides, as amended by later 05-L01 notes (the fourth
+  note, **H6**).
+- **V8-4 item 1, re-pointed.** The 05-L01 share of **V5-5** owner item (a)
+  closes per `### Handoff rows for 01-L01 v8`, row 8. Its "Clears when" cell
+  reads, verbatim: "R2.3a-f landed, and all five worker branches pass in the
+  FINAL lane-runner run (catalog and parity online-index legs, outbox plan
+  leg, concurrency revision race, concurrency apply-owner race), with the
+  booking leg green in the same worker run". The **V8-4** O3 and O5 parts
+  and the closing condition as a whole are unchanged.
+- **V8-5 clearing rule, re-pointed.** A 05-L01-owned blocked row clears
+  only per its row of `### Handoff rows for 01-L01 v8`: rows 1 and 2
+  (catalog, parity), row 3 (SearchVectorMigration), row 4 (outbox), row 5
+  (perf; ALL of items 1, 11, 13, 14 and 15) and row 10 (concurrency). The
+  rest of the **V8-5** rule is unchanged (every listed item landed in the
+  one test-only change, then a part-1 `pass` with 0 failed and 0 skipped
+  under the suite's map after green **V5-4** checks, check 4 included). The
+  land order is the `**Land order (restated).**` paragraph under that
+  heading. The concurrency suite's `allowlist` entry is the 05-L01
+  `## Workflow Dispatch Envelope` entry for its path.
+- **Row-9 literal (V8-6, V8-10).** The ninth row's handoff reason, copied
+  verbatim, is `env-precondition:pg_trgm-visible-and-public-schema`.
+  `handoffs[]` records that item under exactly this string, and **V5-4**
+  check 4 consumes it.
+- **Quote anchors.** The **V8-11** quote of **V7-5** is anchored at
+  `:4446-4447`, not `:4445-4447`: the quoted fragment starts on `:4446`.
+  The quoted text and its **V8-9** refinement are unchanged. **V9-8** adds
+  the verbatim quotes v8 omitted (`:3561`, `:4565`, `:4568`, `:4768-4770`).
+
+#### V9-5 V8-7 rows restated (H4)
+
+These rows replace the **V8-7** catalog/parity row (`:4984`) and the
+result-shape row (`:4985`). The other **V8-7** rows and the **V8-7**
+lead-in stay.
+
+| Suite | Lane prediction | Cause (anchor) | Clears when |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`, `tests/integration/server/task551SchemaMigrationParity.test.ts` | absent from the manifest while their **V5-6** rows stand; once joined, no prediction from source (05-L01 withdrew its first-note prediction until every item has landed and the part-1 rows are receipts: second note, `### Superseded sentences (first note; verbatim, with replacements)`, item 13) | in a `bun_worker_*` session schema the online-index leg asserts zero manifest members (05-L01 `### R2 — Online indexes in worker schemas (D8 with D6 (ii); answers 01-L01 V5-5 (a))`, R2.1 as refined) | join per `### Handoff rows for 01-L01 v8`, rows 1 and 2 (**V8-5**); their worker branches are proven in the FINAL lane-runner run (row 8; **V8-4**), where any non-zero `exit` blocks (**V8-8** step 11) |
+| `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`, `tests/perf/database-index-write-overhead.test.ts` | absent from the manifest (BLOCKED) | result shape (**V7-3**) | **V8-5** (`### Handoff rows for 01-L01 v8`, rows 4 and 5) |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (TASK-551-05-L03) | absent from the manifest (BLOCKED) | result shape (**V7-3**); before O3, the 23505 legs expect online unique members (Addendum E2) | Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped. |
+
+The **V8-7** row "SolutionKit, after joining" stays. Its anchors (`:1979`,
+`:2016`, `:2062`) are lines of the unsplit suite at this tree. After the
+O-L03-1 split (**H5**) they denote the same SQLSTATE 23505 legs in
+whichever split path the 05-L03 second dated note assigns them to.
+
+#### V9-6 SolutionKit rows: the Shared literal (H4, H5)
+
+Both SolutionKit rows, the **V8-5** clearing row and the **V9-5** blocked
+row, carry the Shared literal below byte-for-byte. The 05-L03 second dated
+note writes the same bytes (**H4**, **H5**):
+
+Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped.
+
+- **V8-5 clearing row, replaced.**
+
+| Suite | Clears when (every listed item landed, then the part-1 row passes) |
+| --- | --- |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (TASK-551-05-L03) | Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped. |
+
+- **The FK trap is a rule, not a clearing item.** The FK-trap item that the
+  suite documents at `:2028` (05-L03 Item 3, the FK fixture rule) binds the
+  suite and every split path. It is not an item whose landing clears the
+  row (**H4**; see **H5** for O-L03-2).
+- **Row count.** The suite remains ONE blocked row, owner TASK-551-05-L03,
+  handoff reason
+  `result-shape:tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+  (unchanged). The split paths add no blocked row. The literal holds the row
+  until every split path passes. The **V9-2** count stays seven.
+- **Split paths.** Under the literal, every split test path joins the
+  **V5-1** part-1 set with owner TASK-551-05-L03 and map `M-fixture`. The
+  classifier fixes its gating class when it joins (**V3-4**).
+
+#### V9-7 Owed mirror: TASK-551-10-L01 fence (H6, O6 widened)
+
+| Owed mirror | Owner | Content | Follow-up |
+| --- | --- | --- | --- |
+| TASK-551-10-L01 `## Workflow Dispatch Envelope` | TASK-551-10-L01 (its own writer; not the 05-L01 writer, not this file) | The 10-L01 fence also names `tests/integration/server/task551OnlineIndexDeployment.test.ts` (command `migration-and-plan-tests`: `argv` and `positiveDiscovery`). The O6 `migration-and-index-tests` argv/positiveDiscovery edit that the 05-L01 fourth note approves (**H6**) is owed there as a mirror for the deployment-suite split paths. | orchestrator follow-up (**H6**) |
+
+This file records the row only. The split paths join the **V5-2** list by
+the ordinary rule. The classifier fixes their class (**V3-4**).
+
+- **Observation (not decided here).** The same 10-L01
+  `migration-and-plan-tests` `argv` and `positiveDiscovery` also name
+  `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`,
+  whose O-L03-1 split **H5** approves. **H5** records only the 05-L03 fence
+  amendment. Routed to the orchestrator.
+
+#### V9-8 Superseded sentences (v9)
+
+Quoted verbatim with their current lines (line breaks folded to spaces).
+The quoted text is authoritative for what is superseded.
+
+**v8 sentences.**
+
+- `:4851-4854` (**V8-3**, E1 (a)): "(a) R10.7 gains one named exception, a
+  query whose only key is `options` with the exact value
+  `-csearch_path=bun_worker_<n>` (regex-pinned), accepted only when
+  `BUN_TEST_WORKER_INDEX` is set and equals `<n>`;". Replaced by the
+  **V9-1** (a) and (c) bullets (**H1**). (b) and the rest of the bullet
+  stay.
+- `:4866-4868` (**V8-3**): "The **V7-6** attribution forms already satisfy
+  (a) once it lands: `"$WORKER_URL"` is built with the same `<i>` that the
+  form sets as `BUN_TEST_WORKER_INDEX`." Withdrawn; replaced by the
+  **V9-1** attribution-forms bullet.
+- `:4876-4881` (**V8-4** item 1): "05-L01 R2 (first note), R2.2 and R2.3:
+  the five worker branches of the 05-L01 handoff row "**V5-5 (a)** owner
+  item, 05-L01 share" (`TASK-551-05-L01…md:1866` at HEAD, under
+  `### Handoff rows for 01-L01 v7`): the catalog and parity online-index
+  legs, the outbox plan leg, the concurrency revision race and the
+  concurrency apply-owner race;". Replaced by the **V9-4** re-pointed item
+  1 (row 8).
+- `:4909-4912` (**V8-5** clearing rule): "A 05-L01-owned blocked row clears
+  only per its 05-L01 handoff row (`TASK-551-05-L01…md:1850-1866` at HEAD,
+  under `### Handoff rows for 01-L01 v7`, as restated by the 05-L01 third
+  note, Addendum E3)." Replaced by the **V9-4** re-pointed clearing rule.
+  The rest of the paragraph stays.
+- `:4926` (**V8-5** row): "| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (TASK-551-05-L03) | the items of the 05-L03 dated note (Addendum E2): the no-fallback `rowsOf` (B1), the O3 worker-schema branch, and the FK-trap item that the suite documents at `:2028`; map `M-fixture`. |".
+  Replaced by the **V9-6** row.
+- `:4932` (**V8-5** blocked row, Owner cell): "TASK-551-05-L01
+  (`allowlist`, `TASK-551-05-L01…md:1062` at HEAD)". Replaced by: TASK-551-05-L01
+  (`allowlist`, 05-L01 `## Workflow Dispatch Envelope`). The other cells
+  stay.
+- `:4936-4937` (**V8-5**): "The **V7-3** row stays BLOCKED until the 05-L03
+  note items above have landed (Addendum E2)." Replaced by: the row stays
+  BLOCKED until the Shared literal (**V9-6**) is met. The next sentence (the
+  unchanged handoff reason) stays.
+- `:4945-4946` (**V8-5** count, fragment): "`TASK-551-05-L01…md:1873-1875`
+  at HEAD, under `**Land order (restated).**`". Replaced by: the
+  `**Land order (restated).**` paragraph under 05-L01
+  `### Handoff rows for 01-L01 v8` (**V9-4**). The rest of the bullet
+  stays.
+- `:4963-4964` (**V8-6**): "This consumes the ninth 05-L01 handoff row (the
+  F3 environment precondition, written by the 05-L01 third note, Addendum
+  E3)." Replaced by: this consumes `### Handoff rows for 01-L01 v8`, row 9,
+  `env-precondition:pg_trgm-visible-and-public-schema` (**V9-4**).
+- `:4966-4967` (**V8-6**): "`handoffs[]` records it under the reason string
+  that note pins, copied verbatim (**V8-10**)." Replaced by: `handoffs[]`
+  records it under `env-precondition:pg_trgm-visible-and-public-schema`.
+- `:4984` (**V8-7** row): "| `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`, `tests/integration/server/task551SchemaMigrationParity.test.ts` | absent while the **V5-6** rows stand; after joining (05-L01 R1 + R2 landed) expected green in worker schemas; a red is a finding | 05-L01 R2 pins zero manifest members in a `bun_worker_*` session schema instead of expecting them (`TASK-551-05-L01…md:1383-1392`; "neither suite is part of the D6 (i) interim lane red set", `:1429-1430`) | not in the red set once joined (V7-4, unchanged) |".
+  Replaced by the **V9-5** catalog/parity row. The withdrawn first-note
+  prediction is no longer cited.
+- `:4985` (**V8-7** row): "| `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`, `tests/perf/database-index-write-overhead.test.ts`, `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` | absent from the manifest (BLOCKED) | result shape (**V7-3**) | **V7-3** (V7-4, unchanged; clearing per **V8-5**) |".
+  Replaced by the two **V9-5** rows (outbox and perf; SolutionKit).
+- `:5021-5022` (**V8-8** Swap): "the parent and 10-L02 mirrors cite the
+  booleans as "FINAL step 9 of V7-7" (Addendum E5), which stays exact."
+  Replaced by the **V9-2** Swap bullet ("the parent cites"). The rest of
+  the Swap bullet stays.
+- `:5056` (**V8-10**): "the ninth 05-L01 handoff row (**V8-6**) under its
+  verbatim reason string." Replaced by: `### Handoff rows for 01-L01 v8`,
+  row 9, under `env-precondition:pg_trgm-visible-and-public-schema`.
+- `:5102` (**V8-11** anchor): "`:4445-4447` (**V7-5**)". Replaced by
+  `:4446-4447` (**V9-4**). The quote and its refinement stay.
+
+**v7 sentences.**
+
+- `:4716-4717` (**V7-10**, replacement text for `:4066-4067`): "Replaced by
+  the **V7-3** count: six rows, five on TASK-551-05-L01 and one on
+  TASK-551-05-L03." Replaced by the **V8-5** count: seven rows, six on
+  TASK-551-05-L01 and one on TASK-551-05-L03 (**V9-2**).
+- `:4768-4770` (**V7-10**, replacement text for `:4155`): "Refined by the
+  **V7-7** closing paragraph (STOP at steps 8 and 9)." Replaced by: refined
+  by the **V8-8** closing bullet (STOP at steps 7, 8a and 9).
+- `:4781-4784` (**V7-10**, replacement text for `:4273-4274`): "Replaced
+  by: it waits on six rows, the two rendering rows, the
+  SearchVectorMigration row and the three result-shape rows; five on
+  TASK-551-05-L01 and one on TASK-551-05-L03 (**V7-3**, **V7-7**)."
+  Replaced by: it waits on seven rows, the two rendering rows, the
+  SearchVectorMigration row, the three result-shape rows and the
+  concurrency row; six on TASK-551-05-L01 and one on TASK-551-05-L03
+  (**V8-5**, **V9-2**).
+- `:4565` (**V7-7** FINAL step 3): "3. **V5-4** checks;". Replaced by
+  **V8-8** step 3 (check 4 included, **V8-6**).
+- `:4568` (**V7-7** FINAL step 6): "6. STOP if any **V5-6**, **V6-5** or
+  **V7-3** blocked row remains;". Replaced by **V8-8** step 6 (adds the
+  **V8-5** row).
+
+**v5 table cell.**
+
+- `:3561` (**V5-2** row): "| `tests/integration/server/task551ConcurrencyConstraints.test.ts` | B | TASK-551-05-L01 | `M-ambient` |".
+  Replaced by: map cell `M-ambient` (blocked, **V8-5**), as **V8-5** states.
+  Class and owner are unchanged.

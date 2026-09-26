@@ -1053,6 +1053,7 @@ overrides. The static closed `allowlist` covers every other owned path.
     "scripts/task-551-online-indexes.ts",
     "scripts/task-551-online-indexes-catalog.ts",
     "scripts/task-551-online-indexes-rollout.ts",
+    "scripts/task-551-online-indexes-shared.ts",
     "tests/perf/fixtures/task551OnlineIndexManifest.ts",
     "tests/unit/db/schemaTableFacade.test.ts",
     "tests/unit/db/schemaColumnTypeContracts.test.ts",
@@ -1065,6 +1066,8 @@ overrides. The static closed `allowlist` covers every other owned path.
     "tests/integration/server/task551OnlineIndexDeployment.test.ts",
     "tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts",
     "tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts",
+    "tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts",
+    "tests/integration/server/task551OnlineIndexDeployment-support.ts",
     "tests/perf/database-index-write-overhead.test.ts"
   ],
   "forbiddenPaths": [
@@ -1114,12 +1117,12 @@ overrides. The static closed `allowlist` covers every other owned path.
     {
       "id": "migration-and-index-tests",
       "lane": "bun-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts", "tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
       "environmentProfile": "task551-db-migration-test",
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
-        "minimum": 1
+        "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts", "tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
+        "minimum": 10
       }
     },
     {
@@ -2424,3 +2427,397 @@ Anchors are amended-tree lines (the Anchor rule above).
 - The second note's R1 item 11 (`relation_size_row_missing`, no
   `?? { bytes: 0 }`), R1 item 12's ordering and gating, the F3 limits, R2.4's
   other rows, and **O3**-**O5** stay binding.
+
+## Dated Contract Corrections — 2026-09-26 (fourth note: item-12 split arithmetic, fence amendment 2, seeding, labels)
+
+**Authority and scope.** This append-only note implements orchestrator
+decision **H6** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum H) in full. It cites **H2** and **H5** (the canonical label forms
+"V8-8 step 7" and "V5-4 check 4 (V8-6)"), **H3** (what the FINAL lane run
+proves), **H4** (anchors by heading) and **E3** (the first envelope
+amendment), and does not re-decide them. It corrects the third note directly
+above ("the third note"). Every anchor below was re-read at HEAD `c237e05d`
+(nothing executed except the read-only counts and gates named here). This
+round changes no source, test or migration byte. Its only non-text change is
+"Fence amendment 2" below. `**Status:**` is unchanged (`⏳ To Do`).
+Everything in the first, second and third notes that is not quoted under
+"Superseded sentences (fourth note)" stays binding. A reference to an item
+(for example "R2.2" or "R1 item 12") means that item as amended here.
+
+**Anchor rule.** Fence amendment 2 inserts one line after HEAD `:1055` and
+two lines after HEAD `:1067`, and rewrites HEAD `:1117`, `:1121` and `:1122`
+in place (no line-count change there). Bare anchors into THIS file below are
+line numbers of the fourth-note tree. A HEAD `c237e05d` line `L` maps to `L`
+when `L <= 1055`, to `L + 1` when `1056 <= L <= 1067`, and to `L + 3` when
+`L >= 1068`. So the second note now spans `:1494-1992`, the third note
+`:1994-2429`, and the fence `:1023-1179`. The third note's own anchors are
+HEAD `c237e05d` numbers (its "amended tree"); read them through this rule.
+The first and second notes' anchors keep their own rules and then this one.
+Anchors into other files are unchanged.
+
+### Verified facts (read at `c237e05d`)
+
+- **J1 — line arithmetic (H6).** `wc -l` gives 3,513 lines for
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts` and 2,959
+  for `scripts/task-551-online-indexes.ts`. The four E3 names give each file
+  three paths (the original plus two). Three paths hold at most 3,000 lines,
+  so the deployment suite cannot fit under the 1,000-line gate by 513 lines
+  before any duplicated import header, and moving behaviour out of it is
+  forbidden. The script has 41 lines of slack across three files, while
+  every new file needs its own import block and the original must keep its
+  public exports import-stable (second note, R1 item 12 step 1). The four
+  E3 names therefore cannot hold the suite at all, and hold the script only
+  under a near-perfect balance.
+- **J2 — suite structure.** Imports are `:1-70`. The shared fixtures are
+  `:71-265` (`RUNNER_PATH` `:71`, `CONTRACT_PATH` `:72-75`,
+  `COMMANDED_TEST_PATHS` `:108-116`, `pinRunner` `:118`, `runnerBetween`
+  `:123`, the session and receipt builders `:146-265`). Seventeen top-level
+  `describe` blocks follow, with no top-level `beforeAll`/`afterAll`. Their
+  spans are listed in the split plan below.
+- **J3 — the suite pins this fence.** The static leg "the contract's
+  validation battery commands exactly the seven owned test files" (`:310`)
+  builds `envelopeArgv` from `COMMANDED_TEST_PATHS` (`:312`). It then asserts,
+  on this file's raw text, `bun test <the seven paths>` (`:316`, satisfied by
+  the first body's validation command `:953`) and
+  `contract.includes(envelopeArgv)` (`:320`). The suite is class D, "Ungated
+  (DB-free by construction)", must PASS in 01-L01 (`#### V3-4` row D and the
+  `#### V5-2` map row for the deployment suite). `runnerSource()` (`:90`)
+  reads only `RUNNER_PATH`. `pinRunner`, `runnerBetween` and
+  `runnerStateList` pin needles into those bytes. A DB-free run at HEAD
+  (`bun --env-file=/dev/null test` with a non-routable `DATABASE_URL`) passes
+  49 of 49.
+- **J4 — envelope validation.** `positiveDiscovery.paths` must be
+  `tests/**.test.ts(x)` paths that also appear in `argv`
+  (`_docs/_workflows/lib/task-551-dispatch-envelope.mjs:130-138`), so a
+  non-test support module can appear only in `allowlist`. `minimum` is a
+  positive safe integer (`:129`). Other TASK-551 fences set it to their path
+  count (TASK-551-06-L02: 4 of 4).
+- **J5 — the 10-L01 fence.** The TASK-551-10-L01 dispatch fence also names
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts`, in the
+  argv and the `positiveDiscovery.paths` of its ten-path battery and in its
+  validation command list. (Cited by task only; the 10-L01 writer owns those
+  lines.)
+- **J6 — outbox seeding inputs.** `tags` is
+  `jsonb("tags").$type<string[]>().notNull()`
+  (`core/db/tables/cacheInvalidationOutbox.ts:32`). The table check
+  `cache_invalidation_outbox_tags_chk` (`:67-68`) requires an array of 1-32
+  elements. The loop binds `["seed"]`
+  (`tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts:223`).
+  `DB_STATEMENT_TIMEOUT_MS` defaults to 15,000 ms, bounded 100-120,000
+  (`core/db/databaseConfig.ts:293-299`). A count-only grep finds 0
+  `DB_STATEMENT_TIMEOUT_MS=` lines in the worktree `.env` and in the root
+  `.env`, so the 15,000 ms default is the bound. The plan leg seeds 100,000
+  rows (`:267`) under a 300,000 ms test timeout (`:283`). `clearSeeded`
+  (`:234-236`) is one `delete … where event_key like 'seed-%'`.
+- **J7 — label literals.** The literals "V7-7 step 8" and "E3 check 4"
+  occur 0 times in this file (untruncated `grep -c`). The third note cites
+  the 01-L01 part-1 environment check as "**V5-4** check 4 (**E4**)"
+  (HEAD `:2284`, row 9 `:2304`, superseded item 6 `:2365`). It gives row 8's
+  consumption as "FINAL only" with no step. 01-L01 v8 numbers these as
+  `#### V8-6` (check 4) and `#### V8-8` step 7 (the V5-5 (a) landed check).
+  Step 11 there is the lane-runner run.
+- **J8 — O7 names.** The rewritten shadow index names are
+  `${group.member}_${suffix}`
+  (`tests/perf/database-index-write-overhead.test.ts:170`). Two of them are
+  69 bytes:
+  `pages_author_list_updated_id_idx_pages_author_list_updated_id_indexed`
+  and
+  `cache_outbox_unprocessed_age_idx_cache_outbox_unprocessed_age_indexed`.
+  PostgreSQL truncates each to 63 bytes with a NOTICE. The truncated
+  prefixes differ (`pages_…` and `cache_…`), each shadow table carries one
+  index, and `dropShadow` drops the schema with `cascade` (`:155-157`).
+
+### Fence amendment 2 (in place, H6; the only fence edit)
+
+- The `allowlist` gains exactly three entries (36 → 39, no duplicates). Each
+  sits after its source file's existing split entries:
+  - `scripts/task-551-online-indexes-shared.ts` (`:1056`, after
+    `scripts/task-551-online-indexes-rollout.ts`);
+  - `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts`
+    (`:1069`);
+  - `tests/integration/server/task551OnlineIndexDeployment-support.ts`
+    (`:1070`), both after
+    `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts`.
+- `migration-and-index-tests` (**O6**): its `argv` (`:1120`) and its
+  `positiveDiscovery.paths` (`:1124`) gain the three split test paths,
+  immediately after `tests/integration/server/task551OnlineIndexDeployment.test.ts`
+  and in allowlist order: `…-catalog.test.ts`, `…-rollout.test.ts`,
+  `…-evidence.test.ts`. That is 7 → 10 paths, the same list in the same
+  order in both keys. `minimum` (`:1125`) goes from 1 to 10, so every split
+  test path must be discovered (fail-closed; the same rule as the **H5**
+  split clearing rule). The support module is not a test path (**J4**), so it
+  appears in `allowlist` only.
+- Every other key and entry is byte-identical: `schema`, `artifactPolicy`,
+  `taskId`, `parent`, every existing `allowlist` entry and its relative
+  order, `forbiddenPaths`, `dependencies`, every other command, and
+  `occurrences`. No command or occurrence is added. The JSON parses. The
+  family preflight literal
+  (`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md`, "Family preflight
+  (literal; repo root)") with last argument `c237e05d…` prints
+  `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`
+  on this tree, unchanged. The three new paths occur nowhere in `scripts/`,
+  `tests/`, `core/` or `_docs/` outside this note and this fence, so
+  single-writer ownership holds.
+- **When the amended command runs.** The ten-path `migration-and-index-tests`
+  command is valid only on a tree where R1 item 12 has created every argv
+  path. The R1/R2/R3 test-only change keeps its "R1 gates" (third note, "Land
+  order") and never runs this command. The leaf's `single` occurrence runs
+  after item 12, which is already a precondition of 05-L01 closure (**O2**).
+- **Static pin (J3) — consequence recorded.** The pre-amendment argv literal
+  is quoted verbatim, on one line, under "Superseded fence values" below, as
+  every superseded value is. The J3 leg therefore stays green on the unsplit
+  tree, but it no longer proves the live envelope. The item-12 change
+  re-binds it (split rule 6 below). This note deliberately does not restate
+  the amended argv as one literal line, so the re-bound leg can match only
+  the fence.
+
+### R1 item 12 split — approved paths, budgets and rules (H6)
+
+**Deployment suite.** "HEAD lines" are content lines at `c237e05d`, without
+the file's own import header. "Budget" is the planning ceiling for the whole
+file (import header and the item-12 UNIQUE edits included). The gate is
+≤ 1,000 physical lines per file.
+
+| Path | Holds (HEAD `describe` spans) | HEAD lines | Budget |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551OnlineIndexDeployment.test.ts` | argv contract `:266-373`; closed fail-closed codes `:374-414`; journal-driven artifact resolution `:415-497`; reserved Drizzle adapter `:661-913`; in-transaction GUC guard and receipt insert `:914-1036`; admission adapter argv, nonce and echo validation `:1303-1445` | 751 | ≤ 870 |
+| `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts` | canonical member gate `:498-660`; write-cost gate and autoscaling eligibility `:1795-1948`; per-table classification and health recheck `:1949-2414` | 783 | ≤ 890 |
+| `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts` | cutover evidence `:1446-1794`; canonical preflight digest `:2415-2622`; L02 pre-decision interval `:2623-2845`; quiescence and visibility `:2846-2926` | 861 | ≤ 960 |
+| `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts` | phase-4 guarded apply and crash recovery `:1037-1302`; receipt CAS, mirror and pre-transaction gating `:2927-3020`; offline-single, reverse window and artifact reversal `:3021-3319`; locked state machine shape `:3320-3513` | 853 | ≤ 950 |
+| `tests/integration/server/task551OnlineIndexDeployment-support.ts` | the shared fixtures `:71-265`, exported | 195 | ≤ 320 |
+
+The content sums to 3,443 lines, plus the 70-line HEAD header, which gives
+3,513.
+
+**Rollout script (the shared module only because the balance needs it).**
+Same columns. The import header is HEAD `:1-48`.
+
+| Path | Holds (HEAD spans) | HEAD lines | Budget |
+| --- | --- | --- | --- |
+| `scripts/task-551-online-indexes-shared.ts` | the session-free layer: error codes, budgets, closed constants, grammars, state sets, shared types, `fail`/`values`/`sqlText` `:49-327`; the session-free L02 pre-decision interval decoder `:1693-1858` | 445 | ≤ 520 |
+| `scripts/task-551-online-indexes-catalog.ts` | journal-driven artifact resolution `:350-501`; canonical member gate `:1026-1299`; touched-table measurement, data conflicts and classification `:1605-1692`; online members, journal cleanup and final catalog gate `:2073-2315` | 757 | ≤ 860 |
+| `scripts/task-551-online-indexes-rollout.ts` | receipt mirror and CAS `:502-602`; reserved Drizzle adapter and GUC set/reset `:603-750`; phase-4 guard, receipt insert, guarded apply and recovery `:751-1025`; admission, quiescence and disk gates `:1300-1604` | 829 | ≤ 930 |
+| `scripts/task-551-online-indexes.ts` | CLI argv `:328-349`; health ceilings, preflight digest and recheck `:1859-2020`; reserved session and lease `:2021-2072`; receipt seeding and member state `:2316-2445`; release, autoscaling, write-cost and reverse authorization `:2446-2523`; the commands, `main` and the `import.meta.main` guard `:2524-2959`; import-stable re-exports | 880 | ≤ 980 |
+
+The content sums to 2,911 lines, plus the 48-line header, which gives 2,959.
+If the writer's balance fits the three E3 script names without it, the
+shared module is not created, and the item-12 receipt says so. An unused
+`allowlist` entry grants nothing else.
+
+**Split rules (binding).**
+
+1. The names above are the complete R1 item 12 write surface: the four E3
+   names plus these three. Any other path is a further 05-L01 fence
+   amendment under the same rules, never an implicit widening.
+2. The assignment tables are the recommended cohesive grouping. The writer
+   may move a whole cohesive cluster (a whole `describe` block, or a whole
+   HEAD span above) to another file of the same family, to stay within a
+   budget or to break an import cycle. It never splits a `describe` block
+   across files, and it never drops, merges away or weakens a leg, pin or
+   assertion. The item-12 receipt records the final assignment and the
+   `wc -l` of every file. If no assignment fits ≤ 1,000 lines per file, the
+   writer STOPs before editing and reports it for a further fence amendment.
+3. Script import graph: acyclic. `-shared.ts` imports none of the other
+   three files and opens or holds no database session. Neither `-catalog.ts`
+   nor `-rollout.ts` imports the CLI entry file. The entry keeps the
+   `import.meta.main` guard and stays the path every CLI argv names. It
+   re-exports every public export it has at HEAD, for example with one
+   `export *` line per split module. `canonicalIndexShape` and every symbol
+   the suite imports stay importable from
+   `scripts/task-551-online-indexes.ts`.
+4. Each suite part runs on its own (`bun test <that path>` alone), imports
+   its fixtures from `-support.ts` only, and imports no other `.test.ts`
+   file. `-support.ts` declares no `test` or `describe` and is not
+   discovered as a test file.
+5. The static pins keep proving the same bytes. `runnerSource()` returns the
+   fixed-order concatenation of every script file that exists: the entry,
+   then `-shared.ts`, `-catalog.ts` and `-rollout.ts`. A `runnerBetween` or
+   `pinRunner` span whose needles would cross a file boundary is a split
+   defect. The writer moves the cluster; it never relaxes the pin.
+6. The J3 leg stays in the original suite path. `COMMANDED_TEST_PATHS`
+   becomes the ten amended argv paths, in argv order, and the leg's title
+   and label say "ten". It asserts `contract.includes(envelopeArgv)` for the
+   ten-path argv (which only the fence contains) and `bun test <ten paths>`
+   (the restated validation command below). This re-binding is part of the
+   item-12 done-check.
+7. Order inside the one item-12 change is unchanged: split first, then the
+   two UNIQUE edits (second note). The fast gates are eslint on every
+   touched file, the DB-free run of all four suite parts (0 failed,
+   0 skipped, total test count equal to the pre-split count plus any leg the
+   UNIQUE edits add), and `wc -l` on all seven files.
+
+**Validation command (restated for the split; replaces `:953`).**
+
+- `set -a && source .env && set +a && bun test tests/integration/server/task551SchemaMigrationParity.test.ts tests/integration/server/task551SearchVectorMigration.test.ts tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts tests/integration/server/task551IndexAndConstraintCatalog.test.ts tests/integration/server/task551ConcurrencyConstraints.test.ts tests/integration/server/task551OnlineIndexDeployment.test.ts tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts tests/perf/database-index-write-overhead.test.ts`
+
+### O6 — disposed and widened (H6)
+
+- **O6** is disposed by fence amendment 2 (argv, `positiveDiscovery.paths`
+  and `minimum`, with no new command or occurrence).
+- It is widened. The TASK-551-10-L01 fence also names the deployment suite
+  (**J5**), so after item 12 its battery would silently stop running the
+  moved legs. The same three split test paths are owed to the
+  TASK-551-10-L01 fence (argv, `positiveDiscovery.paths`, and its
+  `minimum` under 10-L01's own rule) and to its validation command list.
+  That is an owed mirror and an orchestrator follow-up, written by the
+  10-L01 writer, never by 05-L01. It must land no later than the item-12
+  change.
+
+### R2.2 — seeding amended (H6)
+
+R2.2 stays set-based and produces the same rows as the loop, with two
+additions:
+
+- **`tags`.** The column list names `tags`, and every seeded row takes the
+  constant `'["seed"]'::jsonb` (the loop's bound value, **J6**; NOT NULL and
+  the 1-32-element check are satisfied).
+- **Batches under the statement bound.** `seedQuarters(rows)` runs the
+  set-based statement in sequential batches of
+  `SEED_BATCH_POSITIONS = 2_500` positions per quarter, so one statement
+  inserts at most 10,000 rows. Each batch is the same
+  `quarter(q, first_minute)` × `generate_series(${from}::int, ${to}::int - 1)`
+  select over a contiguous position range. The health leg (250 per quarter)
+  is one statement. The plan leg (25,000 per quarter) is 10 statements. The
+  union over all batches equals the single-statement rows.
+  - Each statement must finish under the session's effective
+    `statement_timeout`: 15,000 ms by default (**J6**). The suite never sets,
+    raises or disables `statement_timeout`, and never lowers the
+    100,000-row scale.
+  - A statement-timeout failure (SQLSTATE `57014`) on any seed batch fails
+    the leg. The executor records it as an environment finding
+    (`statement-timeout` plus the leg title), never as a pass. Root
+    `AGENTS.md` re-run-once isolation applies. A repeated `57014` keeps
+    row 4 of `### Handoff rows for 01-L01 v8` uncleared.
+- **Limitation (recorded, no change).** `clearSeeded` stays one statement
+  under the same bound. A `57014` there is the same environment finding.
+  Before any re-run, the executor clears only this suite's own `seed-%` rows.
+
+```ts
+// Shape only; names are binding, formatting is prettier's.
+const SEED_BATCH_POSITIONS = 2_500; // x 4 quarters = at most 10,000 rows per statement
+const seedQuarters = async (rows: number): Promise<void> => {
+  const perQuarter = Math.floor(rows / 4);
+  for (let from = 0; from < perQuarter; from += SEED_BATCH_POSITIONS) {
+    const to = Math.min(from + SEED_BATCH_POSITIONS, perQuarter);
+    await db.execute(sql`
+      insert into cache_invalidation_outbox
+        (event_key, tags, created_at, available_at, attempts, claim_token, claim_until, processed_at)
+      select 'seed-' || q || '-' || p, '["seed"]'::jsonb, /* R2.2 created_at */ …, /* per-quarter rules */ …
+      from (values (0, ${QUARTER_FIRST_MINUTE[0]}::int), (1, …), (2, …), (3, …)) as quarter(q, first_minute)
+      cross join generate_series(${from}::int, ${to}::int - 1) as p`);
+  }
+};
+```
+
+Row 4 of `### Handoff rows for 01-L01 v8` ("R2.2 including set-based
+seeding") means R2.2 as amended here.
+
+### Labels (H2/H5 forms; H3)
+
+- In this file, the 01-L01 part-1 environment check reads
+  "**V5-4** check 4 (**V8-6**)", and the FINAL V5-5 (a) landed check reads
+  "**V8-8** step 7". The third note's literals are replaced in the
+  quotes below. "V7-7 step 8" and "E3 check 4" do not occur here (**J7**).
+- Row 8's consumption: 01-L01 **V8-8** step 7 checks that R2, R2.2 and
+  R2.3 have landed. The FINAL lane-runner run (**V8-8** step 11) proves the
+  five worker branches and the booking leg (**H3**). The row is not an
+  initial precondition.
+- Row 9's consumption: 01-L01 **V5-4** check 4 (**V8-6**), green at the
+  initial regeneration before the **V5-1** part-1 runs (**V5-9** step 3)
+  and again at FINAL step 3.
+- Consumers cite these rows by heading and row number
+  (`### Handoff rows for 01-L01 v8`, rows 8 and 9), never by bare line
+  (**H4**).
+
+### O7 — disposed (recorded harmless)
+
+The two 69-byte shadow index names (**J8**) are truncated to 63 bytes with
+a NOTICE only. The truncated names cannot collide, each shadow table has
+one index, and the schema is dropped with `cascade`. No change is made.
+
+### Observation for orchestrator disposition (not decided here)
+
+- **O8 (01-L01 suite map).** The `#### V5-2` map and the `#### V3-4`
+  class-D row in 01-L01 name only
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts`. After
+  item 12 the three split test paths need their own rows (class D, owner
+  TASK-551-05-L01), or 01-L01 has to state that the class-D row covers the
+  family. Owner: the 01-L01 writer.
+
+### Superseded sentences (fourth note; verbatim, with replacements)
+
+Anchors are fourth-note-tree lines (the Anchor rule above); the HEAD
+`c237e05d` line follows in brackets.
+
+1. `:2138-2140` [HEAD `:2135-2137`] — "The names bind the R1 item 12 split.
+   Its writer may refine the split by cohesive responsibility. Any path
+   other than these four is a further 05-L01 fence amendment under the same
+   rules, never an implicit widening." → The seven names of split rule 1
+   (the four E3 names plus the three of fence amendment 2) bind the R1 item
+   12 split. Its writer may refine the assignment by cohesive
+   responsibility under split rule 2. Any path other than these seven is a
+   further 05-L01 fence amendment under the same rules, never an implicit
+   widening.
+2. `:2141-2142` [HEAD `:2138-2139`] — "The amendment grants write surface
+   only. It adds no command, argv, `positiveDiscovery` path or occurrence
+   (see **O6**)." → This stays true of the E3 amendment. Fence amendment 2
+   adds three `positiveDiscovery`/argv test paths to
+   `migration-and-index-tests` and raises its `minimum` to 10. It adds no
+   command or occurrence.
+3. `:2246-2247` [HEAD `:2243-2244`] — "**R2.2 (set-based seeding; E3).**
+   `seedQuarters(rows)` becomes ONE set-based statement," → It becomes the
+   set-based statement run in sequential batches of at most 10,000 rows
+   (R2.2 as amended here), with `tags` = `'["seed"]'::jsonb`.
+4. `:2286-2288` [HEAD `:2283-2285`] — "Either one failing is an environment
+   STOP, never a suite verdict. 01-L01 v8 records this as **V5-4** check 4
+   (**E4**). Until that lands, part 1 has no executor for it (**H6**)." →
+   Either one failing is an environment STOP, never a suite verdict. 01-L01
+   v8 records this as **V5-4** check 4 (**V8-6**), which has landed there,
+   so part 1 has its executor.
+5. `:2306` [HEAD `:2303`] (row 8, "Consumed at") — "FINAL only; not an
+   initial precondition" → FINAL only: **V8-8** step 7 (landed check) and
+   the FINAL lane-runner run (**V8-8** step 11; **H3**). It is not an
+   initial precondition.
+6. `:2307` [HEAD `:2304`] (row 9, "Clears when") — "01-L01 v8 has added
+   **V5-4** check 4 and it is green before part 1; either condition false is
+   an environment STOP" → **V5-4** check 4 (**V8-6**) is green before part 1
+   (**V5-9** step 3, and again at FINAL step 3). Either condition false is
+   an environment STOP.
+7. `:2322-2323` [HEAD `:2319-2320`] — "R1 item 12 (the **O2** split into
+   the four amended `allowlist` paths, then the UNIQUE edits) is still a
+   later, separate 05-L01 change." → R1 item 12 (the **O2** split into the
+   seven approved paths under the split rules above, then the UNIQUE edits)
+   is still a later, separate 05-L01 change. It carries the J3 re-binding
+   and must land no earlier than the TASK-551-10-L01 mirror.
+8. `:2329-2334` [HEAD `:2326-2331`] — "If the item-12 split moves legs into
+   the two new test files, or removes or renames the original, then the argv
+   and `positiveDiscovery` need a same-change envelope amendment with no new
+   occurrence, and E3 authorised the `allowlist` only. Without it the split
+   tests go undiscovered or discovery fails." → Disposed by fence amendment
+   2 (**H6**) and widened to the TASK-551-10-L01 fence (the "O6 — disposed
+   and widened" section above).
+9. `:2361-2365` [HEAD `:2358-2362`] (third-note replacement 5) — "Split
+   both files below 1,000 lines each into the four amended `allowlist`
+   paths (or a refinement through a further fence amendment), keeping
+   `canonicalIndexShape` and the other public exports import-stable; see
+   **O6**." → Split both files below 1,000 lines each into the seven approved
+   paths under the split rules above. Keep `canonicalIndexShape` and the
+   other public exports import-stable (split rule 3).
+10. `:953` (Validation Commands) — the seven-path `bun test` command,
+    quoted verbatim under "Superseded fence values" below → the restated
+    validation command above. It governs from the item-12 change on. Until
+    then, the seven paths are the whole suite family on disk.
+
+### Superseded fence values (verbatim; HEAD `c237e05d` bytes)
+
+These are pre-amendment bytes, one physical line each, quoted so that the
+superseded values stay reviewable. They are not dispatch input: this block
+is not a `json` fence.
+
+```text
+- `set -a && source .env && set +a && bun test tests/integration/server/task551SchemaMigrationParity.test.ts tests/integration/server/task551SearchVectorMigration.test.ts tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts tests/integration/server/task551IndexAndConstraintCatalog.test.ts tests/integration/server/task551ConcurrencyConstraints.test.ts tests/integration/server/task551OnlineIndexDeployment.test.ts tests/perf/database-index-write-overhead.test.ts`
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
+        "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
+        "minimum": 1
+```

@@ -1467,3 +1467,34 @@ Every sentence not quoted below stays binding.
 
 - :1411-1412 "Because `provisionWorkers` runs DDL before `assertDirectUrl`, a pre-provisioning step (01-L01 V6-7) records four booleans and nothing else," → item 1 (only the parenthetical changes).
 - :1392-1393 "No "06-L03 A4" label appears in this file (C2); none is added." → item 2.
+
+## Dated Contract Corrections — 2026-09-26 (fix note 3; append-only)
+
+Source: dispositions Addendum H (H2, H3, H4), same file as above. It edits
+nothing above; the graph fence and the family inventory are unchanged. FINAL
+steps use 01-L01 v8 numbering (**V8-8**). Every sentence not quoted stays binding.
+
+1. **Pre-provisioning anchor (H2).** The item 3 boolean step of the first fix
+   note is the 01-L01 V7-1 pre-provisioning boolean check at its V8-8 step.
+2. **E1 (d) hazard (H2, H3).** From the landing of 02-L02 R7 until 02-L02 R11
+   `lane-worker-dedicated-schema-binding` lands, a lane run on the target
+   executes production pruners against its `public` schema. FINAL STOPs at
+   V8-8 step 8a until it lands. The 01-L01 V8-7 table (which replaces V7-4)
+   carries both rows: `tests/integration/server/task551RetentionJobService.test.ts`
+   and `tests/integration/runtime/preRetentionVacuum.test.ts`.
+3. **05-L01 anchor (H4).** Fix note 2 item 4's 05-L01 share is
+   "`### Handoff rows for 01-L01 v8`, row 8" in TASK-551-05-L01, never a bare line.
+4. **Proof (H2, H3; 01-L01 V8-4).** V5-5 (a) is checked landed at V8-8 step 7.
+   The FINAL lane run proves the five 05-L01 branches and the O3 branch; O5
+   (class-A suite, DB legs skip in the lane) is proven only by the landed
+   06-L02 R15 edit checked at V8-8 step 7 plus its part-1 evidence. Seven
+   blocked rows (six on 05-L01, one on 05-L03) hold the 01-L01 initial
+   regeneration; FINAL STOPs at V8-8 step 6 while any remains.
+
+### Superseded sentences
+
+- :1441-1443 "The item 3 boolean step of the fix note above is "(01-L01 V7-1; FINAL step 9 of V7-7)" (v7 numbering; a later 01-L01 renumbering governs)." → item 1.
+- :1448-1450 "Until 02-L02 R11 `lane-worker-dedicated-schema-binding` (E1 (a)-(c)) lands, a lane run on the target executes production pruners against its `public` schema." → item 2 (bounded from R7).
+- :1450-1454 "01-L01 v8 (owner) inserts a FINAL step between V7-7 steps 8 and 9: "`lane-worker-dedicated-schema-binding` decided and landed, else STOP", and applies the E1 (d) V7-4 row change for `tests/integration/runtime/preRetentionVacuum.test.ts`." → item 2.
+- :1457 "- 05-L01 R2, R2.2 and R2.3 (owner TASK-551-05-L01; handoff row `:1866`);" → item 3 (the three items stay; only the anchor changes).
+- :1463-1464 "01-L01 v8 owns the matching V7-7 step 8 rewrite and the 7/8 order; the FINAL lane-runner run is the proof." → item 4.
