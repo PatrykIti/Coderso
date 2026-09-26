@@ -119,6 +119,9 @@ const expectedL11SidecarPaths = [
   "_docs/_workflows/lib/task-551-evidence-contract.d.mts",
   "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
   "_docs/_workflows/lib/task-551-dispatch-envelope.mjs",
+  "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+  "_docs/_workflows/lib/task-551-worktree-snapshot.mjs",
+  "_docs/_workflows/lib/task-551-l01-barrier.mjs",
 ] as const;
 const expectedL11SidecarTests = [
   "tests/unit/workflows/task551AuthorAudit.test.ts",
@@ -1505,13 +1508,13 @@ describe("TASK-551 L11 compatibility bootstrap and generic barrier", () => {
     expect([
       expectedL11SidecarPaths.length + expectedL11SidecarTests.length,
       receipt.sidecarPaths.length,
-    ]).toEqual([20, 16]);
+    ]).toEqual([23, 19]);
     expect(
       TASK551_PHASE_PROVENANCE.reduce(
         (count, phase) => count + phase.ownedFiles.length + phase.ownedTests.length,
         0
       )
-    ).toBe(82);
+    ).toBe(85);
     expect(receipt.sidecarPaths).toEqual(expectedL11SidecarPaths);
     expect(receipt.plannedBunPaths).toEqual(exactManifestPaths);
     expect(receipt.sidecarClosureSha256).toBe(shaBytes(framed));
@@ -1855,6 +1858,9 @@ describe("TASK-551 L11 compatibility bootstrap and generic barrier", () => {
       "lib/task-551-dispatch-contract.mjs",
       "lib/task-551-dispatch-primitives.mjs",
       "lib/task-551-dispatch-envelope.mjs",
+      "lib/task-551-phase-provenance.mjs",
+      "lib/task-551-worktree-snapshot.mjs",
+      "lib/task-551-l01-barrier.mjs",
       "task-551-author-audit.mjs",
       "task-551-fix.mjs",
     ];
