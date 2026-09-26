@@ -1,0 +1,2273 @@
+{
+  "task": "TASK-551",
+  "child": "TASK-551-11",
+  "reopen": {
+    "id": "impl-11-reopen-20260925",
+    "contract": "_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md",
+    "contractSha256AtHead": "604eb5d4dab3be6d339929b33ea12bc61fc02cf4647b7f25dbc7416045297b21",
+    "contractLines": 2052,
+    "contractCapAt987": 2100,
+    "worktree": "/home/coder/project/Coderso-551",
+    "branch": "feat/task-551-db-cache",
+    "writtenAt": "2026-09-26",
+    "writer": "step-7 implementer (single writer; allowlist = this file only)",
+    "result": "steps 1-6 green and checkpoint-committed; step 7 gates green except the known-red manifest test recorded per V5-3; step-7 commit pending (orchestrator (s))",
+    "foreignDirtyPathsAtWrite": [
+      "_TMP-S1-spina.md",
+      "_docs/_TASKS/TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md",
+      "_docs/_TASKS/TASK-551-02-L01-Validated-Database-Configuration-And-Cluster-Budget.md",
+      "_docs/_TASKS/TASK-551-02-L02-Pool-Lifecycle-Timeouts-And-Sanitized-Query-Telemetry.md",
+      "_docs/_TASKS/TASK-551-03-L02-Bounded-Admin-Lists-And-Oversized-Service-Splits.md",
+      "_docs/_TASKS/TASK-551-05-L01-Schema-Split-Indexes-And-Concurrency-Constraints.md",
+      "_docs/_TASKS/TASK-551-06-L02-Concurrency-Safe-Revisions-And-Retention.md",
+      "_docs/_TASKS/TASK-551-06-L03-Maintenance-Scheduling-Partition-Readiness-And-Recovery.md",
+      "_docs/_TASKS/TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md",
+      "_docs/_TASKS/TASK-551_Scalable_Database_Query_And_Cache_Optimization.md",
+      "_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round7-dispositions.md",
+      "_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md",
+      "core/services/content/revisionRetentionService.ts",
+      "core/services/pages/revisionService.ts",
+      "tests/integration/server/task551RetentionJobService.test.ts",
+      "tests/integration/server/task551RevisionRetention.test.ts",
+      "tests/perf/database-revision-budgets.test.ts",
+      "tests/unit/pages/revisionService.test.ts"
+    ]
+  },
+  "head": {
+    "head": "5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+    "sha_0": "ee4c7f933940409f08aef43050c7d90857d25413",
+    "sha_1": "03d42b900da9035bac14d546cca15b911561ec8d",
+    "sha_2": "66203e22a33ba4d783823d2fd5aa4b26c617a0ca",
+    "sha_3": "420bb24ad9973ded1a5cdc93561c8bf502a09238",
+    "sha_4": "2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed",
+    "sha_5": "e9373a26e031274db624e746c5ee43ee79881b37",
+    "sha_6": "5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+    "docsCommits": [
+      {
+        "sha": "85fb9f552bc2fff87d1e5923501647348db9c99e",
+        "subject": "docs(task551-11): amendment v10 — C0 base, dry-run copies, hook-failure rule, execution card",
+        "position": "between C0 and step 1"
+      },
+      {
+        "sha": "6845ace2dadc84183c795a2c4288adddcdb01c36",
+        "subject": "docs(task551-11): amendments v11-v24 (./ argv, hidden .dryrun root, literal gates, evidence loss)",
+        "position": "after step 4 (sha_4), before step 5; never used as a G-v argument"
+      }
+    ]
+  },
+  "amendments": {
+    "binding": "v3-v24 plus the three earlier 2026-09-25 amendments; each later amendment supersedes only where it quotes",
+    "committedIn": {
+      "2026-09-25 (three) and v3-v9": "ee4c7f93 (C0)",
+      "v10": "85fb9f55",
+      "v11-v24": "6845ace2"
+    },
+    "earlier": {
+      "2026-09-25 (three)": "line gate and lint for the re-pinned suite; contract-file cap; task-file byte cap",
+      "v3": "re-open scope after pre-audit",
+      "v4": "after the v3 audit (import-cycle fix, closed export lists, parity/preflight/provenance literals, frozen ceilings, seven-step land order, V4-5 manifest gap, V4-6 receipt)",
+      "v5": "move-proof procedure and regeneration order (V5-3 manifest state)",
+      "v6": "proof robustness and durable evidence",
+      "v7": "evidence location, prettier gate, pinned names (V7-1 closed mutation list (1)-(10))",
+      "v8": "untracked evidence model and step-7 gates ((11) ranges.jsonl; V8-3 citation; V8-4 step-7 E)",
+      "v9": "bootstrap actor, checkpoint commits, guarded fence calls (V9-2 redo/loss naming, V9-3, V9-5 citation rules)",
+      "v10": "C0 base, dry-run copies, hook failures, execution card (V10-5)"
+    },
+    "v11-v24": {
+      "v11": "./-prefixed A argv: bun test treats a bare argument as a substring filter; every A path is ./tests/unit/workflows/<file> (step 7 also ./tests/unit/toolchain/bunLaneManifest.test.ts)",
+      "v12": "hidden .dryrun/ root from step 4 on (bun skips dot-directories); step-4 dryrun renamed, contents byte-identical",
+      "v13": ".dryrun closure (complete rename; step 3 keeps dryrun/); contract cap 2,000 in place at :987; (12) orchestrator-stop-digests.txt named",
+      "v14": "first literal gates G-f/G-m/G-d; ledger.jsonl = item (13); docs-commit rule",
+      "v15": "gates reach REPO only through env REPO=... bash -c; consolidated resume card (f)/(k)/(m)/(r); (12)/(13) evidence items",
+      "v16": "(r) tail; (12)/(13) citation once by path + SHA-256 / line count + prefix digest; loss rules; G-d pins the digest file",
+      "v17": "ledger-digest literal (V17-1), commit body ledger line, stray check, loss-rule precedence",
+      "v18": "loss window (before/after the step-7 commit), verification literal, post-resume redo, symlink check",
+      "v19": "commit body with attribution trailers; (1)-(11) loss rules; literal guards; contract cap 2,100 in place at :987",
+      "v20": "full commit and commit-body/verification literals",
+      "v21": "names G-c (commit-body check) and G-v (ledger verification); (12)/(13) loss clauses",
+      "v22": "G-c/G-v hardening; outcome classification by last stdout line and exit code",
+      "v23": "G-c order and monotonic N; honest self-test record (corrects the V22-2 over-claim); invocation errors",
+      "v24": "byte-exact one-line G-c/G-v literals with pinned SHA-256; G-c loss classification (V24-1)"
+    },
+    "summary": {
+      "argv": "./-prefixed A argv from step 4 on (steps 1-3 bare receipts are equivalent, V11-1)",
+      "hiddenDryrunRoot": "<step dir>/.dryrun/ for steps 4-6; step 3 keeps dryrun/",
+      "literalGates": ["G-f", "G-m", "G-d", "G-c", "G-v"],
+      "pinnedLiteralSha256": {
+        "Gc": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+        "Gv": "4eb7f6f46285d44f6521eededa717b4c5c18b08fd2521889e2817b77548fba4a",
+        "definition": "SHA-256 of the script bytes inside the single quotes plus one trailing newline; recomputed from contract line 2048 at step 7 and equal"
+      },
+      "evidenceLossRules": "V9-2 as scoped by V19-3, V16-2, V18-1 (a), V19-1 (c), V22-1, V23-1: lost = detected by the orchestrator; a (12)/(13) loss before the step-7 commit STOPs the re-open",
+      "contractCap": "2,100 physical lines (in place at :987, V19; file is 2,052 lines at HEAD)"
+    }
+  },
+  "steps": [
+    {
+      "step": 1,
+      "scope": "dispatch-contract split",
+      "base": {
+        "sha": "ee4c7f933940409f08aef43050c7d90857d25413",
+        "label": "C0"
+      },
+      "source": "_docs/_workflows/lib/task-551-dispatch-contract.mjs",
+      "allowlist": [
+        "_docs/_workflows/lib/task-551-dispatch-contract.mjs",
+        "_docs/_workflows/lib/task-551-dispatch-envelope.mjs",
+        "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+        "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+        "tests/unit/workflows/task551WorkflowContracts.test.ts"
+      ],
+      "created": [
+        "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+        "_docs/_workflows/lib/task-551-dispatch-envelope.mjs"
+      ],
+      "touched": [
+        {
+          "path": "_docs/_workflows/lib/task-551-dispatch-contract.mjs",
+          "lines": 367,
+          "sha256": "ac78bd183cacf36d1edba651b7f8e4ef8f680c796ae02adc206344b8c8ddd219"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+          "lines": 272,
+          "sha256": "b9ec8ea8787884701930f6110312b5022929b01fdee91d3c9f656b36ffe5e57d"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-dispatch-envelope.mjs",
+          "lines": 451,
+          "sha256": "8a40b3b2635c94bdc156a6c745d2d0bca5192aeb514c400246f16f36dc1756c0"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+          "lines": 1727,
+          "sha256": "20cddbc95814242fd23a27e26211edf1955a1a8f2457d0fab3d50081b70e5fea"
+        },
+        {
+          "path": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+          "lines": 2783,
+          "sha256": "05c718a836c60915f3dde9bff55ec15475a4b3852f5a9b6d2c89c245f5d8a907"
+        }
+      ],
+      "commit": {
+        "sha": "03d42b900da9035bac14d546cca15b911561ec8d",
+        "subject": "test(task551-11): re-open step 1 — dispatch-contract split (facade + primitives + envelope)",
+        "hook": "precommit passed",
+        "commitNamesEqualTouched": true,
+        "receiptedEqualsCommittedRecheckedAtStep7": true
+      },
+      "gates": {
+        "E": {
+          "record": "eslint 0 + prettier --check 0",
+          "argv": "./node_modules/.bin/eslint --max-warnings=0 <touched non-.json files> && ./node_modules/.bin/prettier --config .prettierrc.json --check <touched files>",
+          "exit": 0
+        },
+        "W": {
+          "record": "367/272/451/1727/2783",
+          "argv": "wc -l <touched files>"
+        },
+        "A": {
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/task551EvidenceContract.test.ts",
+          "exit": 0,
+          "pass": 87,
+          "fail": 0,
+          "skip": 0,
+          "files": 3,
+          "record": "87 pass 0 fail 0 skip"
+        },
+        "pins": {
+          "pathsPlusTests_receipt": [19, 16],
+          "total": 81
+        },
+        "F": {
+          "step": 1,
+          "argv": "REPO=/home/coder/project/Coderso-551; cd \"$REPO\"; FENCE=\"$(sed -n '978,996p' \"$REPO/_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md\")\"; [ \"$(printf '%s\\n' \"$FENCE\" | head -n 1)\" = \"set -eu\" ] && [ \"$(printf '%s\\n' \"$FENCE\" | tail -n 1)\" = 'git diff --check -- \"$task_contract\"' ] || exit 1; env TASK551_REOPEN_STEP=1 bash -c \"$FENCE\"",
+          "exit": 0,
+          "fenceLines": "978,996",
+          "firstLine": "set -eu",
+          "lastLine": "git diff --check -- \"$task_contract\"",
+          "record": "exit 0 (192 lines)"
+        },
+        "G": {
+          "output": {
+            "taskFileCount": 41,
+            "childTaskCount": 11,
+            "leafTaskCount": 29,
+            "occurrenceCount": 33
+          },
+          "exit": 0,
+          "lastArgument": "ee4c7f933940409f08aef43050c7d90857d25413"
+        },
+        "P": {
+          "keys": "K1 K2 K4 K5 K9",
+          "record": "K1 K2 K4 K5 K9 verbatim"
+        },
+        "T": {
+          "record": "root tsc exit 0, 0 errors (root-tsc-step1.log)",
+          "argv": "bun run lint:repo:types (= tsc -p tsconfig.json --noEmit)",
+          "exit": 0
+        },
+        "diffCheck": {
+          "record": "clean after git add -N",
+          "argv": "git add -N -- <created files>; git diff --check -- <touched files>",
+          "exit": 0
+        },
+        "M": "proof 5 / modules 3 / touched 3 / diffs empty"
+      },
+      "moveProof": {
+        "source": "_docs/_workflows/lib/task-551-dispatch-contract.mjs",
+        "modules": [
+          "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+          "_docs/_workflows/lib/task-551-dispatch-envelope.mjs",
+          "_docs/_workflows/lib/task-551-dispatch-contract.mjs"
+        ],
+        "perModule": [
+          {
+            "module": "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+            "blocks": 4,
+            "hunks": 0,
+            "glueCount": 1,
+            "exportNames": 14
+          },
+          {
+            "module": "_docs/_workflows/lib/task-551-dispatch-envelope.mjs",
+            "blocks": 4,
+            "hunks": 1,
+            "glueCount": 13,
+            "exportNames": 1
+          },
+          {
+            "module": "_docs/_workflows/lib/task-551-dispatch-contract.mjs",
+            "blocks": 5,
+            "hunks": 0,
+            "glueCount": 23,
+            "exportNames": 0
+          }
+        ],
+        "glueTotal": 37,
+        "recheck": {
+          "modulesTxtLines": 3,
+          "touchedSha256Lines": 3,
+          "rangesJsonlLines": 13,
+          "proofJsonlLines": 5,
+          "pinned(modules,ranges,proof)": [3, 13, 5],
+          "countsEqualPins": true,
+          "everyOutDiffEmpty": true
+        },
+        "touchedSha256EqualsReceipted": true
+      },
+      "ledgerLines": {
+        "green": 3,
+        "committed": 4
+      },
+      "bootstrap": {
+        "ledgerLine": 1,
+        "a": "mkdir -p _docs/_workflows/_smoke/task-551/11-reopen && { test -e _docs/_workflows/_smoke/task-551/11-reopen/.gitignore || printf '*\\n' > _docs/_workflows/_smoke/task-551/11-reopen/.gitignore; }",
+        "b": [
+          {
+            "cmd": "printf '*\\n' | cmp -- - _docs/_workflows/_smoke/task-551/11-reopen/.gitignore",
+            "exit": 0,
+            "output": ""
+          },
+          {
+            "cmd": "git status --porcelain --untracked-files=all -- _docs/_workflows/_smoke/task-551/11-reopen",
+            "exit": 0,
+            "output": ""
+          }
+        ],
+        "task03l02Bytes": 522753,
+        "task03l02CapBytes": 524288,
+        "diffQuiet": {
+          "ref": "ee4c7f93",
+          "paths": [
+            "_docs/_workflows/lib/task-551-dispatch-contract.mjs",
+            "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+            "tests/unit/workflows/task551WorkflowContracts.test.ts"
+          ],
+          "exit": 0
+        },
+        "c0Baselines": {
+          "preStepSha256": {
+            "_docs/_workflows/lib/task-551-dispatch-contract.mjs": "d83876d7250bc070eef7f039489f9394abfe2c00a2d455782e0838930678b26d",
+            "_docs/_workflows/lib/task-551-worktree-compatibility.mjs": "b99ba160c7c0ca15f12d6636cb2f826758d6f2419983548fd4dc8f12ffb2b78a",
+            "tests/unit/workflows/task551WorkflowContracts.test.ts": "cf330bc5ea6707e47921f536fecccbaff35b2df2177da4d06e130a44197c85af",
+            "tests/unit/workflows/task551AuthorAudit.test.ts": "595d748f5be89b470b84187cf829c3b151388f9c6016ee6e1aa63dd57358fa7d",
+            "tests/unit/workflows/task551EvidenceContract.test.ts": "6a19a36e00edbcedbe5c9518f57779c4b003859d5f09897904e3bbb7e4e60efb"
+          },
+          "eslintBaseline": "165:14 no-undef TextEncoder; 481:19 no-useless-escape (dispatch-contract); worktree-compatibility clean",
+          "tBaseline": {
+            "step": 1,
+            "phase": "t-baseline",
+            "date": "2026-09-26",
+            "command": "./node_modules/.bin/tsc -p tsconfig.json --noEmit --pretty false",
+            "exit": 0,
+            "errors": 0,
+            "log": "scratchpad/root-tsc-c0.log"
+          }
+        },
+        "prettierVersion": "3.9.6"
+      },
+      "evidenceRef": "evidence.perStep.step-1"
+    },
+    {
+      "step": 2,
+      "scope": "byte cap",
+      "base": {
+        "sha": "03d42b900da9035bac14d546cca15b911561ec8d",
+        "label": "sha_1"
+      },
+      "source": null,
+      "allowlist": [
+        "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+        "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+        "tests/unit/workflows/dispatchContractCaps.test.ts",
+        "tests/unit/workflows/task551EvidenceContract.test.ts",
+        "tests/unit/workflows/task551WorkflowContracts.test.ts"
+      ],
+      "created": ["tests/unit/workflows/dispatchContractCaps.test.ts"],
+      "touched": [
+        {
+          "path": "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+          "lines": 272,
+          "sha256": "5630df7d2cbdc91da83e680bdadf7e789eb9487c769547518a20851f3553dea2"
+        },
+        {
+          "path": "tests/unit/workflows/dispatchContractCaps.test.ts",
+          "lines": 81,
+          "sha256": "26b4481043c550ac1c4c3c0e5545a7ad6058ace791c66d4f179f5527518bcb92"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+          "lines": 1728,
+          "sha256": "12f2c6a8c46eee1f21813ee4423307223712c6ce7f1d03ea6fb61ca19457c8ef"
+        },
+        {
+          "path": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+          "lines": 2784,
+          "sha256": "10bfea0f3b4e3af6a6ff94a2c4237b27b9dfef2e71b1d27ff7436af7777ab0ea"
+        },
+        {
+          "path": "tests/unit/workflows/task551EvidenceContract.test.ts",
+          "lines": 1176,
+          "sha256": "318bbc34909092dd55e0e125af3b510e121b1020d3bd116878afd0d4d989a35d"
+        }
+      ],
+      "commit": {
+        "sha": "66203e22a33ba4d783823d2fd5aa4b26c617a0ca",
+        "subject": "test(task551-11): re-open step 2 — task-file byte cap 1 MiB + dispatchContractCaps suite",
+        "hook": "precommit passed",
+        "commitNamesEqualTouched": true,
+        "receiptedEqualsCommittedRecheckedAtStep7": true,
+        "filesInsertionsDeletions": [5, 93, 4]
+      },
+      "gates": {
+        "E": {
+          "record": "eslint 0 + prettier --check 0",
+          "argv": "./node_modules/.bin/eslint --max-warnings=0 <touched non-.json files> && ./node_modules/.bin/prettier --config .prettierrc.json --check <touched files>",
+          "exit": 0
+        },
+        "W": {
+          "record": "272/81/1728/2784/1176",
+          "argv": "wc -l <touched files>"
+        },
+        "A": {
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/task551EvidenceContract.test.ts tests/unit/workflows/dispatchContractCaps.test.ts",
+          "exit": 0,
+          "pass": 90,
+          "fail": 0,
+          "skip": 0,
+          "files": 4,
+          "record": "90 pass 0 fail 0 skip"
+        },
+        "pins": {
+          "pathsPlusTests_receipt": [20, 16],
+          "total": 82
+        },
+        "F": {
+          "step": 2,
+          "argv": "REPO=/home/coder/project/Coderso-551; cd \"$REPO\"; FENCE=\"$(sed -n '978,996p' \"$REPO/_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md\")\"; [ \"$(printf '%s\\n' \"$FENCE\" | head -n 1)\" = \"set -eu\" ] && [ \"$(printf '%s\\n' \"$FENCE\" | tail -n 1)\" = 'git diff --check -- \"$task_contract\"' ] || exit 1; env TASK551_REOPEN_STEP=2 bash -c \"$FENCE\"",
+          "exit": 0,
+          "fenceLines": "978,996",
+          "firstLine": "set -eu",
+          "lastLine": "git diff --check -- \"$task_contract\"",
+          "record": "exit 0 (192 lines)"
+        },
+        "G": {
+          "output": {
+            "taskFileCount": 41,
+            "childTaskCount": 11,
+            "leafTaskCount": 29,
+            "occurrenceCount": 33
+          },
+          "exit": 0,
+          "lastArgument": "ee4c7f933940409f08aef43050c7d90857d25413"
+        },
+        "P": {
+          "keys": "K1 K3 K4 K5 K9",
+          "record": "K1 K3 K4 K5 K9 verbatim"
+        },
+        "T": {
+          "record": "root tsc exit 0",
+          "argv": "bun run lint:repo:types (= tsc -p tsconfig.json --noEmit)",
+          "exit": 0
+        },
+        "diffCheck": {
+          "record": "clean after git add -N",
+          "argv": "git add -N -- <created files>; git diff --check -- <touched files>",
+          "exit": 0
+        }
+      },
+      "ledgerLines": {
+        "green": 5,
+        "committed": 6
+      },
+      "capsTests": [
+        "accepts a task file of exactly 1,048,576 UTF-8 bytes and pins the cap literal",
+        "rejects a task file of 1,048,577 UTF-8 bytes",
+        "accepts the live 03-L02 task file"
+      ],
+      "evidenceRef": "none: no step directory (V9-5)"
+    },
+    {
+      "step": 3,
+      "scope": "worktree-compatibility split",
+      "base": {
+        "sha": "66203e22a33ba4d783823d2fd5aa4b26c617a0ca",
+        "label": "sha_2"
+      },
+      "source": "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+      "allowlist": [
+        "_docs/_workflows/lib/task-551-l01-barrier.mjs",
+        "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+        "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+        "_docs/_workflows/lib/task-551-worktree-snapshot.mjs",
+        "tests/unit/workflows/task551WorkflowContracts.test.ts"
+      ],
+      "created": [
+        "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+        "_docs/_workflows/lib/task-551-worktree-snapshot.mjs",
+        "_docs/_workflows/lib/task-551-l01-barrier.mjs"
+      ],
+      "touched": [
+        {
+          "path": "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+          "lines": 432,
+          "sha256": "480133948cf7874a8865f82903f96a8a1de7867f3e81fb3a039d871bf0b372d1"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+          "lines": 507,
+          "sha256": "407c84451d606a494e8cb4e477bc76387a440753370167699700b9c5a256461c"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-worktree-snapshot.mjs",
+          "lines": 448,
+          "sha256": "82b3e60861ad050173ac99787b3448ee7d455de68164693c5be2c710d5bbee3c"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-l01-barrier.mjs",
+          "lines": 491,
+          "sha256": "26faf2c279112471ff61bb5107d9c0ac7513f186918c70f8923e92b868ee2116"
+        },
+        {
+          "path": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+          "lines": 2790,
+          "sha256": "39dda80b949eab86935a9d355a825f05bcd73a65eb950bd70faa748241e31620"
+        }
+      ],
+      "commit": {
+        "sha": "420bb24ad9973ded1a5cdc93561c8bf502a09238",
+        "subject": "test(task551-11): re-open step 3 — worktree-compatibility split (facade + phase-provenance + worktree-snapshot + l01-barrier)",
+        "hook": "precommit passed",
+        "commitNamesEqualTouched": true,
+        "receiptedEqualsCommittedRecheckedAtStep7": true
+      },
+      "gates": {
+        "E": {
+          "record": "eslint 0 + prettier --check 0 (5 files)",
+          "argv": "./node_modules/.bin/eslint --max-warnings=0 <touched non-.json files> && ./node_modules/.bin/prettier --config .prettierrc.json --check <touched files>",
+          "exit": 0
+        },
+        "W": {
+          "record": "432/507/448/491/2790",
+          "argv": "wc -l <touched files>"
+        },
+        "A": {
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/task551EvidenceContract.test.ts tests/unit/workflows/dispatchContractCaps.test.ts",
+          "exit": 0,
+          "pass": 90,
+          "fail": 0,
+          "skip": 0,
+          "files": 4,
+          "record": "90 pass 0 fail 0 skip (4 files)"
+        },
+        "pins": {
+          "pathsPlusTests_receipt": [23, 19],
+          "total": 85
+        },
+        "F": {
+          "step": 3,
+          "argv": "REPO=/home/coder/project/Coderso-551; cd \"$REPO\"; FENCE=\"$(sed -n '978,996p' \"$REPO/_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md\")\"; [ \"$(printf '%s\\n' \"$FENCE\" | head -n 1)\" = \"set -eu\" ] && [ \"$(printf '%s\\n' \"$FENCE\" | tail -n 1)\" = 'git diff --check -- \"$task_contract\"' ] || exit 1; env TASK551_REOPEN_STEP=3 bash -c \"$FENCE\"",
+          "exit": 0,
+          "fenceLines": "978,996",
+          "firstLine": "set -eu",
+          "lastLine": "git diff --check -- \"$task_contract\"",
+          "record": "exit 0 (192 lines) TASK551_REOPEN_STEP=3"
+        },
+        "G": {
+          "output": {
+            "taskFileCount": 41,
+            "childTaskCount": 11,
+            "leafTaskCount": 29,
+            "occurrenceCount": 33
+          },
+          "exit": 0,
+          "lastArgument": "ee4c7f933940409f08aef43050c7d90857d25413"
+        },
+        "P": {
+          "keys": "K1 K3 K4 K5 K6 K7 K8 K9",
+          "record": "K1 K3 K4 K5 K6 K7 K8 K9 verbatim (orchestrator re-run)"
+        },
+        "T": {
+          "record": "root tsc exit 0, 0 errors (root-tsc-step3.log)",
+          "argv": "bun run lint:repo:types (= tsc -p tsconfig.json --noEmit)",
+          "exit": 0
+        },
+        "diffCheck": {
+          "record": "clean after git add -N",
+          "argv": "git add -N -- <created files>; git diff --check -- <touched files>",
+          "exit": 0
+        },
+        "M": "proof.jsonl 6 / modules.txt 4 / touched.sha256 4 / 4 empty diffs; uncoveredPre 1,2,4,5",
+        "D": "dry-run all phases exit 0; cmp ranges.jsonl + touched.sha256 exit 0 after last prove"
+      },
+      "moveProof": {
+        "source": "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+        "modules": [
+          "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+          "_docs/_workflows/lib/task-551-worktree-snapshot.mjs",
+          "_docs/_workflows/lib/task-551-l01-barrier.mjs",
+          "_docs/_workflows/lib/task-551-worktree-compatibility.mjs"
+        ],
+        "perModule": [
+          {
+            "module": "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+            "blocks": 3,
+            "hunks": 1,
+            "glueCount": 4,
+            "exportNames": 13
+          },
+          {
+            "module": "_docs/_workflows/lib/task-551-worktree-snapshot.mjs",
+            "blocks": 2,
+            "hunks": 0,
+            "glueCount": 26,
+            "exportNames": 10
+          },
+          {
+            "module": "_docs/_workflows/lib/task-551-l01-barrier.mjs",
+            "blocks": 2,
+            "hunks": 0,
+            "glueCount": 38,
+            "exportNames": 1
+          },
+          {
+            "module": "_docs/_workflows/lib/task-551-worktree-compatibility.mjs",
+            "blocks": 3,
+            "hunks": 0,
+            "glueCount": 75,
+            "exportNames": 0
+          }
+        ],
+        "glueTotal": 143,
+        "recheck": {
+          "modulesTxtLines": 4,
+          "touchedSha256Lines": 4,
+          "rangesJsonlLines": 10,
+          "proofJsonlLines": 6,
+          "pinned(modules,ranges,proof)": [4, 10, 6],
+          "countsEqualPins": true,
+          "everyOutDiffEmpty": true,
+          "cmpPairsRecheckedAtStep7": [
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-3/ranges.jsonl _docs/_workflows/_smoke/task-551/11-reopen/step-3/dryrun/ranges.jsonl",
+              "exit": 0
+            },
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-3/touched.sha256 _docs/_workflows/_smoke/task-551/11-reopen/step-3/dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-3/touched.sha256",
+              "exit": 0
+            }
+          ]
+        },
+        "touchedSha256EqualsReceipted": true
+      },
+      "ledgerLines": {
+        "green": 8,
+        "committed": 9
+      },
+      "preDispatch": {
+        "step": 3,
+        "phase": "pre-dispatch",
+        "date": "2026-09-26",
+        "sha_2": "66203e22a33ba4d783823d2fd5aa4b26c617a0ca",
+        "diffQuiet": {
+          "cmd": "git diff --quiet 66203e22a33ba4d783823d2fd5aa4b26c617a0ca -- _docs/_workflows/lib/task-551-worktree-compatibility.mjs tests/unit/workflows/task551WorkflowContracts.test.ts",
+          "exit": 0
+        },
+        "enumeratedEdits": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/enumerated-edits.txt",
+          "sha256": "b5ffab41b6f58bf47f9ca3a5ea68be2b2d5ea8cb3936e235f919abf6abeff6f0",
+          "lines": 27
+        },
+        "porcelain11reopen": "empty",
+        "wcPre": {
+          "_docs/_workflows/lib/task-551-worktree-compatibility.mjs": 1728
+        }
+      },
+      "deviationsRecorded": [
+        "glue import lists derived by no-undef cross-reference = V4-1 closed lists",
+        "2-line header comments as glue in the new modules",
+        "V10-2 cmp calls made explicit per file (zsh)"
+      ],
+      "evidenceRef": "evidence.perStep.step-3"
+    },
+    {
+      "step": 4,
+      "scope": "author-audit split",
+      "base": {
+        "sha": "420bb24ad9973ded1a5cdc93561c8bf502a09238",
+        "label": "sha_3"
+      },
+      "source": "tests/unit/workflows/task551AuthorAudit.test.ts",
+      "allowlist": [
+        "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+        "tests/unit/workflows/authorAuditBoundedChild.test.ts",
+        "tests/unit/workflows/authorAuditDriftRounds.test.ts",
+        "tests/unit/workflows/dispatchContractCaps.test.ts",
+        "tests/unit/workflows/task551AuthorAudit.test.ts",
+        "tests/unit/workflows/task551AuthorAuditFixtures.ts",
+        "tests/unit/workflows/task551EvidenceContract.test.ts",
+        "tests/unit/workflows/task551WorkflowContracts.test.ts"
+      ],
+      "created": [
+        "tests/unit/workflows/authorAuditDriftRounds.test.ts",
+        "tests/unit/workflows/authorAuditBoundedChild.test.ts",
+        "tests/unit/workflows/task551AuthorAuditFixtures.ts"
+      ],
+      "touched": [
+        {
+          "path": "tests/unit/workflows/task551AuthorAudit.test.ts",
+          "lines": 448,
+          "sha256": "f4cc2bcbe104b2c4d404b3dd3d180332045a1c342556b1cf228e3f4ceca45c31"
+        },
+        {
+          "path": "tests/unit/workflows/authorAuditDriftRounds.test.ts",
+          "lines": 459,
+          "sha256": "209e7bc40018cd7a3e99bb878d5a7ca1fa6b631935a9333c092fea913830ba0b"
+        },
+        {
+          "path": "tests/unit/workflows/authorAuditBoundedChild.test.ts",
+          "lines": 318,
+          "sha256": "2c01a2b8a5008e47e213791bab2d0310d140099aed38c8aa47e5de3dd0cd093e"
+        },
+        {
+          "path": "tests/unit/workflows/task551AuthorAuditFixtures.ts",
+          "lines": 56,
+          "sha256": "dd8016d744ebb809fcab6b6117082914d093936e7686c320d139f8f8f0910f2b"
+        },
+        {
+          "path": "tests/unit/workflows/dispatchContractCaps.test.ts",
+          "lines": 67,
+          "sha256": "91a80669a5eb6f63e4f0d4d66507f22c18c8c445f49877f3da1f08eda9082bd1"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+          "lines": 510,
+          "sha256": "4848dd02ef1c8383bd691bf85a0af19699ec7798feccbe54dd9313dec4b2ecc5"
+        },
+        {
+          "path": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+          "lines": 2793,
+          "sha256": "0ee2c9a68fbf31474ccd7347ebf007842a507cdefef7ab101840e025b55c1ddf"
+        },
+        {
+          "path": "tests/unit/workflows/task551EvidenceContract.test.ts",
+          "lines": 1188,
+          "sha256": "961131515c5070f2f0617d54082b1e364e89a38d7893ce1b06ae174589569040"
+        }
+      ],
+      "commit": {
+        "sha": "2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed",
+        "subject": "test(task551-11): re-open step 4 — author-audit split (fixtures + drift-rounds + bounded-child)",
+        "hook": "precommit passed",
+        "commitNamesEqualTouched": true,
+        "receiptedEqualsCommittedRecheckedAtStep7": true,
+        "bodyLedgerLine": "ledger: 25 6ddb7f9ab1a11772d6cff879e8001551fa49fdf8b1d0c2dd1eb2a1ee157c0653",
+        "Gc": {
+          "literalSha256": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+          "argv": "env REPO=/home/coder/project/Coderso-551 bash -c '<V24-2 G-c>' _ \"<ledger line>\" \"<subject>\" 2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed",
+          "output": "ok",
+          "exit": 0
+        }
+      },
+      "gates": {
+        "E": {
+          "record": "eslint 0 + prettier --check 0 (8 files)",
+          "argv": "./node_modules/.bin/eslint --max-warnings=0 <touched non-.json files> && ./node_modules/.bin/prettier --config .prettierrc.json --check <touched files>",
+          "exit": 0
+        },
+        "W": {
+          "record": "448/459/318/56/67/510/2793/1188",
+          "argv": "wc -l <touched files>"
+        },
+        "A": {
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/unit/workflows/task551AuthorAudit.test.ts ./tests/unit/workflows/authorAuditDriftRounds.test.ts ./tests/unit/workflows/authorAuditBoundedChild.test.ts ./tests/unit/workflows/task551WorkflowContracts.test.ts ./tests/unit/workflows/task551EvidenceContract.test.ts ./tests/unit/workflows/dispatchContractCaps.test.ts",
+          "exit": 0,
+          "pass": 90,
+          "fail": 0,
+          "skip": 0,
+          "files": 6,
+          "record": "90 pass 0 fail 0 skip across 6 files (./-prefixed argv; per-file 18/12/10/25/22/3)"
+        },
+        "pins": {
+          "pathsPlusTests_receipt": [26, 19],
+          "total": 88
+        },
+        "F": {
+          "step": 4,
+          "argv": "REPO=/home/coder/project/Coderso-551; cd \"$REPO\"; FENCE=\"$(sed -n '978,996p' \"$REPO/_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md\")\"; [ \"$(printf '%s\\n' \"$FENCE\" | head -n 1)\" = \"set -eu\" ] && [ \"$(printf '%s\\n' \"$FENCE\" | tail -n 1)\" = 'git diff --check -- \"$task_contract\"' ] || exit 1; env TASK551_REOPEN_STEP=4 bash -c \"$FENCE\"",
+          "exit": 0,
+          "fenceLines": "978,996",
+          "firstLine": "set -eu",
+          "lastLine": "git diff --check -- \"$task_contract\"",
+          "record": "exit 0 (192 lines) TASK551_REOPEN_STEP=4"
+        },
+        "G": {
+          "output": {
+            "taskFileCount": 41,
+            "childTaskCount": 11,
+            "leafTaskCount": 29,
+            "occurrenceCount": 33
+          },
+          "exit": 0,
+          "lastArgument": "ee4c7f933940409f08aef43050c7d90857d25413"
+        },
+        "P": {
+          "keys": "K1 K3 K4 K5 K6 K7 K8 K9",
+          "record": "K1 K3 K4 K5 K6 K7 K8 K9 verbatim (unchanged vs step 3)"
+        },
+        "T": {
+          "record": "root tsc exit 0, 0 errors (root-tsc-step4.log)",
+          "argv": "bun run lint:repo:types (= tsc -p tsconfig.json --noEmit)",
+          "exit": 0
+        },
+        "diffCheck": {
+          "record": "clean after git add -N",
+          "argv": "git add -N -- <created files>; git diff --check -- <touched files>",
+          "exit": 0
+        },
+        "M": "proof.jsonl 6 / modules.txt 4 / touched.sha256 4 / 4 empty diffs; G-m ok",
+        "D": "dry-run green (first attempt); cmp ranges.jsonl + touched.sha256 exit 0 after the real prove",
+        "stray": "ok",
+        "symlink": "ok",
+        "GmOrchestrator": "ok"
+      },
+      "moveProof": {
+        "source": "tests/unit/workflows/task551AuthorAudit.test.ts",
+        "modules": [
+          "tests/unit/workflows/task551AuthorAuditFixtures.ts",
+          "tests/unit/workflows/authorAuditBoundedChild.test.ts",
+          "tests/unit/workflows/task551AuthorAudit.test.ts",
+          "tests/unit/workflows/authorAuditDriftRounds.test.ts"
+        ],
+        "perModule": [
+          {
+            "module": "tests/unit/workflows/task551AuthorAuditFixtures.ts",
+            "blocks": 2,
+            "hunks": 0,
+            "glueCount": 4,
+            "exportNames": 7
+          },
+          {
+            "module": "tests/unit/workflows/authorAuditBoundedChild.test.ts",
+            "blocks": 2,
+            "hunks": 0,
+            "glueCount": 6,
+            "exportNames": 0
+          },
+          {
+            "module": "tests/unit/workflows/task551AuthorAudit.test.ts",
+            "blocks": 2,
+            "hunks": 0,
+            "glueCount": 36,
+            "exportNames": 0
+          },
+          {
+            "module": "tests/unit/workflows/authorAuditDriftRounds.test.ts",
+            "blocks": 2,
+            "hunks": 2,
+            "glueCount": 22,
+            "exportNames": 0
+          }
+        ],
+        "glueTotal": 68,
+        "recheck": {
+          "modulesTxtLines": 4,
+          "touchedSha256Lines": 4,
+          "rangesJsonlLines": 8,
+          "proofJsonlLines": 6,
+          "pinned(modules,ranges,proof)": [4, 8, 6],
+          "countsEqualPins": true,
+          "everyOutDiffEmpty": true,
+          "cmpPairsRecheckedAtStep7": [
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-4/ranges.jsonl _docs/_workflows/_smoke/task-551/11-reopen/step-4/.dryrun/ranges.jsonl",
+              "exit": 0
+            },
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-4/touched.sha256 _docs/_workflows/_smoke/task-551/11-reopen/step-4/.dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-4/touched.sha256",
+              "exit": 0
+            }
+          ]
+        },
+        "touchedSha256EqualsReceipted": true
+      },
+      "ledgerLines": {
+        "green": 25,
+        "committed": 26
+      },
+      "history": {
+        "preDispatch": {
+          "ledgerLine": 10,
+          "record": {
+            "step": 4,
+            "phase": "pre-dispatch",
+            "date": "2026-09-26",
+            "sha_3": "420bb24ad9973ded1a5cdc93561c8bf502a09238",
+            "diffQuiet": {
+              "paths": "tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/dispatchContractCaps.test.ts _docs/_workflows/lib/task-551-phase-provenance.mjs tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/task551EvidenceContract.test.ts",
+              "exit": 0
+            },
+            "enumeratedEdits": {
+              "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/enumerated-edits.txt",
+              "sha256": "8cef43f4e84f894cb5b0d7fda93ca47baf08a1e7b0ba3f09d7c7f2860bf992ef",
+              "lines": 11
+            },
+            "absentCreated": [
+              "authorAuditDriftRounds.test.ts",
+              "authorAuditBoundedChild.test.ts",
+              "task551AuthorAuditFixtures.ts"
+            ]
+          }
+        },
+        "firstAttemptKilled": {
+          "ledgerLine": 11,
+          "record": {
+            "step": 4,
+            "phase": "redo",
+            "date": "2026-09-26",
+            "reason": "implementer killed by the session rate limit between (g) and (m): no proof.jsonl/touched.sha256; V10-4 redo",
+            "voided": "_docs/_workflows/_smoke/task-551/11-reopen/step-4.void-20260926T055719Z",
+            "restored": {
+              "checkout": "420bb24ad9973ded1a5cdc93561c8bf502a09238",
+              "paths": "tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/dispatchContractCaps.test.ts _docs/_workflows/lib/task-551-phase-provenance.mjs tests/unit/workflows/task551WorkflowContracts.test.ts tests/unit/workflows/task551EvidenceContract.test.ts"
+            },
+            "deletedCreated": "tests/unit/workflows/authorAuditDriftRounds.test.ts tests/unit/workflows/authorAuditBoundedChild.test.ts tests/unit/workflows/task551AuthorAuditFixtures.ts",
+            "checks": {
+              "diffQuiet": 0,
+              "createdPorcelainEmpty": true,
+              "gitignoreCmp": 0,
+              "reopenPorcelainEmpty": true
+            },
+            "enumeratedEdits": {
+              "sha256": "8cef43f4e84f894cb5b0d7fda93ca47baf08a1e7b0ba3f09d7c7f2860bf992ef",
+              "lines": 11
+            }
+          }
+        },
+        "stoppedAtK": {
+          "ledgerLine": 12,
+          "record": {
+            "step": 4,
+            "phase": "stopped-at-k",
+            "date": "2026-09-26",
+            "reason": "bare bun test argv matched 6 dry-run .test.ts copies (V11-1); real 6 files 90/0/0",
+            "amendment": "TASK-551-11 v11 (:1853-1865)",
+            "resume": "at (h) under the Rerun rule after the v11 audit pair; stop digests in step-4/orchestrator-stop-digests.txt"
+          }
+        },
+        "dryrunHidden": {
+          "ledgerLine": 13,
+          "record": {
+            "step": 4,
+            "phase": "dryrun-hidden",
+            "date": "2026-09-26",
+            "renamed": [
+              "step-4/dryrun -> step-4/.dryrun",
+              "step-4.void-20260926T055719Z/dryrun -> .dryrun"
+            ],
+            "amendment": "TASK-551-11 v12 (:1866-1885)",
+            "verify": "bare 6-file A argv: 90 pass 0 fail across 6 files; no *.test.ts outside .dryrun under 11-reopen"
+          }
+        },
+        "notesAndCorrections": {
+          "ledgerLines": [14, 15, 16, 18],
+          "summary": "line 14: v12 section range correction; line 15: v13 digest check recorded 8/8 before the check ran (zsh PATH-clobber bug in the orchestrator loop); line 16: the real V13-2 check (8/8, exit 0); line 18: v14 section range correction"
+        },
+        "v14Gates": {
+          "ledgerLine": 17,
+          "supersedes": [15, 16]
+        },
+        "v15PreResume": {
+          "ledgerLine": 19,
+          "note": "pre-resume check only (V15-1 argv recorded by reference)"
+        },
+        "literalSelfTests": {
+          "ledgerLines": [20, 21, 22],
+          "note": "v22/v23/v24 scratch-repository self-tests of G-c/G-v; line 21 corrects the V22-2 over-claim"
+        },
+        "v24AuditClean": {
+          "ledgerLine": 23,
+          "record": {
+            "step": 4,
+            "phase": "v24-audit-clean",
+            "date": "2026-09-26",
+            "audit": "v24 pair: A pass 0/0/4 LOW, B pass 0/0/3 LOW (wf_e554a401-38a)",
+            "literalSha256Recomputed": {
+              "fromContractLine": 2048,
+              "Gc": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+              "Gv": "4eb7f6f46285d44f6521eededa717b4c5c18b08fd2521889e2817b77548fba4a",
+              "equalsPins": true
+            },
+            "note": "v11-v24 are the binding amendments for the step-4 resume; the LOWs (hash-byte definition, subject-shape check in G-c, missing-ledger self-test) are carried to the next amendment after step 4"
+          }
+        },
+        "resumeGdGm": {
+          "ledgerLine": 24,
+          "Gd": {
+            "argv": "env REPO=/home/coder/project/Coderso-551 bash -c 'set -euo pipefail; cd \"$REPO\"; f=_docs/_workflows/_smoke/task-551/11-reopen/step-4/orchestrator-stop-digests.txt; test \"$(wc -l < \"$f\")\" -eq 8; test \"$(sha256sum -- \"$f\" | cut -c1-64)\" = 3b6c695d83eabb1c692452da03532bfc6295f5529abf743ea0b2e3e7e4fdf79d; while read -r p rel; do [[ $p =~ ^[0-9a-f]{16}$ ]]; test -f \"$rel\"; h=\"$(sha256sum -- \"$rel\" | cut -c1-16)\"; test \"$h\" = \"$p\"; echo \"$h $rel\"; done < \"$f\"; cut -d\" \" -f2 \"$f\" | sort | cmp -- - <(printf \"%s\\n\" _docs/_workflows/lib/task-551-phase-provenance.mjs tests/unit/workflows/authorAuditBoundedChild.test.ts tests/unit/workflows/authorAuditDriftRounds.test.ts tests/unit/workflows/dispatchContractCaps.test.ts tests/unit/workflows/task551AuthorAudit.test.ts tests/unit/workflows/task551AuthorAuditFixtures.ts tests/unit/workflows/task551EvidenceContract.test.ts tests/unit/workflows/task551WorkflowContracts.test.ts | sort); echo paths-ok'",
+            "output": [
+              "f4cc2bcbe104b2c4 tests/unit/workflows/task551AuthorAudit.test.ts",
+              "209e7bc40018cd7a tests/unit/workflows/authorAuditDriftRounds.test.ts",
+              "2c01a2b8a5008e47 tests/unit/workflows/authorAuditBoundedChild.test.ts",
+              "dd8016d744ebb809 tests/unit/workflows/task551AuthorAuditFixtures.ts",
+              "91a80669a5eb6f63 tests/unit/workflows/dispatchContractCaps.test.ts",
+              "4848dd02ef1c8383 _docs/_workflows/lib/task-551-phase-provenance.mjs",
+              "0ee2c9a68fbf3147 tests/unit/workflows/task551WorkflowContracts.test.ts",
+              "961131515c5070f2 tests/unit/workflows/task551EvidenceContract.test.ts",
+              "paths-ok"
+            ],
+            "exit": 0
+          },
+          "Gm": {
+            "argv": "env REPO=/home/coder/project/Coderso-551 bash -c 'set -euo pipefail; R=\"$REPO/_docs/_workflows/_smoke/task-551\"; test -d \"$R\"; out=\"$(find \"$R\" \\( -name \"*.test.*\" -o -name \"*_test.*\" -o -name \"*.spec.*\" -o -name \"*_spec.*\" \\) -not -path \"*/.dryrun/*\" -not -name \"*.snapshot\" -not -name \"*.pre\" -not -name \"*.post\" -not -name \"*.diff\")\"; test -z \"$out\"; echo ok'",
+            "output": "ok",
+            "exit": 0
+          },
+          "stopDigestsFileSha256": "3b6c695d83eabb1c692452da03532bfc6295f5529abf743ea0b2e3e7e4fdf79d"
+        },
+        "resumeGreen": {
+          "ledgerLine": 25,
+          "attempt": "resume at (h) after the v11-v24 amendments (first attempt stopped at (k); redo voided; dryrun hidden as .dryrun)"
+        },
+        "Gf": "none: the receipted attempt's (f) ran before G-f existed and no V10-4 redo reran (f) after the resume (V16-1 as amended by V17-3/V18-1)",
+        "voidedDirectory": "_docs/_workflows/_smoke/task-551/11-reopen/step-4.void-20260926T055719Z"
+      },
+      "docsCommitAfterStep": {
+        "sha": "6845ace2dadc84183c795a2c4288adddcdb01c36",
+        "subject": "docs(task551-11): amendments v11-v24 (./ argv, hidden .dryrun root, literal gates, evidence loss)",
+        "ledgerLine": 27,
+        "blobDigestsEqualWorktree": "8/8"
+      },
+      "evidenceRef": "evidence.perStep.step-4"
+    },
+    {
+      "step": 5,
+      "scope": "workflow-contracts split",
+      "base": {
+        "sha": "2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed",
+        "label": "sha_4"
+      },
+      "source": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+      "allowlist": [
+        "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+        "tests/unit/workflows/task551EvidenceContract.test.ts",
+        "tests/unit/workflows/task551WorkflowContracts.test.ts",
+        "tests/unit/workflows/task551WorkflowContractsFixtures.ts",
+        "tests/unit/workflows/task551WorkflowExecutionFixtures.ts",
+        "tests/unit/workflows/workflowContractsBootstrap.test.ts",
+        "tests/unit/workflows/workflowContractsImplementation.test.ts",
+        "tests/unit/workflows/workflowContractsSubgates.test.ts"
+      ],
+      "created": [
+        "tests/unit/workflows/workflowContractsBootstrap.test.ts",
+        "tests/unit/workflows/workflowContractsSubgates.test.ts",
+        "tests/unit/workflows/workflowContractsImplementation.test.ts",
+        "tests/unit/workflows/task551WorkflowContractsFixtures.ts",
+        "tests/unit/workflows/task551WorkflowExecutionFixtures.ts"
+      ],
+      "touched": [
+        {
+          "path": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+          "lines": 283,
+          "sha256": "ebcbbd5380bda5ec86da12c30528c47058059ecbbe8cb460b797e0e0b6410afc"
+        },
+        {
+          "path": "tests/unit/workflows/workflowContractsBootstrap.test.ts",
+          "lines": 714,
+          "sha256": "6ad11ddeb53b3aad5fe1df830a43f74c82f8da2d6e3295bad5033b16604f6389"
+        },
+        {
+          "path": "tests/unit/workflows/workflowContractsSubgates.test.ts",
+          "lines": 187,
+          "sha256": "0cc8cfdacc042f7cf9ca93f76847855f23b1c88d48c028db14069a052303cb60"
+        },
+        {
+          "path": "tests/unit/workflows/workflowContractsImplementation.test.ts",
+          "lines": 553,
+          "sha256": "d8ed9e270af325037acffb5b61cf11da464c37424de245d150eaa15419691933"
+        },
+        {
+          "path": "tests/unit/workflows/task551WorkflowContractsFixtures.ts",
+          "lines": 455,
+          "sha256": "e3fa5a0735ae3bd6f1cf5c8085406f16f012695d08b04483943c07542de084fc"
+        },
+        {
+          "path": "tests/unit/workflows/task551WorkflowExecutionFixtures.ts",
+          "lines": 726,
+          "sha256": "7e5ed43ace95bd098573f23f0bdf65c7aa00869d13c02f7014c53bf43bc178bd"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+          "lines": 515,
+          "sha256": "b853ffcb7aa9f2261c894bc388001bcbffda07602bdc7209341f35b4d7c5491d"
+        },
+        {
+          "path": "tests/unit/workflows/task551EvidenceContract.test.ts",
+          "lines": 1208,
+          "sha256": "e3def00f1e01679feaf260637c4093ca09c548245d5a4d99a8de9587944a0d8b"
+        }
+      ],
+      "commit": {
+        "sha": "e9373a26e031274db624e746c5ee43ee79881b37",
+        "subject": "test(task551-11): re-open step 5 — workflow-contracts split (bootstrap + subgates + implementation + 2 fixtures)",
+        "hook": "precommit passed",
+        "commitNamesEqualTouched": true,
+        "receiptedEqualsCommittedRecheckedAtStep7": true,
+        "bodyLedgerLine": "ledger: 29 b0d103d31f4cdf7dc1f3bc51478bde67ff975955abff3e7dfd84fe0cba43d4d8",
+        "Gc": {
+          "literalSha256": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+          "argv": "env REPO=/home/coder/project/Coderso-551 bash -c '<V24-2 G-c>' _ \"<ledger line>\" \"<subject>\" e9373a26e031274db624e746c5ee43ee79881b37",
+          "output": "ok",
+          "exit": 0
+        }
+      },
+      "gates": {
+        "E": {
+          "record": "eslint 0 + prettier --check 0 (8 files)",
+          "argv": "./node_modules/.bin/eslint --max-warnings=0 <touched non-.json files> && ./node_modules/.bin/prettier --config .prettierrc.json --check <touched files>",
+          "exit": 0
+        },
+        "W": {
+          "record": "283/714/187/553/455/726/515/1208",
+          "argv": "wc -l <touched files>"
+        },
+        "A": {
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/unit/workflows/task551AuthorAudit.test.ts ./tests/unit/workflows/authorAuditDriftRounds.test.ts ./tests/unit/workflows/authorAuditBoundedChild.test.ts ./tests/unit/workflows/task551WorkflowContracts.test.ts ./tests/unit/workflows/workflowContractsBootstrap.test.ts ./tests/unit/workflows/workflowContractsSubgates.test.ts ./tests/unit/workflows/workflowContractsImplementation.test.ts ./tests/unit/workflows/task551EvidenceContract.test.ts ./tests/unit/workflows/dispatchContractCaps.test.ts",
+          "exit": 0,
+          "pass": 90,
+          "fail": 0,
+          "skip": 0,
+          "files": 9,
+          "record": "90 pass 0 fail 0 skip across 9 files (./-prefixed argv)"
+        },
+        "pins": {
+          "pathsPlusTests_receipt": [31, 19],
+          "total": 93
+        },
+        "F": {
+          "step": 5,
+          "argv": "REPO=/home/coder/project/Coderso-551; cd \"$REPO\"; FENCE=\"$(sed -n '978,996p' \"$REPO/_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md\")\"; [ \"$(printf '%s\\n' \"$FENCE\" | head -n 1)\" = \"set -eu\" ] && [ \"$(printf '%s\\n' \"$FENCE\" | tail -n 1)\" = 'git diff --check -- \"$task_contract\"' ] || exit 1; env TASK551_REOPEN_STEP=5 bash -c \"$FENCE\"",
+          "exit": 0,
+          "fenceLines": "978,996",
+          "firstLine": "set -eu",
+          "lastLine": "git diff --check -- \"$task_contract\"",
+          "record": "exit 0 TASK551_REOPEN_STEP=5"
+        },
+        "G": {
+          "output": {
+            "taskFileCount": 41,
+            "childTaskCount": 11,
+            "leafTaskCount": 29,
+            "occurrenceCount": 33
+          },
+          "exit": 0,
+          "lastArgument": "ee4c7f933940409f08aef43050c7d90857d25413"
+        },
+        "P": {
+          "keys": "K1 K3 K4 K5 K6 K7 K8 K9",
+          "record": "K1 K3 K4 K5 K6 K7 K8 K9 verbatim (unchanged vs step 3)"
+        },
+        "T": {
+          "record": "root tsc exit 0, 0 errors (root-tsc-step4.log)",
+          "argv": "bun run lint:repo:types (= tsc -p tsconfig.json --noEmit)",
+          "exit": 0
+        },
+        "diffCheck": {
+          "record": "clean after git add -N",
+          "argv": "git add -N -- <created files>; git diff --check -- <touched files>",
+          "exit": 0
+        },
+        "M": "proof.jsonl 8 / modules.txt 6 / touched.sha256 6 / 6 empty diffs; G-m ok",
+        "D": "dry-run green; cmp ranges.jsonl + touched.sha256 exit 0 after the real prove",
+        "stray": "ok",
+        "symlink": "ok",
+        "GmOrchestrator": "ok"
+      },
+      "moveProof": {
+        "source": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+        "modules": [
+          "tests/unit/workflows/task551WorkflowContractsFixtures.ts",
+          "tests/unit/workflows/workflowContractsBootstrap.test.ts",
+          "tests/unit/workflows/task551WorkflowContracts.test.ts",
+          "tests/unit/workflows/task551WorkflowExecutionFixtures.ts",
+          "tests/unit/workflows/workflowContractsSubgates.test.ts",
+          "tests/unit/workflows/workflowContractsImplementation.test.ts"
+        ],
+        "perModule": [
+          {
+            "module": "tests/unit/workflows/task551WorkflowContractsFixtures.ts",
+            "blocks": 2,
+            "hunks": 1,
+            "glueCount": 15,
+            "exportNames": 19
+          },
+          {
+            "module": "tests/unit/workflows/workflowContractsBootstrap.test.ts",
+            "blocks": 2,
+            "hunks": 2,
+            "glueCount": 47,
+            "exportNames": 0
+          },
+          {
+            "module": "tests/unit/workflows/task551WorkflowContracts.test.ts",
+            "blocks": 2,
+            "hunks": 0,
+            "glueCount": 36,
+            "exportNames": 0
+          },
+          {
+            "module": "tests/unit/workflows/task551WorkflowExecutionFixtures.ts",
+            "blocks": 1,
+            "hunks": 0,
+            "glueCount": 35,
+            "exportNames": 17
+          },
+          {
+            "module": "tests/unit/workflows/workflowContractsSubgates.test.ts",
+            "blocks": 1,
+            "hunks": 0,
+            "glueCount": 9,
+            "exportNames": 0
+          },
+          {
+            "module": "tests/unit/workflows/workflowContractsImplementation.test.ts",
+            "blocks": 1,
+            "hunks": 0,
+            "glueCount": 37,
+            "exportNames": 0
+          }
+        ],
+        "glueTotal": 179,
+        "recheck": {
+          "modulesTxtLines": 6,
+          "touchedSha256Lines": 6,
+          "rangesJsonlLines": 9,
+          "proofJsonlLines": 8,
+          "pinned(modules,ranges,proof)": [6, 9, 8],
+          "countsEqualPins": true,
+          "everyOutDiffEmpty": true,
+          "cmpPairsRecheckedAtStep7": [
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-5/ranges.jsonl _docs/_workflows/_smoke/task-551/11-reopen/step-5/.dryrun/ranges.jsonl",
+              "exit": 0
+            },
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-5/touched.sha256 _docs/_workflows/_smoke/task-551/11-reopen/step-5/.dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-5/touched.sha256",
+              "exit": 0
+            }
+          ]
+        },
+        "touchedSha256EqualsReceipted": true
+      },
+      "ledgerLines": {
+        "green": 29,
+        "committed": 30
+      },
+      "preDispatch": {
+        "step": 5,
+        "phase": "pre-dispatch",
+        "date": "2026-09-26",
+        "sha_4": "2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed",
+        "diffQuiet": {
+          "paths": "tests/unit/workflows/task551WorkflowContracts.test.ts _docs/_workflows/lib/task-551-phase-provenance.mjs tests/unit/workflows/task551EvidenceContract.test.ts",
+          "exit": 0
+        },
+        "createdAbsent": true,
+        "enumeratedEdits": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/enumerated-edits.txt",
+          "sha256": "c23af0af3842c0d8d0b5c0c66468cf8c24e4b44694640199c4d7a85a637e89fc",
+          "lines": 45,
+          "exports": 36,
+          "lineRows": 9
+        },
+        "crossReference": "orchestrator name-level cross-reference over the V5-2 step-5 blocks (wcFixtures 19 names, execFixtures 17 names)",
+        "Gf": "ok (orchestrator pre-check; the implementer repeats it)"
+      },
+      "Gf": "ok (orchestrator pre-check; the implementer repeats it)",
+      "enumeratedExportNames": [
+        "Digest",
+        "Worktree",
+        "expectedL11SidecarPaths",
+        "expectedL11SidecarTests",
+        "sha",
+        "shaBytes",
+        "evidenceDigest",
+        "logicalArgvVectors",
+        "framedLogicalArgv",
+        "freezeTestValue",
+        "clearEvidencePreflight",
+        "taskFiles",
+        "auditSnapshot",
+        "worktree",
+        "classifierManifestPath",
+        "exactManifestPaths",
+        "digestFor",
+        "receipt",
+        "barrierFixtures",
+        "l02ProcessReceipt",
+        "l03CheckEvidence",
+        "workflowRepoRoot",
+        "workflowGit",
+        "executionFixture",
+        "l02ExecutionFixture",
+        "l02States",
+        "classifierResult",
+        "l02EvidenceInput",
+        "task489Temporary",
+        "task489CommitA",
+        "withTask489Temporary",
+        "task489DeferredFiles",
+        "readyTask489Fixture",
+        "task489Worktrees",
+        "task489TerminalOutcome",
+        "task489Handoff"
+      ],
+      "receiptedEqualsCommittedLedger": {
+        "step": 5,
+        "phase": "receipted-equals-committed",
+        "date": "2026-09-26",
+        "sha_5": "e9373a26e031274db624e746c5ee43ee79881b37",
+        "blobDigestsEqualWorktree": "8/8"
+      },
+      "evidenceRef": "evidence.perStep.step-5"
+    },
+    {
+      "step": 6,
+      "scope": "evidence-contract split",
+      "base": {
+        "sha": "e9373a26e031274db624e746c5ee43ee79881b37",
+        "label": "sha_5"
+      },
+      "source": "tests/unit/workflows/task551EvidenceContract.test.ts",
+      "allowlist": [
+        "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+        "tests/unit/workflows/evidenceContractMatrix.test.ts",
+        "tests/unit/workflows/task551EvidenceContract.test.ts",
+        "tests/unit/workflows/task551EvidenceContractFixtures.ts",
+        "tests/unit/workflows/task551WorkflowContractsFixtures.ts",
+        "tests/unit/workflows/workflowContractsBootstrap.test.ts"
+      ],
+      "created": [
+        "tests/unit/workflows/evidenceContractMatrix.test.ts",
+        "tests/unit/workflows/task551EvidenceContractFixtures.ts"
+      ],
+      "touched": [
+        {
+          "path": "tests/unit/workflows/task551EvidenceContract.test.ts",
+          "lines": 462,
+          "sha256": "e53fb7a60c50d58de2882a30d16bb3f3ed0642e2453e91ff261e74895f3673f8"
+        },
+        {
+          "path": "tests/unit/workflows/evidenceContractMatrix.test.ts",
+          "lines": 463,
+          "sha256": "91c6077393dcc770adee95d149ed3fc2ca1583c8f45b7f7d45378868aa909468"
+        },
+        {
+          "path": "tests/unit/workflows/task551EvidenceContractFixtures.ts",
+          "lines": 322,
+          "sha256": "9359fcc264c22ceef537089210cd6687f45222ed683d8c0fd1b9c17ae876d4f9"
+        },
+        {
+          "path": "_docs/_workflows/lib/task-551-phase-provenance.mjs",
+          "lines": 517,
+          "sha256": "03f18adf24fe85cdb482ddf8efa3915e93aca6bd5e972490298e9df8ea1cdfba"
+        },
+        {
+          "path": "tests/unit/workflows/task551WorkflowContractsFixtures.ts",
+          "lines": 457,
+          "sha256": "c1dd1ecb42f2ae4ccf684f1e1b7a4aa926972da3ca0c0335e887991ae2bf588d"
+        },
+        {
+          "path": "tests/unit/workflows/workflowContractsBootstrap.test.ts",
+          "lines": 714,
+          "sha256": "44abf85ea2783b6d8d8d3ac1769d39bf2c63bf8221b356c7e3717cdafdcbeb2e"
+        }
+      ],
+      "commit": {
+        "sha": "5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+        "subject": "test(task551-11): re-open step 6 — evidence-contract split (matrix test + fixtures)",
+        "hook": "precommit passed",
+        "commitNamesEqualTouched": true,
+        "receiptedEqualsCommittedRecheckedAtStep7": true,
+        "bodyLedgerLine": "ledger: 34 2ab7661307d7c5adca8389f082399c5c17f1d5db708faa8c325756efc44f89e6",
+        "Gc": {
+          "literalSha256": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+          "argv": "env REPO=/home/coder/project/Coderso-551 bash -c '<V24-2 G-c>' _ \"<ledger line>\" \"<subject>\" 5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+          "output": "ok",
+          "exit": 0
+        }
+      },
+      "gates": {
+        "E": {
+          "record": "eslint 0 + prettier --check 0 (6 files)",
+          "argv": "./node_modules/.bin/eslint --max-warnings=0 <touched non-.json files> && ./node_modules/.bin/prettier --config .prettierrc.json --check <touched files>",
+          "exit": 0
+        },
+        "W": {
+          "record": "462/463/322/517/457/714",
+          "argv": "wc -l <touched files>"
+        },
+        "A": {
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/unit/workflows/task551AuthorAudit.test.ts ./tests/unit/workflows/authorAuditDriftRounds.test.ts ./tests/unit/workflows/authorAuditBoundedChild.test.ts ./tests/unit/workflows/task551WorkflowContracts.test.ts ./tests/unit/workflows/workflowContractsBootstrap.test.ts ./tests/unit/workflows/workflowContractsSubgates.test.ts ./tests/unit/workflows/workflowContractsImplementation.test.ts ./tests/unit/workflows/task551EvidenceContract.test.ts ./tests/unit/workflows/evidenceContractMatrix.test.ts ./tests/unit/workflows/dispatchContractCaps.test.ts",
+          "exit": 0,
+          "pass": 90,
+          "fail": 0,
+          "skip": 0,
+          "files": 10,
+          "record": "90 pass 0 fail 0 skip across 10 files (./-prefixed argv)"
+        },
+        "pins": {
+          "pathsPlusTests_receipt": [33, 19],
+          "total": 95
+        },
+        "F": {
+          "step": 6,
+          "argv": "REPO=/home/coder/project/Coderso-551; cd \"$REPO\"; FENCE=\"$(sed -n '978,996p' \"$REPO/_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md\")\"; [ \"$(printf '%s\\n' \"$FENCE\" | head -n 1)\" = \"set -eu\" ] && [ \"$(printf '%s\\n' \"$FENCE\" | tail -n 1)\" = 'git diff --check -- \"$task_contract\"' ] || exit 1; env TASK551_REOPEN_STEP=6 bash -c \"$FENCE\"",
+          "exit": 0,
+          "fenceLines": "978,996",
+          "firstLine": "set -eu",
+          "lastLine": "git diff --check -- \"$task_contract\"",
+          "record": "exit 0 TASK551_REOPEN_STEP=6"
+        },
+        "G": {
+          "output": {
+            "taskFileCount": 41,
+            "childTaskCount": 11,
+            "leafTaskCount": 29,
+            "occurrenceCount": 33
+          },
+          "exit": 0,
+          "lastArgument": "ee4c7f933940409f08aef43050c7d90857d25413"
+        },
+        "P": {
+          "keys": "K1 K3 K4 K5 K6 K7 K8 K9",
+          "record": "K1 K3 K4 K5 K6 K7 K8 K9 verbatim (unchanged vs step 3)"
+        },
+        "T": {
+          "record": "root tsc exit 0, 0 errors (root-tsc-step4.log)",
+          "argv": "bun run lint:repo:types (= tsc -p tsconfig.json --noEmit)",
+          "exit": 0
+        },
+        "diffCheck": {
+          "record": "clean after git add -N",
+          "argv": "git add -N -- <created files>; git diff --check -- <touched files>",
+          "exit": 0
+        },
+        "M": "proof.jsonl 5 / modules.txt 3 / touched.sha256 3 / 3 empty diffs; G-m ok",
+        "D": "dry-run green; cmp ranges.jsonl + touched.sha256 exit 0 after the real prove",
+        "stray": "ok",
+        "symlink": "ok",
+        "GmOrchestrator": "ok"
+      },
+      "moveProof": {
+        "source": "tests/unit/workflows/task551EvidenceContract.test.ts",
+        "modules": [
+          "tests/unit/workflows/task551EvidenceContractFixtures.ts",
+          "tests/unit/workflows/evidenceContractMatrix.test.ts",
+          "tests/unit/workflows/task551EvidenceContract.test.ts"
+        ],
+        "perModule": [
+          {
+            "module": "tests/unit/workflows/task551EvidenceContractFixtures.ts",
+            "blocks": 3,
+            "hunks": 0,
+            "glueCount": 2,
+            "exportNames": 10
+          },
+          {
+            "module": "tests/unit/workflows/evidenceContractMatrix.test.ts",
+            "blocks": 3,
+            "hunks": 4,
+            "glueCount": 23,
+            "exportNames": 0
+          },
+          {
+            "module": "tests/unit/workflows/task551EvidenceContract.test.ts",
+            "blocks": 4,
+            "hunks": 0,
+            "glueCount": 21,
+            "exportNames": 0
+          }
+        ],
+        "glueTotal": 46,
+        "recheck": {
+          "modulesTxtLines": 3,
+          "touchedSha256Lines": 3,
+          "rangesJsonlLines": 10,
+          "proofJsonlLines": 5,
+          "pinned(modules,ranges,proof)": [3, 10, 5],
+          "countsEqualPins": true,
+          "everyOutDiffEmpty": true,
+          "cmpPairsRecheckedAtStep7": [
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-6/ranges.jsonl _docs/_workflows/_smoke/task-551/11-reopen/step-6/.dryrun/ranges.jsonl",
+              "exit": 0
+            },
+            {
+              "cmd": "cmp -- _docs/_workflows/_smoke/task-551/11-reopen/step-6/touched.sha256 _docs/_workflows/_smoke/task-551/11-reopen/step-6/.dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-6/touched.sha256",
+              "exit": 0
+            }
+          ]
+        },
+        "touchedSha256EqualsReceipted": true
+      },
+      "ledgerLines": {
+        "green": 34,
+        "committed": 35
+      },
+      "preDispatch": {
+        "step": 6,
+        "phase": "pre-dispatch",
+        "date": "2026-09-26",
+        "sha_5": "e9373a26e031274db624e746c5ee43ee79881b37",
+        "diffQuiet": {
+          "paths": "tests/unit/workflows/task551EvidenceContract.test.ts _docs/_workflows/lib/task-551-phase-provenance.mjs tests/unit/workflows/task551WorkflowContractsFixtures.ts tests/unit/workflows/workflowContractsBootstrap.test.ts",
+          "exit": 0
+        },
+        "createdAbsent": true,
+        "enumeratedEdits": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/enumerated-edits.txt",
+          "sha256": "bd1451ea61bf5737244a544d61e51d54b3b0c767b1687ae13743e5a02fce3241",
+          "lines": 19,
+          "exports": 10,
+          "lineRows": 9
+        },
+        "crossReference": "orchestrator name-level cross-reference over the V5-2 step-6 blocks (evFixtures 10 names; matrix 0)",
+        "Gf": "ok (orchestrator pre-check; the implementer repeats it)"
+      },
+      "Gf": "ok (orchestrator pre-check; the implementer repeats it)",
+      "enumerationCorrected": {
+        "step": 6,
+        "phase": "enumeration-corrected",
+        "date": "2026-09-26",
+        "reason": "first enumeration (sha bd1451ea…) had a duplicate 'line       [],' entry and a 'line' insertion-anchor row; the implementer detected it in a scratch replica before any real snapshot (no repo write, no void needed)",
+        "rejectedCopy": "step-6/enumerated-edits.rejected-20260926.txt",
+        "enumeratedEdits": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/enumerated-edits.txt",
+          "sha256": "cc0b07ab3e77b80cb555b9f0d7028934e951fab2d656113b9a2b656d7d3fcf17",
+          "lines": 18,
+          "exports": 10,
+          "lineRows": 7,
+          "anchorRows": 1
+        },
+        "v7-3": "line x7 with '      [],' once; anchor = the unchanged 11th privateImports row (:1015)"
+      },
+      "enumeratedExportNames": [
+        "sha",
+        "sourceHead",
+        "terminalHead",
+        "sourceDigest",
+        "timestamp",
+        "processReceipt",
+        "predecessorPayload",
+        "promotion",
+        "resultFor",
+        "evidenceValueFor"
+      ],
+      "receiptedEqualsCommittedLedger": {
+        "step": 6,
+        "phase": "receipted-equals-committed",
+        "date": "2026-09-26",
+        "sha_6": "5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+        "blobDigestsEqualWorktree": "6/6"
+      },
+      "evidenceRef": "evidence.perStep.step-6"
+    },
+    {
+      "step": 7,
+      "scope": "final provenance/fence counts + receipt",
+      "base": {
+        "sha": "5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+        "label": "sha_6"
+      },
+      "source": null,
+      "allowlist": ["_docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json"],
+      "created": ["_docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json"],
+      "touched": [
+        {
+          "path": "_docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json",
+          "note": "the receipt cannot carry its own line count or SHA-256; both are taken after the final prettier --check (V8-4) and recorded in the writer's report and the orchestrator's (r)/(13)"
+        }
+      ],
+      "gates": {
+        "E": {
+          "argv": "./node_modules/.bin/prettier --config .prettierrc.json --check _docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json",
+          "scope": "prettier only; eslint is not applicable to .json (V8-4)",
+          "note": "runs after the final write of this file; its exit code is recorded outside this file"
+        },
+        "W": "none: the receipt is .json and has no line cap (table B)",
+        "A": {
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/unit/workflows/task551AuthorAudit.test.ts ./tests/unit/workflows/authorAuditDriftRounds.test.ts ./tests/unit/workflows/authorAuditBoundedChild.test.ts ./tests/unit/workflows/task551WorkflowContracts.test.ts ./tests/unit/workflows/workflowContractsBootstrap.test.ts ./tests/unit/workflows/workflowContractsSubgates.test.ts ./tests/unit/workflows/workflowContractsImplementation.test.ts ./tests/unit/workflows/task551EvidenceContract.test.ts ./tests/unit/workflows/evidenceContractMatrix.test.ts ./tests/unit/workflows/dispatchContractCaps.test.ts",
+          "exit": 0,
+          "pass": 90,
+          "fail": 0,
+          "skip": 0,
+          "files": 10,
+          "expectCalls": 885,
+          "bunVersion": "1.4.2",
+          "summary": "Ran 90 tests across 10 files"
+        },
+        "pins": {
+          "pathsPlusTests_receipt": [33, 19],
+          "total": 95,
+          "where": "tests/unit/workflows/workflowContractsBootstrap.test.ts:127 ([33, 19]) and :133 (95); both pass inside gate A"
+        },
+        "F": {
+          "step": 7,
+          "argv": "REPO=/home/coder/project/Coderso-551; cd \"$REPO\"; FENCE=\"$(sed -n '978,996p' \"$REPO/_docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md\")\"; [ \"$(printf '%s\\n' \"$FENCE\" | head -n 1)\" = \"set -eu\" ] && [ \"$(printf '%s\\n' \"$FENCE\" | tail -n 1)\" = 'git diff --check -- \"$task_contract\"' ] || exit 1; env -u TASK551_REOPEN_STEP bash -c \"$FENCE\"",
+          "env": "TASK551_REOPEN_STEP unset (env -u); the fence defaults to step 7: no absence, no interim ceiling",
+          "fenceLines": "978,996",
+          "firstLine": "set -eu",
+          "lastLine": "git diff --check -- \"$task_contract\"",
+          "exit": 0,
+          "stderr": "",
+          "grepOutputLines": 192,
+          "grepOutputSha256": "65028145be522464a97d932294f3154e8c9185176f92d981cdacc2455e092e94",
+          "firstOutputLinePrefix": "14:The declaration/type boundary in the closed matrix below is implemented and audited: the four sibling test-only `.d.m",
+          "firstOutputLineSha256": "5cf7f8c4408347b577ff3ad5a6427616d18e2c9b27446ae03b3d2f5c9d2d2a9d",
+          "lastOutputLine": "1009:## Documentation Updates Required"
+        },
+        "provenanceEquality": {
+          "argv": "the V4-1 sidecar provenance equality literal (:1174) with arguments _docs/_TASKS/TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md _docs/_workflows/lib/task-551-phase-provenance.mjs",
+          "output": "19 14",
+          "exit": 0
+        },
+        "G": {
+          "argv": "the V4-1 family-preflight literal (:1173) with arguments _docs/_workflows/lib/task-551-dispatch-contract.mjs ee4c7f933940409f08aef43050c7d90857d25413",
+          "output": {
+            "taskFileCount": 41,
+            "childTaskCount": 11,
+            "leafTaskCount": 29,
+            "occurrenceCount": 33
+          },
+          "exit": 0
+        },
+        "P": {
+          "argv": "the V4-1 parity literal over the eight present modules in V4-1 table order",
+          "keys": "K1 K3 K4 K5 K6 K7 K8 K9",
+          "lines": [
+            "_docs/_workflows/lib/task-551-dispatch-contract.mjs 1 7b36b5870117e163e4edc2b72f02a7d48deadb461873a615688af88862e98900",
+            "_docs/_workflows/lib/task-551-dispatch-primitives.mjs 15 84759d6ae6c2f03f6e8f5b738e9d57865d7c2a5975265939e541b0f921937b86",
+            "_docs/_workflows/lib/task-551-dispatch-envelope.mjs 1 75554a3bacc0a522f206be4a37c616276a337f1d01ef982443f8804d4d9332c8",
+            "_docs/_workflows/lib/task-551-worktree-compatibility.mjs 61 f9ac9b1b482663b8557734e5a3c6acd7ea4f64dcde3a3a1ef0e061c99eb4ecfd",
+            "_docs/_workflows/lib/task-551-phase-provenance.mjs 44 db4e6bcbac58359d4a0f8a31a9609c6c838c9afba08d399f3aa847a0bd84b972",
+            "_docs/_workflows/lib/task-551-worktree-snapshot.mjs 23 e00ef59892c4ef6fb085bfa64d8fab6e040bb5ab73d83b47b8027d7fabc52196",
+            "_docs/_workflows/lib/task-551-l01-barrier.mjs 4 582241d2def64471f3fe869ac5f0a471bc7298659f67078b28713ccd4e8b7637",
+            "_docs/_workflows/lib/task-551-contract.mjs 99 e466e413cb77a5ba3a9979a6556e08f3d7bf682e85e70d400065b68b79a0b147"
+          ],
+          "exit": 0,
+          "equalsTableB": true
+        },
+        "T": "not required: step 7 touches no .ts file (V4-3, table B)",
+        "manifestState": {
+          "rule": "V5-3 (:1421 as amended by V11-3/V12-3); recorded, never regenerated",
+          "argv": "env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/unit/toolchain/bunLaneManifest.test.ts",
+          "exit": 1,
+          "pass": 14,
+          "fail": 2,
+          "failing": [
+            "committed manifest equals a fresh classification run",
+            "manifest rows are internally consistent"
+          ],
+          "freshRows": 482,
+          "committedRows": 454,
+          "delta": 28,
+          "countSource": "the failing assertion expect(rows.length).toBe(golden.length): Expected 482 (fresh, git-golden lane files) / Received 454 (committed rows)",
+          "committedGeneratedAt": "2026-09-02T22:16:08.940Z",
+          "sevenNewPathsCommittedRows": {
+            "tests/unit/workflows/authorAuditDriftRounds.test.ts": 0,
+            "tests/unit/workflows/authorAuditBoundedChild.test.ts": 0,
+            "tests/unit/workflows/workflowContractsBootstrap.test.ts": 0,
+            "tests/unit/workflows/workflowContractsSubgates.test.ts": 0,
+            "tests/unit/workflows/workflowContractsImplementation.test.ts": 0,
+            "tests/unit/workflows/evidenceContractMatrix.test.ts": 0,
+            "tests/unit/workflows/dispatchContractCaps.test.ts": 0
+          },
+          "pendingRegeneration": "first TASK-551-01-L01 regeneration after TASK-551-11 step 6",
+          "note": "red at HEAD by a known family debt (V4-5 (c): 475 fresh / 454 committed on 2026-09-25); +7 since then = the seven new test files; TASK-551-11 neither fixes nor regenerates it"
+        },
+        "diffCheck": "orchestrator (q): git add -N -- _docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json; git diff --check -- _docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json"
+      },
+      "commit": "pending: orchestrator (s) (V21-1 commit form, then G-c); not made by the writer",
+      "evidenceRef": "none: no step directory (V9-5)"
+    }
+  ],
+  "evidence": {
+    "rules": "V7-1 closed mutation list (1)-(11), V8-3/V9-5 citation rules, (12)/(13) per V15-3/V16-2/V17-1/V21-2; every cited file was present and hashed from disk before this receipt was written (V22-1); (8) out/ file by file, every green .diff = the empty-file digest e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855; of (10) exactly <step dir>/(.)dryrun/ranges.jsonl and the nested touched.sha256 (step 3 under dryrun/, steps 4-6 under .dryrun/); steps 2 and 7 have no step directory",
+    "lostItems": "none: every (1)-(13) item cited below is present; no green step is cited by commit sha in place of a lost item",
+    "(1) gitignore": {
+      "path": "_docs/_workflows/_smoke/task-551/11-reopen/.gitignore",
+      "sha256": "cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b",
+      "bytes": "*\\n",
+      "pinnedSha256": "cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b"
+    },
+    "perStep": {
+      "step-1": {
+        "(2) enumerated-edits.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/enumerated-edits.txt",
+          "sha256": "f99e55364ce9e3feef7aaefeb774a75607c3c64497c5377ee6b1b139ffaaee03"
+        },
+        "(3) spec.json": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/spec.json",
+          "sha256": "cd79b782b5b176182c4ca521186ed689658941009eaa8ffc805d19eb6848f4d1"
+        },
+        "(4) pre snapshot": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/pre/task-551-dispatch-contract.mjs.snapshot",
+          "sha256": "d83876d7250bc070eef7f039489f9394abfe2c00a2d455782e0838930678b26d"
+        },
+        "(5) pre.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/pre.sha256",
+          "sha256": "070b05ed3111b76eec6d8226e23bef0a510c921a09026f9f71d0eb115b65e3a3"
+        },
+        "(6) proof.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/proof.jsonl",
+          "sha256": "99d89e698fb6f29f4d341b38dd74b0f29a8695fc24595b2972f12155951b35ec"
+        },
+        "(7) modules.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/modules.txt",
+          "sha256": "1c4e1b7cf7b609e444cd51cafb40acc5d0d26bcfe5cc1e0f7b744b1b93d81a9d"
+        },
+        "(8) out/": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-primitives.mjs.pre",
+            "sha256": "78d94a3c771d8dd78d84f925199de1a11c54b0419c74738701d9fff935de5fb7"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-primitives.mjs.post",
+            "sha256": "78d94a3c771d8dd78d84f925199de1a11c54b0419c74738701d9fff935de5fb7"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-primitives.mjs.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-envelope.mjs.pre",
+            "sha256": "16d3f514a5a5342975924d2821d89bc94b6b6b7f658a2ff453ea3a5d75f710ce"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-envelope.mjs.post",
+            "sha256": "16d3f514a5a5342975924d2821d89bc94b6b6b7f658a2ff453ea3a5d75f710ce"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-envelope.mjs.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-contract.mjs.pre",
+            "sha256": "5fa6876a4f737e786dc12fe2c7bcf6ac8de0b8ef7fce128c0e99147a0740f5ef"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-contract.mjs.post",
+            "sha256": "5fa6876a4f737e786dc12fe2c7bcf6ac8de0b8ef7fce128c0e99147a0740f5ef"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/out/task-551-dispatch-contract.mjs.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "(9) touched.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/touched.sha256",
+          "sha256": "c44ad2381b245574ffb002b5a8df1b316685f6227cf555360c49657af05d2514"
+        },
+        "(11) ranges.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-1/ranges.jsonl",
+          "sha256": "8245ef12f13d8629cdfaad3082c676f667dc7999ddb354c35b622d8611b6694a"
+        },
+        "(10) dry-run (two files, V8-3/V9-5)": "none: step 1 ran no dry-run (optional for steps 1, 4, 5)"
+      },
+      "step-3": {
+        "(2) enumerated-edits.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/enumerated-edits.txt",
+          "sha256": "b5ffab41b6f58bf47f9ca3a5ea68be2b2d5ea8cb3936e235f919abf6abeff6f0"
+        },
+        "(3) spec.json": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/spec.json",
+          "sha256": "2bc3f239cdfa9810a50d83f0d8fc6c111f631be2151a9bbcbeb2420ddba927b5"
+        },
+        "(4) pre snapshot": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/pre/task-551-worktree-compatibility.mjs.snapshot",
+          "sha256": "12f2c6a8c46eee1f21813ee4423307223712c6ce7f1d03ea6fb61ca19457c8ef"
+        },
+        "(5) pre.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/pre.sha256",
+          "sha256": "ce44c1098fa6564d781a0ec661f7bf0037f7f39782b1d3bbd9c9862deb871b87"
+        },
+        "(6) proof.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/proof.jsonl",
+          "sha256": "22f65bde1a6559634832ed9cdaca71acac71838ac3e5338110ee401ac2ca4750"
+        },
+        "(7) modules.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/modules.txt",
+          "sha256": "9a7e006ad1bb7c433831d4725bdd46b746684fdceff1609ada9fb6c9aeab6728"
+        },
+        "(8) out/": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-phase-provenance.mjs.pre",
+            "sha256": "a5661653889e6cbd07af7e6c69718801b302b99f8937028662154abfb4e1fe54"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-phase-provenance.mjs.post",
+            "sha256": "a5661653889e6cbd07af7e6c69718801b302b99f8937028662154abfb4e1fe54"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-phase-provenance.mjs.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-worktree-snapshot.mjs.pre",
+            "sha256": "d9d01b8b908dc2b42bc098b023116bcab3e211f17edc480473087286847e7bf0"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-worktree-snapshot.mjs.post",
+            "sha256": "d9d01b8b908dc2b42bc098b023116bcab3e211f17edc480473087286847e7bf0"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-worktree-snapshot.mjs.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-l01-barrier.mjs.pre",
+            "sha256": "be337a1a5cc8521a6d072ee730c6446737909d32a082e17c4de16841a8d58fde"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-l01-barrier.mjs.post",
+            "sha256": "be337a1a5cc8521a6d072ee730c6446737909d32a082e17c4de16841a8d58fde"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-l01-barrier.mjs.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-worktree-compatibility.mjs.pre",
+            "sha256": "c3b4b14ab2e399cd751ead654547ae4448aa41fb7fcaf8ba53248f3866199bc4"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-worktree-compatibility.mjs.post",
+            "sha256": "c3b4b14ab2e399cd751ead654547ae4448aa41fb7fcaf8ba53248f3866199bc4"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/out/task-551-worktree-compatibility.mjs.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "(9) touched.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/touched.sha256",
+          "sha256": "db269156379dce17d7b27ac17203abdc57f33774206f7c7290e98f806aee96fd"
+        },
+        "(11) ranges.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/ranges.jsonl",
+          "sha256": "55300a4e0a74938c17a1e732ed8b29eef41512bb6ac848fc11d75048f7fb87b7"
+        },
+        "(10) dry-run (two files, V8-3/V9-5)": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/dryrun/ranges.jsonl",
+            "sha256": "55300a4e0a74938c17a1e732ed8b29eef41512bb6ac848fc11d75048f7fb87b7"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-3/dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-3/touched.sha256",
+            "sha256": "db269156379dce17d7b27ac17203abdc57f33774206f7c7290e98f806aee96fd"
+          }
+        ]
+      },
+      "step-4": {
+        "(2) enumerated-edits.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/enumerated-edits.txt",
+          "sha256": "8cef43f4e84f894cb5b0d7fda93ca47baf08a1e7b0ba3f09d7c7f2860bf992ef"
+        },
+        "(3) spec.json": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/spec.json",
+          "sha256": "5bd5b0c991275956ce1f536aace79b20d7fe18004764eb13eb9293747161ace4"
+        },
+        "(4) pre snapshot": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/pre/task551AuthorAudit.test.ts.snapshot",
+          "sha256": "595d748f5be89b470b84187cf829c3b151388f9c6016ee6e1aa63dd57358fa7d"
+        },
+        "(5) pre.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/pre.sha256",
+          "sha256": "7b77f18e76b0b6a65d28d5be96587cc61b67438fd4d93aa34914a6702ab41d5e"
+        },
+        "(6) proof.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/proof.jsonl",
+          "sha256": "bc424d492bcc6b39f4b7a1d36b007346abafca7dbb93f0dc9ee45f078f01b8bf"
+        },
+        "(7) modules.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/modules.txt",
+          "sha256": "af181e4a86efa995a7d85d228cebb92061b10b89e019c53c4b92a44d68d26e3e"
+        },
+        "(8) out/": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/task551AuthorAuditFixtures.ts.pre",
+            "sha256": "1f2b8580751e650b4fc20c93a3ff2c52edd3167b1d4c466c8316dcba34b9cd74"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/task551AuthorAuditFixtures.ts.post",
+            "sha256": "1f2b8580751e650b4fc20c93a3ff2c52edd3167b1d4c466c8316dcba34b9cd74"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/task551AuthorAuditFixtures.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/authorAuditBoundedChild.test.ts.pre",
+            "sha256": "9566490da4c40d991d9a64880d77deeecf3036581f07f7d8d88ec0e2162829f5"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/authorAuditBoundedChild.test.ts.post",
+            "sha256": "9566490da4c40d991d9a64880d77deeecf3036581f07f7d8d88ec0e2162829f5"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/authorAuditBoundedChild.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/task551AuthorAudit.test.ts.pre",
+            "sha256": "0556675ebe7af7ac48e639f283abef96a5809e00f28aa84c38ef60e13871fa23"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/task551AuthorAudit.test.ts.post",
+            "sha256": "0556675ebe7af7ac48e639f283abef96a5809e00f28aa84c38ef60e13871fa23"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/task551AuthorAudit.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/authorAuditDriftRounds.test.ts.pre",
+            "sha256": "1eec68562bed5b1bafeb6c51bc2f517b46a883a85997b7b0afeaf6832bf2f9c1"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/authorAuditDriftRounds.test.ts.post",
+            "sha256": "1eec68562bed5b1bafeb6c51bc2f517b46a883a85997b7b0afeaf6832bf2f9c1"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/out/authorAuditDriftRounds.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "(9) touched.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/touched.sha256",
+          "sha256": "6f7f6621dc97f5caaf1355c2ae8bc52b2d30f9b539610254fe3726f03e1c07f2"
+        },
+        "(11) ranges.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/ranges.jsonl",
+          "sha256": "6a68820730e067dd244e9959e6bcf7fd9f4c3b4ad615d8e81c80e7101a57251a"
+        },
+        "(10) dry-run (two files, V8-3/V9-5)": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/.dryrun/ranges.jsonl",
+            "sha256": "6a68820730e067dd244e9959e6bcf7fd9f4c3b4ad615d8e81c80e7101a57251a"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/.dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-4/touched.sha256",
+            "sha256": "6f7f6621dc97f5caaf1355c2ae8bc52b2d30f9b539610254fe3726f03e1c07f2"
+          }
+        ]
+      },
+      "step-5": {
+        "(2) enumerated-edits.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/enumerated-edits.txt",
+          "sha256": "c23af0af3842c0d8d0b5c0c66468cf8c24e4b44694640199c4d7a85a637e89fc"
+        },
+        "(3) spec.json": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/spec.json",
+          "sha256": "faab288ab0da11a5f0a73cc64cd76da7d8857240151c3bce585a48382ab2a758"
+        },
+        "(4) pre snapshot": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/pre/task551WorkflowContracts.test.ts.snapshot",
+          "sha256": "0ee2c9a68fbf31474ccd7347ebf007842a507cdefef7ab101840e025b55c1ddf"
+        },
+        "(5) pre.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/pre.sha256",
+          "sha256": "67ddaf5323f30cc006bfc6806fc12caa38c7cdb145b2cd81824ccc59f2825658"
+        },
+        "(6) proof.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/proof.jsonl",
+          "sha256": "27750cb8e94d5cd9009f174e1911df4ca5760492d2a9a8fc83b049201e52c55f"
+        },
+        "(7) modules.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/modules.txt",
+          "sha256": "7637bb1a94d49311e4e5dd8caaf010df7c24c482dc895af9e687a1ff39e3d0f6"
+        },
+        "(8) out/": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowContractsFixtures.ts.pre",
+            "sha256": "ea3956e5329e55dd7b5b53253bd51076469f580530c7bc0a74653a4e1aad853f"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowContractsFixtures.ts.post",
+            "sha256": "ea3956e5329e55dd7b5b53253bd51076469f580530c7bc0a74653a4e1aad853f"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowContractsFixtures.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsBootstrap.test.ts.pre",
+            "sha256": "6c15140f8c59e5860469997c30bb1480b904e4677da6e31508cb6365ea9df9ab"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsBootstrap.test.ts.post",
+            "sha256": "6c15140f8c59e5860469997c30bb1480b904e4677da6e31508cb6365ea9df9ab"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsBootstrap.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowContracts.test.ts.pre",
+            "sha256": "d6b47b2aac279f335f17bd2311834510d44eb988a711253ff0c0d57f14bc57bc"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowContracts.test.ts.post",
+            "sha256": "d6b47b2aac279f335f17bd2311834510d44eb988a711253ff0c0d57f14bc57bc"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowContracts.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowExecutionFixtures.ts.pre",
+            "sha256": "39f9c4a6c1c484a49483ce9b03b5af1876329cca35d09f57a1839a5a902e6d01"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowExecutionFixtures.ts.post",
+            "sha256": "39f9c4a6c1c484a49483ce9b03b5af1876329cca35d09f57a1839a5a902e6d01"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/task551WorkflowExecutionFixtures.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsSubgates.test.ts.pre",
+            "sha256": "b23a78b0837e31c74204718a8e4bd270d4aeda719712f2d2bb4cc25bdb9ddaee"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsSubgates.test.ts.post",
+            "sha256": "b23a78b0837e31c74204718a8e4bd270d4aeda719712f2d2bb4cc25bdb9ddaee"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsSubgates.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsImplementation.test.ts.pre",
+            "sha256": "a9dad2f4bfac8acfaf769991fbdec3bcadf7be527cb988d81e1bedf7d8f89b5a"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsImplementation.test.ts.post",
+            "sha256": "a9dad2f4bfac8acfaf769991fbdec3bcadf7be527cb988d81e1bedf7d8f89b5a"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/out/workflowContractsImplementation.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "(9) touched.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/touched.sha256",
+          "sha256": "325cbf2381537b707f212c810c476e6f818ba8a2b275fba7cf514bd415b2fe18"
+        },
+        "(11) ranges.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/ranges.jsonl",
+          "sha256": "489cd154c6c894f2555f4ea0aeec8811d65ffe6143406553ed5349ef4e330bdb"
+        },
+        "(10) dry-run (two files, V8-3/V9-5)": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/.dryrun/ranges.jsonl",
+            "sha256": "489cd154c6c894f2555f4ea0aeec8811d65ffe6143406553ed5349ef4e330bdb"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-5/.dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-5/touched.sha256",
+            "sha256": "325cbf2381537b707f212c810c476e6f818ba8a2b275fba7cf514bd415b2fe18"
+          }
+        ]
+      },
+      "step-6": {
+        "(2) enumerated-edits.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/enumerated-edits.txt",
+          "sha256": "cc0b07ab3e77b80cb555b9f0d7028934e951fab2d656113b9a2b656d7d3fcf17"
+        },
+        "(3) spec.json": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/spec.json",
+          "sha256": "ffa2cae1bd8ed0853a594ba47611aa6744ced098ad225091e84af73d0454ffac"
+        },
+        "(4) pre snapshot": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/pre/task551EvidenceContract.test.ts.snapshot",
+          "sha256": "e3def00f1e01679feaf260637c4093ca09c548245d5a4d99a8de9587944a0d8b"
+        },
+        "(5) pre.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/pre.sha256",
+          "sha256": "a3099c832598a06c0a75c78e4dabc990803bbb122ce91f5ca24972fc332fcc04"
+        },
+        "(6) proof.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/proof.jsonl",
+          "sha256": "2f5ea3662146740bab346baec7e9ef0335742c14e6ff714e8f0a81243b5a1270"
+        },
+        "(7) modules.txt": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/modules.txt",
+          "sha256": "0dfae3dc0d718f94f6e943ba58f1a69d5c4b4b994bb76bb5b4e39101a94c4562"
+        },
+        "(8) out/": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/task551EvidenceContractFixtures.ts.pre",
+            "sha256": "1b220eee7882b44eee10d7c7afa72d5d2201b4745897dfd918efb273cd360886"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/task551EvidenceContractFixtures.ts.post",
+            "sha256": "1b220eee7882b44eee10d7c7afa72d5d2201b4745897dfd918efb273cd360886"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/task551EvidenceContractFixtures.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/evidenceContractMatrix.test.ts.pre",
+            "sha256": "e884ae68a581afb9ae9b22bd2e997b986b76c7e335b50c17406bf2bb605bcf80"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/evidenceContractMatrix.test.ts.post",
+            "sha256": "e884ae68a581afb9ae9b22bd2e997b986b76c7e335b50c17406bf2bb605bcf80"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/evidenceContractMatrix.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/task551EvidenceContract.test.ts.pre",
+            "sha256": "fecb1ab3d5650728b29f9ac4e6f43b176ae7aebc24c2dedc1e6aec707be89c1a"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/task551EvidenceContract.test.ts.post",
+            "sha256": "fecb1ab3d5650728b29f9ac4e6f43b176ae7aebc24c2dedc1e6aec707be89c1a"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/out/task551EvidenceContract.test.ts.diff",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        ],
+        "(9) touched.sha256": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/touched.sha256",
+          "sha256": "b56a8a33824b88f2783f6f6a4f6ea6692f8bec5b5522605f94bb0bac9f6d3fba"
+        },
+        "(11) ranges.jsonl": {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/ranges.jsonl",
+          "sha256": "4c483eb46b51682b2eef84eb10f5188bfc971be6a3e767d0812fb6df94b409c9"
+        },
+        "(10) dry-run (two files, V8-3/V9-5)": [
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/.dryrun/ranges.jsonl",
+            "sha256": "4c483eb46b51682b2eef84eb10f5188bfc971be6a3e767d0812fb6df94b409c9"
+          },
+          {
+            "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/.dryrun/_docs/_workflows/_smoke/task-551/11-reopen/step-6/touched.sha256",
+            "sha256": "b56a8a33824b88f2783f6f6a4f6ea6692f8bec5b5522605f94bb0bac9f6d3fba"
+          }
+        ]
+      }
+    },
+    "(12)": {
+      "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4/orchestrator-stop-digests.txt",
+      "sha256": "3b6c695d83eabb1c692452da03532bfc6295f5529abf743ea0b2e3e7e4fdf79d",
+      "equalsPin": true,
+      "source": "orchestrator-provided value; recomputed by the writer from disk and equal"
+    },
+    "(13)": {
+      "path": "_docs/_workflows/_smoke/task-551/11-reopen/ledger.jsonl",
+      "lineCount": 36,
+      "headShaOfThoseLines": "7dabdc0d508c339cf9122712dadd67e814c8b0d2feffe9d4f047204a36e89453",
+      "argvForm": "head -n 36 _docs/_workflows/_smoke/task-551/11-reopen/ledger.jsonl | sha256sum (V17-1 literal form)",
+      "source": "orchestrator-provided N and digest, taken immediately before this receipt was written; recomputed by the writer and equal",
+      "note": "line 37 (N+1) is the orchestrator's step-7 pre-receipt record, appended after the digest; later lines are appended"
+    },
+    "Gv": {
+      "literalSha256": "4eb7f6f46285d44f6521eededa717b4c5c18b08fd2521889e2817b77548fba4a",
+      "argv": "env REPO=/home/coder/project/Coderso-551 bash -c '<V24-2 G-v>' _ 2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed e9373a26e031274db624e746c5ee43ee79881b37 5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+      "output": [
+        "2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed ok 25",
+        "e9373a26e031274db624e746c5ee43ee79881b37 ok 29",
+        "5cf5349064f85af0b154f566ac64b62bbc7f7ee1 ok 34",
+        "ledger-ok"
+      ],
+      "exit": 0,
+      "runBy": "orchestrator, immediately before this dispatch (cited verbatim; ledger line 37)"
+    },
+    "supplementary": {
+      "step-4 voided directory (V6-4 rename, never deleted; not evidence of a green step)": [
+        {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4.void-20260926T055719Z/enumerated-edits.txt",
+          "sha256": "8cef43f4e84f894cb5b0d7fda93ca47baf08a1e7b0ba3f09d7c7f2860bf992ef"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4.void-20260926T055719Z/spec.json",
+          "sha256": "5bd5b0c991275956ce1f536aace79b20d7fe18004764eb13eb9293747161ace4"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4.void-20260926T055719Z/pre/task551AuthorAudit.test.ts.snapshot",
+          "sha256": "595d748f5be89b470b84187cf829c3b151388f9c6016ee6e1aa63dd57358fa7d"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4.void-20260926T055719Z/pre.sha256",
+          "sha256": "7b77f18e76b0b6a65d28d5be96587cc61b67438fd4d93aa34914a6702ab41d5e"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-4.void-20260926T055719Z/ranges.jsonl",
+          "sha256": "6a68820730e067dd244e9959e6bcf7fd9f4c3b4ad615d8e81c80e7101a57251a"
+        }
+      ],
+      "step-6 rejected first enumeration (ledger line 33)": {
+        "path": "_docs/_workflows/_smoke/task-551/11-reopen/step-6/enumerated-edits.rejected-20260926.txt",
+        "sha256": "bd1451ea61bf5737244a544d61e51d54b3b0c767b1687ae13743e5a02fce3241"
+      }
+    }
+  },
+  "gates": {
+    "step7": "see steps[6].gates",
+    "Gc": {
+      "literalSha256": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+      "records": [
+        {
+          "step": 4,
+          "literalSha256": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+          "argv": "env REPO=/home/coder/project/Coderso-551 bash -c '<V24-2 G-c>' _ \"<ledger line>\" \"<subject>\" 2ee1c1a9ea6d60a6a8ad3694aab9c2b3479bf7ed",
+          "output": "ok",
+          "exit": 0
+        },
+        {
+          "step": 5,
+          "literalSha256": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+          "argv": "env REPO=/home/coder/project/Coderso-551 bash -c '<V24-2 G-c>' _ \"<ledger line>\" \"<subject>\" e9373a26e031274db624e746c5ee43ee79881b37",
+          "output": "ok",
+          "exit": 0
+        },
+        {
+          "step": 6,
+          "literalSha256": "37b55b688c57de39984f36ccb9d112a0e2e8a764f9704a31afc7d8b66f488763",
+          "argv": "env REPO=/home/coder/project/Coderso-551 bash -c '<V24-2 G-c>' _ \"<ledger line>\" \"<subject>\" 5cf5349064f85af0b154f566ac64b62bbc7f7ee1",
+          "output": "ok",
+          "exit": 0
+        }
+      ],
+      "step7": "pending: orchestrator (s) after the step-7 commit"
+    },
+    "Gv": "evidence.Gv",
+    "GfGmGd": {
+      "step4": "no G-f (the receipted attempt's (f) predates G-f); G-d + G-m at the resume (ledger line 24); G-m ok in (m) and (r) (ledger line 25)",
+      "step5": "G-f ok (orchestrator pre-check, implementer repeat; ledger line 28); G-m ok (ledger line 29)",
+      "step6": "G-f ok (orchestrator pre-check, implementer repeat; ledger line 32); G-m ok (ledger line 34)"
+    },
+    "strayAndSymlinkChecks": {
+      "step4": "ok / ok",
+      "step5": "ok / ok",
+      "step6": "ok / ok",
+      "source": "green ledger lines 25, 29, 34"
+    },
+    "frozenCeilings": {
+      "rule": "V4-2: at or under the frozen count; raising a ceiling is never a fix; the next TASK-551-11 change touching one must split it to <= 999",
+      "ceilings": {
+        "_docs/_workflows/lib/task-551-evidence-contract.mjs": 1562,
+        "_docs/_workflows/lib/task-551-evidence-filesystem.mjs": 1014,
+        "_docs/_workflows/task-551-author-audit.mjs": 1039,
+        "_docs/_workflows/task-551-implement.mjs": 1844,
+        "_docs/_workflows/task-551-fix.mjs": 1459
+      },
+      "enforcedBy": "gate F step 7 (exit 0)"
+    },
+    "otherCaps": "28 non-debt paths: 18 at 999, 3 test files at 700 (AuthorAudit trio), 7 test files at 800; enforced by gate F step 7 (exit 0)"
+  },
+  "handoffs": [
+    {
+      "to": "TASK-551-10-L02",
+      "item": "ten-path closure command adopts the ./-prefixed argv in its prose command (V11-2 ripple as limited by V12-2, :1178); the 10-L02 envelope argv and positiveDiscovery.paths stay bare (validator-compatible; clean under hidden roots); frozen-ceiling mirror unchanged (V4-2, V4-7)"
+    },
+    {
+      "to": "TASK-551-01-L01",
+      "item": "v6/v7 per-suite runs stay bare (V13-5); owns the bun-lane manifest regeneration (V4-5, V5-3): first TASK-551-01-L01 regeneration after TASK-551-11 step 6 closes the manifest gap"
+    },
+    {
+      "to": "TASK-551-03-L02",
+      "item": "R6-08 (1)/(1b) ripple and stale-anchor tables and R7-08/R7-11 state refresh are 03-L02's own append-only sections; 'the split landed' (R6-08 (2), V4-7) needs steps 1-7 all green AND this receipt; with this receipt written the remaining condition is the step-7 checkpoint commit"
+    },
+    {
+      "to": "orchestrator (owner follow-up)",
+      "item": "audit-evidence relocation (V7-1 OWNER FOLLOW-UP; 03-L02 R7-08 (a)): foreign direct entries under the closed canonical root audit-evidence/ must move out, with every citing task file updated, before TASK-551-10-L02 closure; L11 moves none and cites none as its own evidence"
+    },
+    {
+      "to": "owner closure (H)",
+      "item": "the owner closure argv at contract :1004 reads with ./-prefixed paths (V12-3), same ten files, order and caps-last rule; an executor that runs one Bun process per file (cf. TASK-551-06-L03 A4 '(H) One Bun process per test file') keeps the same ./ paths; label 'H' from the orchestrator mandate"
+    },
+    {
+      "to": "stale anchors (V4-6)",
+      "item": "03-L02, 06-L03, 07-L01, 10-L01, 10-L02 and this file cite pre-split dispatch-contract/worktree-compatibility line anchors; each owner corrects them in its next append-only section"
+    }
+  ],
+  "debts": [
+    {
+      "id": "frozen-ceilings",
+      "item": "five untouched over-cap sidecar sources held at their V4-2 frozen ceilings (1,562 / 1,014 / 1,039 / 1,844 / 1,459); the next TASK-551-11 change touching one splits it to <= 999",
+      "owner": "TASK-551-11 (next change)"
+    },
+    {
+      "id": "bun-lane-manifest",
+      "item": "tests/bun-lane-manifest.json not regenerated (V4-5/V5-3): bunLaneManifest.test.ts red at HEAD (2 fail / 14 pass; 482 fresh / 454 committed); the seven new test files are not manifest rows, so 48 of the 90 sidecar tests stay outside bun run test until regeneration",
+      "owner": "TASK-551-01-L01"
+    },
+    {
+      "id": "v24-audit-lows",
+      "item": "three LOWs of the v24 audit pair carried to the next amendment (ledger line 23): hash-byte definition of the pinned literals, a subject-shape check in G-c, a missing-ledger self-test; no amendment after v24 exists at HEAD",
+      "owner": "TASK-551-11 (next amendment)"
+    }
+  ],
+  "honestyNotes": [
+    "Step 4 first attempt: the implementer was killed by the session rate limit between (g) and (m); the directory was voided as step-4.void-20260926T055719Z and the step redone from sha_3 (ledger line 11). The redo stopped at (k) because the bare A argv also ran six dry-run .test.ts copies (90 pass / 6 fail across 12 files; the six real files 90/0/0), which produced v11 (ledger line 12). The dry-run roots were renamed to .dryrun/ (v12, ledger line 13). The step resumed at (h) under the Rerun rule after v11-v24 with G-d and G-m (ledger line 24) and went green (line 25), then was committed as sha_4 (line 26).",
+    "Ledger line 15 recorded the v13 digest check as 8/8 before the check ran (orchestrator zsh PATH-clobber bug); line 16 is the real check (8/8, exit 0); line 17 (v14 gates) supersedes both.",
+    "The V22-2 contract self-test sentence over-claimed stale-ledger/out-of-order coverage; the cases produced malformed-subject/2 (ledger line 20); v23 corrected it and exercised both cases (line 21); v24 re-ran from the exact literal bytes (line 22).",
+    "Step 6 first enumeration (sha bd1451ea...) had a duplicate line entry and a line-kind insertion anchor; the implementer caught it in a scratch replica before any real snapshot; the corrected enumeration (cc0b07ab...) is receipted and the rejected copy is kept (ledger line 33).",
+    "Step 4 green line 25 says 'D: dry-run green (first attempt)': it refers to the redo attempt that stopped at (k), whose .dryrun/ stands under V11-2/V13-6; the step-4 cmp pairs were re-checked at step 7 and exit 0.",
+    "Steps 1-3 A runs used bare argv; V11-1 declares them equivalent (no .test.ts copies existed then) and they were not re-run.",
+    "The step-5 and step-6 green ledger lines name the T log 'root-tsc-step4.log'; recorded verbatim, the T result (exit 0, 0 errors) is the orchestrator's.",
+    "The move-proof glue totals (37 / 143 / 68 / 179 / 46 for steps 1, 3, 4, 5, 6) have no numeric cap: V5-6 withdrew the V4-4 '<= 60 per step' sentence.",
+    "Gate A per-file pass counts at step 7 were not printed by the non-TTY bun reporter; the aggregate is 90 pass / 0 fail / 0 skip across 10 files.",
+    "The selection of the three debts in 'debts' is the writer's reading of the contract and ledger (V4-2, V4-5/V5-3, ledger line 23); the audit-evidence relocation is recorded as a handoff.",
+    "This receipt does not contain its own SHA-256 or line count, and the step-7 E, (q) and (s) results are recorded outside it."
+  ]
+}
