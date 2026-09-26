@@ -913,3 +913,304 @@ and no line of it widens L03's surface. The catalog guards at :159-160, the nine
 named checks at :161-171, the relation check at :173, the SET NULL -> RESTRICT
 transition at :142-144, and the addendum corrections at :730-785 all stand as
 written.
+
+## Dated Contract Corrections — 2026-09-26 (re-open note: result shape, worker-schema legs)
+
+This note implements orchestrator dispositions **B1**, **C7** and **E2** (O3)
+of `_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+Those dispositions are not re-decided here. It is append-only. Every earlier
+sentence of this file stays binding except the ones quoted under
+"Superseded sentences" below. The dispatch envelope (json fence `:787-860`)
+is unchanged. Test anchors are for
+`tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+(abbreviated "the suite") at HEAD `74fe8f4e`, where it has 2,182 lines.
+
+### Verified facts (read from source at `74fe8f4e`; nothing executed)
+
+- **L1 — result shape (B1).** `db` is drizzle over postgres-js
+  (`core/db/client.ts:18`, `:91`). `db.execute` returns a `PgRaw` whose
+  driver call is `client.unsafe(query, params)` when the query has no
+  fields (`node_modules/drizzle-orm/pg-core/db.js:273-287`,
+  `node_modules/drizzle-orm/postgres-js/session.js:31-34`). So it resolves
+  to the postgres.js `Result`, which `extends Array` and has no `rows`
+  property (`node_modules/postgres/src/result.js:1-15`). The suite's
+  helper `:1012-1013` reads `(result as { rows: T[] }).rows`, which is
+  `undefined`, and its docblock says the driver returns a `{ rows }`
+  envelope. That is false.
+- **L2 — `rowsOf` sites (untruncated grep).** `grep -c rowsOf` gives 10:
+  the definition at `:1013` plus nine readers at `:1745` (`assertZeroResidue`,
+  which runs in the `finally` of every DB leg and in `afterAll` `:1766-1771`),
+  `:1799`, `:1831`, `:1853`, `:1860`, `:1880`, `:2099`, `:2142` and `:2163`.
+  The only other `.rows` reads (`:824`, `:832`, `:833`) are on the in-memory
+  `ClassifierPage` model (`:788`). They are not driver results and must not
+  change. So every DB leg (`:1773`, `:1915`, `:1979`, `:2016`, `:2062`,
+  `:2109`) fails from source today, in every schema.
+- **L3 — online members in worker schemas (O3).** The lane runner re-migrates
+  `bun_worker_<i>` from `_journal.json` only. The journal holds the
+  transactional `0081_task551_search_indexes_constraints_outbox`
+  (`core/db/migrations/meta/_journal.json:562`) and never the companion
+  `0081_task551_online_indexes.sql` (0 journal matches). The 05-L01 note
+  records the same fact (first note, F4). The four members the O3 legs name
+  are all companion-only: `solution_kit_legacy_template_evidence_source_position_key`
+  (companion `:21`, manifest `:145`),
+  `solution_kit_legacy_template_evidence_source_key` (`:22`, `:156`),
+  `solution_kit_starter_apply_owners_active_idx` (`:23`, `:166`) and
+  `solution_kit_runs_active_rollback_source_idx` (`:81`, `:747`). The
+  following are journaled in the transactional 0081 and so exist in every
+  schema: the evidence primary key (`:53`; PostgreSQL's default name
+  `solution_kit_legacy_template_evidence_pkey`),
+  `solution_kit_legacy_template_evidence_identity_key` (`:68`),
+  `solution_kit_starter_apply_owners_source_run_id_pk` (`:99`), the three
+  `solution_kit_runs_id_*_key` uniques (`:154-156`) and every FK (`:157-166`).
+- **L4 — what each O3 leg does without its member.**
+  - `:1979` (identity): the `sameIdentity` probe (`:1990-1995`) is decided
+    by the journaled primary key in every schema. The `samePosition`
+    (`:1996-2001`) and `sameKey` (`:2002-2007`) probes use a fresh `id`, so
+    no journaled unique covers them (`identity_key` includes `id`). They
+    commit.
+  - `:2016` (owner slot): the refused probe (`:2035-2040`) inserts an owner
+    for a DIFFERENT `source_run_id` (`otherRun`). The primary key does not
+    cover it, and the FK is satisfied by the fixture at `:2029-2034`. It
+    commits.
+  - `:2062` (race): both writers (`:2074-2079`) use distinct ids. The only
+    journaled unique that names `rollback_of_run_id` is
+    `solution_kit_runs_id_rollback_relation_key` `(id, rollback_of_run_id)`,
+    which does not collide. Both commit, so `:2092-2095` fails.
+- **L5 — the FK trap (`:2028`).** `solution_kit_starter_apply_owners_source_identity_fk`
+  is `(source_run_id, package_key, actor_id) → solution_kit_install_runs(id, kit_id, actor_id)`
+  (transactional 0081 `:165`; `core/db/tables/solutionKitRollbackAuthority.ts:80-88`).
+  Worker schemas carry it too: the lane migrator rewrites
+  `REFERENCES "public"` into the worker schema (`scripts/bun-lane-migrate.ts:77-81`). An owner row whose run has
+  `kit_id <> package_key`, or another actor, is refused with 23503 by this
+  FK. That happens before any unique index is consulted. The owners'
+  primary key is `source_run_id` alone (`:99`), so two owners on ONE run are
+  refused by the primary key (23505), and the active index never decides.
+  The same trap made the 05-L01 concurrency apply-owner race unreachable.
+  That is disposed by **E3** in 05-L01, not here.
+- **L6 — fence.** The suite is the only path in this leaf's `allowlist`
+  (`:801-803`). Every edit below is test-only inside that allowlist. No
+  fence byte changes.
+
+### Items (the ONE test-only edit to the suite)
+
+**Item 1 — `rowsOf` (B1; the 05-L01 R1 item 1 rule).** Replace `:1012-1013`
+with a file-local duplicate of the 05-L01 helper. The literal is kept, so one
+grep finds every copy:
+
+```ts
+/** postgres-js via drizzle: `db.execute` resolves to the Result array itself; no `.rows` fallback. */
+const rowsOf = <T>(result: unknown): T[] => {
+  if (!Array.isArray(result)) throw new Error("catalog_result_not_array");
+  return result as T[];
+};
+```
+
+- The nine readers (L2) keep their call shape and read through the new
+  helper. No reader adds `?? []`, `.rows`, or an `Array.isArray` fallback of
+  its own.
+- The `ClassifierPage` `.rows` sites (`:824`, `:832`, `:833`, and the
+  `rows:` literals in the static half and `:2146-2148`) are untouched.
+- Done-check (untruncated): `grep -c '{ rows: T\[\] }'` is `0`. Every
+  `db.execute` result that is read goes through `rowsOf`, except
+  `hasDb` (`:995`), which reads no rows. `grep -c 'catalog_result_not_array'`
+  is `1`.
+
+**Item 2 — worker-schema branches for the three O3 legs (E2; the 05-L01 R2.1
+rule).** Add these file-local duplicates next to `rowsOf`:
+
+```ts
+const LANE_WORKER_SCHEMA = /^bun_worker_[0-9]+$/;
+const sessionSchema = async (): Promise<string> => {
+  const schema = rowsOf<{ schema: string | null }>(await db.execute(sql`select current_schema() as schema`))[0]?.schema;
+  if (!schema) throw new Error("catalog_session_schema_missing"); // a failure, never a skip
+  return schema;
+};
+/** Online guard members present in the session schema, sorted. */
+const presentGuards = async (guards: readonly string[]): Promise<string[]> =>
+  rowsOf<{ name: string }>(
+    await db.execute(
+      sql`select c.relname as name from pg_class c where c.relkind = 'i' and c.relnamespace = current_schema()::regnamespace and c.relname in ${guards} order by c.relname`
+    )
+  ).map((row) => row.name);
+```
+
+- `in ${guards}` is the drizzle list form. `any(${array})` is banned (05-L01
+  **B4**).
+- The branch is chosen by schema NAME, never by index presence. A worker
+  schema asserts that its guards are ABSENT (`[]`). Every other schema
+  first asserts that its guards are PRESENT (the sorted guard list), then
+  runs the unchanged assertions. A missing member in `public` therefore
+  fails, and a later change that replays the companion into workers fails
+  loudly (05-L01 R2 re-open rule).
+- A new static test asserts that each guard name below is a member of
+  `TASK551_ONLINE_INDEX_MEMBERS`. The suite already imports it at `:16-19`.
+  A renamed member then cannot silently empty a guard.
+- `const worker = LANE_WORKER_SCHEMA.test(await sessionSchema());` is read
+  once per leg, inside `try`, right after `seedFixture`.
+
+Exact branch per leg:
+
+- **`:1979` identity leg.** Guards:
+  `["solution_kit_legacy_template_evidence_source_key", "solution_kit_legacy_template_evidence_source_position_key"]`.
+  - Both branches: the committed evidence insert (`:1984-1989`) and the
+    `sameIdentity` probe (`:1990-1995`) stay unchanged. The journaled
+    primary key decides in every schema:
+    `["23505", "solution_kit_legacy_template_evidence_pkey"]`.
+  - Worker: `expect(await presentGuards(guards)).toEqual([])`, then leave
+    the `try` block (the `finally` still runs) BEFORE `samePosition`. No
+    journaled path decides the two remaining probes (L4), and running them
+    would commit unreceipted rows.
+  - Non-worker: `expect(await presentGuards(guards)).toEqual(guards)`, then
+    `:1996-2007` run unchanged.
+  - `assertReceipt("identity", 3)` is unchanged in both branches. The
+    probes run through `db.execute`, not `run`.
+- **`:2016` owner-slot leg.** Guards:
+  `["solution_kit_starter_apply_owners_active_idx"]`.
+  - Both branches: `:2022-2034` (owner on `fixture.sourceRun`, then
+    `otherRun` seeded with `kit_id = fixture.packageKey` and the same actor,
+    per L5), and the release plus re-insert `:2041-2053`, stay unchanged.
+  - Worker: `expect(await presentGuards(guards)).toEqual([])`. Then the
+    primary-key path replaces `:2035-2040`: `const duplicate =
+    db.execute(insertOwner(fixture.sourceRun, "before_captured"));`, which
+    rejects with
+    `["23505", "solution_kit_starter_apply_owners_source_run_id_pk"]`. The
+    `insertOwner(otherRun, …)` probe is NOT attempted before the release,
+    because without the member it would commit.
+  - Non-worker: `expect(await presentGuards(guards)).toEqual(guards)`, then
+    `:2035-2040` run unchanged.
+  - `assertReceipt("owner-slot", 5, 1)` is unchanged in both branches.
+- **`:2062` race leg.** Guards:
+  `["solution_kit_runs_active_rollback_source_idx"]`. No journaled
+  PK/FK/unique path decides this race (L4). So, as in the 05-L01 R2.3
+  revision race, the worker branch takes the whole leg.
+  - Worker: `expect(await presentGuards(guards)).toEqual([])`, then leave
+    the `try` BEFORE `pending` (`:2087`) is created. No writer runs.
+  - Non-worker: `expect(await presentGuards(guards)).toEqual(guards)`, then
+    `:2087-2099` run unchanged.
+  - `:2103` becomes `assertReceipt("race", worker ? 2 : 3)`. The worker
+    receipt holds only the two `seedFixture` inserts. `gate.release` in
+    `finally` stays.
+- **Every other DB leg runs unchanged in every schema.** The matrix
+  (`:1773`), restrict (`:1915`) and sentinel (`:2109`) legs depend only on
+  journaled checks, primary keys and FKs. The matrix progress rows use
+  distinct `rollback_position` values, so the online
+  `…_rollback_position_idx` never decides. The sentinel leg's bound is the
+  in-file cap model, not an index. After this item, the suite's
+  online-member inventory is exactly the three legs above.
+
+**Item 3 — FK fixture rule (L5; binding for this suite and recorded for any
+sibling that seeds `solution_kit_starter_apply_owners`).** Every seeded
+owner row needs its own install run with `id = source_run_id`,
+`kit_id = package_key` and `actor_id = actor_id`, seeded before the owner
+insert and deleted child-first. A leg that means to exercise the active
+index (`(package_key, actor_id) WHERE released_at IS NULL`) must use
+DISTINCT `source_run_id` values. Otherwise the primary key decides first.
+It must also use one `package_key`/actor pair across those runs, or the FK
+refuses first. The `:2028` comment stays as the in-file statement of this
+rule. The implementer may reflow it but must not drop it.
+
+**Item 4 — handoff to 01-L01 v8 (row texts; 01-L01's writer copies them).**
+The **V7-3** blocked row clears only when Items 1 AND 2 have landed in the
+one edit, the orchestrator's disposition of **O-L03-2** below has landed,
+and the suite's part-1 row meets the class table (**V5-6** rule). Part 1
+runs in `public` (**V5-4** check 1, and **E3** check 4), so it proves only
+the non-worker branches. The worker branches first execute in the FINAL
+lane-runner run.
+
+| Handoff reason (copy verbatim) | Delivered by | Clears when | Consumed at |
+| --- | --- | --- | --- |
+| `result-shape:tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (**B1**, **C7**; **V7-3** row) | 05-L03 Items 1 and 2 (this note), one test-only edit | Items 1 and 2 landed, **O-L03-2** disposed and landed; part-1 row under `M-fixture` passes (0 failed, 0 skipped) after green **V5-4** checks | initial, **V5-9** step 6 |
+| **V5-5 (a)** owner item, 05-L03 share (**O3**, **E2**) | 05-L03 Item 2 | the three worker branches (`:1979`, `:2016`, `:2062`) pass in the FINAL lane-runner run | FINAL only (**V7-7** step 8 as rewritten by **E2**); not an initial precondition |
+
+Post-join **V7-4** row (**E2**), to be inserted as written:
+
+| Suite | Lane prediction | Cause (anchor) | Clears when |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` | absent while its **V7-3** row stands; after joining (05-L03 Items 1 and 2 plus **O-L03-2** landed) expected green in worker schemas through the Item 2 worker branches; a red is a finding | online members `…_source_position_key`, `…_source_key`, `…_apply_owners_active_idx`, `…_active_rollback_source_idx` are never in `bun_worker_*` (L3); worker branches at `:1979`, `:2016`, `:2062` | not in the red set once joined |
+
+**Item 5 — scope.** The suite is the only allowlisted path (L6). No fence
+edit, no source edit, no other test file. The dispatch precondition is
+**O-L03-1** below.
+
+### Gates for the implementer (fast)
+
+- `./node_modules/.bin/eslint --max-warnings=0 <every touched suite file>`.
+- DB-free proof:
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test <every touched suite file>`.
+  The static half passes. The DB legs skip through the `hasDb` connect probe
+  (`:994-999`).
+- `wc -l` (every touched file ≤ 1,000; see **O-L03-1**), `git diff --check`,
+  and the Item 1 done-checks.
+- The DB proof is the orchestrator's 01-L01 **V5-1** part-1 run under
+  `M-fixture`, serialized. The worker branches are proven only by the
+  01-L01 FINAL lane-runner run.
+
+**Land order.** This edit is independent of the 05-L01 five-file edit.
+Like that edit, it lands before 01-L01 initial **V5-9** step 4.
+
+### Observations for orchestrator disposition (not decided here)
+
+- **O-L03-1 (line gate; blocks dispatch).** The suite has 2,182 physical
+  lines (01-L01 already records it and assigns the split to this leaf).
+  This leaf's acceptance says "This leaf and every file it touches stay at
+  or below 1,000 physical lines." (`:601`). The root rule requires a split
+  by cohesive responsibility in the same change that touches an over-cap
+  file. A split creates test files that are not in the one-path
+  `allowlist` (`:801-803`). So Items 1-2 cannot close without an
+  orchestrator-approved allowlist extension and a fence edit inside this
+  leaf's json fence (`allowlist`, the `rollback-authority-schema-test`
+  argv and its `positiveDiscovery` paths/minimum; no new occurrence; family
+  inventory pinned 41/11/29/33). The implementer STOPs before editing
+  until that exists. A suggested seam, not a decision, is the suite's own
+  boundary: the DB-free static half (`:1015-1632`, including the in-file
+  models) and the `testIfDb` live half (`:1633-2182`, from the `SCOPE` fixture block on). Shared fixtures and
+  models would go into one test-support module. Each file must stay
+  independently runnable.
+- **O-L03-2 (constraint name read; blocks the V7-3 row).** `pgConstraint`
+  (`:1003-1006`) reads `error.constraint` / `error.cause.constraint`.
+  postgres.js 3.4.9 names the field `constraint_name`: see the error-field
+  map at `node_modules/postgres/src/connection.js:46` (`110 : 'constraint_name'`),
+  which is copied onto `PostgresError` by `Object.assign`
+  (`node_modules/postgres/src/errors.js:1-6`). Drizzle wraps that error as
+  `DrizzleQueryError.cause` (`node_modules/drizzle-orm/errors.js:10-19`).
+  The repository reads `constraint_name`
+  (`core/services/media/mediaFoldersService.ts:62`). So `pgConstraint` is
+  always `null`, and every constraint-name assertion fails in every schema
+  (`:1817`, `:1939`, `:1949`, `:1968`, `:1994`, `:2000`, `:2004`, `:2037`).
+  The race writer (`:2082`) falls through to the SQLSTATE `"23505"`.
+  Items 1 and 2 alone cannot make the part-1 row pass. The recommended
+  fix, in the same test-only edit, reads `constraint_name` on the error and
+  its `cause`, with no `.constraint` fallback. This note does not decide
+  it.
+- **O-L03-3 (catalog wording; no behaviour).** `:236-237` says every
+  mandatory index row is "created by the non-transactional companion". Four
+  of the fourteen rows (`solution_kit_runs_id_package_actor_key`,
+  `…_id_rollback_relation_key`, `…_id_legacy_template_plan_key`,
+  `solution_kit_legacy_template_evidence_identity_key`) are unique
+  CONSTRAINTS in the transactional 0081 (`:68`, `:154-156`; table module
+  comment `solutionKitRollbackAuthority.ts:136-139`). Item 2 relies on the
+  L3 split, not on that sentence. Rewording it is left to the orchestrator.
+
+### Superseded sentences (verbatim; superseded from this date)
+
+1. `:567-569` (Testing Requirements): "Concurrent duplicate owner/rollback
+   inserts have one winner; malformed
+   phases/digests/evidence/progress-state combinations fail at the database boundary;
+   source, evidence, or related run deletion is restricted while authority remains."
+   Replacement: "In every non-worker schema, concurrent duplicate
+   owner/rollback inserts have one winner. In a `bun_worker_*` schema, the
+   owner-slot and race legs assert that their online guard members are
+   absent (Item 2), and the owner-slot leg asserts the journaled primary-key
+   refusal instead. Malformed phases/digests/evidence/progress-state
+   combinations fail at the database boundary, and source, evidence, or
+   related run deletion is restricted while authority remains, in every
+   schema."
+2. `:597-599` (Quantified Acceptance): "Tests reject source/package/actor
+   mismatch, progress linked to another rollback
+   or evidence row, proof/status mismatch, duplicate evidence identity, deletion
+   that would orphan a rollback relation, and duplicate running owners;"
+   Replacement: the same list, with "duplicate running owners" and the
+   duplicate evidence position/key probes asserted in every non-worker
+   schema. In a `bun_worker_*` schema, the absence of the online guard
+   members is asserted instead (Item 2), and duplicate evidence identity is
+   still rejected by the journaled primary key.

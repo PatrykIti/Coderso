@@ -1051,6 +1051,8 @@ overrides. The static closed `allowlist` covers every other owned path.
     "core/db/searchVectorDefinitions.ts",
     "core/db/bookingReservationExclusion.ts",
     "scripts/task-551-online-indexes.ts",
+    "scripts/task-551-online-indexes-catalog.ts",
+    "scripts/task-551-online-indexes-rollout.ts",
     "tests/perf/fixtures/task551OnlineIndexManifest.ts",
     "tests/unit/db/schemaTableFacade.test.ts",
     "tests/unit/db/schemaColumnTypeContracts.test.ts",
@@ -1061,6 +1063,8 @@ overrides. The static closed `allowlist` covers every other owned path.
     "tests/integration/server/task551IndexAndConstraintCatalog.test.ts",
     "tests/integration/server/task551ConcurrencyConstraints.test.ts",
     "tests/integration/server/task551OnlineIndexDeployment.test.ts",
+    "tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts",
+    "tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts",
     "tests/perf/database-index-write-overhead.test.ts"
   ],
   "forbiddenPaths": [
@@ -1983,3 +1987,440 @@ dispositions of **O3** and **O5**. 05-L01 cannot close those.
   generated expressions by server-deparse equality (R3.4). Exact source
   bytes stay in the static legs.
 - First-note O1's proposal is adopted (**A5**) as R1 items 10-11.
+
+## Dated Contract Corrections — 2026-09-26 (third note: perf and concurrency source defects, split allowlist, env precondition)
+
+**Authority and scope.** This append-only note implements orchestrator
+decision **E3** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+in full. It cites **E2** (the **O3**/**O5** dispositions), **E4** (01-L01 v8
+consumes the handoff rows below), **C3 (b)**, **C6** and **D8**, and does not
+re-decide them. It corrects the second note directly above ("the second
+note"). The corrections come from two read-only audits of the second note;
+every anchor below was re-read from source at HEAD `74fe8f4e` (nothing
+executed). This round changes no source, test or migration byte. Its only
+non-text change is the in-place envelope amendment recorded under
+"Envelope amendment" below (four `allowlist` entries). `**Status:**` is
+unchanged (`⏳ To Do`). Everything in the first and second notes that is not
+quoted under "Superseded sentences (third note)" stays binding. A reference
+to an item (for example "R2.3" or "R3.4") means that item as amended here.
+
+**Anchor rule.** The envelope amendment inserts two lines after HEAD `:1053`
+and two after HEAD `:1063`. Anchors into THIS file below are line numbers of
+the amended tree. A HEAD line `L` maps to `L` when `L <= 1053`, to `L + 2`
+when `1054 <= L <= 1063`, and to `L + 4` when `L >= 1064`. So the second
+note now spans `:1491-1989`, and its fence anchors (`:1053`,
+`:1058`-`:1064`, forbidden `:1073`) and the first note's (`:1054`, `:1058`,
+`:1061`) are HEAD numbers. Anchors into other files are unchanged.
+
+### Verified facts (read from source at `74fe8f4e`)
+
+- **H1 — the perf suite fails from source in every schema**
+  (`tests/perf/database-index-write-overhead.test.ts`, 267 lines). Both DB
+  legs call `measureAllGroups` (`:214-224`), and three defects stop them
+  whatever `rowsOf` does:
+  - (a) `memberBytes` (`:125-128`) only prefixes the manifest's table with
+    the shadow schema: `.replace(/ ON /, \` ON ${SHADOW_SCHEMA}.\`)` turns
+    `ON "pages"` into `ON task551_overhead."pages"`. That table never exists.
+    The shadow tables are `<member stem>_baseline` / `<member stem>_indexed`
+    (`:163-167`). So the first `CREATE INDEX` fails with 42P01. The third
+    `.replace` (`:128`) never matches (`USING …` separates the relation from
+    `(`) and is a no-op.
+  - (b) `createTable` is renamed by the regex at `:167`, but `insertRow`
+    (`:67`, `:78`, `:89`, `:98`, `:108`) and `updateStatement` (`:70`,
+    `:81`, `:90`, `:99`, `:111-118`) still name the `overhead_*` tables,
+    which are never created.
+  - (c) `measure` receives the already-qualified `tableName(suffix)`
+    (`:165`, `:195-196`) and passes it to `relationBytes` (`:192`), which
+    qualifies it again (`:148`). The result is a three-part name, which
+    PostgreSQL rejects as a cross-database reference.
+  - (d) Limitation, not a defect: the insert "p95" is ONE sample of one
+    5,000-statement batch (`timedRuns(..., 1)`, `:182-187`, `:186`). The
+    update p95 uses 25 samples (`:188`).
+  - The member column lists do fit the shadow tables (manifest `:817`
+    pages `("author_id","updated_at" desc,"id" desc)`, `:516`, `:897`,
+    `:596`, `:103`), so once each member is rewritten onto its shadow table
+    the bytes build. Two rewritten index names exceed 63 bytes
+    (`${member}_${suffix}` at `:170`: 69 bytes for the pages and outbox
+    groups). PostgreSQL truncates them with a NOTICE. That is harmless
+    (one index per shadow table) and recorded, not changed.
+  - The second note's R2.4 row "builds its own copies in shadow schema
+    `task551_overhead`" therefore describes the intent, not the source.
+- **H2 — the concurrency suite fails from source in every schema**
+  (`tests/integration/server/task551ConcurrencyConstraints.test.ts`, 349
+  lines). The second note's R2.3 premise was drawn from this defective
+  source.
+  - (1) The revision race (`:189`) builds raw SQL with the parent UUID
+    unquoted: `` `(${parentId}, 1, '{}')` `` (`:213`, and `:212` for the
+    widget-template family), executed through `sql.raw` (`:214`, `:218`).
+    Every probe is a syntax error, so `committed` is 0.
+  - (2) The column list `(${parentColumn}, version, data)` (`:209`) is
+    wrong for `detail_page_revisions`. Its payload column is `document`
+    (`core/db/tables/pages.ts:171`, in `detailPageRevisions` `:162`; the
+    seed anchor `pages.ts:77` is `page_templates.document`, not this
+    table). The other three share `data` (`pages.ts:98`,
+    `content.ts:128`, `posts.ts:95`).
+  - (3) In the apply-owner race (`:279`) all 50 probes insert the same
+    `source_run_id` (`fixture.runId`, `:289`). That column is the journaled
+    PRIMARY KEY
+    (`core/db/migrations/0081_task551_search_indexes_constraints_outbox.sql:99`).
+    So the PK alone would reject the duplicates, and the online member
+    `solution_kit_starter_apply_owners_active_idx`
+    (`core/db/migrations/0081_task551_online_indexes.sql:23`,
+    `("package_key","actor_id") WHERE released_at IS NULL`) never decides.
+  - (4) The FK `solution_kit_starter_apply_owners_source_identity_fk`
+    (0081 `:165`) maps `(source_run_id, package_key, actor_id)` to
+    `solution_kit_install_runs (id, kit_id, actor_id)`. The run is seeded
+    with `kit_id = SCOPE` (`:160-161`) while `package_key` is
+    `unique("package")` (`:282`), so every probe fails 23503. 05-L03
+    documents the same trap at
+    `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts:2028`.
+  - (5) The booking disjoint probes (`:258-272`) use `hour = 12 + index`
+    for index 0..49 (`:260`), which yields literals up to `61:00`. Only the
+    first 12 probes have valid bounds, so `toHaveLength(FAMILY_SIZE)`
+    (`:272`) fails.
+  - After (1)-(2), the families that need online members are exactly
+    `page_revisions` and `widget_template_revisions` (companion `:11-12`).
+    `content_revisions` (0076), `post_revisions` (0045 `:54`) and
+    `detail_page_revisions` (0054 `:31`) are journaled. After (3)-(4), the
+    apply-owner race needs `solution_kit_starter_apply_owners_active_idx`.
+- **H3 — outbox seeding.** `seedQuarters`
+  (`task551CacheInvalidationOutboxSchema.test.ts:207-231`) awaits one
+  INSERT per row. The plan leg seeds 100,000 rows (`:267`) under a
+  300,000 ms timeout (`:283`), so it needs a round trip under 3 ms. No
+  timing evidence exists: the leg has never run green.
+- **H4 — counts.** The whole-tree single-line grep for
+  `as unknown as { rows` gives 13 matches in the five files (catalog 5,
+  parity 1, SearchVector 4, outbox 2, perf 1). The catalog read at
+  `:202-206` is a multi-line cast (`as unknown as {` at `:203`, `rows:` at
+  `:204`). So there are 14 read sites. `grep -c '\.rows\b'` over the five
+  files gives 6/1/4/2/1 = 14 at HEAD.
+- **H5 — R3.4 helper.** The signature `deparsedExpected(table, bytes)`
+  (`:1835-1836`) interpolates `schema`, which is not a parameter. "In ONE
+  `db.transaction`" does not require the transaction handle. A `db.execute`
+  inside the callback runs on another pooled connection, where
+  `'pg_temp.task551_sv_probe'::regclass` does not resolve.
+- **H6 — env precondition not routed.** An untruncated count of
+  `pg_opclass_is_visible|gin_trgm_ops` in
+  `_docs/_TASKS/TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md`
+  is 0 at HEAD. The second note's claim that 01-L01 v7 records it is
+  false, and its handoff table has no row for it.
+- **H7 — split targets outside the fence.** R1 item 12 splits
+  `scripts/task-551-online-indexes.ts` (2,959 lines) and
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts` (3,513
+  lines) into new files, and no TASK-551 fence named any split target at
+  HEAD. The four E3 names occur nowhere in `scripts/`, `tests/`, `core/` or
+  `_docs/_TASKS/` at HEAD (only in the dispositions file).
+
+### Envelope amendment (in place, E3; the only fence edit)
+
+- The json fence `allowlist` (`:1032-1069`) gains exactly four entries, the
+  orchestrator-approved **O2** split targets:
+  - `scripts/task-551-online-indexes-catalog.ts` (`:1054`)
+  - `scripts/task-551-online-indexes-rollout.ts` (`:1055`)
+  - `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts`
+    (`:1066`)
+  - `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts`
+    (`:1067`)
+- Each is placed after its source file's entry. Every existing entry keeps
+  its bytes and relative order (32 → 36 entries, no duplicates). `schema`,
+  `artifactPolicy`, `taskId`, `parent`, `forbiddenPaths`, `dependencies`,
+  `commands` and `occurrences` are byte-identical. The JSON parses. No other
+  TASK-551 fence names these paths, so single-writer ownership holds.
+- The family preflight literal
+  (`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md`, "Family preflight
+  (literal; repo root)") with last argument `74fe8f4e…` prints
+  `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`
+  on this tree, unchanged from before the amendment.
+- The names bind the R1 item 12 split. Its writer may refine the split by
+  cohesive responsibility. Any path other than these four is a further
+  05-L01 fence amendment under the same rules, never an implicit widening.
+- The amendment grants write surface only. It adds no command, argv,
+  `positiveDiscovery` path or occurrence (see **O6**).
+
+### R1 items 13-15 — perf suite source fixes (E3; same test-only edit)
+
+- **R1 item 13 (member bytes on the paired shadow table).**
+  `memberBytes(member, table)` rewrites the manifest's single
+  ` ON "<table>" ` token to ` ON ${SHADOW_SCHEMA}.${table} `, where `table` is
+  the `_indexed` suffix table, and drops ` CONCURRENTLY`. Exactly one match
+  is required; otherwise it throws `overhead_member_rewrite_missing`. The
+  no-op third `.replace` (`:128`) is deleted. The index-name rewrite
+  (`:170`) and the static manifest-bytes leg (`:226-233`) are unchanged.
+- **R1 item 14 (statements parameterised by the suffix table).**
+  `insertRow(table, index)` and `updateStatement(table)` become functions of
+  the qualified shadow table `tableName(suffix)`. `createTable(table)` may
+  take the same parameter in place of the `:167` regex. All three builders
+  must target the same qualified name. The warm-up insert (`:174`,
+  `:178-181`) is built inside `measure` from `insertRow(table, 0)`.
+- **R1 item 15 (single qualification).** `measure(suffix)` receives the BARE
+  suffix (`:195-196` pass `baseTable` / `indexedTable`). The statements use
+  `tableName(suffix)`, and `relationBytes(suffix)` qualifies exactly once
+  (`:148`), read through `rowsOf` per item 11.
+- **Limitation (recorded, no change).** The insert p95 is a single-sample
+  measurement (**H1 (d)**). Once items 1, 11 and 13-15 land, a ceiling red
+  is a measured finding, not a source defect. Per root `AGENTS.md`, it is
+  re-run once in isolation before it counts. This note does not change the
+  sampling.
+
+```ts
+// Shape only; names are binding, formatting is prettier's.
+const memberBytes = (member: string, table: string): string => {
+  const found = TASK551_ONLINE_INDEX_MEMBERS.find((entry) => entry.name === member);
+  if (found === undefined) throw new Error(`member ${member} is not in the closed manifest`);
+  const on = / ON "[a-z_]+" /g;
+  if ((found.createSql.match(on) ?? []).length !== 1) throw new Error("overhead_member_rewrite_missing");
+  return found.createSql.replace(on, ` ON ${SHADOW_SCHEMA}.${table} `).replace(" CONCURRENTLY", "");
+};
+const measure = async (suffix: string) => {
+  const table = tableName(suffix); // qualified once
+  await timedRuns(group.insertRow(table, 0), 3);
+  const insertSamples = await timedRuns(batchOf(group, table), 1); // limitation: one sample
+  const updateSamples = await timedRuns(group.updateStatement(table), 25);
+  return { insert: p95(insertSamples), update: p95(updateSamples), bytes: await relationBytes(suffix) };
+};
+```
+
+### R2.3 — corrected (concurrency; E3; same test-only edit)
+
+The file is edited for these source fixes AND for its R2 branch, in the one
+test-only change.
+
+- **R2.3a (bind `parentId`).** The revision insert is built with the
+  drizzle `sql` tag and bound values. It no longer uses `sql.raw` string
+  assembly for any value: identifiers go through `sql.identifier`, and
+  `parentId`, name and category are bound parameters. The widget-template
+  name and category are computed ONCE per family, outside the probe
+  closure, so all 50 probes insert the identical `(parent, 1)` row.
+- **R2.3b (`document` for `detail_page_revisions`).** The payload column
+  comes from a closed per-family map: `data` for `page_revisions`,
+  `content_revisions` and `post_revisions`, `document` for
+  `detail_page_revisions`. `widget_template_revisions` keeps its own list.
+- **R2.3c (50 valid disjoint 30-minute windows).** Probe `i` uses
+  `start = base + i × 30 min` and `end = start + 30 min`, with
+  `base = 2026-05-02 12:00`. The values are computed by UTC arithmetic and
+  formatted `YYYY-MM-DD HH:MM` (the same zone-less form as the overlap
+  probe). Windows are adjacent `[)` ranges and never overlap each other or
+  the 2026-05-01 overlap window. The three assertions (`:272-274`) are
+  unchanged.
+- **R2.3d (apply-owner race on the active index).**
+  - Before the barrier, seed 50 install runs with distinct `id`s,
+    `kit_id = packageKey`, `actor_id = fixture.userId`, `mode 'apply'` and
+    `status 'running'`. Use one set-based insert,
+    `values ${sql.join(rows, sql\`, \`)}`; the drizzle `any(${array})` ban
+    applies.
+  - Probe `i` inserts the owner row with `source_run_id = runIds[i]` and
+    the shared `(packageKey, fixture.userId)`, with `released_at` null. The
+    PK and the FK are satisfied, so ONE actor and the ACTIVE INDEX, not the
+    PK, decide.
+  - Assertions: 1 fulfilled, 49 × 23505, and every rejection names
+    `solution_kit_starter_apply_owners_active_idx`. Read `constraint_name`
+    the way `failureCode` reads `code`, including `cause`.
+  - `cleanupParents` gains `delete from solution_kit_install_runs where
+    actor_id = ${fixture.userId}` after the owner delete and before the user
+    delete, so it stays child-first and scope-owned.
+- **R2.3e (explicit guard presence outside worker schemas).** Both
+  member-reading legs follow R2.2's shape. Read `sessionSchema()` and run
+  the R2.1 presence read. A worker schema expects `[]` and returns before
+  any seeding. Any other schema first asserts that the sorted present names
+  equal the sorted guards (revision race: the two revision members;
+  apply-owner race: `solution_kit_starter_apply_owners_active_idx`), then
+  runs the leg.
+- **R2.3f (legs by dependency, restated).** Revision race: guards
+  `page_revisions_page_version_idx` and
+  `widget_template_revisions_template_version_idx`, whole-leg worker branch
+  (the `:232` receipt rule is unchanged). Apply-owner race: guard
+  `solution_kit_starter_apply_owners_active_idx`, after R2.3d. Booking
+  exclusion: no online member, so it runs in every schema, but only after
+  R2.3c. The file stays far below 1,000 lines.
+
+### R2.1 and R2.2 — refinements
+
+- **R2.1.** "Runs in full" means that a non-worker branch first asserts that
+  every guard is present (R2.3e form), then runs. A missing guard fails
+  there, before any seeding. This applies to every R2 leg: catalog, parity,
+  outbox and both concurrency legs.
+- **R2.2 (set-based seeding; E3).** `seedQuarters(rows)` becomes ONE
+  set-based statement,
+  `insert into cache_invalidation_outbox (…) select … from (values (0, ${…}::int), (1, …), (2, …), (3, …)) as quarter(q, first_minute) cross join generate_series(0, ${perQuarter}::int - 1) as p`.
+  It produces the same rows as the loop:
+  - `event_key` = `'seed-' || q || '-' || p`;
+  - `created_at` = `timestamp '2026-01-01 00:00:00' + make_interval(mins => ((first_minute + p) / 60) % 60, secs => (first_minute + p) % 60)`;
+  - the same `available_at`, `claim_token`, `claim_until` and
+    `processed_at` rules per quarter, and `attempts` 0.
+
+  First minutes come from `QUARTER_FIRST_MINUTE` as bound `::int`
+  parameters. Both the health leg (`:239-260`, 1,000 rows) and the plan leg
+  use it, and every assertion is unchanged. The worker branch still returns
+  before seeding.
+
+### R1 item 1 and R3.4 — wording corrections
+
+- **R1 item 1 count.** There are 13 single-line grep matches and 14 read
+  sites. Done-check: `grep -c '\.rows\b'` is 0 in each of the five files
+  (HEAD 6/1/4/2/1).
+- **R3.4 helper.** The signature is
+  `deparsedExpected(schema: string, table: string, bytes: string): Promise<string>`.
+  `schema` is the SearchVector file's own file-local `sessionSchema()`
+  result (first note item 2 form; `catalog_session_schema_missing` on null or
+  empty), read once per test. The helper runs
+  `db.transaction(async (tx) => …)`, and steps 1-3 plus the step-4 read all
+  use `tx.execute`; no `db.execute` inside the callback. The assertion is
+  `expect(live.expression).toBe(await deparsedExpected(schema, member.table, bytes))`,
+  with no whitespace collapsing.
+- **File-local duplicates.** `rowsOf` and `sessionSchema` are file-local in
+  all six files (the SearchVector file included). `LANE_WORKER_SCHEMA` is
+  file-local in the R2 files (catalog, parity, outbox, concurrency).
+
+### Environment precondition (routed; E3)
+
+Before part 1, the executor checks both conditions:
+
+- `select bool_or(pg_opclass_is_visible(oid)) from pg_opclass where opcname = 'gin_trgm_ops'`
+  is `true` (null or false fails);
+- `select current_schema()` is `public`.
+
+Either one failing is an environment STOP, never a suite verdict. 01-L01 v8
+records this as **V5-4** check 4 (**E4**). Until that lands, part 1 has no
+executor for it (**H6**).
+
+### Handoff rows for 01-L01 v8 (replaces the second note's table)
+
+The second note's lead-in stays binding: every "Clears when" is reachable
+only after EVERY listed item has landed in the one test-only change. A
+part-1 row is a `pass` with 0 failed and 0 skipped tests under the suite's
+map, after green **V5-4** checks (now including check 4, row 9).
+
+| # | Handoff reason (copy verbatim) | Delivered by | Clears when | Consumed at |
+| --- | --- | --- | --- | --- |
+| 1 | `catalog-indexdef-rendering:tests/integration/server/task551IndexAndConstraintCatalog.test.ts` | R1 items 1-9 and R2 (first note; R2.1 as refined) | items 1, 2, 3 (as corrected), 4, 5, 6, 7, 8, 9 and the R2.1 guard assertion landed; part-1 row under `M-ambient` passes | initial, **V5-9** step 6 |
+| 2 | `catalog-indexdef-rendering:tests/integration/server/task551SchemaMigrationParity.test.ts` | R1 items 1, 2, 3, 4, 6 and R2 (R2.1 as refined) | those items landed; part-1 row under `M-ambient` passes | initial, **V5-9** step 6 |
+| 3 | `catalog-schema-qualification:tests/integration/server/task551SearchVectorMigration.test.ts` (**D6 (i)** BLOCKED row) | R3.1-R3.5 (R3.4 as corrected here) | R3.1-R3.5 landed; part-1 row passes | initial, **V5-9** step 6 |
+| 4 | `result-shape:tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts` (**A5**, **C3 (b)**) | R1 items 1, 10; R2.2 including set-based seeding | those items landed; part-1 row under `M-ambient` passes | initial, **V5-9** step 6 |
+| 5 | `result-shape:tests/perf/database-index-write-overhead.test.ts` (**A5**, **C3 (b)**) | R1 items 1, 11, 13, 14, 15 | ALL of items 1, 11, 13, 14 and 15 landed (never items 1 and 11 alone); part-1 row under `M-ambient` passes; a ceiling red after that is a measured finding | initial, **V5-9** step 6 |
+| 6 | `catalog-schema-qualification:` plus the catalog and parity paths (**V4-3a**) | R1 item 3 (as corrected) | same edit | recorded as delivered; owner item, not a precondition (**V5-6** decision 4) |
+| 7 | `result-shape:tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` | NOT delivered here: 05-L03 owner item (**B1**, **C7**; **O3** per **E2**) | 05-L03's own dated note | per 01-L01 v8 |
+| 8 | **V5-5 (a)** owner item, 05-L01 share | R2 (first note), R2.2, R2.3 (R2.3a-f) | R2.3a-f landed, and all five worker branches pass in the FINAL lane-runner run (catalog and parity online-index legs, outbox plan leg, concurrency revision race, concurrency apply-owner race), with the booking leg green in the same worker run | FINAL only; not an initial precondition |
+| 9 | `env-precondition:pg_trgm-visible-and-public-schema` | F3 limits (second note) and "Environment precondition" above | 01-L01 v8 has added **V5-4** check 4 and it is green before part 1; either condition false is an environment STOP | initial, before **V5-1** part 1 |
+| 10 | `catalog-concurrency-source:tests/integration/server/task551ConcurrencyConstraints.test.ts` (01-L01 v8 blocked row) | R2.3a-f (+ R1 item 1 form where it reads rows) | R2.3a-f landed; part-1 row under `M-ambient` passes, including both guard assertions and the booking leg | initial, **V5-9** step 6 |
+
+The FINAL target is still the direct (non-pooled) endpoint of the
+`DATABASE_URL` target (**C1**). **V5-5 (a)** as a whole closes only when
+05-L01 R2 + R2.2 + R2.3, 05-L03 **O3** and 06-L02 **O5** have landed
+(**E2**). Row 8 is 05-L01's share only.
+
+**Land order (restated).**
+- One 05-L01 test-only change covers the five-file R1/R2/R3 edit (with R1
+  items 13-15 in the perf file and the R2.2 seeding in the outbox file),
+  plus the R2.3a-f source fixes and R2 branch in
+  `task551ConcurrencyConstraints.test.ts`. It lands before 01-L01 initial
+  **V5-9** step 4.
+- Its fast gates are the second note's "R1 gates" over the six files.
+- R1 item 12 (the **O2** split into the four amended `allowlist` paths,
+  then the UNIQUE edits) is still a later, separate 05-L01 change.
+
+### Observations for orchestrator disposition (not decided here)
+
+- **O6 (split vs command surface).** `migration-and-index-tests` names
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts` in its
+  argv and `positiveDiscovery` (fence `:1115-1124`). If the item-12 split
+  moves legs into the two new test files, or removes or renames the
+  original, then the argv and `positiveDiscovery` need a same-change
+  envelope amendment with no new occurrence, and E3 authorised the
+  `allowlist` only. Without it the split tests go undiscovered or
+  discovery fails.
+- **O7 (index-name truncation).** The two 69-byte shadow index names
+  (**H1**) are truncated silently apart from a NOTICE. They are recorded
+  only; no change is proposed.
+
+### Superseded sentences (third note; verbatim, with replacements)
+
+Anchors are amended-tree lines (the Anchor rule above).
+
+1. `:1501-1503` (second note) — "The dispatch envelope is unchanged,
+   and every file named below is already in this leaf's `allowlist`
+   (`:1053`, `:1058`-`:1064`)." → True for the six test files and the
+   script. The R1 item 12 split targets were NOT in the fence. The
+   "Envelope amendment" above adds them.
+2. `:1566-1567` — "The whole-tree count of `as unknown as { rows` is 13
+   matches across exactly five files: catalog 5, parity 1, SearchVector 4,
+   outbox 2, perf 1." → The count holds for single-line grep matches. The
+   read-site count is 14 (**H4**).
+3. `:1587-1590` — "The R2.3 legs (below) add
+   `tests/integration/server/task551ConcurrencyConstraints.test.ts`
+   (allowlist `:1062`) to the same change, but that file is edited only for
+   its R2 branch." → It is edited for R2.3a-f (source fixes plus the R2
+   branch) in the same change. The allowlist anchor is `:1064` in this tree.
+4. `:1596` — "All 13 sites read through it:" → All 14 read sites (13
+   single-line grep matches) read through it, with the `grep -c '\.rows\b'`
+   done-check.
+5. `:1715-1716` — "1. Split both files below 1,000 lines each, keeping
+   `canonicalIndexShape` and the other public exports import-stable." → Split
+   both files below 1,000 lines each into the four amended `allowlist`
+   paths (or a refinement through a further fence amendment), keeping
+   `canonicalIndexShape` and the other public exports import-stable; see
+   **O6**.
+6. `:1750-1751` — "**New environment precondition (01-L01 v7 records it
+   next to V5-4 check 3).** Before part 1:" → New environment precondition,
+   handed off as row 9 to 01-L01 v8 **V5-4** check 4 (not recorded in v7).
+   The two conditions and the STOP rule stay binding in the "Environment
+   precondition" form above.
+7. `:1764-1765` (R2.1) — "In every other schema it runs in full, and a
+   missing member fails." → R2.1 as refined: it first asserts every guard
+   present, then runs.
+8. `:1772-1773` — "`LANE_WORKER_SCHEMA`, `sessionSchema` and `rowsOf` are
+   file-local duplicates, as the first note item 6 already allows." → The
+   "File-local duplicates" bullet above (the SearchVector file included).
+9. `:1785-1786` (R2.3) — "These were found by the behavioural check, not by
+   name." → That check ran against defective source (**H2**). The corrected
+   dependency list is R2.3f.
+10. `:1787-1790` — "The revision race (`:189-235`) needs the online unique
+    members `page_revisions_page_version_idx` and
+    `widget_template_revisions_template_version_idx` (manifest members).
+    Without them, more than one duplicate commits." → The same only after
+    R2.3a-b. At HEAD no probe commits in any schema.
+11. `:1795-1796` — "The apply-owner race (`:279-306`) needs
+    `solution_kit_starter_apply_owners_active_idx`. Guards: that name." →
+    At HEAD the PK and the FK decide, and the member is never exercised. The
+    guard is valid only after R2.3d.
+12. `:1797-1798` — "The booking exclusion leg (`:237-277`) depends only on
+    the journaled transactional 0081 and runs in every schema." → It depends
+    only on 0081 and runs in every schema only after R2.3c. At HEAD it fails
+    in every schema.
+13. `:1813` (R2.4 row) — "| perf index-write-overhead (05-L01) | builds its
+    own copies in shadow schema `task551_overhead` | not an R2 leg (reads no
+    session-schema member) |" → Intended to build its own copies in
+    `task551_overhead`, but at HEAD it fails before building any (**H1**).
+    Items 13-15 make that true. The class "not an R2 leg" stays.
+14. `:1835-1836` (R3.4) — "Helper: file-local `deparsedExpected(table:
+    string, bytes: string): Promise<string>`. In ONE `db.transaction`, it
+    runs:" → The "R3.4 helper" bullet above (`schema` parameter, every
+    statement on `tx`).
+15. `:1844-1845` — "Assertion: `expect(live.expression).toBe(await
+    deparsedExpected(member.table, bytes))`, with no whitespace collapsing."
+    → `deparsedExpected(schema, member.table, bytes)`, as above.
+16. `:1866` (outbox row) — Delivered by: "R1 items 1, 10 and R2.2" →
+    row 4 (R2.2 including set-based seeding).
+17. `:1867` (perf row) — Delivered by: "R1 items 1, 11"; Clears when:
+    "those items landed; part-1 row under `M-ambient` passes" → row 5
+    (items 1, 11, 13, 14, 15; never items 1 and 11 alone).
+18. `:1870` (V5-5 (a) row) — Delivered by: "R2 (first note), R2.2, R2.3";
+    Clears when: "all five worker branches pass in the FINAL lane-runner
+    run: catalog and parity online-index legs, outbox plan leg, concurrency
+    revision race, concurrency apply-owner race" → row 8.
+19. `:1873-1874` — "**V5-5 (a)** as a whole also needs the orchestrator's
+    dispositions of **O3** and **O5**. 05-L01 cannot close those." → The
+    dispositions exist (**E2**). The closing condition is the sentence under
+    the table above.
+20. `:1877-1878` — "The five-file R1/R2/R3 edit, plus the R2.3 branch in
+    `task551ConcurrencyConstraints.test.ts`, is one 05-L01 test-only
+    change." → The land order restated above.
+
+**Retained, not re-quoted.**
+- First note `:1412-1415` (HEAD `:1408-1411`) was already superseded by the
+  second note's item 9. That replacement concerns the catalog and parity
+  legs only and stays binding. The concurrency and outbox legs are governed
+  by R2.2 and R2.3 as amended here.
+- The second note's R1 item 11 (`relation_size_row_missing`, no
+  `?? { bytes: 0 }`), R1 item 12's ordering and gating, the F3 limits, R2.4's
+  other rows, and **O3**-**O5** stay binding.

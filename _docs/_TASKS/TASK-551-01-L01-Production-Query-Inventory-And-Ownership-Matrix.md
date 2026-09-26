@@ -4782,3 +4782,359 @@ The quoted text is authoritative for what is superseded.
   six rows, the two rendering rows, the SearchVectorMigration row and the
   three result-shape rows; five on TASK-551-05-L01 and one on
   TASK-551-05-L03 (**V7-3**, **V7-7**).
+
+### Amendment v8 (2026-09-26)
+
+Recorded at HEAD `74fe8f4e` from the two v7 audit results (A: 0 HIGH,
+1 MEDIUM, 5 LOW, 1 INFO; B: 1 HIGH, 1 MEDIUM, 4 LOW, 2 INFO), the parts of
+the two 05-L01 second-note audit results that route to this file, and the
+orchestrator decisions Addendum E1 (d), E2, E3 and E4 of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+The dispositions decide; this section records them as contract text and
+does not re-decide them. Every anchor into this file, into source and into
+committed task text was re-read at this tree. Four owner texts this section
+depends on are being written in this round or are pending: the 05-L01 third
+note (Addendum E3), the 05-L03 dated note (Addendum E2), the 02-L02 R11 item
+`lane-worker-dedicated-schema-binding` (Addendum E1 (a)-(c), F9) and the
+06-L02 R15 O5 item (Addendum E2, F8). They are cited by Addendum item and
+name, never by line. 05-L01 anchors below are HEAD lines of its committed
+second note, each paired with its heading, because the in-flight third note
+shifts them. The tree carried other writers' uncommitted edits to other
+task files and the untracked TASK-551-11 re-open evidence; none of them is
+part of this amendment. v8 is append-only. It supersedes v7 (and the
+earlier clauses v7 kept) only where stated, and **V8-11** quotes every
+superseded sentence with its current line. Every clause not quoted there
+stays binding. No fence byte of this file changes, and no source or test
+file changes. Environment facts below are key-name counts only; no
+environment value was read, printed or recorded for this amendment.
+
+#### V8-1 Label anchors by heading (E4; audit A L, audit B INFO)
+
+The v7 label rule (C2) stays: "06-L03 A8 (2026-09-26)" is the only label
+this file uses for that section. It is anchored by heading from now on: the
+section is 06-L03 `### A8 — 2026-09-26` (`TASK-551-06-L03…md:1625` at this
+tree), and its `:156` item is `#### A8-g` (`:1994` at this tree). When a
+line number and a heading disagree, the heading decides.
+
+#### V8-2 `DATABASE_*` keys per process (E4; audit A L, audit B M)
+
+The **V7-1** "Use" bullet is restated per process. The **V7-6** forms and
+the **V7-8** table were already correct; the prose now matches them.
+
+- **FINAL lane-runner run** (**V7-6** form): both `DATABASE_URL` and
+  `DATABASE_DIRECT_URL` are `"$ROOT_DIRECT_URL"`.
+- **B, C and perf attribution re-runs** (**V7-6**): `DATABASE_DIRECT_URL`
+  is `"$ROOT_DIRECT_URL"`, and `DATABASE_URL` is `"$WORKER_URL"`, built
+  from `"$ROOT_DIRECT_URL"` with the same `<i>` that the form sets as
+  `BUN_TEST_WORKER_INDEX`.
+- **`a` attribution re-runs**: neither key is set (pure lane,
+  `--env-file=/dev/null`).
+- Nowhere else. The attribution worker URL is still built from the same
+  variable, and `<ROOT_DATABASE_URL>` still appears in no form. 10-L02
+  mirrors this wording through its own writer (Addendum E5); this file does
+  not edit it.
+
+#### V8-3 Owner item `lane-worker-dedicated-schema-binding` (E1 (d); audit B HIGH)
+
+- **Fact (from source; not executed).** Every B, C and perf lane worker
+  gets `DATABASE_URL` = the worker URL (an `options` query that sets
+  `search_path` to `bun_worker_<i>`, `scripts/bun-lane-worker-url.ts:61-66`,
+  `:155`) and a bare `DATABASE_DIRECT_URL` (`:156`). Under 02-L02 R7.2,
+  `off + primary` resolves the dedicated target to `DATABASE_DIRECT_URL`
+  when it is set (`TASK-551-02-L02…md:2016`, `### R7.2`). So once 02-L02 R7
+  has landed, a lane worker's dedicated sessions bind to the `public`
+  schema of the target while the suite's fixtures sit in `bun_worker_<i>`.
+  The 02-L02 R10.7 URL-query guard rejects a target URL whose query holds
+  `options`, so the worker URL cannot simply be passed through.
+- **Owner and decision (Addendum E1 (a)-(c); recorded, not re-decided).**
+  Owner TASK-551-02-L02, item R11 `lane-worker-dedicated-schema-binding`
+  (pending): (a) R10.7 gains one named exception, a query whose only key is
+  `options` with the exact value `-csearch_path=bun_worker_<n>`
+  (regex-pinned), accepted only when `BUN_TEST_WORKER_INDEX` is set and
+  equals `<n>`; (b) the R7.2 `off + primary` dedicated target takes the
+  worker `DATABASE_URL`, not `DATABASE_DIRECT_URL`, when
+  `BUN_TEST_WORKER_INDEX` is set, so dedicated and control sessions bind to
+  `bun_worker_<n>`; (c) an F-leg pins both.
+- **Hazard (E1 (d)).** From the landing of 02-L02 R7 until the item lands,
+  a lane run on a target executes production pruners
+  (`withDedicatedDatabaseSession`,
+  `core/services/maintenance/retentionJobService.ts:859`) against that
+  target's `public` schema. This includes the interim `bun run test`,
+  `bun run test:bun` and `bun run test:full` runs that **V6-1** does not
+  forbid. FINAL cannot reach its lane-runner run in that state (**V8-8**
+  step 8a).
+- The **V7-6** attribution forms already satisfy (a) once it lands:
+  `"$WORKER_URL"` is built with the same `<i>` that the form sets as
+  `BUN_TEST_WORKER_INDEX`.
+- The item joins `handoffs[]` (**V8-10**). It is a FINAL precondition only,
+  not a precondition of the 01-L01 initial regeneration.
+
+#### V8-4 V5-5 owner item (a): closing condition, O3, O5 (E2; audit A M; 05-L01 audit B L)
+
+- **Closing condition.** **V5-5** owner item (a) closes only when all of
+  these have landed:
+  1. 05-L01 R2 (first note), R2.2 and R2.3: the five worker branches of the
+     05-L01 handoff row "**V5-5 (a)** owner item, 05-L01 share"
+     (`TASK-551-05-L01…md:1866` at HEAD, under
+     `### Handoff rows for 01-L01 v7`): the catalog and parity online-index
+     legs, the outbox plan leg, the concurrency revision race and the
+     concurrency apply-owner race;
+  2. the 05-L03 worker-schema branch for **O3**
+     (`tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`,
+     the SQLSTATE 23505 legs at `:1979`, `:2016` and `:2062`), in the 05-L03
+     dated note of this round (Addendum E2);
+  3. the 06-L02 worker-schema branch for **O5**
+     (`tests/integration/server/task551RevisionConcurrency.test.ts:634`), in
+     06-L02 R15 (Addendum E2, F8; pending).
+- 05-L01 R2 alone no longer answers (a) (quote in **V8-11**). The condition
+  is checked at **V8-8** step 7.
+- **Proof.** The FINAL lane-runner run proves the five 05-L01 branches and
+  the O3 branch: the suites that carry them are class B (**V5-2**) and run
+  in the lane. The O5 leg belongs to a class-A suite (**V5-2**:
+  `task551RevisionConcurrency`, `M-fixture-lock`) whose DB legs skip in the
+  lane (**V8-7** class-A row).
+  For O5, step 7 checks that the 06-L02 R15 edit has landed; the lane run
+  does not prove it.
+- **Scratch manifest (V7-6), restated.** Without the first part of the
+  union, the suites the initial regeneration committed would be missing
+  from FINAL. Among them are `task551IndexAndConstraintCatalog`,
+  `task551SchemaMigrationParity`, `task551CacheInvalidationOutboxSchema`
+  and `task551ConcurrencyConstraints`, whose 05-L01 worker branches (R2,
+  R2.2, R2.3) this run first proves; `task551SolutionKitRollbackAuthoritySchema`,
+  whose O3 branch it proves; and the **V5-5** (c) contention suites.
+
+#### V8-5 Blocked rows: clearing per the 05-L01 handoff table; concurrency row added (E2, E3; audit A L; 05-L01 audits A HIGH, B HIGH)
+
+**Clearing rule (replaces the V7-3 clearing sentence and the V7-4 Defect-1
+R3 citation).** A 05-L01-owned blocked row clears only per its 05-L01
+handoff row (`TASK-551-05-L01…md:1850-1866` at HEAD, under
+`### Handoff rows for 01-L01 v7`, as restated by the 05-L01 third note,
+Addendum E3). Every item that row lists must have landed in the one 05-L01
+test-only edit; only then does the suite's part-1 row decide. That row must
+be a `pass` with 0 failed and 0 skipped tests, under the suite's map, after
+green **V5-4** checks, check 4 included (**V8-6**). A no-fallback `rowsOf`
+alone never clears a row. For R1 item 1 the done-check is 14 read sites:
+13 single-line grep matches plus the multi-line catalog cast (E3).
+
+| Suite | Clears when (every listed item landed, then the part-1 row passes) |
+| --- | --- |
+| `tests/integration/server/task551SearchVectorMigration.test.ts` | R3.1-R3.5 (`TASK-551-05-L01…md:1816` at HEAD, `### R3 — SearchVector, restated in full`), with the third-note helper form `deparsedExpected(schema, table, bytes)`: `schema` from `sessionSchema()`, every statement on the `tx` handle (E3). The v6 rule that part-1 evidence alone never clears this row stays. |
+| `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts` | R1 items 1 and 10 and R2.2, with the set-based outbox plan-leg seeding (`insert … select from generate_series`) of the third note (E3); map `M-ambient`. |
+| `tests/perf/database-index-write-overhead.test.ts` | R1 items 1 and 11, plus the third-note perf items (E3): each member's `ON "<table>"` rewritten to its paired shadow table; `insertRow`/`updateStatement` parameterised by the suffix table; the bare suffix passed to `relationBytes`. The p95 single-sample ceiling is a recorded limitation, not a clearing item. Map `M-ambient`. |
+| `tests/integration/server/task551ConcurrencyConstraints.test.ts` (row added below) | the third-note R2.3 items (E3); map `M-ambient`. |
+| `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`, `tests/integration/server/task551SchemaMigrationParity.test.ts` (**V5-6** rendering rows) | the items of their own 05-L01 handoff rows; map `M-ambient`. |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (TASK-551-05-L03) | the items of the 05-L03 dated note (Addendum E2): the no-fallback `rowsOf` (B1), the O3 worker-schema branch, and the FK-trap item that the suite documents at `:2028`; map `M-fixture`. |
+
+**Blocked list: added row (to the **V5-6** table).**
+
+| Suite | Owner | Reason (verified from source; not executed) | Handoff reason |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551ConcurrencyConstraints.test.ts` | TASK-551-05-L01 (`allowlist`, `TASK-551-05-L01…md:1062` at HEAD) | The legs fail from source in every schema, `public` included. The revision race interpolates the parent UUID unquoted (`:212-213`) into `sql.raw` (`:218`), so no probe commits; for `detail_page_revisions` it also writes a `data` column (`:209`) that the table does not have (`core/db/tables/pages.ts:171`, `document`). In the apply-owner race every probe shares one `source_run_id`, the primary key (`core/db/migrations/0081_task551_search_indexes_constraints_outbox.sql:99`), and fails the composite FK (`:165`), because `package_key` is `unique("package")` (`:282`) while the seeded run has `kit_id = SCOPE` (`:160-161`). The booking exclusion leg builds hours `12 + index` for 50 probes (`:260`, `:264-265`), which are invalid from hour 24, so `toHaveLength(FAMILY_SIZE)` (`:272`) fails. Delivered by the 05-L01 third-note R2.3 items (E3). | `catalog-concurrency-source:tests/integration/server/task551ConcurrencyConstraints.test.ts` |
+
+- **V5-2 map cell.** The row reads `M-ambient` (blocked, **V8-5**)
+  (`:3561`). Class and owner are unchanged.
+- **SolutionKit row.** The **V7-3** row stays BLOCKED until the 05-L03 note
+  items above have landed (Addendum E2). Its handoff reason string is
+  unchanged.
+- **Count and land order.** Seven blocked rows now hold the 01-L01 initial
+  regeneration: the two rendering rows, the SearchVectorMigration row, the
+  three result-shape rows and the concurrency row. Six wait on
+  TASK-551-05-L01, in its one test-only change (the five-file R1/R2/R3 edit
+  plus the R2.3 changes to `task551ConcurrencyConstraints.test.ts`, which
+  lands before 01-L01 initial **V5-9** step 4,
+  `TASK-551-05-L01…md:1873-1875` at HEAD, under
+  `**Land order (restated).**`). One waits on TASK-551-05-L03. The O2 split
+  (the file names Addendum E3 approves) is a later 05-L01 change and holds
+  no 01-L01 row. The class-E rows of **V5-6** stay on the list and hold
+  10-L01, not 01-L01 (**V5-6**, kept).
+
+#### V8-6 V5-4 check 4: part-1 session environment (E3; 05-L01 audit B M)
+
+**V5-4** gains a fourth check. It runs in the same `READ ONLY` transaction
+and at the same times as checks 1-3, in a session opened with the part-1
+`DATABASE_URL` (`<URL3>`, **V5-2**) and no other connection key, so that it
+sees the `search_path` part 1 sees. It records booleans only.
+
+4. **Part-1 session environment.** `pg_opclass_is_visible(oid)` is `true`
+   for the `gin_trgm_ops` row of `pg_opclass` (no row counts as `false`),
+   and `current_schema()` is `public`. Either one `false` is an environment
+   STOP, not a suite verdict; the STOP raises an owner item.
+
+This consumes the ninth 05-L01 handoff row (the F3 environment
+precondition, written by the 05-L01 third note, Addendum E3). It is
+consumed at the 01-L01 initial regeneration before the **V5-1** part-1 runs
+(**V5-9** step 3) and again at FINAL step 3. `handoffs[]` records it under
+the reason string that note pins, copied verbatim (**V8-10**).
+
+#### V8-7 Interim red set (restated in full; replaces the V7-4 table)
+
+The **V7-4** lead-in stays: these are predictions from source, not
+receipts; a lane run between the initial regeneration and FINAL is expected
+to show exactly the rows of this table, and none of them may be read as a
+regression except where the table says a red is a finding. Rows marked
+"(V7-4, unchanged)" carry their **V7-4** cells unchanged; only the marker
+(and, for the result-shape row, the **V8-5** pointer) is added.
+
+| Suite | Lane prediction | Cause (anchor) | Clears when |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551SearchVectorMigration.test.ts` | absent from the manifest (BLOCKED) | Defect 1 (`:204-210`); `.rows` reads (`:209`, `:221`, `:238`, `:247`) | **V8-5** (R3.1-R3.5 landed, then part 1 passes) |
+| `tests/integration/server/task551RetentionJobService.test.ts` | red until 06-L03 A8 lands; from the landing of 02-L02 R7, red in every lane run until `lane-worker-dedicated-schema-binding` lands; afterwards red only under worker contention | Defect 2 (`:156`); its dedicated sessions bind to the target's `public`, not to `bun_worker_<i>` (**V8-3**; `scripts/bun-lane-worker-url.ts:156`); its `pg_stat_activity` baseline (`:148-149`) and lock 551063/3 (`:128-131`) race `retentionScheduler` in a concurrent worker | 06-L03 A8 (Addendum A1; per R13-4 (i) text) and 02-L02 R11 `lane-worker-dedicated-schema-binding` (Addendum E1); the contention part is **V5-5** owner item (c), a FINAL precondition (**V8-8** step 7) |
+| `tests/integration/runtime/preRetentionVacuum.test.ts` (06-L03 A8 `allowlist` addition, Addendum A2; not on disk at this tree; joins by the **V5-2** rule, owner TASK-551-06-L03) | once joined: from the landing of 02-L02 R7, red in every lane run until `lane-worker-dedicated-schema-binding` lands; afterwards red only under worker contention | its pre-step runs through the dedicated seam, whose sessions bind to the target's `public` (**V8-3**) | 02-L02 R11 `lane-worker-dedicated-schema-binding` (Addendum E1); the contention part is **V5-5** owner item (c) |
+| `tests/integration/runtime/retentionScheduler.test.ts` | red only under worker contention | its `pg_locks` read of lock 551063/3 (`:77-81`) races the job-service suite | **V5-5** owner item (c); after 06-L03 A1-b these legs move to the real-db split (**V6-4**) (V7-4, unchanged) |
+| `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`, `tests/integration/server/task551SchemaMigrationParity.test.ts` | absent while the **V5-6** rows stand; after joining (05-L01 R1 + R2 landed) expected green in worker schemas; a red is a finding | 05-L01 R2 pins zero manifest members in a `bun_worker_*` session schema instead of expecting them (`TASK-551-05-L01…md:1383-1392`; "neither suite is part of the D6 (i) interim lane red set", `:1429-1430`) | not in the red set once joined (V7-4, unchanged) |
+| `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`, `tests/perf/database-index-write-overhead.test.ts`, `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` | absent from the manifest (BLOCKED) | result shape (**V7-3**) | **V7-3** (V7-4, unchanged; clearing per **V8-5**) |
+| `tests/integration/server/task551ConcurrencyConstraints.test.ts` | absent from the manifest (BLOCKED) | source defects (**V8-5**) | **V8-5** |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`, after joining | expected green in worker schemas through its O3 branch; a red is a finding | before O3, its 23505 legs (`:1979`, `:2016`, `:2062`) expect online unique members that no `bun_worker_*` schema has (Addendum E2) | not in the red set once joined |
+| every class-A suite of **V5-2** and **V6-5** | skip, not red | the lane sets no `TASK551_FIXTURE_*` key | by design; the DB proof is part 1 (V7-4, unchanged) |
+
+The `preRetentionVacuum` row states the prediction for its DB legs as
+Addendum E1 (d) gives it; the suite's gating class is fixed by the
+classifier when it joins (**V3-4**).
+
+#### V8-8 FINAL order (replaces the V7-7 FINAL list; E1 (d), E2; audit A M, audit B H/L)
+
+- **01-L01 initial.** The **V5-9** order stands (steps 1-8). Step 3
+  includes **V5-4** check 4 (**V8-6**). Step 6 covers the **V5-6**,
+  **V6-5**, **V7-3** and **V8-5** blocked rows.
+- **01-L01 FINAL** runs these steps, in this order:
+
+| Step | Action |
+| --- | --- |
+| 1 | source and test edits |
+| 2 | fast gates |
+| 3 | **V5-4** checks, check 4 included (**V8-6**) |
+| 4 | **V5-1** part-1 runs (sequential, **V5-3** with the **V6-4** rows) |
+| 5 | map-free run |
+| 6 | STOP if any **V5-6**, **V6-5**, **V7-3** or **V8-5** blocked row remains |
+| 7 | **V5-5** owner items decided and landed, else STOP: (c), the **V5-3** suites serialized into one worker or a pid/`application_name` filter; and (a), as **V8-4** closes it (05-L01 R2, R2.2 and R2.3; 05-L03 O3; 06-L02 O5) |
+| 8 | **V2-6** step 1: write the scratch manifest `.tmp/task551-reopen-v2/precondition-manifest.json` as the **V7-6** union |
+| 8a | `lane-worker-dedicated-schema-binding` (**V8-3**; 02-L02 R11) decided and landed, else STOP |
+| 9 | the **V7-1** pre-provisioning booleans; STOP on any FALSE or undetermined value |
+| 10 | the **V7-6** key-name count, with the **V6-2** serialization and the **V7-5** exclusion in force |
+| 11 | the **V7-6** lane-runner run, then **V7-6** attribution re-runs (keys per **V8-2**) for any non-zero worker `exit`; any non-zero `exit` blocks |
+| 12 | the literal classifier command with the one-path proof |
+| 13 | airtight gates |
+
+- **Swap.** v7 steps 7 and 8 are swapped (Addendum E2), so the scratch
+  manifest is written only after the owner items that can change
+  classification have landed. The inserted step is numbered 8a so that
+  steps 9-13 keep their v7 numbers; the parent and 10-L02 mirrors cite the
+  booleans as "FINAL step 9 of V7-7" (Addendum E5), which stays exact.
+- **Resume.** A STOP at step 6, 7, 8a or 9 resumes FINAL at step 1: the
+  landing edit changes the tree that steps 1-5 proved, and step 8 is then
+  re-run after it.
+- FINAL does not STOP on a missing owner decision about the worker database
+  (**V6-2**, **V7-1**). It STOPs at step 7 while owner item (a) or (c) has
+  not landed, at step 8a while `lane-worker-dedicated-schema-binding` has
+  not landed, and at step 9 on any failing boolean.
+
+#### V8-9 `.env` keys that reach workers; `package.json` anchors (E4; audit A INFO, audit B L)
+
+- **Keys that reach workers.** Every worktree `.env` key name that the spawn
+  env does not set reaches the B, C and perf workers and their attribution
+  re-runs, because those processes run without `--env-file=/dev/null` and
+  Bun fills only unset keys from `.env`. They are recorded by key name only.
+  At this tree the worktree `.env` has 22 key names; the spawn env sets 3 of
+  them (`DATABASE_URL`, `DATABASE_DIRECT_URL`, `DB_POOL_MAX`), so 19 reach
+  workers, among others `DATABASE_URL2`, `DATABASE_URL3`, `TMPDIR`,
+  `PAGINATION_CURSOR_SECRET` and the two `PII_*` keys. Worker `a` and its
+  attribution receive none (`--env-file=/dev/null`). The **V7-6** STOP list
+  and its counts are unchanged.
+- **`package.json` anchors.** `test` is `package.json:28`, `test:full` is
+  `:29` and `test:bun` is `:30`. `test` and `test:full` reach
+  `scripts/run-bun-parallel.ts --lane all` through `test:bun`. The **V6-1**
+  scope sentence and the **V7-5** exclusion list read these anchors per
+  script (quotes in **V8-11**).
+
+#### V8-10 Receipt addendum (additive)
+
+- `preRegenerationLaneRun[].blocked` also covers the **V8-5** row:
+  `{ taskId: "TASK-551-05-L01", reason: "catalog-concurrency-source:tests/integration/server/task551ConcurrencyConstraints.test.ts" }`.
+- `handoffs[]` gains that item; `lane-worker-dedicated-schema-binding`
+  (TASK-551-02-L02, **V8-3**); the **V5-5** (a) parts O3 (TASK-551-05-L03)
+  and O5 (TASK-551-06-L02), by owner and Addendum item name (**V8-4**); and
+  the ninth 05-L01 handoff row (**V8-6**) under its verbatim reason string.
+- `preRunChecks` gains `trgmOpclassVisible` and `sessionSchemaIsPublic`
+  (**V8-6**), values `true`/`false` only.
+- `laneRunnerRun.ownerDecisionDate` stays `2026-09-24`, and the entry still
+  never names the database.
+
+The entry still holds no environment values, URLs, DB identities, SQL, or
+fixture data.
+
+#### V8-11 Superseded sentences (v8)
+
+Quoted verbatim with their current lines (line breaks folded to spaces).
+The quoted text is authoritative for what is superseded.
+
+**v7 sentences.**
+
+- `:4301-4303` (v7 label rule): "(at this tree it starts at
+  `TASK-551-06-L03…md:1625` under its pre-relabel heading; its `:156` item
+  is at `:1992`)". Replaced by the **V8-1** heading anchors.
+- `:4329-4331` (**V7-1** Use): "Both `DATABASE_URL` and
+  `DATABASE_DIRECT_URL` are set to `"$ROOT_DIRECT_URL"` (quoted) in the
+  **V7-6** run and in its **V7-6** attribution re-runs, and nowhere else."
+  Replaced by the **V8-2** per-process bullets.
+- `:4382-4385` (**V7-3**): "Each row clears only when its owner's fix has
+  landed (a `rowsOf` that returns the array, with no fallback; the 05-L01
+  R1 item 1 form, `TASK-551-05-L01…md:1314`, `:1356`) and the suite's
+  part-1 row meets the class table (**V5-6** rule)." Replaced by the
+  **V8-5** clearing rule and table.
+- `:4402-4406` (**V7-3** count): "Six blocked rows now hold the 01-L01
+  initial regeneration: the two rendering rows, the SearchVectorMigration
+  row and the three result-shape rows. Five wait on TASK-551-05-L01 (its
+  R1-R3 test-only edit, five files per Addendum B4) and one waits on
+  TASK-551-05-L03." Replaced by the **V8-5** count: seven rows, six on
+  TASK-551-05-L01 and one on TASK-551-05-L03.
+- `:4414-4416` (**V7-4** Defect 1): "The 05-L01 R3 item already covers both
+  parts (`TASK-551-05-L01…md:1438-1440`: qualify `:204-207`, read the four
+  sites through `rowsOf`)." Replaced by: the 05-L01 R3.1-R3.5 items cover
+  both parts (**V8-5** table).
+- `:4416-4417` (**V7-4** Defect 1): "The row clears only when that R3 edit
+  has landed and the part-1 row meets the class table." Replaced by the
+  **V8-5** SearchVectorMigration row. The next sentence (the v6 rule) stays.
+- `:4428` (**V7-4** row): "| `tests/integration/server/task551SearchVectorMigration.test.ts` | absent from the manifest (BLOCKED) | Defect 1 (`:204-210`); `.rows` reads (`:209`, `:221`, `:238`, `:247`) | the 05-L01 R3 edit lands and part 1 passes (**V6-5**, amended here) |".
+  Replaced by the **V8-7** row.
+- `:4429` (**V7-4** row): "| `tests/integration/server/task551RetentionJobService.test.ts` | red until 06-L03 A8 lands; afterwards red only under worker contention | Defect 2 (`:156`); its `pg_stat_activity` baseline (`:148-149`) and lock 551063/3 (`:128-131`) race `retentionScheduler` in a concurrent worker | 06-L03 A8 (Addendum A1; per R13-4 (i) text); the contention part is **V5-5** owner item (c), a FINAL precondition (**V7-7** step 8) |".
+  Replaced by the **V8-7** row and the **V8-7** `preRetentionVacuum` row
+  (Addendum E1 (d)).
+- `:4445-4447` (**V7-5**): "no `bun run test`, `bun run test:bun` or
+  `bun run test:full` (`package.json:28`, `:29`, `:30`)". Refined by
+  **V8-9**: `test` `:28`, `test:full` `:29`, `test:bun` `:30`. The rest of
+  the sentence stays.
+- `:4464-4468` (**V7-6** scratch manifest): "Without the first part, the
+  suites the initial regeneration committed (among them
+  `task551IndexAndConstraintCatalog` and `task551SchemaMigrationParity`,
+  whose worker branch 05-L01 R2 first proves in this run,
+  `TASK-551-05-L01…md:1426-1428`, and the **V5-5** (c) contention suites)
+  would be missing from FINAL." Replaced by the **V8-4** restatement.
+- `:4491-4493` (**V7-6** key-name count): "Keys that reach workers from
+  `.env` (at this tree `DATABASE_URL3`, `PAGINATION_CURSOR_SECRET` and the
+  two `PII_*` keys) are recorded by key name only." Replaced by the **V8-9**
+  bullet (19 key names at this tree, among others). The rest of the
+  paragraph stays.
+- `:4560-4561` (**V7-7** initial): "Step 6 covers the **V6-5** and
+  **V7-3** blocked rows." Replaced by the **V8-8** initial bullet.
+- `:4569-4576` (**V7-7** FINAL steps 7-8): "7. **V2-6** step 1: write the
+  scratch manifest `.tmp/task551-reopen-v2/precondition-manifest.json` as
+  the **V7-6** union; 8. **V5-5** owner item (c) decided and landed (the
+  **V5-3** suites serialized into one worker, or a pid/`application_name`
+  filter), else STOP. **V5-5** owner item (a) is answered by 05-L01 R2
+  (`TASK-551-05-L01…md:1383-1392`), which lands with the R1 edit and so
+  has landed by step 6; this run proves its worker branch;". Replaced by
+  **V8-8** steps 7, 8 and 8a. The other v7 FINAL steps are carried into
+  the **V8-8** table with their numbers (step 6 and step 11 as amended
+  there).
+- `:4587-4588` (**V7-7** closing): "It STOPs at step 8 while owner item (c)
+  has not landed, and at step 9 on any failing boolean." Replaced by the
+  **V8-8** closing bullet. The first sentence of the paragraph stays.
+
+**v6 sentence.**
+
+- `:3871-3874` (**V6-1** scope): "`bun run test`, `bun run test:bun` and
+  `bun run test:full` source `.env` and run
+  `scripts/run-bun-parallel.ts --lane all` over that manifest
+  (`package.json:28`, `:29`, `:30`)." Refined by **V8-9**: `test` `:28`,
+  `test:full` `:29` and `test:bun` `:30`; `test` and `test:full` reach the
+  runner through `test:bun`. The rest of the paragraph stays.

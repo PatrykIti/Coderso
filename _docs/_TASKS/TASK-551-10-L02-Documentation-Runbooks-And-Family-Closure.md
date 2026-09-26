@@ -1873,3 +1873,33 @@ superseded; every other sentence of the section above stays binding.
 2. `:1815-1817` "The orchestrator sets `DATABASE_DIRECT_URL` to that target for the FINAL run only, in the closed `env -i` form; the `bun_worker_*` worker schemas are additive." → the **Worker database (C1)** bullet above; the `bun_worker_*` worker schemas stay additive.
 3. `:1820-1825` "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in 01-L01 v6: `task551SearchVectorMigration` stays a BLOCKED row with an owner item for its leaf until its `pg_class` lookup is schema-qualified, and `task551RetentionJobService` is fixed by 06-L02 R13 (D5) and joins normally." → "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in 01-L01 v6 as amended by v7 (the V6-1 table and the V6-5/V6-8 blocked rows, per C3 (b)): six BLOCKED rows, namely the two catalog rendering rows, `task551SearchVectorMigration` and the three `result-shape:<path>` rows, each with the owner item named there; `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins normally."
 4. `:1833-1835` "The FINAL lane-runner run on the `DATABASE_URL` target is serialized with every runtime smoke on that host." → "While the FINAL lane-runner run on the direct endpoint of the `DATABASE_URL` target and its attribution re-runs are in progress, no other `run-bun-parallel.ts`, `bun run test`/`test:bun`/`test:full`, `bun-lane-provision.ts`, dev host, runtime smoke or DB gate may use that target (C3 (e), C4)."
+
+### Amendment (2026-09-26, fix note 2): attribution URLs, V7-4 table, blocked vs red
+
+Source: Addendum E (E5 for 10-L02, citing E1 (d) and E4) of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+Append-only; the envelope, json fence, allowlist, dependencies and **Exact
+Validation Commands** are unchanged. Only the four passages quoted below are
+superseded; every other sentence of both sections above stays binding.
+
+- **Attribution URLs (E4).** In the 01-L01 FINAL lane-runner run both
+  `DATABASE_URL` and `DATABASE_DIRECT_URL` are `"$ROOT_DIRECT_URL"`; in its
+  B/C/perf attribution re-runs `DATABASE_DIRECT_URL` is `"$ROOT_DIRECT_URL"`
+  and `DATABASE_URL` is `"$WORKER_URL"` built from it; the `a` re-runs set
+  neither key. Values are quoted shell variables and never printed.
+- **Worker schema binding (E1 (d)).** Until the 02-L02 owner item
+  `lane-worker-dedicated-schema-binding` lands, a lane run on the target
+  executes production pruners against its `public` schema: every lane worker
+  keeps a bare `DATABASE_DIRECT_URL` (`scripts/bun-lane-worker-url.ts:156`),
+  which the 02-L02 R7.2 `off + primary` dedicated target dials. 01-L01 FINAL
+  STOPs at the new **V7-7** step that 01-L01 v8 inserts between steps 8 and 9
+  ("`lane-worker-dedicated-schema-binding` decided and landed, else STOP").
+  This leaf never runs a lane form; it consumes that STOP only through its
+  `TASK-551-10-L01:single` dependency.
+
+#### Superseded sentences (quoted; superseded from this date)
+
+1. `:1807-1808` "01-L01 v6 owns the per-suite detail; the closure writer re-reads it there, never from this summary." → "01-L01 v6 as amended by v7/v8 owns the per-suite detail; the closure writer re-reads it there, never from this summary."
+2. `:1861-1866` (the E5 `:1862-1865` passage) "The orchestrator sets BOTH `DATABASE_URL` and `DATABASE_DIRECT_URL` to it (quoted shell variables, values never printed) for the FINAL run and its attribution re-runs only, in the closed `env -i` form, after the 01-L01 v7 pre-provisioning boolean check (same host, same database, port not 6432, not `coderso02`; STOP on any FALSE)." → "The orchestrator sets the keys of the **Attribution URLs (E4)** bullet of fix note 2 for the FINAL run and its attribution re-runs only, in the closed `env -i` form, after the 01-L01 **V7-1** pre-provisioning boolean check (same host, same database, port not 6432, not `coderso02`; STOP on any FALSE)."
+3. `:1874` (fix note replacement 3) "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in 01-L01 v6 as amended by v7 (the V6-1 table and the V6-5/V6-8 blocked rows, per C3 (b)): six BLOCKED rows, namely the two catalog rendering rows, `task551SearchVectorMigration` and the three `result-shape:<path>` rows, each with the owner item named there; `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins normally." → "Until the named fixes land, an interim `bun run test` red set is expected and is recorded per suite in the 01-L01 **V7-4** table (as amended by v8): six suites are BLOCKED (absent from the manifest, so never red; **V5-6**/**V6-5**/**V7-3** rows), and the red rows are those the **V7-4** table names; any other red is a finding. `task551RetentionJobService` is fixed by 06-L03 A8 (2026-09-26; Addendum A1) and joins the manifest; its lane prediction is its **V7-4** row."
+4. `:1874` (fix note quote-3 anchor) "`:1820-1825`" → "`:1821-1825`" (the quoted sentence starts on `:1821`; its text is verbatim and unchanged).

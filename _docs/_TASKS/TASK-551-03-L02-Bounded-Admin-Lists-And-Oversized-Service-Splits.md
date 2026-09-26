@@ -9804,3 +9804,723 @@ parsed fence; line numbers are file lines).
 No NEW allowlisted path is needed. One JSON fence. **Size (R6-06 stop rule).**
 This file is 707,757 bytes after the Round-8 append (`wc -c`), below the
 1,048,576-byte cap with the 200-byte closure headroom.
+
+## Dated Contract Corrections — 2026-09-26 (Round 9: posts patch marker drop, detail-pages event-key clear, media-library pin, INITIAL capture dependencies, own-emit epoch wording, slot-bearing families; append-only)
+
+Source:
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round9-dispositions.md`
+(R9-01..R9-13 over the Round-8 auditors S1, S2-A, S2-B, S3-A and S3-B;
+audited HEAD `74fe8f4ea4324a4ef3a04a610983779c9649632e`, with Round 8
+committed; the only untracked paths are the TASK-551-11 re-open evidence under
+`_docs/_workflows/_smoke/task-551/11-reopen/` and orchestrator evidence, never
+this file). This section applies R9-01..R9-12. R9-13 corrects the
+orchestrator's mandate only (the module is
+`core/admin/services/cachePolicy.ts`, not `core/admin/utils/`, and the audited
+HEAD is `74fe8f4e`); it changes no contract text. **This section wins** over
+every earlier part where they differ. No in-place edit: the fence
+(`:1441-2172`), "Validation Commands" and all earlier text stay
+byte-identical, and there is no envelope delta. The section is appended after
+`contract :9806`, so no citation shifts. Anchors were re-read on 2026-09-26 at
+`74fe8f4e` (the symbol stays authoritative wherever a line drifts). Every
+sentence this round supersedes is quoted verbatim under "Superseded sentences
+(Round 9)" (text authoritative; a hard line wrap inside a quote is rendered as
+one space). Everything not quoted there stays binding.
+
+### R9-01 — A posts patch drops the first-page marker; no other client patches a null slot into existence (MEDIUM; S2-A; INFO S2-B)
+
+**Finding (verified).** C9 v2 `upsertCachedPost` (`:4011-4025`) reads the
+default slot. When `postsListCache.read()` is `null`, it synthesizes `base = {
+v: 1, filters: DEFAULT_POST_LIST_FILTERS, items: [], nextCursor: null,
+hasMore: false }` (`:4014-4016`) and writes the slot (`:4021`). The read is
+`null` once the list TTL has passed: `createMemoryBackedStorageCache` drops a
+memory entry older than `ttlMs` and reads Storage through the same freshness
+check (`core/admin/utils/storageCache.ts:130-150`). Only `primePostsFirstPage`
+drops the marker (R8-02 rule (1), `:8832-8833`), and the first-page hit path
+(`:7815`) serves `getCachedPosts(filters)` whenever the marker equals
+`postsInvalidationEpoch`. HEAD `getPostCached` (`postsClient.ts:436-458`)
+calls `upsertCachedPost` and broadcasts nothing. So a detail read after the
+TTL writes a one-row page with `hasMore: false` under a still-valid marker,
+and the next non-forced `readPostsListPage()` serves it on the network path.
+That contradicts the Round-8 security row (`:9711-9713`).
+
+The other clients carry the same "patch into nothing" idiom at HEAD:
+`pagesClient.ts:161` (`readPagesCache() ?? []`), `formsClient.ts:229`
+(`upsertCachedFormSummary`, also reached by the detail read at `:242`),
+`bookingClient.ts:257`, `:266`, `:275` (`upsertResource`, `upsertService`,
+`upsertReservation`) and `:579` (`createBookingBlackout`), and
+`entriesClient.ts:321` (`mergeSummaryIntoCurrentList`). `mediaClient.ts:122`
+and `detailPagesClient.ts:150-151` already return early on a missing list.
+
+**Rule.**
+
+- **(1b) Posts patches drop the default marker.** Every slot write by
+  `upsertCachedPost` or `removeCachedPost` first runs
+  `postFirstPageEpochs.delete(postFirstPageMarkerKey(DEFAULT_POST_LIST_FILTERS))`
+  and then `postsListCache.write(...)`. The drop is unconditional: it runs for
+  a synthesized base and for a stored one alike. That simpler form costs at
+  most one extra network read on the next non-forced default first-page read.
+  A path that writes no slot (a tombstoned upsert, a remove with no stored
+  slot) drops nothing.
+- These patches are NOT installs for rule (1). They keep the C9 v2 direct write
+  (`:4021`) and never call `primePostsFirstPage`. They keep the TASK-554
+  precondition that a detail upsert creates or patches the default-filter
+  envelope (`:4053-4054`), so the synthesis itself stays. Only the default key
+  is dropped, because only the default slot is written. `patchMemoryPages`
+  stays replace-only (`:4022`) and moves no marker.
+- **R8-02's marker assertion** (the sentence quoted below) now reads: a
+  `postFirstPageEpochs` entry for key K asserts that the TASK-554 read at K was
+  installed by a `readPostsListPage` first-page completion classified `page`
+  under the current `postsInvalidationEpoch`, and that since then nothing has
+  installed at K and, for the default key, no patch has written the persisted
+  slot.
+- **Every other slot-bearing client** (pages; entries-type per slug and
+  `entriesAllList`; the forms list; media; booking ×4; detail pages, global
+  and per content type; R9-06): a patch (merge, upsert, prepend, status patch
+  or remove) whose persisted default slot reads `null` writes NOTHING to the
+  persisted slot. `null` means missing, expired, or a legacy shape that
+  `isPersistedFirstPage` rejects. The patch then touches only the client's
+  memory pages, replace only and never inserting, exactly like the posts
+  `patchMemoryPages` (`:4022`). An existing versioned slot is patched as at
+  HEAD, including a prepend on create where HEAD prepends. Every HEAD `?? []`
+  base listed above is retired. Posts is the only client whose patch may
+  create the slot (the TASK-554 precondition), and (1b) keeps that slot off
+  the network path.
+- **C9 v2 / C11 / C12 patch sentences.** A grep of this file at `74fe8f4e` for
+  patch wording (`merge`, `upsert`, `prepend`, `unshift`, `patch`) finds a
+  slot synthesis only for posts (C9 v2 `:4014-4016`, R3-17 "Posts prepend"
+  `:5432-5435`, R8-03 `:8889`). All of these stand. C11 (`:2819-2880`) and C12
+  (`:2882-2932`) contain no patch sentence. No sentence synthesizes a slot from
+  `null` for another client, so nothing beyond the R8-03 sentence below is
+  quoted. The blackouts row (`:434`, "never synthesize a full list") already
+  agrees with this rule.
+
+```ts
+// core/admin/services/postsClient.ts (R9-01; amends C9 v2 upsertCachedPost/removeCachedPost; everything else in them stands)
+const dropDefaultPostFirstPageMarker = (): void => {
+  postFirstPageEpochs.delete(postFirstPageMarkerKey(DEFAULT_POST_LIST_FILTERS)); // === the readPostsListPage key for (DEFAULT, null)
+};
+const upsertCachedPost = (post: PostListItem | PostDetail) => {
+  if (postDetailTombstones.has(post.id)) return false;             // no slot write; marker untouched
+  invalidatedPostListRows.delete(post.id);
+  const stored = postsListCache.read();                            // null after the list TTL
+  const base = stored ?? { v: 1, filters: DEFAULT_POST_LIST_FILTERS, items: [],
+    nextCursor: null, hasMore: false };                            // C9 v2 synthesis, unchanged (TASK-554 precondition)
+  const row = toPostListItem(post);
+  const index = base.items.findIndex((item) => item.id === row.id);
+  const items = index === -1 ? [row, ...base.items]
+    : base.items.map((item, i) => (i === index ? { ...item, ...row } : item));
+  dropDefaultPostFirstPageMarker();                                // (1b): BEFORE the slot write
+  postsListCache.write({ ...base, items });                        // C9 v2 direct write (:4021); not a rule-(1) install
+  patchMemoryPages(row);                                           // replace only; moves no marker
+  /* detail cache, tombstones and recordPostListRowPublication unchanged */
+  return true;
+};
+const removeCachedPost = (id: string, options?: { invalidateListRow?: boolean }) => {
+  /* HEAD invalidatedPostListRows handling (postsClient.ts:266-267) unchanged */
+  const stored = postsListCache.read();
+  if (stored !== null) {                                           // no stored slot: no write, marker untouched
+    dropDefaultPostFirstPageMarker();                              // (1b)
+    postsListCache.write({ ...stored, items: stored.items.filter((item) => item.id !== id) });
+  }
+  /* memory pages filtered (C9 v2 :4026); detail, revision and publication paths unchanged (HEAD :270-274) */
+};
+
+// core/admin/services/pagesClient.ts (R9-01; the null-slot patch rule; the template for every slot-bearing client except posts)
+function patchPagesFirstPageSlot(patch: (items: readonly PageListItem[]) => readonly PageListItem[]): void {
+  const stored = pagesFirstPage.read();                            // PersistedFirstPage | null (missing, expired, legacy => null)
+  if (stored === null) return;                                     // null slot: install NOTHING (retires HEAD :161 `?? []`)
+  pagesFirstPage.write({ ...stored, items: patch(stored.items) }); // v, filters, nextCursor, hasMore kept
+}
+const mergeCachedPageIntoList = (page: PageListItem | PageDetail): void => {
+  const row = toPageListItem(page);                                // the C9 v2 narrowing
+  patchPagesFirstPageSlot((items) => mergeOrPrependPageRow(items, row, hasAuthorField(page))); // HEAD :163-171 semantics
+  patchPageMemoryPages(row);                                       // memory pages: replace only, never inserts
+  /* the detail cache write (HEAD :178-180) unchanged */
+};
+// updateCachedPageStatus and removeCachedPage keep their HEAD `if (current)` guards (:185, :197) over the versioned slot.
+// Entries (per slug and entriesAllList), forms, booking ×4, media and detail pages (each key) follow the same shape;
+// helper names are the writer's, and the `stored === null` early return is binding.
+```
+
+**Tests.**
+
+- **T6 (d), posts first page** (`tests/vitest/admin/task551PaginatedClients.test.ts`,
+  posts block; "posts: a detail upsert after the list TTL never serves a
+  synthesized first page"). The test fakes `Date` only
+  (`vi.useFakeTimers({ toFake: ["Date"] })`, restored in `afterEach`).
+  1. Stub `fetch`: the default list GET returns an envelope of three rows with
+     `nextCursor` non-null and `hasMore: true`; the detail GET for an id X
+     that is not among the three returns a post detail.
+  2. `readPostsListPage()` resolves `{ kind: "page" }`, which sets the marker.
+     Control: a second non-forced `readPostsListPage()` issues 0 list GETs.
+  3. `vi.setSystemTime(Date.now() + cacheTtlMs.list + 1)`. `getCachedPosts()`
+     now returns `null`.
+  4. `await getPostCached(X, { force: true })` issues exactly one detail GET.
+     `getCachedPosts()` (`"hydrate"`) then returns the synthesized page
+     `{ items: [X's row], nextCursor: null, hasMore: false }` (TASK-554
+     precondition, unchanged).
+  5. The next non-forced `readPostsListPage()` issues exactly one list GET and
+     resolves the fetched envelope (three rows, `hasMore: true`). It never
+     resolves the synthesized one-row page.
+  6. Variant with the slot present (no time advance): the upsert in step 4
+     patches the stored slot and still drops the marker, so step 5 again
+     issues exactly one list GET. That is the at-most-one-extra-fetch cost.
+  Without (1b), step 5 resolves the synthesized page with 0 list GETs, so the
+  case fails.
+- **T16 (new matrix row; "a patch into a null default slot installs
+  nothing").** Cells: pages `updatePage`; entries-type and `entriesAllList`,
+  through any own mutation whose HEAD path reaches
+  `mergeSummaryIntoCurrentList`; forms `updateForm`, plus the detail read that
+  reaches `upsertCachedFormSummary` (`formsClient.ts:242`); media
+  `updateMedia`; booking resources, services and reservations through their
+  create mutations (`upsertResource`, `upsertService`, `upsertReservation`),
+  and blackouts through `createBookingBlackout`; detail pages through an
+  update that reaches `upsertCachedDetailPage`, for both key shapes; posts
+  n/a (the TASK-554 precondition synthesizes; T6 (d)); users n/a (no slot,
+  R3-18). Each case starts with no persisted default slot, either never read
+  or read and then expired with `vi.setSystemTime(Date.now() + cacheTtlMs.list
+  + 1)`. It runs the mutation against a stubbed response and asserts: the
+  `Storage` spy records no write to the family list key; `getCached*()` for
+  the default filters returns `null`; the next non-forced default first-page
+  read issues exactly one list GET. The patched-slot pins (R8-07) cover the
+  "slot present" half, which is unchanged.
+- The R8-02 T6 (a)-(c) cases stand.
+
+### R9-02 — Detail pages: the subscription also clears the triggering key (MEDIUM; S2-A)
+
+**Finding (verified).** `detailPagesClient.ts` creates its list caches lazily:
+`getListCache` (`:103-114`) and `upsertListCache` (`:141-149`) add a
+`listCacheByKey` entry only on first use. HEAD's public clears handle a key
+that has never been read in this tab with `clearLocalCache(key)` (`:180`, and
+`:189-198` for the known keys). The R8-13 invalidate text (`:9405-9409`)
+enumerates only `listCacheByKey`. A per-content-type slot that exists only in
+Storage therefore survives a foreign `detailPagesListByContentType(ct)` event,
+and a later non-forced read serves it as fresh.
+
+**Rule.** The detail-pages subscription path is `invalidateDetailPagesList()`
+(R8-13: epoch +1, dedupe cleared, every slot in `listCacheByKey` cleared) PLUS
+the triggering event key: `listCacheByKey.get(event.key)?.clear()` when that
+key has a cache, otherwise `clearLocalCache(event.key)` (the HEAD `:180`
+idiom). Storage is never enumerated. The public clears
+`clearDetailPageListCache` and `clearDetailPagesCache` keep their HEAD bodies
+(`:176-199`) and then run the invalidate (R7-12). The R8-03 `onOwnEmit` stays
+the invalidate minus the slot clears, and it clears no event key, because an
+own emission is skipped by the subscription (R7-02).
+
+```ts
+// core/admin/services/detailPagesClient.ts (R9-02; the subscription handler; the R7-12 predicate and R8-13 invalidate stand)
+function ensureDetailPagesListSubscription(): void {                // lazy on the first page read; idempotent
+  detailPagesSubscription ??= subscribeCacheEvents((event, origin) => {
+    if (origin === "local" && detailPagesSelfEmit.isEmitting()) return; // R7-02: own emission, skipped (onOwnEmit already ran)
+    if (!event.key.startsWith(cacheKeys.detailPagesList)) return;       // R7-12 predicate; never detailPageDetail(id)
+    invalidateDetailPagesList();                                       // R8-13: epoch +1, dedupe cleared, every listCacheByKey slot cleared
+    const slot = listCacheByKey.get(event.key);
+    if (slot) slot.clear();                                           // the triggering key, when this tab created its cache
+    else clearLocalCache(event.key);                                  // Storage-only slot (HEAD :180 idiom); no Storage enumeration
+  });
+}
+```
+
+- **R8-06 (1), detail-pages cell** (restated): the test seeds the global slot
+  and the per-content-type slot for `ct` through `Storage`. The next read is
+  the GLOBAL non-forced default first-page read, served by the seeded global
+  slot with 0 `fetch` calls, and it re-subscribes. The foreign event carries
+  `cacheKeys.detailPagesListByContentType(ct)`. Afterwards
+  `getCachedDetailPages(ct)` is `null`, whether or not the client created a
+  `listCacheByKey` entry for `ct` before the event.
+- **Design note (HEAD parity; LOW; not a defect of this leaf).** A
+  per-content-type slot that exists only in Storage survives a foreign GLOBAL
+  (`detailPagesList`) event until its own key is read or cleared, exactly as
+  at HEAD.
+
+### R9-03 — The media view pin that actually changes (MEDIUM; S2-A; LOW S2-B; INFO S3-A)
+
+The R8-04 "Intended contract change" bullet (quoted below) is replaced by (a)
+and (b).
+
+(a) **No folder-event list counter exists.** At HEAD no view assertion counts
+media list GETs across a `mediaFolders` event. The only media list GET
+counters in `tests/vitest/ui/media-library*.test.tsx` are
+`media-library.test.tsx:235` and `:268` (the `"/admin/api/media"` filter), and
+neither crosses a `mediaFolders` event. The folder-event tests (their
+`mediaFolders` broadcasts are at `media-library-load-retry-wave.test.tsx:203`
+and `media-library-mutation-retry-wave.test.tsx:557`, `:613`, `:654`, `:830`)
+count folder GETs only. The new R8-04 view test ("a foreign mediaFolders
+event revalidates the media results") is therefore additive, and every folder
+GET count stays unchanged.
+
+(b) **The named intended contract change** is
+`tests/vitest/ui/media-library.test.tsx:242-273` ("MediaLibraryPage applies
+media update events from storage without fetching media"). The mechanism:
+
+1. The media client's lazy subscription is registered synchronously inside
+   the first media list read the view issues on mount. At HEAD that read is
+   `listMediaCached` in the mount refresh effect
+   (`core/admin/ui/media/MediaLibraryPage.tsx:356-358`), which precedes the
+   view's own subscription effect (`:360-366`: `:362` key filter, `:363`
+   `update` short-circuit through `applyCachedMediaRows()`, `:364` forced
+   background refresh).
+2. cacheBus delivers local handlers synchronously in insertion order: the
+   `localHandlers` Set gets `add` at `core/admin/utils/cacheBus.ts:157`, and
+   the loop runs at `:151-153`.
+3. A foreign `mediaList` `update` event therefore runs `invalidateMediaList`
+   first, which clears the slot in memory and in Storage. Then
+   `applyCachedMediaRows()` (`getCachedMediaForEvent()`, Storage first) finds
+   nothing and returns `false`, and the view performs exactly ONE forced
+   background read.
+
+The test's assertions become the following:
+
+- exactly 1 media list GET after the broadcast;
+- after flushing, the rendered rows equal the fetched page (the stub's
+  "Network update" row);
+- the "Storage update" expectation is replaced. The test may still assert
+  that the "Storage update" row the test wrote is never rendered.
+
+The fetch stub and the `writeMediaCache` seed take their C9 v2 envelope and
+versioned-slot wire forms. That is the owning-section adaptation (R8-07), not
+part of this named change. Every other assertion in the file stands.
+
+**STOP rules.** If the implementer observes the opposite handler order (the
+view's handler before the client's), it STOPs and reports to the orchestrator.
+This can happen, for example, when a C11 extraction registers the results
+subscription before the first list read. The implementer does not re-baseline
+silently. The R8-03/R8-04 STOP-and-report rule stays in force for every other
+pin.
+
+### R9-04 — INITIAL capture waits for the declared dependencies (MEDIUM; S3-A; INFO S3-B)
+
+The R8-09 state sentence and the Round-8 Handoffs orchestrator line (both
+quoted below) are replaced by this text:
+
+"R6-08 (2) no longer blocks W0. INITIAL W0 and its capture remain blocked by
+the occurrence dependency `TASK-551-09-L04:initial` (fence `:2162`) and the
+header Dependencies (`:9-11`: TASK-551-03-L01, 05-L02, 06-L03, the 09-L04
+INITIAL receipt and the 08-L03 INITIAL receipt, all `⏳ To Do` at
+`74fe8f4e`). The INITIAL capture runs once, at the INITIAL `preWaveCommit`,
+immediately before W0's first edit, after those dependencies have landed. A
+capture taken earlier is void and is not a re-capture."
+
+The R8-09 sentence "The INITIAL `preWaveCommit` is still the commit the
+orchestrator records immediately before W0's first edit, and every other W0
+precondition (C13 v3 list, R7-08 (a) as restated by R8-13) is unchanged."
+stands. The dependency gate above is in addition to it.
+
+**R8-09 receipt commands: satisfied at `74fe8f4e`** (run 2026-09-26 from the
+worktree root; re-run by this writer with the same outputs):
+
+| Command | Output at `74fe8f4e` |
+|---|---|
+| `git ls-files --error-unmatch _docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json` | prints the path; exit 0 |
+| `git log --diff-filter=A --format=%H -- _docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json` | `051e36bc9f1bead4b3fb28a1f4f6cb8d1339057a` (= sha_7) |
+| `git status --porcelain=v1 --untracked-files=all -- <the 321 allowlist paths, each a :(literal) pathspec>` | prints nothing (allowlist clean) |
+
+The five dependency statuses were read from each task file's `**Status:**`
+line at `74fe8f4e`. The W0 receipt re-runs all three commands at the INITIAL
+`preWaveCommit`. The value recorded there, not the one recorded here, is the
+capture evidence.
+
+### R9-05 — Own emissions advance the epoch: R6-01 wording and C17 v5 item 3 (MEDIUM; S2-B)
+
+R8-03 made `onOwnEmit` (the invalidate minus the persisted-slot clear) a
+second advancer of each client's `invalidationEpoch`, and R6-01 still says
+"ONLY by `invalidate`". Only the posts sentence was quoted in Round 8 (quote
+11). The R6-01 sentences at `:7031-7034` and the template comment at `:7067`
+(quoted below) now read:
+
+- `:7031-7034`: "`invalidationEpoch` is advanced by `invalidate` (public clear
+  or subscription) and by `onOwnEmit` on an own emission (the invalidate minus
+  the persisted-slot clear); `invalidate` runs from the client's public
+  `clear<Family>Cache` (mutation callers) and from the client's lazy cacheBus
+  subscription to its family keys (any origin, `local` or `remote`;
+  `core/admin/utils/cacheBus.ts:18-22`, consumed only)." The rest of
+  `:7035-7044` is unchanged.
+- `:7067`: "let pagesInvalidationEpoch = 1; // invalidationEpoch: advanced by
+  invalidatePagesList and by advancePagesListEpoch (own emission, R8-03)".
+
+The posts comment `:7782` ("advanced ONLY by invalidatePostsList") stays
+true: the posts `onOwnEmit` IS `invalidatePostsList` (R8-03). C17 v5 item 3
+is amended under "C17 v5 amendments (Round 9)" below.
+
+### R9-06 — T10 observable (1) covers only the families with a persisted slot (MEDIUM; S2-B)
+
+Observable (1) of R8-06 names "forms and submissions" and "entries ×3" (quoted
+below). Form submissions and custom-screen entries have no persisted slot.
+`core/admin/services/cachePolicy.ts:70-73` has only `formsList`,
+`formDetail`, `formActions` and `formActionRuns`. `:31-38` has
+`entriesAllList` and `entriesList(slug)`, and no custom-screen-entries list
+key. C9 v2 persists only the default first page, under the family list key
+(`:3985-3991`), and fixes no submissions or custom-screen default constant
+(`:3992-3997`).
+
+- **R8-06 (1) family list** (replaces `:9117-9118`): "(the families that own a
+  persisted default slot: pages; entries-type per slug (`entriesList(slug)`)
+  and `entriesAllList`; the forms list (`formsList`); media; booking ×4;
+  detail pages, global plus one per-content-type key)".
+- **Memory-only families.** Form submissions and custom-screen entries use
+  observable (2) only. Their (1) cell reads "n/a (memory-only; no persisted
+  slot)". The R8-06 sentence "Posts and users use (2) only." (quoted below)
+  now reads "Posts, users, form submissions and custom-screen entries use (2)
+  only." The posts and users reasons after it stand.
+- **R8-03 table cells** (`:8921-8922`, quoted below): the entries row's "Kept
+  by an own emission" cell reads "the `entriesList(slug)` and `entriesAllList`
+  slots (custom-screen entries: memory-only)". The forms row's cell reads "the
+  `formsList` slot (submissions: memory-only)". The other cells of both rows
+  stand.
+
+### R9-07 — "The next read" and the accessor shape (LOW; S2-B)
+
+- **The next read** in R8-06 (1) (the sentence quoted below) is pinned as a
+  non-forced default first-page read of that client, served by the seeded
+  slot with 0 `fetch` calls, which re-subscribes. The sentence now reads:
+  "After the next read of that client, a non-forced default first-page read
+  served by the seeded slot with 0 `fetch` calls (it re-subscribes), the same
+  foreign event clears the slot, and `getCached*()` for the default filters
+  returns `null`." For detail pages the next read is the global read and the
+  event is the per-content-type key (R9-02).
+- **Accessor shape.** Every slot-bearing `getCached*()` accessor has the
+  `getCachedPosts` shape (C9 v2 `:4007-4010`; media R8-04 `:8994-8998`). For
+  the default filters it reads the persisted slot only
+  (`readPersistedFirstPage`). For other filters it reads verified memory in
+  `"hydrate"` (R7-04 4-argument rule). This applies to the pages, entries
+  (per slug and `entriesAllList`), forms-list, media, booking (each family)
+  and detail-pages (each key) accessors.
+- **Verification (no quote needed).** At `74fe8f4e` this file defines
+  accessor bodies only for `getCachedPosts` (`:4007-4010`) and the media
+  accessor (`:8994-8998`). No sentence defines a `getCached*` accessor that
+  reads verified memory first for the default filters. The memory-first
+  reads at C9 v2 `:3954-3955` and R6-01 `:7093-7094` are network-path hit
+  checks, not accessors. After the registered reset their memory is empty,
+  so the pinned next read is served by the slot. No sentence is quoted for
+  R9-07.
+
+### R9-08 — T1 posts first page: the install is deterministic (LOW; S2-B)
+
+The R8-02 T1 posts first-page clause (quoted below) now reads: "The inner
+TASK-554 `listPostsCached` installs its reconciled envelope (TASK-554
+behaviour, unchanged), so `getCachedPosts(f)` equals the fetched envelope
+reconciled by TASK-554." A `postsList` event never advances
+`postsCacheAuthorityEpoch` (R7-01). The install at C9 v2 `:4039-4042` is
+skipped only when that epoch advanced, so for an event during the await the
+install always runs. With `clearPostsCache()` during the await the R8-02
+reading stands (authority-stale, installs nothing).
+
+### R9-09 — Booking legs: rows from slots, window reads from `w` (LOW; S1; INFO S1 ×2)
+
+- **Timestamps** (replaces `:9332-9333`, quoted below): "Every row timestamp a
+  DB leg writes (the week-cap seed rows and every reservation) comes only from
+  `s = bookingLegSlots(w)`, where `w = bookingLegWindows(RUN)`. Service inputs
+  pass `new Date(slot.start).toISOString()` / `new
+  Date(slot.end).toISOString()`. The global blackout row spans `w.blackout`
+  (`startsAt: new Date(w.blackout.from).toISOString()`, `endsAt: new
+  Date(w.blackout.to).toISOString()`). Window-bound reads (the week-cap route
+  query, the R5-02 race precondition and the blackout precondition) read `w`
+  directly." The DB-free containment test that follows it stands.
+- **Anchor note** (replaces `:9371-9373`, quoted below): "**Anchor note
+  (INFO).** For the C13 `afterAll` citation `:739-741` (`:2945`): the
+  `afterAll` opens at `task551RevisionConcurrency.test.ts:739`; its marker
+  deletes are `:747` (pages) and `:749` (users); the symbol governs."
+- **`reason` anchor** (appended; quoted below): "(the service stores `reason`,
+  `core/services/booking/bookingService.ts:851-859`; after the C7 split:
+  `bookingMutationService.ts`, same body)".
+- The Round-7 S1 note on two same-`k` runs (probability 1/4096, a loud
+  failure that never passes falsely) needs no change.
+
+### R9-10 — 09-L04 owes a mirror (LOW; S3-A)
+
+The Round-8 Handoffs 09-L04 row (`:9743-9751`) was labelled "informational; no
+edit owed" (quoted below). It is reclassified as an owed mirror in another
+writer's file:
+
+"TASK-551-09-L04 (owed mirror): its next append-only section records the
+R7-02/R8-04 consumer constraints (synchronous local delivery,
+operation-token pass-through, own-sourceId drop; `mediaFoldersClient.ts`
+emissions `:236/:251/:268` `mediaFolders` only, `:280-281` both keys) and
+adds `tests/vitest/admin/task551PaginatedClients.test.ts` (T14/T14b) to its
+FINAL gate."
+
+The rest of that row stands as the content of the mirror: the module-level
+state list, the "keep these or re-open R7-02/R7-06" rule, and the 09-L04
+FINAL ownership of `mediaFoldersClient.ts`. The mirror is listed in "C17 v5
+amendments (Round 9)" next to the TASK-554 and orchestrator pointers. The
+orchestrator queues the 09-L04 mirror writer. 09-L04 is 1,308 lines at
+`74fe8f4e`, and its own writer edits it, not 03-L02's writer.
+
+### R9-11 — Entries self-emit guard placement: accepted (INFO; S2-A, S2-B, S3-A)
+
+The contract text at `:9386-9399` is ACCEPTED as written:
+
+- the guard is created in `entriesClientPagination.ts` and exported one way
+  to `entriesClient.ts`;
+- `entriesClientPagination.ts` has no value import from `./entriesClient`;
+- the STOP fallback covers a helper that only `entriesClient.ts` owns;
+- the second static assertion checks the one-way import rule.
+
+The opposite direction in `03-l02-round8-dispositions.md` (R8-13) is
+superseded by the Round-9 dispositions record. This file changes nothing.
+
+### R9-12 — Superseded-list completeness (INFO; S3-B, S3-A)
+
+Three sentences are added to the superseded list below:
+
+- the R7-08 lead-in `:8257-8258`;
+- the Round-7 Handoffs TASK-551-11 lead-in `:8688`;
+- the Round-7 Handoffs 10-L02 sub-bullet `:8675-8676` ("own-emission ignore …
+  (emitting flag plus `ownMutationEpoch` fence)").
+
+The two lead-ins are replaced by R8-10 ("nothing is owed to TASK-551-11") and
+"Handoffs (Round 8)". The R7-08 (a) relocation lives on as an orchestrator
+follow-up (R8-13 restatement). The sub-bullet is replaced by R8-03 (an own
+emission runs the invalidate minus the persisted-slot clear) and by C17 v5
+item 4 in its Round-8 form.
+
+### C17 v5 amendments (Round 9)
+
+The heading `### C17 v5 — Handoffs and owed mirrors (2026-09-26; Rounds 5-8)`
+(`:9166`) stays 10-L02's copy authority
+(`TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md:1628-1633`).
+Under that rule, the closure writer greps 03-L02 for every `C17 v` heading,
+copies from the highest dated one, and applies earlier C17 bullets only where
+that heading leaves them standing. This subsection is NOT a new C17 version
+and has no date of its own. 10-L02 copies C17 v5 as amended here.
+
+1. **Item 3** now reads: "the two-counter model per paged client
+   (`invalidationEpoch`, advanced by the invalidate and by an own emission
+   (item 5 (b)), vs `resetGeneration`, advanced only by the registered
+   reset)". The rest of item 3 stands (R9-05).
+2. **Item 6 (Round 9; added to the 10-L02 mirror).**
+   - (a) Posts `upsertCachedPost` and `removeCachedPost` slot writes drop the
+     default first-page marker. Every other slot-bearing client never patches
+     a `null` persisted slot into existence; it patches memory only (R9-01).
+   - (b) The detail-pages subscription also clears the triggering event key,
+     through its cache or `clearLocalCache` (R9-02).
+   - (c) Media library: a foreign `mediaList` update clears the media slot
+     before the view's handler runs, so the view performs one forced
+     background read instead of applying Storage rows (R9-03).
+   - (d) Form submissions and custom-screen entries are memory-only list
+     families with no persisted slot (R9-06).
+3. **Pointers.** These replace the C17 v5 pointer sentence quoted below:
+   - **TASK-554:** unchanged; see "Handoffs (Round 9)".
+   - **TASK-551-09-L04:** owed mirror (R9-10); see "Handoffs (Round 9)".
+   - **Orchestrator:** "Handoffs (Round 8)" as amended by "Handoffs (Round
+     9)".
+   - The C17 v5 TASK-551-11 and query-inventory (01-L01) sentences stand.
+
+### Superseded sentences (Round 9)
+
+Each quote is verbatim (text authoritative; a hard wrap is one space). The
+replacement is the named Round-9 item.
+
+1. R6-01 model (`:7031-7034`): "`invalidationEpoch` is advanced ONLY by
+   `invalidate`. `invalidate` runs from the client's public
+   `clear<Family>Cache` (mutation callers) and from the client's lazy
+   cacheBus subscription to its family keys (any origin, `local` or `remote`;
+   `core/admin/utils/cacheBus.ts:18-22`, consumed only)." → R9-05 (the epoch
+   is also advanced by `onOwnEmit`; the rest of the sentence stands).
+2. R6-01 template (`:7067`): "let pagesInvalidationEpoch = 1; //
+   invalidationEpoch: advanced ONLY by invalidatePagesList" → R9-05 (advanced
+   by `invalidatePagesList` and by `advancePagesListEpoch`).
+3. R7-08 lead-in (`:8257-8258`): "**TASK-551-11 obligations** (these replace
+   the Round-6 Handoffs row "TASK-551-11. Nothing owed.", quoted below):" →
+   R9-12 (R8-10: nothing is owed to TASK-551-11; the (a) relocation is an
+   orchestrator follow-up per R8-13).
+4. Handoffs (Round 7), 10-L02 (`:8675-8676`): "own-emission ignore through
+   `createAdminListSelfEmitGuard` (emitting flag plus `ownMutationEpoch`
+   fence);" → R9-12 (R8-03 and C17 v5 item 4).
+5. Handoffs (Round 7), TASK-551-11 (`:8688`): "**TASK-551-11.** This row
+   replaces "Nothing owed." (quote 35):" → R9-12 (R8-10 and "Handoffs (Round
+   8)").
+6. R8-02 rule (`:8812-8813`): "`postsInvalidationEpoch`, and nothing has
+   installed at K since." → R9-01 (nothing has installed at K and, for the
+   default key, no patch has written the persisted slot).
+7. R8-02 T1 (`:8865-8866`): "installs its reconciled envelope (TASK-554
+   behaviour, unchanged), so `getCachedPosts(f)` may change." → R9-08
+   (`getCachedPosts(f)` equals the fetched envelope reconciled by TASK-554).
+8. R8-03 table, entries row (`:8921`): "| entries |
+   `entriesInvalidationEpoch` +1; every entries dedupe map cleared | every
+   entries family slot |" → R9-06 (last cell only: the `entriesList(slug)` and
+   `entriesAllList` slots; custom-screen entries memory-only).
+9. R8-03 table, forms row (`:8922`): "| forms (+ submissions) |
+   `formsInvalidationEpoch` +1; forms and submissions dedupe cleared | every
+   forms slot |" → R9-06 (last cell only: the `formsList` slot; submissions
+   memory-only).
+10. R8-03 (`:8944`): "No `upsertCachedPost` change is needed." → R9-01 (the
+    upsert-before-await argument stands; the (1b) marker drop is the only
+    `upsertCachedPost` and `removeCachedPost` change).
+11. R8-04 (`:9047-9050`): "**Intended contract change (named here).** An
+    existing media view assertion that counts media LIST GETs across a
+    `mediaFolders` event gains exactly that one forced read and nothing else.
+    Folder GET counts, row values and every other assertion stay as they
+    are." → R9-03 (a) and (b).
+12. R8-06 (1) (`:9117-9118`): "(pages; entries ×3; forms and submissions;
+    media; booking ×4; detail pages with the global key and one
+    per-content-type key)." → R9-06 (the families with a persisted slot).
+13. R8-06 (1) (`:9123-9125`): "After the next read of that client (which
+    re-subscribes), the same foreign event clears the slot, and `getCached*()`
+    for the default filters returns `null`." → R9-07 (a non-forced default
+    first-page read served by the seeded slot, 0 `fetch` calls) and R9-02
+    (the detail-pages cell).
+14. R8-06 (`:9136`): "Posts and users use (2) only." → R9-06 (posts, users,
+    form submissions and custom-screen entries).
+15. C17 v5 item 3 (`:9182-9183`): "`invalidationEpoch`, advanced only by the
+    invalidate," → "C17 v5 amendments (Round 9)" item 1 (R9-05).
+16. C17 v5 (`:9211-9212`): "**TASK-554, TASK-551-09-L04 and the
+    orchestrator:** "Handoffs (Round 8)" below." → "C17 v5 amendments (Round
+    9)" item 3.
+17. R8-09 state (`:9246-9248`): "The R5-12 INITIAL capture window at
+    `_docs/_workflows/_smoke/task-551/03-l02-baselines/03-l02-root-tsc-baseline.txt`
+    (R7-08 path) is therefore OPEN." → R9-04 (blocked by the occurrence
+    dependency and the header Dependencies; one capture at the INITIAL
+    `preWaveCommit`).
+18. R8-12 (`:9332-9333`): "Every DB leg reads its timestamps only from
+    `bookingLegSlots(bookingLegWindows(RUN))`." → R9-09 (rows from `s`,
+    window reads and the blackout row from `w`).
+19. R8-12 blackout marker (`:9342-9343`): "(the service stores `reason`,
+    `core/services/booking/bookingService.ts:851-859`)" → R9-09 (the C7-split
+    anchor appended).
+20. R8-12 anchor note (`:9371-9373`): "**Anchor note (INFO).** The C13
+    `afterAll` marker delete cited as `:739-741` (`:2945`) is now
+    `task551RevisionConcurrency.test.ts:747-749`; the symbol governs." →
+    R9-09 (`afterAll` opens at `:739`; deletes at `:747` and `:749`).
+21. Security Contract rows (Round 8) (`:9711-9713`): "A posts first page
+    installed by any path other than a current `page` completion is never
+    served on the network path (R8-02)." → "Security Contract rows (Round 9)"
+    (extended by R9-01).
+22. Handoffs (Round 8), 09-L04 (`:9743`): "**TASK-551-09-L04 (informational;
+    no edit owed).**" → R9-10 (owed mirror; the rest of the row is the
+    mirror's content).
+23. Handoffs (Round 8), orchestrator (`:9762-9763`): "The INITIAL capture
+    window is open (R8-09): capture before W0's first edit with both diffs
+    empty." → R9-04 and "Handoffs (Round 9)".
+
+**Stands** (non-exhaustive reminders):
+
+- R8-02 rules (1)-(4), its code block and T6 (a)-(c);
+- R8-03 except the two quoted table cells and `:8944`;
+- R8-04 except the quoted bullet (predicate, T7, T14, T14b and the view test);
+- R8-05;
+- R8-06 (2) and R8-06 except the quoted sentences;
+- R8-07 and R8-08;
+- C17 v5 except items 3 and the pointer sentence, as amended;
+- R8-09 except `:9246-9248`, including the tightened R6-05 and R6-08 (2)
+  rules and the sentence at `:9250-9252`;
+- R8-10 and R8-11;
+- R8-12 except the three quoted pieces;
+- R8-13 (the detail-pages invalidate stands and gains the R9-02 event-key
+  clear on the subscription path only);
+- the Round-8 Security, Handoffs and Envelope records except the quoted
+  sentences.
+
+### Security Contract rows (Round 9)
+
+No route, schema, auth, RBAC, CSRF or rate-limit change. Endpoint visibility,
+the auth model and rate-limit buckets stay as in Rounds 2-8.
+
+- **No stale page served as fresh (extended; replaces the sentence quoted as
+  item 21).** "A posts first page installed by any path other than a current
+  `page` completion is never served on the network path (R8-02), and no patch
+  creates a servable first-page slot where none existed (R9-01)." The rest of
+  the Round-8 row stands. A posts detail upsert after the list TTL may still
+  synthesize the TASK-554 default slot. The TASK-554 `listPostsCached` readers
+  see it exactly as at HEAD (`postsClient.ts:250`), and (1b) keeps it off the
+  `readPostsListPage` network path.
+- **Detail pages.** A foreign event of a per-content-type key clears that
+  key's persisted slot even when this tab never created its cache (R9-02).
+  The clear applies only to keys that pass the family predicate
+  (`event.key.startsWith(cacheKeys.detailPagesList)`). It removes exactly one
+  Storage key and never enumerates Storage.
+- **Media view.** Storage rows written under an invalidated slot are never
+  applied as fresh. The event costs one forced background read (R9-03),
+  within the Round-8 per-event bound (paged ≤ 2 forced reads per event).
+- **TASK-554 authority isolation.** Unchanged. (1b) deletes only
+  `postFirstPageEpochs` entries, which are 03-L02 list state that no TASK-554
+  path reads. The synthesis and the tombstone, publication and
+  authority-epoch paths are untouched (`postsClient.ts:506`, `:522`, `:534`,
+  `:707`).
+- **Evidence.** The INITIAL capture runs once, at the INITIAL
+  `preWaveCommit`, after the declared dependencies land (R9-04). Receipts
+  keep commit ids, paths and digests only.
+- **Test fixtures.** R9-09 changes wording only. The marker-scoped deletes and
+  the bounded blackout precondition read (`.limit(1)`, no foreign delete)
+  stand.
+
+### Handoffs (Round 9)
+
+- **TASK-554.** Unchanged: no file edit and no re-open. (1b) touches only
+  `postFirstPageEpochs`, which no TASK-554 path reads. The C9 v2 synthesis
+  that TASK-554's precondition requires stays. `postsClientCacheAuthority.test.ts`
+  keeps only the D2 edits (R8-01). T6 (d) and T16 live in
+  `task551PaginatedClients.test.ts`.
+- **TASK-551-10-L02.** Owed through C17 v5 as amended by "C17 v5 amendments
+  (Round 9)", in 10-L02's next append-only section.
+- **TASK-551-09-L04 (owed mirror; another writer's file).** "Its next
+  append-only section records the R7-02/R8-04 consumer constraints
+  (synchronous local delivery, operation-token pass-through, own-sourceId
+  drop; `mediaFoldersClient.ts` emissions `:236/:251/:268` `mediaFolders`
+  only, `:280-281` both keys) and adds
+  `tests/vitest/admin/task551PaginatedClients.test.ts` (T14/T14b) to its FINAL
+  gate." (R9-10.)
+- **TASK-551-11.** Nothing owed. Round 9 adds no gate argv, no `./` site and
+  no evidence path under the 11 closed root.
+- **TASK-551-01-L01.** Unchanged. Round 9 adds no server statement.
+- **Orchestrator.**
+  - (a) INITIAL capture blocked by dependencies. INITIAL W0 and its capture
+    are blocked by `TASK-551-09-L04:initial` (fence `:2162`) and the header
+    Dependencies (`:9-11`) (R9-04). The W0 receipt re-runs the three R8-09
+    commands at the INITIAL `preWaveCommit`.
+  - (b) Queue the 09-L04 mirror writer (R9-10).
+  - (c) The R8-13 relocation follow-up now covers
+    `03-l02-round9-dispositions.md` too (N = 9). That record is untracked at
+    `74fe8f4e`. Until it is committed or moved, R4-10 gloss 2 (`:6423`)
+    classifies it at W0 like the others.
+  - (d) The restated `owned-module-consumers-bun` precondition (R8-10) and
+    the R6-06 stop rule (size below).
+  - (e) R9-13 corrections for future mandates: `core/admin/services/cachePolicy.ts`;
+    audited HEAD `74fe8f4e`.
+
+### Envelope record (Round 9)
+
+No edit: the fence (`:1441-2172`) stays byte-identical. It has allowlist 321,
+forbidden 52, commands 34, and occurrences `initial` (30 command ids,
+`dependsOn` `TASK-551-09-L04:initial`) and `final` (11). Every path this
+round names was checked on 2026-09-26 at `74fe8f4e` (a parse of the fence;
+line numbers are file lines).
+
+- **Allowlisted** (no new entry):
+  - `core/admin/services/pagesClient.ts` (`:1480`),
+    `detailPagesClient.ts` (`:1481`), `entriesClient.ts` (`:1482`),
+    `postsClient.ts` (`:1483`), `formsClient.ts` (`:1485`),
+    `mediaClient.ts` (`:1486`) and `bookingClient.ts` (`:1487`);
+  - `adminListEnvelope.ts` (`:1541`) and `entriesClientPagination.ts`
+    (`:1542`);
+  - `core/admin/ui/media/MediaLibraryPage.tsx` (`:1510`),
+    `MediaLibraryResults.tsx` (`:1512`) and `useMediaFolderOperations.ts`
+    (`:1553`);
+  - `core/services/booking/bookingMutationService.ts` (`:1458`) and
+    `bookingService.ts` (`:1460`);
+  - `tests/integration/server/task551AdminWriteConcurrency.test.ts`
+    (`:1570`);
+  - `tests/vitest/admin/task551PaginatedClients.test.ts` (`:1571`; argv
+    `:1919`, `:1996`);
+  - `tests/vitest/ui/media-library.test.tsx` (`:1613`; argv `:1919`);
+  - `tests/vitest/ui/media-library-load-retry-wave.test.tsx` (`:1615`);
+  - `tests/vitest/ui/media-library-mutation-retry-wave.test.tsx` (`:1616`;
+    cited read-only);
+  - `tests/vitest/admin/postsClientCacheAuthority.test.ts` (`:1640`;
+    unchanged by Round 9).
+- **Forbidden and consumed only:** `core/admin/services/cachePolicy.ts`
+  (`:1773`), `core/admin/utils/adminCacheAuthority.ts` (`:1774`),
+  `core/admin/services/mediaFoldersClient.ts` (`:1808`) and
+  `core/admin/utils/cacheBus.ts` (`:1823`).
+- **Outside the envelope (read-only anchors; none is in the fence):**
+  - `core/admin/utils/storageCache.ts`;
+  - `tests/integration/server/task551RevisionConcurrency.test.ts`;
+  - the task files of TASK-551-09-L04, TASK-551-10-L02 and TASK-551-11;
+  - `_docs/_workflows/_smoke/task-551/impl-11-reopen-20260925.json`;
+  - the `03-l02-baselines/` path;
+  - the dispositions records, including `03-l02-round9-dispositions.md`
+    (orchestrator evidence).
+
+No NEW allowlisted path is needed. One JSON fence. **Size (R6-06 stop rule).**
+This file is 750,900 bytes after the Round-9 append (`wc -c`), below the
+1,048,576-byte cap with the 200-byte closure headroom.

@@ -1428,3 +1428,42 @@ this file (C2); none is added.
 - :1340-1341 "The FINAL lane-runner worker database is the `DATABASE_URL` target of the root `.env`." → item 3.
 - :1341-1342 "For that run only, the orchestrator sets `DATABASE_DIRECT_URL` to it in the closed `env -i` form." → item 3.
 - :1368-1370 "update the 41→42 `taskFileCount` inventory pin in `tests/unit/workflows/task551AuthorAudit.test.ts` (:324 at HEAD `66203e22`) and in the fixtures that pin the family file set." → same duty; anchor per item 4.
+
+## Dated Contract Corrections — 2026-09-26 (fix note 2; append-only)
+
+Source: dispositions Addendum E (E1 (d), E2, E5) in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+It edits nothing above; the graph fence stays byte-identical and the family
+inventory stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+Every sentence not quoted below stays binding.
+
+1. **Pre-provisioning anchor (E5).** The item 3 boolean step of the fix note
+   above is "(01-L01 V7-1; FINAL step 9 of V7-7)" (v7 numbering; a later
+   01-L01 renumbering governs). The rest of item 3 stands.
+2. **06-L03 label (E5, C2).** This file cites the 2026-09-26 06-L03 section
+   only as "06-L03 A8" and adds no other label for it. The superseded literal
+   remains only at :1392 (append-only) and in the quote below; a grep-based
+   C2 check on this file excludes those two places.
+3. **Lane-worker schema binding (E1 (d)).** Until 02-L02 R11
+   `lane-worker-dedicated-schema-binding` (E1 (a)-(c)) lands, a lane run on the
+   target executes production pruners against its `public` schema. 01-L01 v8
+   (owner) inserts a FINAL step between V7-7 steps 8 and 9:
+   "`lane-worker-dedicated-schema-binding` decided and landed, else STOP", and
+   applies the E1 (d) V7-4 row change for
+   `tests/integration/runtime/preRetentionVacuum.test.ts`.
+4. **V5-5 (a) is a family-closure precondition (E2).** It closes only when all
+   of these have landed; TASK-551-10-L02 and this parent do not close before:
+   - 05-L01 R2, R2.2 and R2.3 (owner TASK-551-05-L01; handoff row `:1866`);
+   - O3: worker-schema branch for the 23505 legs `:1979`, `:2016`, `:2062` of
+     `task551SolutionKitRollbackAuthoritySchema.test.ts` (owner TASK-551-05-L03,
+     its own dated note; the suite stays BLOCKED on the B1 row until then);
+   - O5: `current_schema()` worker-schema branch at
+     `task551RevisionConcurrency.test.ts:634` (owner TASK-551-06-L02, R15).
+   01-L01 v8 owns the matching V7-7 step 8 rewrite and the 7/8 order; the
+   FINAL lane-runner run is the proof.
+
+### Superseded sentences
+
+- :1411-1412 "Because `provisionWorkers` runs DDL before `assertDirectUrl`, a pre-provisioning step (01-L01 V6-7) records four booleans and nothing else," → item 1 (only the parenthetical changes).
+- :1392-1393 "No "06-L03 A4" label appears in this file (C2); none is added." → item 2.
