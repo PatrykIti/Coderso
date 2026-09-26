@@ -79,6 +79,7 @@ import {
   isEligibleForRetentionCutoff,
   type RuntimeEnv,
 } from "../../../core/services/maintenance/retentionPolicy";
+import { MAX_PAGE_REVISION_RETENTION } from "../../../core/services/pages/revisionRetention";
 import {
   TASK551_RETENTION_CLOCK_MS,
   retentionTs,
@@ -572,13 +573,17 @@ describe("revision retention service (airtight, no database)", () => {
     expect(statement.indexOf('"page_revisions"."created_at" asc')).toBeLessThan(
       statement.indexOf('"page_revisions"."id" asc')
     );
-    // The keep-newest floor is an in-SQL probe: keepNewest travels as both the
-    // probe LIMIT and the compared count, never into JS arithmetic.
+    // The keep-newest floor is an in-SQL probe: the typed 4 resolves to the page
+    // whole-family floor (100), bound as both the probe LIMIT and the compared
+    // count, never into JS arithmetic.
     expect(statement).toContain("newer_rows");
-    expect(spy.bound.filter((param) => param === 4)).toHaveLength(2);
-    // The page family carries the published anchor probe.
+    expect(spy.bound.filter((param) => param === MAX_PAGE_REVISION_RETENTION)).toHaveLength(2);
+    expect(spy.bound.filter((param) => param === 4)).toHaveLength(0);
+    // The page family carries the newest-publish anchor probe.
     expect(statement).toContain('"page_revisions"."kind" = \'publish\'');
     expect(statement).toContain("not exists");
+    expect(statement).toContain("published.kind = 'publish'");
+    expect(statement).toContain('not ("page_revisions"."kind" = \'publish\' and not exists');
   });
 
   test("apply batches lock SKIP LOCKED and count deletes by returning length", async () => {
@@ -689,6 +694,7 @@ describe("revision retention service (airtight, no database)", () => {
       // Only the page/detail_page tables carry the published anchor probe.
       expect(statement.includes("= 'publish'")).toBe(kindBearing);
       expect(statement.includes("not exists")).toBe(kindBearing);
+      expect(statement.includes("published.kind = 'publish'")).toBe(kindBearing);
     }
   });
 
@@ -716,6 +722,19 @@ describe("revision retention service (airtight, no database)", () => {
 
 /** One seeded page revision row: [version, kind, offset in days from cutoff]. */
 type RevisionSeed = readonly [version: number, kind: "publish" | "autosave", offsetDays: number];
+
+/** `count` consecutive seeds from `first`, sized to the page whole-family floor. */
+const floorSeeds = (
+  first: number,
+  count: number = MAX_PAGE_REVISION_RETENTION,
+  kind: RevisionSeed[1] = "autosave",
+  offsetDays = 1
+): RevisionSeed[] =>
+  Array.from({ length: count }, (_, index): RevisionSeed => [first + index, kind, offsetDays]);
+
+/** The `version:kind` tags `pageSurvivors` reports for `seeds`. */
+const tags = (seeds: readonly RevisionSeed[]): string[] =>
+  seeds.map(([version, kind]) => `${version}:${kind}`);
 
 const seedPageRevisions = async (pageId: string, seeds: readonly RevisionSeed[]): Promise<void> => {
   await db.insert(pageRevisions).values(
@@ -781,7 +800,7 @@ const expectPrune = async (
 describe("revision retention on the owner-injected fixture database", () => {
   testIfDb("page family: bounded batches converge on floor, anchor and boundary row", async () => {
     const pageId = await createParent(pages, "convergence");
-    // Eight revisions: the newest two are the keep-newest floor, v6 sits
+    // 106 revisions: v7..v106 fill the effective page floor (100), v6 sits
     // exactly on the cutoff, v2 is the newest publish (old, anchored), and
     // v1/v3/v4/v5 are aged history eligible for the drain.
     await seedPageRevisions(pageId, [
@@ -791,10 +810,9 @@ describe("revision retention on the owner-injected fixture database", () => {
       [4, "autosave", -3],
       [5, "autosave", -2],
       [6, "autosave", 0],
-      [7, "autosave", 1],
-      [8, "autosave", 2],
+      ...floorSeeds(7),
     ]);
-    expect(await pageSurvivors(pageId)).toHaveLength(8);
+    expect(await pageSurvivors(pageId)).toHaveLength(106);
     // Read-only guard: this fixture's candidate set is the only eligible set
     // in the table, so a polluted shared table fails here before any delete.
     await expectRun("page", policyInput({ dryRun: true, batchSize: 500 }), [true, true, 1, 4, 0]);
@@ -806,26 +824,39 @@ describe("revision retention on the owner-injected fixture database", () => {
       drainedOutcome
     );
     expect(drained.batches).toBeLessThanOrEqual(10);
-    const survivors = ["2:publish", "6:autosave", "7:autosave", "8:autosave"];
+    const survivors = ["2:publish", "6:autosave", ...tags(floorSeeds(7))];
     expect(await pageSurvivors(pageId)).toEqual(survivors);
     // A completed rerun matches nothing: convergence is idempotent.
     await expectRun("page", policyInput({ keepNewestPerParent: 2 }), [true, false, 1, 0, 0]);
     expect(await pageSurvivors(pageId)).toEqual(survivors);
   });
 
+  testIfDb("page whole-family floor: aged publish history keeps the newest 100", async () => {
+    const pageId = await createParent(pages, "whole-family-floor");
+    // 105 aged publish rows: the effective floor (typed 50 -> 100) keeps
+    // v6..v105; v105 is also the newest publish. Only v1..v5 are prunable.
+    await seedPageRevisions(pageId, floorSeeds(1, 105, "publish", -1));
+    // The typed 50 mirrors the scheduler's re-fed normalized policy.
+    const floored = policyInput({ keepNewestPerParent: 50, batchSize: 500 });
+    await expectRun("page", { ...floored, dryRun: true }, [true, true, 1, 5, 0]);
+    await expectRun("page", floored, [true, false, 2, 5, 5]);
+    expect(await pageSurvivors(pageId)).toEqual(tags(floorSeeds(6, 100, "publish", -1)));
+  });
+
   testIfDb("page family dry-run: exact match count, zero deletes, rows untouched", async () => {
     const pageId = await createParent(pages, "dry-run");
-    // v1..v3 are aged and floored out; v4 sits on the cutoff and v5 is recent.
+    // v1..v3 are aged and floored out; v4 sits on the cutoff and v5..v104
+    // (recent) fill the effective page floor.
     await seedPageRevisions(pageId, [
       [1, "autosave", -3],
       [2, "autosave", -2],
       [3, "autosave", -1],
       [4, "autosave", 0],
-      [5, "autosave", 1],
+      ...floorSeeds(5),
     ]);
     // Typed dry-run: exactly one bounded read, nothing deleted.
     await expectRun("page", policyInput({ dryRun: true, batchSize: 500 }), [true, true, 1, 3, 0]);
-    expect(await pageSurvivors(pageId)).toHaveLength(5);
+    expect(await pageSurvivors(pageId)).toHaveLength(104);
     // L01's global RETENTION_DRY_RUN drives the same read with no typed flag.
     await expectRun(
       "page",
@@ -833,9 +864,11 @@ describe("revision retention on the owner-injected fixture database", () => {
       [true, true, 1, 3, 0],
       { [RETENTION_DRY_RUN_ENV]: "true" }
     );
-    expect((await pageSurvivors(pageId)).join()).toBe(
+    const untouched = await pageSurvivors(pageId);
+    expect(untouched.slice(0, 5).join()).toBe(
       "1:autosave,2:autosave,3:autosave,4:autosave,5:autosave"
     );
+    expect(untouched).toHaveLength(104);
   });
 
   testIfDb("per-parent prune: only the scoped parent's eligible rows die", async () => {
@@ -894,6 +927,21 @@ describe("revision retention on the owner-injected fixture database", () => {
     ]);
     await expectPrune("page", floored, dbPolicy("page", { keepNewestPerParent: 1 }), 4, 4);
     expect(await pageSurvivors(floored)).toEqual(["5:autosave"]);
+  });
+
+  testIfDb("per-parent prune: only the newest publish is anchored", async () => {
+    const pageId = await createParent(pages, "publish-history");
+    // v3 is the newest publish and survives old; the older publish v1 and the
+    // autosave v4 newer than the anchor are ordinary aged candidates.
+    await seedPageRevisions(pageId, [
+      [1, "publish", -10],
+      [2, "autosave", -9],
+      [3, "publish", -8],
+      [4, "autosave", -7],
+      [5, "autosave", 1],
+    ]);
+    await expectPrune("page", pageId, dbPolicy("page", { keepNewestPerParent: 1 }), 3, 3);
+    expect(await pageSurvivors(pageId)).toEqual(["3:publish", "5:autosave"]);
   });
 
   testIfDb("post family: the env enablement switch gates the whole family", async () => {

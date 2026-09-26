@@ -24,13 +24,11 @@
 //  1. keep-newest floor — the newest `keepNewestPerParent` rows per parent
 //     (`version DESC, id DESC`) are never candidates, so the row standing for
 //     the current document lineage survives for every family;
-//  2. published anchor — on the kind-bearing families (page, detail_page) a
-//     row is protected by this anchor exactly when no same-parent
-//     `kind='publish'` row is strictly newer in `(version, id)` order; i.e.
-//     the entire lineage from the newest publish row upward survives (the
-//     published-snapshot lineage the parent's
-//     `published_data`/`published_document` mirrors), even when history
-//     outgrows the floor;
+//  2. published anchor — on the kind-bearing families (page, detail_page) the
+//     newest `kind='publish'` row per parent (by `(version, id)`) is never a
+//     candidate (the snapshot the parent's `published_data`/
+//     `published_document` mirrors), even when history outgrows the floor;
+//     older publish rows and autosaves newer than it are ordinary candidates;
 //  3. age boundary — a row exactly at the cutoff is retained (`column < now -
 //     age`, via L01's `computeRetentionCutoff`). Other parents' rows are out
 //     of scope by construction.
@@ -61,9 +59,12 @@
 // `true|false`, numeric keys are canonical integers, out-of-range rejects
 // (never clamps), any other key under the prefix fails closed. Defaults:
 // enabled true, maxAgeDays 180 in [30, 2555], keepNewestPerParent 50 in
-// [1, 500]. These five families are NOT members of L01's closed 14-member
-// `RetentionPolicy.family` set, so nothing here passes them through
-// `normalizeRetentionPolicy`; the leaf-local normalizer mirrors its shape.
+// [1, 500]. The page whole-family pass never floors below the per-page
+// `settings.revisionRetention` ceiling (`MAX_PAGE_REVISION_RETENTION`, 100):
+// see `resolveWholeFamilyRetentionPolicy`. These five families are NOT members
+// of L01's closed 14-member `RetentionPolicy.family` set, so nothing here
+// passes them through `normalizeRetentionPolicy`; the leaf-local normalizer
+// mirrors its shape.
 
 import { and, asc, eq, inArray, lt, sql, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
@@ -89,6 +90,7 @@ import {
   resolveRetentionMaxBatchesPerRun,
   type RuntimeEnv,
 } from "../maintenance/retentionPolicy";
+import { MAX_PAGE_REVISION_RETENTION } from "../pages/revisionRetention";
 
 /** Machine-readable failure code for a failed retention batch. */
 export const REVISION_RETENTION_BATCH_FAILED = "retention_batch_failed";
@@ -448,19 +450,24 @@ const keepNewestFloorProbe = (spec: RevisionFamilySpec, keepNewest: number): SQL
         limit ${keepNewest}
       ) newer_rows) = ${keepNewest}`;
 
+const PUBLISHED_KIND = sql.raw("published.kind");
+
 /**
- * Published anchor probe (kind-bearing families only): the newest
- * `kind='publish'` row per parent — the published-snapshot lineage the parent
- * document mirrors — is never a candidate.
+ * Newest-publish anchor (kind-bearing families only): excluded exactly when
+ * the candidate is `kind='publish'` AND no same-parent publish row is strictly
+ * newer in `(version, id)` order. Older publishes and autosaves newer than the
+ * anchor stay ordinary candidates. `kind` is `NOT NULL`, so the negated
+ * conjunction has no NULL branch.
  */
 const publishedAnchorProbe = (spec: RevisionFamilySpec): SQL | undefined =>
   spec.kindColumn === null
     ? undefined
-    : sql`not exists (select 1 from ${spec.table} published
+    : sql`not (${spec.kindColumn} = 'publish' and not exists (
+        select 1 from ${spec.table} published
         where published.${sql.raw(spec.parentColumnSql)} = ${spec.parentColumn}
-          and ${spec.kindColumn} = 'publish'
+          and ${PUBLISHED_KIND} = 'publish'
           and (${PUBLISHED_ORDER}) > (${spec.versionColumn}, ${spec.idColumn})
-        limit 1)`;
+        limit 1))`;
 
 const buildEligibilityWhere = (
   spec: RevisionFamilySpec,
@@ -599,6 +606,23 @@ const ledger = (
 ): RevisionRetentionLedger => Object.freeze({ family, enabled, dryRun, batches, matched, deleted });
 
 /**
+ * Whole-family effective policy. On the `page` family the keep-newest floor
+ * never drops below the per-page `settings.revisionRetention` ceiling, so a
+ * whole-family pass never deletes a row a page's own setting could keep; the
+ * request path (`pruneRevisionsTx` -> `pruneParentRevisions`) keeps the
+ * per-page value. Every other family is returned unchanged.
+ */
+export function resolveWholeFamilyRetentionPolicy(
+  policy: RevisionRetentionPolicy
+): RevisionRetentionPolicy {
+  if (policy.family !== "page") return policy;
+  const keepNewestPerParent = Math.max(policy.keepNewestPerParent, MAX_PAGE_REVISION_RETENTION);
+  return keepNewestPerParent === policy.keepNewestPerParent
+    ? policy
+    : Object.freeze({ ...policy, keepNewestPerParent });
+}
+
+/**
  * Whole-family bounded retention pass over one revision table. This is the
  * entry point TASK-551-06-L03's scheduler calls (direct calls never acquire
  * the scheduler advisory lock). Disabled families do zero work and zero SQL;
@@ -609,7 +633,9 @@ export async function runRevisionFamilyRetention(
   executor: RevisionRetentionExecutor = db,
   options?: RevisionRetentionRunOptions
 ): Promise<RevisionRetentionLedger> {
-  const policy = normalizeRevisionRetentionPolicy(family, options?.policy, options?.env);
+  const policy = resolveWholeFamilyRetentionPolicy(
+    normalizeRevisionRetentionPolicy(family, options?.policy, options?.env)
+  );
   const spec = REVISION_FAMILY_SPECS[family];
   if (!policy.enabled) return ledger(family, false, policy.dryRun, 0, 0, 0);
   if (policy.dryRun) {

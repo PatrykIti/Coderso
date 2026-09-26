@@ -44,6 +44,7 @@ import {
   listRevisions,
   type Tx,
 } from "../../core/services/pages/revisionService";
+import { MAX_PAGE_REVISION_RETENTION } from "../../core/services/pages/revisionRetention";
 import {
   RETENTION_BATCH_SIZE_DEFAULT,
   RETENTION_BATCH_SIZE_MAX,
@@ -62,6 +63,7 @@ import {
   REVISION_RETENTION_FAMILY_ORDER,
   isRevisionRetentionFamily,
   normalizeRevisionRetentionPolicy,
+  resolveWholeFamilyRetentionPolicy,
   runRevisionFamilyRetention,
   type RevisionRetentionExecutor,
   type RevisionRetentionPolicyInput,
@@ -151,6 +153,7 @@ const compileListQuery = (limit: number, cursor: { version: number; id: string }
       authorId: users.id,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(pageRevisions)
     .leftJoin(users, eq(pageRevisions.createdBy, users.id))
@@ -193,6 +196,7 @@ describe("page revision list budget (pure legs)", () => {
     expect(countOccurrences(projection, '"page_revisions"."data" ->> \'')).toBe(2);
     expect(projection).toContain('"page_revisions"."page_id"');
     expect(projection).toContain('"users"."email"');
+    expect(projection).toContain('"users"."email_encrypted"');
     // LIMIT + 1 semantics: the default reads 51 rows, the cap reads 101.
     expect(compileListQuery(50, null).params.at(-1)).toBe(51);
     expect(compileListQuery(100, null).params.at(-1)).toBe(101);
@@ -221,6 +225,7 @@ describe("page revision list budget (pure legs)", () => {
     expect(body).toContain("leftJoin(users, eq(pageRevisions.createdBy, users.id))");
     expect(body).toContain("pageRevisions.data} ->> 'title'");
     expect(body).toContain("pageRevisions.data} ->> 'slug'");
+    expect(body).toContain("authorEmailEncrypted: users.emailEncrypted,");
     expect(countOccurrences(body, "pageRevisions.data,")).toBe(0);
   });
 
@@ -464,7 +469,7 @@ describe("autosave statement budgets (pure legs over a counting stub tx)", () =>
     const body = sourceSlice(
       source,
       "export async function createOrReplaceAutosaveRevisionTx(",
-      'return { revision: mapAllocatedRevisionRow(created, "autosave"), reusedRevision: false };'
+      "return { revision: mapAllocatedRevisionRow(created), reusedRevision: false };"
     );
     expect(countOccurrences(body, "await tx")).toBe(2);
     expect(countOccurrences(body, "await allocateRevision(")).toBe(1);
@@ -492,6 +497,23 @@ describe("retention batch bounds (L01 resolvers + leaf normalizer)", () => {
       expect([policy.batchSize, policy.maxBatchesPerRun, policy.dryRun]).toEqual([500, 10, false]);
       expect([policy.maxAgeDays, policy.keepNewestPerParent]).toEqual([180, 50]);
       expect(Object.isFrozen(policy)).toBe(true);
+    }
+  });
+
+  test("the page whole-family pass never floors below the per-page retention ceiling", () => {
+    expect(MAX_PAGE_REVISION_RETENTION).toBe(100);
+    const page = (env: Record<string, string> = {}) =>
+      normalizeRevisionRetentionPolicy("page", { now: FROZEN_NOW }, env);
+    const keep = (value: string) =>
+      page({ RETENTION_PAGE_REVISIONS_KEEP_NEWEST_PER_PARENT: value });
+    expect(keep("50").keepNewestPerParent).toBe(50);
+    expect(resolveWholeFamilyRetentionPolicy(keep("50")).keepNewestPerParent).toBe(100);
+    expect(resolveWholeFamilyRetentionPolicy(keep("150")).keepNewestPerParent).toBe(150);
+    const resolved = resolveWholeFamilyRetentionPolicy(page());
+    expect([resolved.keepNewestPerParent, Object.isFrozen(resolved)]).toEqual([100, true]);
+    for (const family of REVISION_RETENTION_FAMILY_ORDER.filter((name) => name !== "page")) {
+      const policy = normalizeRevisionRetentionPolicy(family, { now: FROZEN_NOW }, {});
+      expect(resolveWholeFamilyRetentionPolicy(policy)).toBe(policy);
     }
   });
 
@@ -634,8 +656,9 @@ describe("100,000-row scale-profile budgets (fixture arithmetic, no database)", 
     // items are 0.101% of the 100k population, on every read, forever.
     expect(large / 101).toBeGreaterThan(990);
     // Small profile: 2,000 rows over the builder's 100 parents is 20 versions
-    // per parent, under the 50-row keep-newest floor -- so the count floor
-    // alone retains 100% of the small-profile family, whatever the ages are.
+    // per parent, under the 50-row keep-newest floor (the page whole-family
+    // floor is 100) -- so the count floor alone retains 100% of the
+    // small-profile family, whatever the ages are.
     const versionsPerParentSmall = TASK551_SCALE_COUNTS.pageRevisions.small / 100;
     expect(versionsPerParentSmall).toBe(20);
     expect(versionsPerParentSmall).toBeLessThan(REVISION_RETENTION_DEFAULT_KEEP_NEWEST_PER_PARENT);
@@ -663,10 +686,10 @@ describe("revision budgets on real PostgreSQL (requires the owner-injected task5
     await db.delete(users).where(like(users.email, `${RUN}%`));
   });
 
-  const seedMarkerUser = async (): Promise<string> => {
+  const seedMarkerUser = async (suffix: string): Promise<string> => {
     const [user] = await db
       .insert(users)
-      .values({ email: `${RUN}@fixture.invalid`, passwordHash: `${RUN}-hash`, name: RUN })
+      .values({ email: `${RUN}-${suffix}@fixture.invalid`, passwordHash: `${RUN}-hash`, name: RUN })
       .returning({ id: users.id });
     if (!user) throw new Error(BUDGET_TEST_CODES.seedMissing);
     return user.id;
@@ -793,7 +816,7 @@ describe("revision budgets on real PostgreSQL (requires the owner-injected task5
   testIfDb(
     "list stays on one bounded statement: 100 items, hasMore, LIMIT 101 over 105 revisions",
     async () => {
-      const authorId = await seedMarkerUser();
+      const authorId = await seedMarkerUser("list");
       const pageId = await seedMarkerPage("list", authorId);
       // Ordering is by version, so one shared createdAt is enough for 105 rows.
       await seedRevisions(pageId, segment(105, 1, "v", FROZEN_NOW));
@@ -832,7 +855,7 @@ describe("revision budgets on real PostgreSQL (requires the owner-injected task5
   testIfDb(
     "autosave spends at most six statements over 30 legacy revisions and reuses in two",
     async () => {
-      const authorId = await seedMarkerUser();
+      const authorId = await seedMarkerUser("autosave");
       const pageId = await seedMarkerPage("autosave", authorId);
       const aged = new Date(TASK551_RETENTION_CLOCK_MS - 90 * DAY_MS);
       await seedRevisions(pageId, [
@@ -870,12 +893,13 @@ describe("revision budgets on real PostgreSQL (requires the owner-injected task5
       const otherPageId = await seedMarkerPage("retention-other", null);
       const cutoff = computeRetentionCutoff(FROZEN_NOW, 30);
       const old = new Date(cutoff.getTime() - 170 * DAY_MS);
-      // 560 revisions on one parent: 505 strictly older than the cutoff, 5
-      // exactly at it (retained by strict `<`), newest 50 held by the floor.
+      // 610 revisions on one parent: 505 strictly older than the cutoff, 5
+      // exactly at it (retained by strict `<`), the newest 100 held by the
+      // effective page floor (typed 50 -> 100).
       await seedRevisions(pageId, [
         ...segment(505, 1, "old", old),
         ...segment(5, 506, "boundary", cutoff),
-        ...segment(50, 511, "floor", old),
+        ...segment(100, 511, "floor", old),
       ]);
       await seedRevisions(otherPageId, segment(3, 1, "other", old));
       // Shared-database discipline: the injected executor scopes the family's
@@ -937,8 +961,8 @@ describe("revision budgets on real PostgreSQL (requires the owner-injected task5
         policy: { ...policy, dryRun: true },
       });
       expect(probe.dryRun && probe.deleted === 0).toBe(true);
-      expect([probe.batches, probe.matched]).toEqual([1, 505]);
-      expect([batchSizes.length, await countRevisions(pageId)]).toEqual([0, 560]);
+      expect([probe.batches, probe.matched]).toEqual([1, 500]);
+      expect([batchSizes.length, await countRevisions(pageId)]).toEqual([0, 610]);
       // The real pass: batch one fills the 500-row batch, batch two takes the
       // remaining five, the third read is empty and ends the drain.
       const ledger = await runRevisionFamilyRetention("page", executor, { policy });
@@ -949,11 +973,11 @@ describe("revision budgets on real PostgreSQL (requires the owner-injected task5
       for (const size of batchSizes) expect(size).toBeLessThanOrEqual(SUITE_MAX_DELETES_PER_BATCH);
       // Ledger agreement, preservation anchors, and idempotent convergence.
       expect(batchSizes.reduce((sum, size) => sum + size, 0)).toBe(ledger.deleted);
-      expect(await countRevisions(pageId)).toBe(55);
+      expect(await countRevisions(pageId)).toBe(105);
       expect(await countRevisions(otherPageId)).toBe(3);
       const converged = await runRevisionFamilyRetention("page", executor, { policy });
       expect([converged.batches, converged.matched, converged.deleted]).toEqual([1, 0, 0]);
-      expect(await countRevisions(pageId)).toBe(55);
+      expect(await countRevisions(pageId)).toBe(105);
     }
   );
 });

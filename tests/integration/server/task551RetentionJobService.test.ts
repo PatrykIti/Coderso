@@ -82,6 +82,7 @@ import {
   type RuntimeEnv,
 } from "../../../core/services/maintenance/retentionPolicy";
 import { REVISION_RETENTION_FAMILY_ORDER } from "../../../core/services/content/revisionRetentionService";
+import { MAX_PAGE_REVISION_RETENTION } from "../../../core/services/pages/revisionRetention";
 import {
   countExpiredPageviewsBatch,
   countExpiredSessionsBatch,
@@ -258,7 +259,12 @@ const analyticsSurvivorCounts = async (
   return { sessions: sessions[0]?.n ?? -1, pageviews: pageviews[0]?.n ?? -1 };
 };
 
-/** One marker page carrying three aged autosave revisions (newest kept). */
+/**
+ * One marker page carrying `MAX_PAGE_REVISION_RETENTION + 3` aged autosave
+ * revisions (v1..v103): the effective page whole-family floor keeps the
+ * newest `MAX_PAGE_REVISION_RETENTION`, so exactly the three oldest are
+ * eligible.
+ */
 const seedPageRevisionFixture = async (tag: string): Promise<string> => {
   const inserted = await db
     .insert(pages)
@@ -266,9 +272,9 @@ const seedPageRevisionFixture = async (tag: string): Promise<string> => {
     .returning({ id: pages.id });
   const pageId = inserted[0]!.id;
   await db.insert(pageRevisions).values(
-    [1, 2, 3].map((version) => ({
+    Array.from({ length: MAX_PAGE_REVISION_RETENTION + 3 }, (_, index) => ({
       pageId,
-      version,
+      version: index + 1,
       kind: "autosave",
       data: {},
       createdAt: daysAgo(60),
@@ -611,7 +617,7 @@ describe("batch and family-unit independence (contract L217-223, C2(b)/C9)", () 
     "a later-family failure keeps the earlier committed analytics high-water mark, names the failing family, and skips the remaining families",
     async () => {
       const tag = "familyfail";
-      const fixture = await seedAnalyticsFixture(tag);
+      await seedAnalyticsFixture(tag);
       const baseline = await activeBackendCount();
 
       let summary: RetentionJobSummary | null = null;
@@ -682,9 +688,11 @@ describe("batch and family-unit independence (contract L217-223, C2(b)/C9)", () 
       expect(familyIds).not.toContain("detail_page");
       expect(familyIds).not.toContain("entry");
       expect(familyIds).not.toContain("post");
-      // Durable effect of the committed unit: only the keep-newest floor row
-      // survives on the fixture page.
-      expect(await pageRevisionVersions(pageId)).toEqual([3]);
+      // Durable effect of the committed unit: the effective page floor
+      // (MAX_PAGE_REVISION_RETENTION) holds v4..v103; exactly v1..v3 were deleted.
+      expect(await pageRevisionVersions(pageId)).toEqual(
+        Array.from({ length: MAX_PAGE_REVISION_RETENTION }, (_, index) => index + 4)
+      );
       expect(await advisoryHeld()).toBe(false);
       expect(await activeBackendCount()).toBe(baseline);
     },

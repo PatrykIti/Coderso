@@ -25,6 +25,7 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 
+import { encryptEmail, hashEmail } from "../../../core/services/security/piiEmail";
 import type {
   PageRevisionListInput,
   PageRevisionPruneResult,
@@ -45,6 +46,10 @@ const OWNER_DB_TEST_MAP_PRESENT = [
   process.env.TASK551_FIXTURE_DATABASE_NAME,
   process.env.TASK551_FIXTURE_DATABASE_SENTINEL,
 ].every((value) => typeof value === "string" && value.length > 0);
+
+// PII test keys, copied from tests/unit/security/piiEmail.test.ts:13-14.
+process.env.PII_HASH_KEY ||= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.PII_ENC_KEY ||= "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
 
 // Named gate: exactly the real-database legs register through `test.skipIf` on
 // the owner map above; every other leg below is pure.
@@ -307,7 +312,7 @@ const snapshotOf = (title: string, slug: string, text: string) => ({
   data: buildPageData(text),
 });
 
-/** One list row tuple, in the exact 11-column projection order of the list. */
+/** One list row tuple, in the exact 12-column projection order of the list. */
 const listRow = (pageId: string, version: number, withAuthor: boolean): unknown[] => [
   `a1b2c3d4-0000-4000-8000-${String(version).padStart(12, "0")}`,
   pageId,
@@ -320,6 +325,7 @@ const listRow = (pageId: string, version: number, withAuthor: boolean): unknown[
   withAuthor ? AUTHOR_ID : null,
   withAuthor ? "Ada Lovelace" : null,
   withAuthor ? "ada@example.com" : null,
+  null,
 ];
 
 const listRows = (count: number, pageId: string): StubResultSet =>
@@ -461,6 +467,26 @@ describe("revisionService pure airtight legs", () => {
     expect(statements).toHaveLength(1);
   });
 
+  test("resolves list author emails through resolveEmailValue, never the raw column", async () => {
+    const hash = hashEmail("ada@example.com");
+    const cases: [unknown, PageRevisionSummary["createdBy"]][] = [
+      [
+        JSON.stringify(encryptEmail("ada@example.com")),
+        { id: AUTHOR_ID, name: "Ada Lovelace", email: "ada@example.com" },
+      ],
+      [null, null],
+    ];
+    for (const [encrypted, expected] of cases) {
+      const row = listRow(PAGE_ID, 3, true);
+      row[10] = hash;
+      row[11] = encrypted;
+      const { envelope, statements } = await runList(undefined, LIST_HANDLER([row]));
+      expect(statements[0].sql).toContain('"users"."email_encrypted"');
+      expect(envelope.items[0].createdBy).toEqual(expected);
+      expect(envelope.items[0].createdBy?.email).not.toBe(hash);
+    }
+  });
+
   test("extracts title and slug in SQL and never transfers the data column", async () => {
     const { statements } = await runList({ limit: 2 }, LIST_HANDLER(listRows(3, PAGE_ID)));
     const { sql } = statements[0];
@@ -592,6 +618,15 @@ describe("revisionService pure airtight legs", () => {
     expect(params.slice(0, 2)).toEqual([PAGE_ID, LATEST_ID]);
     expect(sql).toMatch(/limit \$\d+$/);
 
+    // A hash-only author (no encrypted payload) resolves to no author at all.
+    const [hashOnly] = pointReadResult(PAGE_ID, stored);
+    hashOnly[8] = hashEmail("ada@example.com");
+    const { stubDb: hashDb } = makeStubDb([{ match: RX.pointRead, results: [[hashOnly]] }]);
+    const hashRecord = await withSwappableDatabase(hashDb, () =>
+      service.getPageRevision(PAGE_ID, LATEST_ID)
+    );
+    expect(hashRecord?.createdBy).toBeNull();
+
     const { stubDb: emptyDb } = makeStubDb([{ match: RX.pointRead, results: [[]] }]);
     const missing = await withSwappableDatabase(emptyDb, () =>
       service.getPageRevision(PAGE_ID, CREATED_ID)
@@ -646,7 +681,12 @@ describe("revisionService pure airtight legs", () => {
       USER_ID
     );
     expect(result.reusedRevision).toBe(false);
-    expect(result.revision).toMatchObject({ id: CREATED_ID, version: 10, kind: "autosave" });
+    expect(result.revision).toMatchObject({
+      id: CREATED_ID,
+      pageId: PAGE_ID,
+      version: 10,
+      kind: "autosave",
+    });
     // lock + latest read + re-entrant lock + next-version read + insert + delete
     expect(statements.length).toBeLessThanOrEqual(6);
     expect(statements).toHaveLength(6);
@@ -822,6 +862,7 @@ describe("revisionService real-database legs (requires the owner-injected task55
       expect(rev1.version).toBe(1);
       expect(rev2.version).toBe(2);
       expect(rev1.kind).toBe("publish");
+      expect(rev1.pageId).toBe(page.id);
 
       const autosave = await service.createOrReplaceAutosaveRevision(
         page.id,
@@ -858,6 +899,10 @@ describe("revisionService real-database legs (requires the owner-injected task55
         "version",
       ]);
       expect("data" in only.items[0]).toBe(false);
+      expect(only.items[0].createdBy).toMatchObject({
+        id: actorId,
+        email: expect.stringMatching(/^revsvc-[0-9a-f-]+@example\.com$/),
+      });
       // title/slug reach the summary through the bounded `->>` extraction.
       expect(only.items[0]).toMatchObject({
         id: autosave.revision.id,

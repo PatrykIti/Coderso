@@ -22,6 +22,7 @@ import {
 import { areRevisionSnapshotsEqual } from "../content/revisionSnapshot";
 import {
   allocateRevision,
+  type Revision,
   revisionScopeDigest,
   withRevisionParentLock,
 } from "../database/revisionAllocation";
@@ -162,6 +163,12 @@ type RevisionRow = {
 
 const mapRevisionRow = (row: RevisionRow): PageRevisionRecord => {
   const snapshot = normalizePageRevisionSnapshot(row.data);
+  const email = row.createdBy
+    ? resolveEmailValue({
+        email: row.authorEmail ?? null,
+        emailEncrypted: row.authorEmailEncrypted ?? null,
+      })
+    : null;
 
   return {
     id: row.id,
@@ -173,24 +180,20 @@ const mapRevisionRow = (row: RevisionRow): PageRevisionRecord => {
     data: snapshot.data,
     createdAt: row.createdAt,
     createdBy:
-      row.createdBy && (row.authorEmail || row.authorEmailEncrypted)
-        ? {
-            id: row.createdBy,
-            name: row.authorName ?? null,
-            email:
-              resolveEmailValue({
-                email: row.authorEmail ?? null,
-                emailEncrypted: row.authorEmailEncrypted ?? null,
-              }) ?? "",
-          }
-        : null,
+      row.createdBy && email ? { id: row.createdBy, name: row.authorName ?? null, email } : null,
   };
 };
 
-const mapAllocatedRevisionRow = (created: unknown, kind: PageRevisionKind): PageRevisionRecord => {
-  const row = created as RevisionRow;
-  return mapRevisionRow({ ...row, kind: row.kind ?? kind });
-};
+const mapAllocatedRevisionRow = (created: Revision<unknown>): PageRevisionRecord =>
+  mapRevisionRow({
+    id: created.id,
+    pageId: created.parentId,
+    version: created.version,
+    kind: created.kind,
+    data: created.data,
+    createdAt: created.createdAt,
+    createdBy: created.createdBy,
+  });
 
 /**
  * Same-parent point read by revision ID. This is the only list-adjacent
@@ -366,6 +369,7 @@ export async function listRevisions(
       authorId: users.id,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(pageRevisions)
     .leftJoin(users, eq(pageRevisions.createdBy, users.id))
@@ -379,23 +383,24 @@ export async function listRevisions(
     .limit(query.limit + 1);
 
   const hasMore = rows.length > query.limit;
-  const items: PageRevisionSummary[] = rows.slice(0, query.limit).map((row) => ({
-    id: row.id,
-    pageId: row.pageId,
-    version: row.version,
-    kind: normalizeRevisionKind(row.kind),
-    title: normalizeScalarText(row.title),
-    slug: normalizeScalarText(row.slug),
-    createdAt: row.createdAt,
-    createdBy:
-      row.createdById && row.authorEmail
-        ? {
-            id: row.createdById,
-            name: row.authorName ?? null,
-            email: row.authorEmail,
-          }
-        : null,
-  }));
+  const items: PageRevisionSummary[] = rows.slice(0, query.limit).map((row) => {
+    const email = row.createdById
+      ? resolveEmailValue({ emailEncrypted: row.authorEmailEncrypted, email: row.authorEmail })
+      : null;
+    return {
+      id: row.id,
+      pageId: row.pageId,
+      version: row.version,
+      kind: normalizeRevisionKind(row.kind),
+      title: normalizeScalarText(row.title),
+      slug: normalizeScalarText(row.slug),
+      createdAt: row.createdAt,
+      createdBy:
+        row.createdById && email
+          ? { id: row.createdById, name: row.authorName ?? null, email }
+          : null,
+    };
+  });
 
   const boundary = hasMore ? rows[query.limit - 1] : undefined;
   const nextCursor = boundary
@@ -450,7 +455,7 @@ export async function createRevisionTx(
     tx
   );
 
-  return mapAllocatedRevisionRow(created, kind);
+  return mapAllocatedRevisionRow(created);
 }
 
 export async function createOrReplaceAutosaveRevision(
@@ -538,7 +543,7 @@ export async function createOrReplaceAutosaveRevisionTx(
         );
     }
 
-    return { revision: mapAllocatedRevisionRow(created, "autosave"), reusedRevision: false };
+    return { revision: mapAllocatedRevisionRow(created), reusedRevision: false };
   });
 }
 
