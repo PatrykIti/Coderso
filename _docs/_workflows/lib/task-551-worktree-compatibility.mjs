@@ -107,6 +107,8 @@ export const TASK551_PHASE_PROVENANCE = freeze([
       "_docs/_workflows/task-551-implement.d.mts",
       "_docs/_workflows/task-551-fix.d.mts",
       "_docs/_workflows/lib/task-551-evidence-contract.d.mts",
+      "_docs/_workflows/lib/task-551-dispatch-primitives.mjs",
+      "_docs/_workflows/lib/task-551-dispatch-envelope.mjs",
     ],
     ownedTests: [
       "tests/unit/workflows/task551AuthorAudit.test.ts",
