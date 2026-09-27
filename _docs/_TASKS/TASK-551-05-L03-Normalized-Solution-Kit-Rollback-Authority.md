@@ -1788,3 +1788,49 @@ for the orchestrator and is never re-baselined (Item N3-1, Item N2-2).
    (`:157`, `:158`, `:159`, `:161`, `:162`, `:163`, `:165`) (Item N4-1).
 3. `:1639-1642` (note 3, Item N3-1, replacement sentence): "RESTRICT triggers on one table fire in trigger-name order (`RI_ConstraintTrigger_a_<oid>`), which is creation order for these same-migration constraints (**H5**)."
    Replacement: Item N4-2.
+
+## Dated Contract Corrections — 2026-09-27 (note 5: V4-3 membership gate, N2-2 comment qualifier, anchor)
+
+This note writes out orchestrator disposition **N11** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum N). It does not re-decide it. It is append-only and makes no fence edit. A bare cite
+of this file is a line at HEAD `0d28d915`; this note adds lines only after `:1790`. Every earlier
+sentence stays binding except those quoted under "Superseded sentences" below.
+
+**Item N5-1 — V4-3 leaf-side membership gate (N11; 01-L01 V3-2 item 1, V11-2).** The Item N2-3
+split names the NEW path `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts`;
+its 01-L01 static-list mirror is **V11-1**. Its gate set gains the 01-L01 **V4-3** command,
+copied verbatim (`TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md:3242` at HEAD):
+
+```text
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551BunLaneMembership.test.ts -t 'binds the static contracted list to every TASK-551 task-file fence|every task551-path lane file on disk is planned or statically contracted'
+```
+
+- Case titles, byte-exact: "binds the static contracted list to every TASK-551 task-file fence"
+  and "every task551-path lane file on disk is planned or statically contracted".
+- Where it runs: the implementer FAST gates and the orchestrator gate of the Item N2-3 split
+  edit, as prose (V3-2 item 3). Green is the V4-3 rule (exit 0, exactly `2 pass`, `0 fail`,
+  0 skipped) on a tree carrying both the split and the 01-L01 source edit with V2-5 cases 1
+  and 8 over the V11-1 list (V3-2 item 2). The fence and `occurrences` stay byte-identical.
+
+**Item N5-2 — N2-2 comment qualifier (N11; N4-2).** The replacement comment is:
+
+```ts
+      // Probe before any evidence row exists. RI triggers fire in trigger-name order
+      // (RI_ConstraintTrigger_a_<oid>), which equals creation order only while the oids have the
+      // same decimal width. Under that condition the evidence FKs (0081 :161-162), created before
+      // the owners FK (:163), would fire first; with only the owner row present, the owners'
+      // single-column FK (:163) precedes the composite source_identity_fk (:165), so its trigger
+      // decides.
+```
+
+The code and the fail-closed rule (Item N2-2, N4-2) are unchanged.
+
+### Superseded sentences (verbatim, line breaks shown as single spaces; superseded from this date)
+
+1. `:1351-1353` (note 2, Item N2-2, code comment): "// Probe before any evidence row exists: the evidence FKs (0081 :161-162) are created before the owners FK (:163) // and would fire first. With only the owner row present, the owners' single-column FK (:163) precedes the // composite source_identity_fk (:165), so its trigger decides."
+   Replacement: Item N5-2.
+2. `:1649-1651` (note 3, Item N3-1): "So do the Item N2-2 code comment ("created before … and would fire first"; "precedes") and the expected constraint name `solution_kit_starter_apply_owners_source_run_id_solution_kit_install_runs_id_fk`."
+   Replacement: "So do the Item N5-2 code comment and the expected constraint name `solution_kit_starter_apply_owners_source_run_id_solution_kit_install_runs_id_fk`."
+3. `:1789` (note 4, superseded item 3, anchor): "`:1639-1642` (note 3, Item N3-1, replacement sentence)".
+   Replacement: "`:1640-1642` (note 3, Item N3-1, replacement sentence)"; its quote is unchanged.

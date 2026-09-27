@@ -981,3 +981,210 @@ Source: `_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-faza0-dispositio
    - **Graph and dependencies unchanged.** The parent graph adds no
      `TASK-551-09-L01:single` edge to 03-L02 FINAL, and this leaf's
      `dependencies`/occurrence `dependsOn` are unchanged.
+
+## Dated Contract Corrections — 2026-09-27 (09-L04 consumer mirror: cross-owner FINAL input, post-FINAL settings-read re-open, zero-skip pin; append-only)
+
+Source: orchestrator decision Addendum N, items N5 and N6
+(`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`),
+with Addendum L item L1 and TASK-551-03-L02 Round 13 item R13-11
+(`.../audit-evidence/03-l02-round13-dispositions.md`), after the Round-12 /
+fix5 audits `wf_cd2288a2-292`. This section is append-only. It wins over the
+body and the 2026-09-24 section wherever they differ. Everything not quoted
+under "Superseded sentences" below stays binding.
+
+Anchor rule: line references to this file, to TASK-551-09-L04
+(`TASK-551-09-L04-Admin-Identity-And-Security-Cache-Hardening.md`), to the
+parent (`TASK-551_Scalable_Database_Query_And_Cache_Optimization.md`) and to
+`core/services/settings/securitySettings.ts` use HEAD `0d28d915` numbering.
+This round makes no in-place edit: the Workflow Dispatch Envelope fence
+(:792-932), the Testing Requirements command block (:710-777) and every
+earlier line are byte-identical to HEAD `0d28d915`, so no line shifts.
+
+The suite in scope is `tests/integration/runtime/public-site-cache-query-budget.test.ts`
+("the suite"). This leaf creates it and is its single writer (Exclusive
+Ownership :50; envelope allowlist :810).
+
+### (a) The suite is a read-only cross-owner FINAL input of 09-L04 (N6 (a); L1)
+
+- **Consumer.** TASK-551-09-L04 runs the suite whole, read-only, as the third
+  cross-owner FINAL gate input (09-L04 note 3 (a), :1719-1769): in
+  `memory-security-settings-tests` (09-L04 envelope :737; `argv` :740;
+  `positiveDiscovery.paths` :743) and `redis-security-settings-tests`
+  (:748; `argv` :751; `positiveDiscovery.paths` :754). Both 09-L04 lanes use
+  the same environment profiles as this leaf's commands (`task551-db-test`,
+  `task551-db-redis-test`). The suite stays outside the 09-L04 allowlist and
+  its `line-count` command (09-L04 :1734-1737).
+- **Single writer.** This leaf is the only writer of the suite at every
+  point of the family: at `TASK-551-09-L01:single` (parent :1001), in a
+  consumer re-run (below) and in the re-open of item (b). 09-L04 never
+  creates, edits, skips, filters or re-baselines it.
+- **Q1 red at 09-L04 FINAL.** A red (or a skipped or filtered-out test) in
+  the suite at 09-L04 FINAL that is caused by a rule of the 09-L04 Uncached
+  Secret Security-Settings Contract (09-L04 :300-348; trigger Q1, 09-L04
+  :1812-1817) is a pre-disposed consumer re-run owed to this leaf, never a
+  09-L04 edit of the suite. 09-L04 FINAL does not land and records the STOP
+  (09-L04 :1748-1758 and :1819-1822). The 09-L01 writer, dispatched by the
+  orchestrator, adapts only the suite within this contract and re-runs it
+  with this leaf's `public-memory-cache-tests` (:863-871) and
+  `public-redis-cache-tests` (:874-882) commands. 09-L04 FINAL resumes only
+  after that 09-L01 re-run receipt is recorded. The adaptation follows the
+  fix-the-source rule the other way round: the Q1 rule wins, and the
+  adaptation never weakens a behavior assertion of the suite. It may only
+  replace an assertion that depended on the removed process-level settings
+  cache (`securitySettings.ts` :226-227, :804) with its item (b) form. If the
+  red cannot be fixed inside the suite (it needs a change to a production
+  file of this leaf), the writer STOPs and reports to the orchestrator; it
+  does not widen its allowlist.
+- **Graph.** The consumer re-run is an orchestrator follow-up, not a graph
+  occurrence. It adds no edge, dependency or occurrence; the parent graph
+  (:1001-1006) and this envelope's `dependencies`/`dependsOn` are unchanged.
+  Its receipt records that it was used.
+
+### (b) Named post-FINAL re-open "09-L01 settings-read assertions" (N5; N6 (b))
+
+- **Why it is post-FINAL.** `TASK-551-09-L01:single` (parent :1001) lands
+  while `getSecuritySettings` still returns a process-cached value
+  (`securitySettings.ts` :226-227 hold `cachedSettings`/`cachedUpdatedAt`;
+  :804 returns the cached object). Only `TASK-551-09-L04:final` (parent :1004)
+  removes that cache (09-L04 :302-307). A per-request settings-read count
+  therefore cannot be green at this leaf's `single` gate without a reset seam,
+  and this contract names none.
+- **What the re-open appends.** After 09-L04 FINAL lands, the 09-L01 writer
+  appends to the suite the settings-read assertions of N5, verbatim: "one
+  authoritative settings read plus zero additional reads for a safe warm hit;
+  settings plus one content gate plus zero additional reads for mutable
+  detail/list". "One authoritative settings read" is the one
+  `getSecuritySettings` DB statement of the request, counted by the
+  TASK-551-02 instrumentation over the complete request (:140). "One content
+  gate" is the one set-based root+nested dependency validator (:617-619). The
+  assertions cover the safe warm hit and the page/home, post and
+  content-entry detail/list warm hits (:614-620), and the 1/10/50-caller
+  cases (each request reads settings once and validates once, :620-621).
+- **Allowlist.** Exactly the suite. No production file, fence, task file or
+  other test is edited. A red that needs a production change is a STOP and
+  report to the orchestrator.
+- **Gate (both backends).** The re-open proves the assertions with this
+  leaf's own commands, run whole as the envelope literals (argv and
+  `environmentProfile`, no `-t`/name filter): `public-memory-cache-tests`
+  (:863-871; memory) and `public-redis-cache-tests` (:874-882; Redis). It also
+  runs the envelope's `diff-check` (:910) and `line-count` (:917; the suite
+  stays at or under 1,000 lines) and the repo-root ESLint on the suite. Item
+  (c) applies to both backend runs.
+- **Land order.** After `TASK-551-09-L04:final` (parent :1004) and before
+  `TASK-551-10-L01:single` is dispatched (parent :1006). This note does not
+  order the re-open against `TASK-551-01-L01:final` (parent :1005). Like the
+  consumer re-run, the re-open is an orchestrator follow-up and not a graph
+  occurrence; the parent graph and this envelope are unchanged.
+- **Receipts.** The re-open's own receipt enforces the assertions. It records
+  HEAD, the appended test names, both backend command results with
+  pass/fail/skip/todo counts, the `line-count` result and the ESLint exit. The
+  09-L04 FINAL receipt only records whether the assertions were present in
+  the suite (09-L04 :1738-1747). At 09-L04 FINAL they are absent by this land
+  order, and 09-L04 gates on the suite's assertions as they exist then (N5).
+- **Proof at `TASK-551-09-L01:single`.** Until the re-open lands, the suite
+  asserts the non-settings part of each budget over the complete-request
+  instrumentation. For a safe warm hit that is zero domain/render/cache reads.
+  For a page/home, post or content-entry detail/list warm hit it is exactly
+  one set-based root+nested validator statement (`pageLimit + 1` and stable
+  ordering inside it for lists) and zero additional reads. For the 1/10/50
+  callers it is one validation per request. The count of the
+  `getSecuritySettings` DB statement is neither asserted as 1 nor as 0, and
+  no test calls `resetSecuritySettingsCache` to produce it. The per-request
+  `getSecuritySettings` call contract (:132-137, :347, :356, :360) and the
+  Security Contract (:599-601) stay binding at `single`; only the proof of the
+  settings-read DB count moves to the re-open. This is also why the suite
+  stays green under 09-L04's current assertions when 09-L04 FINAL removes the
+  process-level cache.
+
+### (c) Zero-skip pin per backend for the suite (N5 last sentence; N6 (c))
+
+Current treatment, verified: neither this body nor the envelope sets a skip
+policy for the suite. Each `positiveDiscovery` block (`"minimum": 1`, :870
+and :881) is only a discovery floor over its listed paths. The prose
+(:705-707) requires discovery of every replacement but says nothing about
+skips. `bun test` exits 0 when tests are skipped: a scratch probe on
+2026-09-27 (Bun 1.4.2) with one passing test, one `test.skip` and one
+`test.if(false)` test reported "1 pass / 2 skip / 0 fail" and exit 0. So no
+existing command's exit code enforces zero skips. No earlier sentence
+permits a skip, so none is superseded here. The pin below is new and is
+enforced by receipts, not by the fence.
+
+- **Legs.** Memory (`public-memory-cache-tests`, profile `task551-db-test`,
+  documented default backend :786-787), Redis (`public-redis-cache-tests`,
+  profile `task551-db-redis-test`) and, if the suite hosts them, the
+  two-process Redis legs (:624-628, :663-664), which run inside the Redis
+  command.
+- **Rule.** In every leg, the suite's run reports 0 skip, 0 todo and 0 fail.
+  The suite contains no `test.skip`, `test.todo`, `test.only`, `test.if`,
+  `test.skipIf`, `test.todoIf`, `describe.skip`, `describe.only`,
+  `describe.if` or `describe.skipIf`. No test returns early to pass
+  vacuously.
+- **Backend-specific registration.** A test that exists only for one backend
+  (for example a two-process Redis leg) is registered from the resolved
+  server-cache backend of the command's environment profile. It is never
+  registered from an availability probe. Missing or unreachable DB, Redis or
+  spawn infrastructure is a failure, never a skip or deselection. The
+  per-backend registered test-name sets (memory M, Redis R, R including every
+  two-process leg the suite hosts) are fixed. Each receipt records them with
+  pass count = |M| or |R|.
+- **Where it binds.** At `TASK-551-09-L01:single`, at every consumer re-run
+  of item (a) and at the item (b) re-open. The 09-L04 lanes use the same two
+  profiles, so they see exactly M and R with zero skips. From this leaf's
+  side, a skip or todo in the suite in either 09-L04 lane breaches this pin.
+  It is owed to 09-L01 as a consumer re-run under item (a), even when it is
+  not traceable to Q1. This note does not change 09-L04's own procedure.
+
+### (d) No fence edit (N6 (d))
+
+The suite is already in both backend commands and in the allowlist.
+Untruncated `grep -n` over this file at HEAD `0d28d915` finds the path 10
+times: Exclusive Ownership :50; prose commands :717 (memory) and :727
+(Redis); prose `wc -l` :757; envelope allowlist :810;
+`public-memory-cache-tests` `argv` :865 and `positiveDiscovery.paths` :869;
+`public-redis-cache-tests` `argv` :876 and `positiveDiscovery.paths` :880;
+`line-count` `argv` :919. The envelope fence (:792-932), its `dependencies`
+and its single occurrence stay byte-identical. The family preflight stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+### Superseded sentences (quoted verbatim)
+
+Line numbers are HEAD `0d28d915` numbering. Each sentence is superseded only
+for when the settings-read DB count is proven (item (b)). The product budgets
+in the Overview (:19-26) and the Security Contract (:599-601) are not
+superseded.
+
+- (s1) Testing Requirements (:614-617), superseded:
+  "Prove cold
+  render behavior and that the second safely eligible structurally non-mutable
+  request has byte parity and exactly one total PostgreSQL query: the uncached
+  security-settings read, with zero domain/render/cache reads."
+  - Replacement: "Prove cold render behavior and that the second safely
+    eligible structurally non-mutable request has byte parity and zero
+    domain/render/cache reads at `TASK-551-09-L01:single`; the one
+    authoritative settings read (exactly one total PostgreSQL query) is
+    asserted by the item (b) re-open after `TASK-551-09-L04:final`."
+- (s2) Testing Requirements (:617-620), superseded:
+  "Page/home, post and
+  content-entry detail/list hits execute exactly two total queries: security plus
+  one set-based root+nested dependency validator; lists retain `pageLimit + 1` and
+  stable ordering inside that statement."
+  - Replacement: "Page/home, post and content-entry detail/list hits execute
+    exactly one set-based root+nested dependency validator and zero additional
+    reads at `TASK-551-09-L01:single` (lists retain `pageLimit + 1` and stable
+    ordering inside that statement); the settings read (exactly two total
+    queries) is asserted by the item (b) re-open."
+- (s3) Testing Requirements (:620-621), superseded:
+  "For 1/10/50 callers, each request reads
+  security once and validates once;"
+  - Replacement: "For 1/10/50 callers, each request validates once at
+    `TASK-551-09-L01:single`, and reads security once as asserted by the item
+    (b) re-open;". The rest of that sentence (from "when the cacheable
+    positive fill is conditionally written") stays binding.
+
+Superseded quote count: 3.
+
+### Family inventory
+
+No task file is added, renamed or removed; no occurrence is added; the
+envelope fence is untouched this round. The family preflight stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.

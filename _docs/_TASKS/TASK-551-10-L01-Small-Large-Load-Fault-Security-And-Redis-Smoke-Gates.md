@@ -2091,3 +2091,45 @@ bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
 ```text
 "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"], "minimum": 1 }
 ```
+
+## Dated Contract Corrections — 2026-09-27 (note 2: dispatch precondition, digest source)
+
+This note implements Addendum **N7**, with the **N5** land-order bound, from `_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+It is append-only, edits no fence, and uses HEAD `0d28d915` line numbers. Parent graph verified: `TASK-551-05-L01:single` `:983`,
+`TASK-551-05-L03:single` `:984`, `TASK-551-09-L01:single` `:1001`, `TASK-551-09-L04:final` `:1004`, `TASK-551-01-L01:final` `:1005`,
+`TASK-551-10-L01:single` `:1006`. The 05-L01 item-12 split and the 05-L03 split are re-open edits. They have no graph node and
+no edge to `:1006`, so node order does not put them before this leaf.
+
+### Item 1 — Dispatch precondition (replaces the Item-4 node-order argument; N7, N5)
+
+`TASK-551-10-L01:single` is not dispatched until all three of these are recorded:
+
+1. **05-L01 item-12 landing evidence**: the three-part conjunction of 01-L01 **V11-3**
+   (`TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md:5903-5912`). (a) The three split test paths exist as files.
+   (b) For each of them, the **V3-4** class-D owner-map run and map-free run both PASS with 0 failed and 0 skipped. (c) The 05-L01
+   rule-7 awk form prints 3 on the item-12 tree. Part (c) on its own is only a retention guard and never landing evidence.
+2. **The 05-L03 split receipt**: the receipt of the test-only edit that lands Item N2-3 (`TASK-551-05-L03-…md:1380-1394`), with its
+   note-2 gate results (`:1503-1522`). This covers `…Schema-static.test.ts` existing on disk.
+3. **The 09-L01 post-FINAL re-open "09-L01 settings-read assertions"** (**N5**): its receipt is recorded after
+   `TASK-551-09-L04:final` (`:1004`).
+
+A missing record blocks dispatch. Do not work around it with a lower `minimum` or a shorter path list. The Item 4 table and its
+"Undispatchable until the files exist (intended)" rule stay binding.
+
+### Item 2 — Digest source for the `TASK-551-09-L04:` manifest (N7)
+
+The manifest literal for `final-admin-cache-tests` is the `:998-1010` block with the Item-3 fifteen-path substitution (the Item 3
+command, 2026-09-27 section `:1948-1962`). The owner-receipt digest is taken over the `TASK-551-09-L04:` block (`:989-1039`)
+with that command in place of `:998-1010`. `:998-1010` stays in place, unedited, as the historical thirteen-path literal and is
+never a digest input. The other three manifest blocks and the canonicalization are unchanged.
+
+### Superseded sentences (verbatim, line breaks shown as single spaces; superseded from this date)
+
+1. `:2010-2015` (2026-09-27 section, Item 4): "In the parent graph, `TASK-551-10-L01:single` (parent `:1006`) depends on
+   `TASK-551-01-L01:final` (`:1005`), which depends on `TASK-551-09-L04:final` (`:1004`). `TASK-551-05-L01:single` (`:983`) and
+   `TASK-551-05-L03:single` (`:984`) come earlier in the parent node order, which is the total land order (**J1**). So on the
+   dispatch tree every path already exists." Replacement: Item 1.
+2. `:775-776` (amended): "Validate four ordered TASK-551-09 owner command manifests against the literal blocks below."
+   Replacement: the same sentence, where the `TASK-551-09-L04:` literal is the one Item 2 defines.
+3. `:783-784` (amended): "Canonicalize these blocks to argv arrays and compare their SHA-256 digests with the four ordered owner
+   receipts." Replacement: the same sentence, with "these blocks" read through Item 2 for `TASK-551-09-L04:`.

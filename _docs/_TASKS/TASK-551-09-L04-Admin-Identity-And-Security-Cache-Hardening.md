@@ -1957,3 +1957,285 @@ Superseded quote count: 7.
 No task file is added, renamed or removed; no occurrence is added; the
 envelope fence is untouched this round. The family preflight stays
 `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+## Dated Contract Corrections — 2026-09-27 (consumer mirror note 4: resetSecuritySettingsCache fate, :531-534 as amended, negative-leg seam, S1-S12 wording, parity claim)
+
+Source: orchestrator decision Addendum N, items N2, N4, N5 and N8
+(`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`),
+and TASK-551-03-L02 Round 13 items R13-02 and R13-11
+(`.../audit-evidence/03-l02-round13-dispositions.md`), after the Round-12 /
+fix5 audits `wf_cd2288a2-292` (09-L04 + 10-L01: two auditors, 0/2/5 and
+0/1/3). This section is append-only. It wins over the body, the 2026-09-24
+sections, the 2026-09-26 section and notes 2 and 3 (the earlier 2026-09-27
+sections) wherever they differ, for the FINAL occurrence only; INITIAL is
+unchanged. Everything not quoted under "Superseded sentences" below stays
+binding.
+
+Anchor rule: line references to this file and to every other file use HEAD
+`0d28d915` numbering. `git diff -U0 b98ed8d9 0d28d915 -- <this file>` is
+exactly one hunk (`@@ -1695,0 +1696,264 @@`, note 3 appended), so lines
+1-1695 are identical at HEAD `b98ed8d9` and HEAD `0d28d915`, and every
+`b98ed8d9` anchor in note 3 still holds. This round makes no in-place edit and
+no fence edit: the envelope fence, the Testing Requirements command block and
+every earlier line are byte-identical to HEAD `0d28d915`, so no line shifts.
+
+### (a) `resetSecuritySettingsCache` stays a stable export (N4)
+
+Facts at HEAD `0d28d915`: `core/services/settings/securitySettings.ts` (in
+this leaf's Exclusive Ownership list, :51) holds the process-level value cache
+`let cachedSettings` / `let cachedUpdatedAt` (:226-227), the export
+`export function resetSecuritySettingsCache()` (:798-801) and the cache hit
+`if (cachedSettings) return cachedSettings;` inside `getSecuritySettings`
+(:803-804). The Uncached Secret Security-Settings Contract (:300-348) removes
+that process cache at FINAL. `core/tsconfig.json` type-checks neither `tests/`
+nor `scripts/`, so no FINAL gate would catch a removed export.
+
+Importers (untruncated `grep -rl resetSecuritySettingsCache tests scripts core`
+at HEAD `0d28d915`: 11 files, the defining module plus 10 importers):
+
+| Importer | Owning task (where known) |
+|---|---|
+| `tests/unit/security/securitySettings.test.ts` | TASK-551-09-L04 (this leaf; Exclusive Ownership :82) |
+| `tests/unit/auth/sessionService.test.ts` | historical (TASK-004-03 / TASK-020-10 lineage); no TASK-551 writer |
+| `tests/security/codersoSecurityGate.test.ts` | historical (TASK-054-19-02 / TASK-174-07 lineage); no TASK-551 writer |
+| `tests/security/seo-pipeline.test.ts` | originally TASK-493-06-L01; allowlisted for TASK-551-09-L02 (09-L02 :75) and run by TASK-551-10-L01 (10-L01 :900) |
+| `tests/integration/runtime/task-539-page-parity-runtime.test.ts` | TASK-539-08-L01; named in TASK-551-03-L02 command argv (03-L02 :1219, :1964) |
+| `scripts/smoke-auth-rate-window.ts` | not recorded in a task allowlist (named by TASK-552-04-L04 and TASK-560-01) |
+| `scripts/runtime-smoke/adapters/task-540/auth-window.ts` | TASK-552-04-L02 (TASK-540 adapter) |
+| `scripts/runtime-smoke/adapters/task-488/fixture.ts` | TASK-488 runtime-smoke adapter (no task file names the path) |
+| `scripts/runtime-smoke/adapters/task-490/production-handlers.ts` | TASK-490 runtime-smoke adapter (no task file names the path) |
+| `scripts/runtime-smoke/adapters/task-491/db-operations.ts` | TASK-491 runtime-smoke adapter (no task file names the path) |
+
+Planned caller: TASK-551-03-L02 R2-31 (03-L02 :3753-3759) calls
+`resetSecuritySettingsCache()` in the `afterAll` of its session-race suite.
+
+FINAL rule (binding; no follow-up):
+
+- `resetSecuritySettingsCache` stays exported from
+  `core/services/settings/securitySettings.ts` with its signature unchanged
+  (`export function resetSecuritySettingsCache(): void`, no parameters,
+  synchronous).
+- After FINAL removes the process-level settings cache (:226-227 and the
+  :804 hit), the function is a no-op: it clears whatever transient
+  module state remains, if any, and nothing else. It never reads the database,
+  never throws, never installs or returns a value, and never becomes a
+  value-cache seam (body :302-304 stays binding).
+- None of the ten importers above and the planned 03-L02 `afterAll` needs a
+  change because of this leaf. This leaf edits only the importer it owns
+  (`tests/unit/security/securitySettings.test.ts`) and only where a body rule
+  requires it. Removing or renaming the export is outside this leaf's FINAL.
+
+### (b) Body :531-534 as amended; post-FINAL 09-L01 re-open (N5)
+
+Body :531-534 is quoted under "Superseded sentences" (b1) and amended as
+follows. 09-L01:single (parent :1001) lands while `getSecuritySettings` still
+returns the process-cached value; only this leaf's FINAL (parent :1004)
+removes it. The settings-read assertions therefore cannot be proven at
+09-L01's own gate and are not a gate of this leaf.
+
+- **Owed assertions.** "One authoritative settings read plus zero additional
+  reads for a safe warm hit; settings plus one content gate plus zero
+  additional reads for mutable detail/list", in
+  `tests/integration/runtime/public-site-cache-query-budget.test.ts` (09-L01
+  :50; allowlist :810; commands `public-memory-cache-tests` :863 and
+  `public-redis-cache-tests` :874).
+- **Owner and name.** A named post-FINAL TASK-551-09-L01 re-open, "09-L01
+  settings-read assertions". 09-L01 is the single writer; this leaf never
+  writes them.
+- **Land order.** This leaf's FINAL (parent :1004): the query-budget suite
+  runs whole in both FINAL Bun lanes as it exists, and this leaf gates on its
+  current assertions → the 09-L01 re-open appends the settings-read
+  assertions and proves them at its own gate (the suite's own commands, both
+  backends) → before `TASK-551-10-L01:single` dispatch (parent :1006).
+- **Receipts.** This leaf's FINAL receipt records, for that file, the test
+  names it ran and whether the settings-read assertions were present (at
+  FINAL they are expected to be absent). The 09-L01 re-open receipt enforces
+  them. This leaf's FINAL is never blocked by their absence.
+- **Backend-conditional skips.** 09-L01 pins zero skips per backend (memory,
+  Redis, two-process) for this file as a mirror item. A skip that appears in
+  this file in either FINAL Bun lane of this leaf is therefore a breach of the
+  owner's pin. It is recorded in the FINAL receipt and handled like a note 2
+  (d) STOP with TASK-551-09-L01 as the re-run owner (note 3 (a)
+  "Red handling"); it is not a K4 carve-out, because this leaf's allowlist
+  cannot fix it.
+
+Note 3 (a) :1743-1747 is quoted under "Superseded sentences" (b2)-(b3) and
+restated to match.
+
+### (c) Negative-leg seam named (N8)
+
+Note 2 (c) (ii) drops a stale-scope local event for every local handler. At
+HEAD `0d28d915`, `CacheEventBroadcastOptions` (`core/admin/utils/cacheBus.ts`
+:14-16) holds only `operationToken`, and `broadcastCacheEvent` (:131-154) is
+synchronous. The binding seam is an optional captured installation token.
+The names are verified in `core/admin/utils/adminCacheAuthority.ts`:
+`AdminCacheInstallationToken` (:9), `captureAdminCacheInstallationToken`
+(:93), `isCurrentAdminCacheInstallationToken` (:96), and the identity-free
+`advanceAdminCacheInstallationAuthority()` (body :113). Both files are in this
+leaf's Exclusive Ownership list (:43, :48). `adminCacheAuthority.ts` imports
+nothing, so the new import creates no cycle.
+
+Pseudocode (FINAL):
+
+```ts
+import {
+  isCurrentAdminCacheInstallationToken,
+  type AdminCacheInstallationToken,
+} from "./adminCacheAuthority";
+
+export type CacheEventBroadcastOptions = Readonly<{
+  operationToken?: CacheEventOperationToken;
+  installationToken?: AdminCacheInstallationToken;
+}>;
+
+export const broadcastCacheEvent = (input, options = {}) => {
+  const event = /* scoped event shape (S11) */;
+  /* remote post: not changed by this note; remote receivers keep the S11 filter */
+  if (
+    options.installationToken !== undefined &&
+    !isCurrentAdminCacheInstallationToken(options.installationToken)
+  ) {
+    return; // stale-scope local event: zero local handlers, never a partial delivery
+  }
+  for (const handler of localHandlers) {
+    handler(event, "local", options.operationToken); // each wrapped independently (S10)
+  }
+};
+```
+
+- The check runs once, before the first local handler, so delivery is all or
+  nothing.
+- A call without `installationToken` (the current `{ operationToken }` shape)
+  is delivered under the current scope. It stays valid, and the positive leg
+  of note 3 (c) runs unchanged.
+- A caller that starts async work captures
+  `captureAdminCacheInstallationToken()` when the work starts and passes it at
+  completion.
+
+Negative leg, restated (replaces the note 3 (c) negative-leg bullet; see
+"Superseded sentences" (c1)): subscribe N >= 2 local handlers; capture
+`const token = captureAdminCacheInstallationToken()`; run a transition that
+advances the installation authority (a direct
+`advanceAdminCacheInstallationAuthority()` call, or an identity transition
+that FINAL wires to an advance, body :118-119 and S9 :273-281); call
+`broadcastCacheEvent(input, { operationToken, installationToken: token })`;
+assert that zero of the N handlers ran. Control, in the same test: call
+`broadcastCacheEvent(input, { operationToken, installationToken:
+captureAdminCacheInstallationToken() })` with a fresh token; assert that all N
+handlers ran synchronously inside the call, each with `origin` `"local"` and
+the identical `operationToken`. The leg therefore cannot pass by dropping
+everything. It stays in `tests/vitest/admin/cacheBusHardening.test.ts` and
+runs through `final-admin-cache-tests` unchanged (note 3 (c)).
+
+### (d) S1-S12 wording (N2)
+
+The note 3 (b) trigger sentence (:1774-1775) is quoted under "Superseded
+sentences" (d1). For the two 03-L02 suites, the (d) STOP trigger set is the
+enumerated rules S1-S12 of note 3 (b), a closed list. The scope-preimage and
+digest rules (:171-173, :177-179, :180-231) are not separate triggers. A red
+caused by a preimage rejection (the scope stays null) is traced through S2
+(:174-176), and the receipt names S2. Q1 (:300-348) stays the query-budget
+suite's trigger, with TASK-551-09-L01 as the re-run owner. The receipt field
+stays "(its trigger id S1-S12 or Q1 and the rule's name)".
+
+### (e) Parity claim corrected (N2; 03-L02 R13-02, R13-11)
+
+Note 3 (e) (:1893-1899) is quoted under "Superseded sentences" (e1). At HEAD
+`0d28d915` the two records DIFFER. 03-L02 Round 12 row (v) (03-L02
+:12720-12733) gives one Admin Browser storage/scope trigger set to every
+cross-owner input, including the query-budget suite. It has no Q1, and its
+S1 anchor is `:158-159` without `:166-170`. 03-L02 Round 13 item R13-02, which
+runs concurrently with this note, restates row (v) per input: S1-S12 with
+`:156-157` and `:166-170` for the two 03-L02 suites; Q1 `:300-348` for the
+query-budget suite with 09-L01 as the re-run owner; the receipt field
+"trigger id S1-S12 or Q1 and the rule's name"; and "the enumerated rules
+S1-S12". Parity holds once 03-L02 Round 13 lands. Until then, this note
+records the difference above, and this file governs this leaf's FINAL
+(note 3 (e) :1900-1902 stays binding).
+
+### (f) Line-gate reference (N8)
+
+Note 3 (d) points to "03-L02 item (g)". In 03-L02 "Handoffs (Round 12)",
+orchestrator (g) is "Merged into (d) (R12-13)" (03-L02 :12957). The owed
+edit is orchestrator (d) (03-L02 :12950-12952). The reference is replaced
+under "Superseded sentences" (f1).
+
+### Superseded sentences (quoted verbatim)
+
+Line numbers are HEAD `0d28d915` numbering.
+
+- (b1) Body Testing Requirements (:531-534), superseded as amended:
+  "Re-run the complete public-site
+  query-budget suite after removing the settings cache: assert one authoritative
+  settings read plus zero additional reads for a safe warm hit and settings plus one
+  content gate plus zero additional reads for mutable detail/list."
+  - Replacement: "Re-run the complete public-site query-budget suite as it
+    exists at FINAL, whole, in both FINAL Bun lanes, and gate on its current
+    assertions. The settings-read assertions (one authoritative settings read
+    plus zero additional reads for a safe warm hit; settings plus one content
+    gate plus zero additional reads for mutable detail/list) are owed to the
+    post-FINAL TASK-551-09-L01 re-open "09-L01 settings-read assertions",
+    which lands before `TASK-551-10-L01:single` dispatch. This leaf's FINAL
+    receipt records whether they were present; the 09-L01 re-open receipt
+    enforces them." (item (b)).
+- (b2) Note 3 (a) "Owed 09-L01 mirror" (:1743-1744), superseded:
+  "They are written by the 09-L01 writer under an orchestrator
+  follow-up (Addendum L1), never by this leaf."
+  - Replacement: "They are written by the 09-L01 writer in the named
+    post-FINAL re-open "09-L01 settings-read assertions" (Addendum N5), after
+    this leaf's FINAL and before `TASK-551-10-L01:single` dispatch, never by
+    this leaf."
+- (b3) Note 3 (a) "Owed 09-L01 mirror" (:1744-1747), superseded as amended:
+  "This leaf's FINAL receipt
+  records, for that file, the test names it ran and whether the :531-534
+  assertions were present in it; this leaf does not add them, and does not
+  gate on them by its own authority."
+  - Replacement: "This leaf's FINAL receipt records, for that file, the test
+    names it ran and whether the settings-read assertions were present in it
+    (expected absent at FINAL); this leaf does not add them and does not gate
+    on them; the 09-L01 re-open receipt enforces them." (item (b)).
+- (c1) Note 3 (c) negative leg (:1860-1867), superseded:
+  "- **Negative leg (stale-scope local event).** Subscribe N >= 2 local
+  handlers, start an emission bound to the current scope/epoch (the
+  stamp or captured installation token/epoch that FINAL implements for note 2
+  (c)), perform an identity transition (for example a nonce-only rotation or
+  an installation-authority advance), then complete the emission. Assert that
+  zero of the N handlers ran (no partial delivery). In the same test, a fresh
+  emission under the new current scope reaches all N handlers, so the leg
+  cannot pass by dropping everything."
+  - Replacement: the item (c) negative leg (capture → transition → broadcast
+    with the captured token → zero handlers; control with a fresh token → all
+    N handlers).
+- (d1) Note 3 (b) (:1774-1775), superseded:
+  "For the two 03-L02 suites, a trigger is EVERY Admin Browser
+  Contract storage/scope rule this leaf's body mandates:"
+  - Replacement: "For the two 03-L02 suites, a trigger is one of the
+    enumerated rules S1-S12 below; a preimage-rejection red is traced through
+    S2:" (item (d)).
+- (e1) Note 3 (e) (:1893-1899), superseded:
+  "03-L02 Round 12 item R12-02 restates the C17 v6 09-L04 row with the same
+  content as this note and note 2: constraint (1) qualified by note 2 (c)
+  (same-tab local delivery under the current scope, including the
+  no-persistent-scope state, is never dropped; a stale-scope local event is
+  dropped for every handler); five re-open items (note 2 (e)); the three
+  cross-owner FINAL inputs of item (a); the (d) STOP triggers = every
+  body-mandated storage/scope rule (item (b)); the non-traceable-red carve-out;
+  the (c) test shape in `cacheBusHardening.test.ts` (item (c))."
+  - Replacement: the item (e) text (the records differ at HEAD `0d28d915`;
+    parity holds once 03-L02 Round 13 lands).
+- (f1) Note 3 (d) replacement sentence (:1887-1889), superseded:
+  "`task551PaginatedClientsSlots.test.ts` is bound
+  by the R10-09 STOP rule and the repository line gate until 03-L02 item (g)
+  lands (a 03-L02 `line-count` command names it)."
+  - Replacement: "`task551PaginatedClientsSlots.test.ts` is bound by the
+    R10-09 STOP rule and the repository line gate until the fence edit owed
+    by 03-L02 Handoffs orchestrator (d) (R12-13) lands (a 03-L02 `line-count`
+    command names it)."
+
+Superseded quote count: 7.
+
+### Family inventory
+
+No task file is added, renamed or removed; no occurrence is added; the
+envelope fence is untouched this round. The family preflight stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.

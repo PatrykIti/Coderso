@@ -6010,3 +6010,64 @@ The quoted text is authoritative for what is superseded.
 - `:5672-5673` (**V10-8**): "Routed to the orchestrator. This amendment adds
   no static-list entry." Replaced by: decided by **K3** and **L7**; v11 adds
   the four entries (**V11-1**, **V11-2**).
+
+### Amendment v12 (2026-09-27)
+
+Recorded at HEAD `0d28d915` from orchestrator decision **N9** (Addendum N
+of `_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`;
+audits `wf_cd2288a2-292`, 01-L01 reports d1 and d2). It records the
+decision and does not re-decide it. Anchors are HEAD `0d28d915` lines,
+re-read at this tree. v12 is append-only and supersedes earlier text only
+where **V12-3** quotes it verbatim; every clause not quoted stays binding.
+No fence byte, source or test file changes; no environment file was read.
+
+#### V12-1 V11-3 Rule reworded (N9)
+
+The **V11-3** Rule now reads: from item 0 on, the `grep -c` = 3 check
+(**V10-4**, and the 05-L01 rule-7 form) shows that the three split paths
+are still in `COMMANDED_TEST_PATHS` and are declared once (a second
+declaration prints 6). On its own it is never landing evidence; it is
+recorded only as the retention guard next to items 1-2 of the **V11-3**
+landing-evidence list. Item-12 landing evidence is the three-part
+conjunction of that list: the split files on disk (1), the **V3-4** class-D
+PASS runs (2), and the rule-7 awk form printing 3 on the item-12 tree (3);
+items 1-2 tell landed from not landed (the check printed 3 before item 12,
+**V11-3** Fact). A receipt, `handoffs[]` entry or closure note citing the
+check without items 1-2 cites no landing evidence. The other **V11-3**
+bullets stay; v12 adds no FINAL step and no handoff row.
+
+#### V12-2 Stale "27" sentences (N9)
+
+Untruncated `grep -n '27 paths\|yields 27\|exactly 27'` hits nine lines:
+`:2854`, `:2859`, `:3023`, `:3050` (v3, quoted by **V11-5**) and `:5947`,
+`:5951`, `:5974`, `:5980` (those quotes) are historical; `:3020` (**V3-6**)
+is live and stale. The second sentence d1 names is the v3 heading `:2824`
+("27 entries"), also live and stale. In a wider `grep -n '\b27\b'`,
+`:2844` is the v3 renumbering step **V11-1** builds on (historical); other
+hits are dates, **V11-5** quotes or **V11-1** numbering. At `0d28d915`, 17
+of the 31 **V11-1** paths are on disk; the first-fence `task551` test
+paths, less two planned and six `tests/vitest` paths, are the same 31.
+
+#### V12-3 Superseded sentences (v12)
+
+Quoted verbatim with their current lines (line breaks folded to spaces).
+
+- `:2824` (**V3-1** heading): "#### V3-1 Static list grows to 27 entries
+  (finding H)". Replaced by: the static list has 31 entries (**V11-1**);
+  the label **V3-1** stays the anchor for its v3 text.
+- `:3018-3020` (**V3-6**): "`:2334-2335`: "This equals the v1 derivation
+  result ("26 contracted paths, 17 of which are present on disk")."
+  Replaced by: the fence derivation at this tree yields 27 paths, 17
+  present (**V3-1**)." Only its replacement sentence is superseded, by: 31
+  paths, 17 present (**V11-1**). Its `:1972` sentence stays.
+- `:5898-5902` (**V11-3** Rule): "From item 0 on, the `grep -c` = 3 check
+  (**V10-4**, and the 05-L01 rule-7 form) only guards retention. It shows
+  that the three split paths are still in `COMMANDED_TEST_PATHS` and are
+  declared once (a second declaration prints 6). It is never evidence that
+  item 12 has landed. No receipt, `handoffs[]` entry or closure note cites
+  it as landing evidence." Replaced by **V12-1**.
+- `:6003-6006` (**V11-5** replacement for `:5597-5599`): "Replaced by
+  **V11-3**: that check guards retention only; item-12 landing evidence is
+  the three split paths on disk, the **V3-4** class-D PASS runs and the
+  05-L01 fifth-note rule-7 awk form." Replaced by: replaced by **V11-3** as
+  reworded by **V12-1**; on its own that check is never landing evidence.

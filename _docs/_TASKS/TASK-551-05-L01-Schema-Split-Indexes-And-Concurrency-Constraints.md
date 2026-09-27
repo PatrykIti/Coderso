@@ -3281,3 +3281,261 @@ Anchors are HEAD `b98ed8d9` lines.
    "only inside quotes" becomes "only inside quotation marks". Item 2's
    replacement therefore reads: The literals "V7-7 step 8" and "E3 check 4"
    occur in this file only inside quotation marks, never as a live label.
+
+## Dated Contract Corrections — 2026-09-27 (seventh note: V4-3 membership gate, retention-guard classification, item-0 rationale, needles, anchors)
+
+**Authority and scope.** This append-only note implements orchestrator
+decision **Addendum N10** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum N) in full. It cites **Addendum J2** (item 0), **Addendum L8**
+(the sixth note), **Addendum N7** and **Addendum N9** (the 01-L01 V11-3
+wording), and the TASK-551-01-L01 family rules **V3-2**, **V4-3** and
+**V11-3**. It re-decides none of them. It corrects the sixth note directly
+above ("the sixth note") and, for labels only, the fifth note. Naming:
+"Addendum Xn" always names an orchestrator decision; the sixth note's own
+facts are "sixth-note fact Sn"; this note's facts are T1-T5. This round
+changes no source, test or migration byte and makes NO fence edit: the
+fence stays `:1023-1179`, no `commands[]` entry and no occurrence is added.
+`**Status:**` is unchanged (`⏳ To Do`). Everything in the first to sixth
+notes that is not quoted under "Superseded sentences (seventh note)" stays
+binding. This note contains no code fence and no dispatch literal.
+
+**Anchor rule.** No line above this note moves, so a bare anchor into THIS
+file is a HEAD `0d28d915` line. Commit `0d28d915` only appended the sixth
+note (`:3099-3283`, one hunk) to this file, so every line `:1-3098` equals
+the `b98ed8d9` line the sixth note cites. Between `b98ed8d9` and `0d28d915`,
+`scripts/task-551-online-indexes.ts`,
+`tests/integration/server/task551OnlineIndexDeployment.test.ts`,
+`tests/integration/server/task551BunLaneMembership.test.ts` and
+`.prettierrc.json` are byte-identical. 01-L01 anchors are HEAD `0d28d915`
+lines of
+`_docs/_TASKS/TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md`.
+
+### Verified facts (read at `0d28d915`)
+
+- **T1 — the V4-3 leaf-side command.** 01-L01 **V4-3** (heading `:3236`)
+  carries the command on `:3242`. Its two `-t` alternatives are the
+  **V2-5** case 1 title (`:2526`) and case 8 title (`:2558`), byte-exact.
+  Before this note, a count-only grep for `task551BunLaneMembership` finds
+  0 matches in this file (01-L01 **V11-2** observation), and the fence names
+  no membership path. At HEAD, each of the two titles occurs 0 times in
+  `tests/integration/server/task551BunLaneMembership.test.ts` (count-only
+  grep): the 01-L01 source edit that carries **V2-5** cases 1 and 8 has not
+  landed. The filtered command, run DB-free at HEAD, reports that the regex
+  "matched 0 tests" and exits 1. That is red under **V4-3** (fewer than
+  2 passes), as expected before that source edit.
+- **T2 — what item 0 changed in the leg.** The J3 leg
+  ("the contract's validation battery commands exactly the ten owned test
+  files", test `:313`) was edited in place: its prose-matching envelope
+  check became the structural check (`:314-336`), and it gained one
+  assertion that did not exist before: `positiveDiscovery.paths` of the
+  single `migration-and-index-tests` command deep-equals
+  `COMMANDED_TEST_PATHS` filtered to `.test.ts` paths, that is, the ten
+  paths in order (`:337-340`, label "positive discovery names every test
+  path in order"). The file has 0 `minimum` matches, so the optional
+  `minimum` comparison the fifth note allows was not added. The suite still
+  has 49 `test(` legs (sixth-note fact S1).
+- **T3 — the Prettier config.** The repository's Prettier config is
+  `.prettierrc.json` (tracked; `:4` reads `"singleQuote": false,`). No
+  `.prettierrc` file exists. The HEAD script still imports
+  `from "./task-551-pg-stat-interval"` (`scripts/task-551-online-indexes.ts:47`).
+- **T4 — shell form of the quote class.** GNU grep 3.11 (`/usr/bin/grep`)
+  does not read `\x60` as a backquote inside a bracket expression: on a
+  scratch file, `grep -nE 'a[\x60]'` matches the line `ax` and not the line
+  that holds `a` plus a backquote. The needles below therefore use bash/zsh
+  ANSI-C quoting (`$'…'`), where `\x60` becomes a backquote, `\'` becomes a
+  single quote and `\\.` becomes `\.` before grep sees the pattern. The
+  pattern grep receives is exactly the **Addendum N10** class
+  `task-551-online-indexes(-catalog|-rollout)?(\.ts|\.js)?["'\x60]` (with
+  the named suffix set of each needle), where `\x60` denotes a backquote.
+- **T5 — needle sanity (read-only).** Each of the three widened needles
+  below, run on the HEAD script `scripts/task-551-online-indexes.ts`
+  (2,959 lines), prints 0 and exits 1. The script's only
+  `task-551-online-indexes` occurrence is still the `:1` doc block, where
+  `.ts` is followed by a space. On a scratch sample, needle 1 matches the
+  entry specifier in double quotes, in single quotes with `.ts` and in
+  backquotes with `.js`, and matches neither the `-catalog`, `-rollout` or
+  `-shared` specifiers nor the CLI usage text
+  `bun scripts/task-551-online-indexes.ts status`. Needle 2 matches only the
+  `-rollout` specifier (here with `.ts` in double quotes). Needle 3 matches
+  the entry, `-catalog` and `-rollout` specifiers and not the `-shared`
+  specifier or the CLI usage text.
+
+### V4-3 leaf-side membership gate (Addendum N10; 01-L01 V3-2, V4-3)
+
+This leaf names the three new `task551` Bun-lane test paths
+`tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts`,
+`…-rollout.test.ts` and `…-evidence.test.ts` (fourth note, fence
+amendment 2). Under 01-L01 **V3-2** item 1, the membership suite therefore
+joins this leaf's own gate set. The leaf-side form is the **V4-3** command,
+copied verbatim from 01-L01 `:3242`:
+
+- `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551BunLaneMembership.test.ts -t 'binds the static contracted list to every TASK-551 task-file fence|every task551-path lane file on disk is planned or statically contracted'`
+
+- **Titles.** The two alternatives are the 01-L01 **V2-5** case 1 and
+  case 8 titles, byte-exact: "binds the static contracted list to every
+  TASK-551 task-file fence" and "every task551-path lane file on disk is
+  planned or statically contracted". They are owned by 01-L01; a rename is
+  a contract change of 01-L01, and 05-L01 never edits the membership suite.
+- **Green (01-L01 V4-3, unchanged).** Exit 0, exactly `2 pass`, `0 fail`
+  and 0 skipped. The `filtered out` count is informational. Fewer than 2
+  passes (including "matched 0 tests", T1) is red, so the gate cannot pass
+  vacuously.
+- **Where it runs (gate order).** It is part of this leaf's gate set in
+  the **V3-2** item 3 sense: implementer FAST gates and orchestrator gates,
+  as prose only (no fence `commands[]` entry, no occurrence change; the
+  family preflight is unchanged). In the R1 item-12 fast gates (fourth-note
+  split rule 7 as extended by the fifth and sixth notes) it runs third:
+  (1) eslint on every touched file; (2) the DB-free run of all four suite
+  parts; (3) this **V4-3** gate; (4) the three split rule-7 import checks
+  (widened below); (5) the retention guard (next section); (6) `wc -l` on
+  all seven files. The orchestrator re-runs it on the final 05-L01 tree
+  with its other 05-L01 gates. The R1/R2/R3 test-only change and item 0
+  name no new path and gain no gate.
+- **Precondition (01-L01 V3-2 item 2; no new land-order edge).** The gate
+  is green only on a tree that carries both this leaf's item-12 paths and
+  the 01-L01 source edit with **V2-5** cases 1 and 8 over the 01-L01
+  **V11-1** static list. Until that 01-L01 edit lands, the gate is red
+  (T1). The item-12 writer then records the red with its T1 cause and
+  STOPs before closure; it never edits the membership suite or `bunLane.ts`.
+- **Receipt.** The item-12 receipt records the exact command, exit code and
+  the pass, fail, skip and filtered-out counts. Any
+  `task551_pending_regeneration:` INFO line the run prints is copied as
+  `pendingRegeneration: [{ path, severity: "info" }]` (01-L01 **V4-3**);
+  INFO rows never block.
+
+### Awk + grep check reclassified as a retention guard (Addendum N10; 01-L01 V11-3; Addendum N9)
+
+The fifth-note split rule-7 check
+`awk '/COMMANDED_TEST_PATHS[^=]*= \[/,/^\];/' tests/integration/server/task551OnlineIndexDeployment.test.ts tests/integration/server/task551OnlineIndexDeployment-support.ts | grep -c -E 'task551OnlineIndexDeployment-(catalog|rollout|evidence)\.test\.ts'`
+(prints 3) is, from item 0 on, a **retention guard only**. It shows that
+the three split paths are still in `COMMANDED_TEST_PATHS` and are declared
+once (a second declaration prints 6). It already prints 3 before item 12
+(01-L01 **V11-3** fact), so on its own it is never evidence that item 12
+has landed, and no receipt, `handoffs[]` entry or closure note cites it
+alone as landing evidence.
+
+- **Item-12 landing evidence** is the 01-L01 **V11-3** three-part
+  conjunction, all three required: (1) the three split test paths exist on
+  disk as files; (2) the **V3-4** class-D PASS runs (owner-map run and
+  map-free run for each split path, 0 failed and 0 skipped); (3) this awk
+  form, run on the item-12 tree, prints 3. Part 3 is recorded only as the
+  retention guard next to parts 1-2 (**Addendum N9**).
+- The check keeps its command text, its place in the item-12 fast gates
+  (step 5 above) and its binding force as a retention guard. Only its label
+  and its evidentiary role change. The 10-L01 dispatch precondition of
+  **Addendum N7** consumes the conjunction, not this check alone.
+
+### Item 0 — rationale corrected (Addendum N10; Addendum J2)
+
+Item 0 edited one existing leg in place (T2): it replaced the leg's
+archived-prose envelope match with the structural parse of the live
+envelope, and it added one strengthening assertion,
+`positiveDiscovery.paths` deep-equal to the ten `COMMANDED_TEST_PATHS`
+test paths. That added assertion is new behaviour in the suite, not a
+move, so the sixth note's "adds no behaviour" rationale is withdrawn
+(superseded item 8 below). The corrected rationale: item 0 edits one leg in
+place and adds one strengthening assertion (`positiveDiscovery.paths`
+deep-equal), allowed under **Addendum J2**, whose item-0 contract (fifth
+note, "Item 0 — the J3 leg re-bound now, test-only") expressly permits
+that comparison as a strengthening. The rest of the sixth-note item-0
+record stands: no leg added or removed (49 `test(` legs), no production,
+fence or other test byte, +24 lines, and the closure line gate bound to the
+pre-family baseline with R1 item 12 as a precondition of 05-L01 closure
+(**O2**).
+
+### Split rule 7 — needles widened to the quote class (Addendum N10)
+
+The three sixth-note import checks keep their edges, file operands and
+pass rule (every named file exists and prints 0; `grep -c` then exits 1;
+a missing file, exit 2, is a failure). Their needles are widened from
+"double quote after an optional `.ts`" to the **Addendum N10** quote class:
+an optional `.ts` or `.js` suffix followed by a double quote, a single
+quote or a backquote (T4). They therefore also catch single-quoted and
+template-literal specifiers (for example, a dynamic `import()` with a
+backquoted path) and `.js`-suffixed specifiers. The exact lines, run from
+the repo root in bash or zsh:
+
+1. Neither `-catalog.ts` nor `-rollout.ts` imports the entry (the entry
+   needle):
+   `grep -cE $'task-551-online-indexes(\\.ts|\\.js)?["\'\x60]' scripts/task-551-online-indexes-catalog.ts scripts/task-551-online-indexes-rollout.ts`
+   prints 0 for each file.
+2. `-catalog.ts` does not import `-rollout.ts`:
+   `grep -cE $'task-551-online-indexes-rollout(\\.ts|\\.js)?["\'\x60]' scripts/task-551-online-indexes-catalog.ts`
+   prints 0.
+3. `-shared.ts` imports none of `-catalog.ts`, `-rollout.ts` or the entry:
+   `grep -cE $'task-551-online-indexes(-catalog|-rollout)?(\\.ts|\\.js)?["\'\x60]' scripts/task-551-online-indexes-shared.ts`
+   prints 0.
+
+Each line prints 0 on the HEAD script (T5). The allowed edges
+(`-catalog.ts` → `-shared.ts`; `-rollout.ts` → `-shared.ts` and
+`-catalog.ts`; the entry → all three) still match none of the needles,
+because a `-shared` specifier is followed by neither a quote nor `.ts`/`.js`
+at the needle's position, and needle 1 does not match a `-catalog` or
+`-rollout` specifier.
+
+### Superseded sentences (seventh note; verbatim, with replacements)
+
+Anchors are HEAD `0d28d915` lines (line breaks folded to spaces).
+
+1. `:3145-3147` (sixth-note fact S3, first sentence) — "Module specifiers
+   in this repo are written with double quotes (`.prettierrc` has
+   `"singleQuote": false`; the HEAD script imports
+   `from "./task-551-pg-stat-interval"`)." → Module specifiers in this repo
+   are written with double quotes (`.prettierrc.json` has
+   `"singleQuote": false`; the HEAD script imports
+   `from "./task-551-pg-stat-interval"`) (T3). The widened needles do not
+   rely on that convention.
+2. `:3147-3151` (sixth-note fact S3, second sentence) — "On a scratch
+   sample, `task-551-online-indexes(\.ts)?"` matches
+   `"./task-551-online-indexes"` and `"./task-551-online-indexes.ts"` and
+   does not match `"./task-551-online-indexes-shared"` or the CLI usage
+   text `bun scripts/task-551-online-indexes.ts status`." → The scratch
+   sample results of T5 for the three widened needles.
+3. `:3173-3176` (sixth-note split rule 7, lead-in) — "Each needle is
+   extension-tolerant (with or without `.ts`) and counts value imports,
+   `import type`, `export … from` re-exports and dynamic `import("…")`
+   alike, because each writes the specifier followed by a double quote."
+   → Each needle is extension-tolerant (no suffix, `.ts` or `.js`) and
+   counts value imports, `import type`, `export … from` re-exports and
+   dynamic `import()` alike, whether the specifier is followed by a double
+   quote, a single quote or a backquote (the **Addendum N10** quote class).
+4. `:3181` (sixth-note needle 1) —
+   "`grep -cE 'task-551-online-indexes(\.ts)?"' scripts/task-551-online-indexes-catalog.ts scripts/task-551-online-indexes-rollout.ts`"
+   → needle 1 of "Split rule 7 — needles widened to the quote class" above.
+5. `:3185` (sixth-note needle 2) —
+   "`grep -cE 'task-551-online-indexes-rollout(\.ts)?"' scripts/task-551-online-indexes-catalog.ts`"
+   → needle 2 above.
+6. `:3188` (sixth-note needle 3) —
+   "`grep -cE 'task-551-online-indexes(-catalog|-rollout)?(\.ts)?"' scripts/task-551-online-indexes-shared.ts`"
+   → needle 3 above.
+7. `:3194-3196` (sixth-note split rule 7, closing sentence) — "The
+   fifth-note item-12 done-check (the awk + `grep -c -E` over
+   `COMMANDED_TEST_PATHS`, printing 3) is unchanged and stays binding." →
+   The fifth-note awk + `grep -c -E` check over `COMMANDED_TEST_PATHS`
+   (printing 3) keeps its command text and stays binding as a retention
+   guard only; item-12 landing evidence is the 01-L01 **V11-3** three-part
+   conjunction ("Awk + grep check reclassified as a retention guard" above).
+8. `:3223-3225` (sixth-note item 0, "Why ahead of the item-12 split") —
+   "Item 0 adds no behaviour to the suite: it moves an existing static
+   assertion from archived-prose matching to the live envelope." → Item 0
+   edits one leg in place and adds one strengthening assertion
+   (`positiveDiscovery.paths` deep-equal), allowed under **Addendum J2**
+   (T2; "Item 0 — rationale corrected" above).
+9. `:3268-3269` (sixth-note superseded item 2, last sentence) — "The
+   fifth-note second bullet (the item-12 done-check) is not superseded." →
+   The fifth-note second bullet (the awk + `grep -c -E` check, now the
+   item-12 retention guard) keeps its command text; its label and role are
+   corrected by items 7 and 10 of this list.
+10. `:3023` (fifth-note split rule 7, second bullet label) — "Item-12
+    done-check (Addendum J2):" → Item-12 retention guard (Addendum J2, as
+    reclassified by Addendum N10 and 01-L01 V11-3; never landing evidence on
+    its own):
+11. `:3088-3090` (fragment of the fifth-note superseded item 9
+    replacement) — "and the rule-7 item-12 done-check (fifth note) proves
+    that the three split paths are still in `COMMANDED_TEST_PATHS`" → and
+    the rule-7 item-12 retention guard (fifth note; seventh note) shows that
+    the three split paths are still in `COMMANDED_TEST_PATHS`.
+12. `:3097` (fragment of the fifth-note superseded item 11 replacement) —
+    "(the rule-7 item-12 done-check)" → (the rule-7 item-12 retention
+    guard).
