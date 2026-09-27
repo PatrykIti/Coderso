@@ -1693,3 +1693,267 @@ Superseded or amended quote count: 6.
 No task file is added, renamed or removed; no occurrence is added; the
 envelope fence is untouched this round. The family preflight stays
 `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+## Dated Contract Corrections — 2026-09-27 (consumer mirror note 3: third cross-owner input, widened STOP triggers, (c) test shape)
+
+Source: orchestrator decision Addendum L, items L1, L2 and L6
+(`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`),
+and TASK-551-03-L02 Round 12 item R12-02 (with R12-01 and R12-13)
+(`.../audit-evidence/03-l02-round12-dispositions.md`), after the Round-11 /
+fix4 audits `wf_75d02a03-d77` (09-L04: two auditors, 0/2/1 and 0/2/2). This
+section is append-only. It wins over the body, the 2026-09-24 sections, the
+2026-09-26 section and note 2 (the first 2026-09-27 section) wherever they
+differ, for the FINAL occurrence only; INITIAL is unchanged. Everything not
+quoted under "Superseded sentences" below stays binding.
+
+Anchor rule: line references to this file use HEAD `b98ed8d9` numbering;
+references to other files (TASK-551-09-L01, TASK-551-03-L02,
+`core/admin/utils/cacheBus.ts`) use HEAD `b98ed8d9` numbering as well.
+`git diff -U0 a3d46bf1 b98ed8d9 -- <this file>` is exactly one hunk
+(`@@ -1474,0 +1475,221 @@`, note 2 appended), so lines 1-1474 are identical
+at HEAD `a3d46bf1` and HEAD `b98ed8d9`, and every `a3d46bf1` anchor in note 2
+still holds. This round makes no in-place edit: the envelope fence, the
+Testing Requirements command block and every earlier line are byte-identical
+to HEAD `b98ed8d9`, so no line shifts.
+
+### (a) Third read-only cross-owner FINAL input (L1)
+
+`tests/integration/runtime/public-site-cache-query-budget.test.ts` is a
+read-only cross-owner FINAL gate input of this leaf, the third next to the two
+03-L02 paginated-client suites:
+
+- **Owner.** TASK-551-09-L01 creates it and is its single writer (09-L01 :50
+  "new `tests/integration/runtime/public-site-cache-query-budget.test.ts`";
+  09-L01 fence allowlist :810). Its line gate is 09-L01's own `line-count`
+  command (09-L01 :919 names the path).
+- **Where it runs here.** Whole, in both FINAL Bun lanes:
+  `memory-security-settings-tests` (envelope :737; `argv` :740;
+  `positiveDiscovery.paths` :743) and `redis-security-settings-tests`
+  (envelope :748; `argv` :751; `positiveDiscovery.paths` :754); prose
+  Testing Requirements block :573-580. The envelope stays authoritative.
+- **Boundary.** It is outside this leaf's Exclusive Ownership list (:39-87),
+  the envelope allowlist (:625-683) and the `line-count` argv (:790). This leaf
+  never creates, edits, skips, filters or re-baselines it, and never adds it
+  to its allowlist or `line-count` command.
+- **Owed 09-L01 mirror.** The settings-read assertions the body asks for at
+  :531-534 ("Re-run the complete public-site query-budget suite after removing
+  the settings cache: assert one authoritative settings read plus zero
+  additional reads for a safe warm hit and settings plus one content gate plus
+  zero additional reads for mutable detail/list") are an owed TASK-551-09-L01
+  mirror. They are written by the 09-L01 writer under an orchestrator
+  follow-up (Addendum L1), never by this leaf. This leaf's FINAL receipt
+  records, for that file, the test names it ran and whether the :531-534
+  assertions were present in it; this leaf does not add them, and does not
+  gate on them by its own authority.
+- **Red handling.** A red (or a skipped or filtered-out test) in this file
+  under a change this leaf's body mandates follows the (d) STOP-and-report
+  procedure of note 2, as widened by item (b) below, with TASK-551-09-L01 in
+  place of TASK-551-03-L02 as the re-run owner: FINAL does not land; the
+  09-L01 writer adapts its own suite within the 09-L01 contract and re-runs
+  it; this leaf's FINAL resumes only after that 09-L01 receipt is recorded.
+  The body-mandated changes that can reach this file are the Uncached Secret
+  Security-Settings Contract rules (:300-348; trigger Q1 in item (b)). A red
+  that is not traceable to a body-mandated change stays an ordinary FINAL gate
+  failure, fixed in this leaf's own allowlisted source (the note 2 (d)
+  carve-out applies unchanged).
+
+Replacement for the note 2 (b) sentences quoted under "Superseded sentences"
+(a1)-(a3):
+
+"The two 03-L02 paginated-client suites
+(`tests/vitest/admin/task551PaginatedClients.test.ts`,
+`tests/vitest/admin/task551PaginatedClientsSlots.test.ts`; 03-L02 is their
+single writer) and the 09-L01-owned
+`tests/integration/runtime/public-site-cache-query-budget.test.ts` (09-L01 is
+its single writer) are the three read-only cross-owner FINAL gate inputs. No
+read-only cross-owner test input exists at INITIAL."
+
+### (b) (d) STOP triggers widened; receipt field (L2)
+
+The note 2 (d) trigger sentence and its receipt field are widened to the same
+closed set. For the two 03-L02 suites, a trigger is EVERY Admin Browser
+Contract storage/scope rule this leaf's body mandates:
+
+- **S1 (:156-159; with :166-170 and test list :500-501).** A missing,
+  cross-origin, malformed, empty or oversized deployment input returns
+  `null`, publishes `scope=null` and makes persistent reads/writes safe
+  misses; an unhashed Vite development entry is persistent-cache-ineligible
+  (`scope=null`).
+- **S2 (:174-176).** `scope=null` is published first; an async digest
+  installs only while deployment, incarnation and auth epoch are current;
+  cache reads/writes before scope readiness are safe misses/no-ops.
+- **S3 (:232-241, including :238-240).** The session-only 128-bit
+  incarnation; a sessionStorage failure yields a memory-only incarnation, so
+  persistent reads stay safe misses.
+- **S4 (:242-259, including :247-248).** The deployment-scoped cross-tab
+  auth-generation record; a storage failure makes the persistent scope null;
+  unavailable/throwing storage and concurrent rotation fail to
+  persistent-cache misses.
+- **S5 (:260-261).** The v3 storage key
+  `coderso:admin-cache:v3:<deploymentDigest>:<scopeDigest>:e<authEpoch>:<boundedResourceKey>`.
+- **S6 (:262-265).** The v3 envelope (schema, deployment digest, scope
+  digest, auth epoch, saved time, value; reject unknown/mismatch; no raw
+  incarnation).
+- **S7 (:266-270).** The exported limits; UTF-8 resource keys outside
+  `1..512` fail closed as a miss/no-op.
+- **S8 (:270-272).** The per-scope owned-key index inside both count and
+  serialized-byte caps, oldest-key eviction before an add, no storage scan
+  (its index write accompanies a resource write).
+- **S9 (:273-281).** Transition order (rotate generation, increment epoch,
+  advance installation generation, abort, clear in-memory values),
+  incarnation rotation/deletion and the bounded one-time v1/v2 key removal.
+- **S10 (:282-286).** Independent wrapping of storage, JSON,
+  BroadcastChannel, fallback and every subscriber.
+- **S11 (:287-291, as amended by note 2 (c)).** The scoped cacheBus event
+  shape and its remote/stale-scope filter.
+- **S12 (:292-298).** The `readThroughCache` epoch/installation-token/per-key
+  generation rule.
+
+For the 09-L01-owned query-budget suite (item (a)), the trigger is:
+
+- **Q1 (:300-348).** Any rule of the Uncached Secret Security-Settings
+  Contract (no decrypted-settings value cache; one authoritative settings read
+  per call; the explicit transaction, lock and outbox rules; the route
+  mapping).
+
+(d) item 1 as widened: "FINAL does not land. Its receipt records the STOP
+with the failing suite path, the failing test names, the mandated rule that
+caused the red (its trigger id S1-S12 or Q1 and the rule's name) and the
+body anchor that mandates it." (d) items 2 and 3 are unchanged for the two
+03-L02 suites; for the query-budget suite they read with TASK-551-09-L01 as
+the owner (item (a)).
+
+The note 2 (e) sentence "a 03-L02 red caused by that rule is a (d) STOP case,
+not a (5) violation" (:1611-1613) is now covered by S1-S4 and stays binding.
+
+The 03-L02 suites are seeded through the same API: they seed and observe
+persisted slots only through the storageCache API by logical key (TASK-551-03-L02
+R11-06; note 2 (e) constraint (5)), and any red caused by a body rule is a (d)
+STOP. The body rules above can change what a logical write does physically
+(for example S8 adds an owned-key index write next to the resource-key write,
+and S1/S2/S4 make writes safe no-ops while the persistent scope is null).
+This leaf never narrows a body rule to fit a consumer test; the matching
+03-L02 adaptation of its T16 positive control (record every key the sentinel
+write touched; at least one `setItem`; order setup → sentinel → baseline →
+mutation) is owned by 03-L02 (Addendum L2; 03-L02 R12-01).
+
+### (c) Regression-test shape for the note 2 (c) rules (L6)
+
+The two note 2 (c) behavior rules get a regression-test shape and one owning
+suite: `tests/vitest/admin/cacheBusHardening.test.ts`. It is in this leaf's
+Exclusive Ownership list (:66), the envelope allowlist (:666), the
+`final-admin-cache-tests` `argv` and `positiveDiscovery.paths` (second path,
+:729 and :732) and the `line-count` argv (:790); it is 398 lines at HEAD
+`b98ed8d9` and stays at or under 1,000. Both legs drive the real
+`broadcastCacheEvent`/`subscribeCacheEvents` path of
+`core/admin/utils/cacheBus.ts` (at HEAD `b98ed8d9`: `broadcastCacheEvent`
+:131-154, local loop :151-153, `localHandlers.add(handler)` :157), never a
+test-only delivery bypass.
+
+- **Positive leg (current scope, no persistent scope).** Under a null
+  persistent scope (for example before digest readiness, S2) or an unhashed
+  development entry (S1), subscribe N >= 2 local handlers and call
+  `broadcastCacheEvent` once with a caller `operationToken`. Assert that every
+  one of the N handlers ran synchronously inside the call (all N invocations
+  are recorded before the call returns), each with `origin` `"local"` and the
+  identical `operationToken`. "Unknown scope" never drops a local event.
+- **Negative leg (stale-scope local event).** Subscribe N >= 2 local
+  handlers, start an emission bound to the current scope/epoch (the
+  stamp or captured installation token/epoch that FINAL implements for note 2
+  (c)), perform an identity transition (for example a nonce-only rotation or
+  an installation-authority advance), then complete the emission. Assert that
+  zero of the N handlers ran (no partial delivery). In the same test, a fresh
+  emission under the new current scope reaches all N handlers, so the leg
+  cannot pass by dropping everything.
+
+FINAL command that runs the suite: `final-admin-cache-tests` (envelope :726;
+`argv` :729), that is
+`env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run <15 paths>`
+with the fifteen paths in envelope order (prose :557-571; the second path is
+`tests/vitest/admin/cacheBusHardening.test.ts`), run whole: no `-t`/name
+filter, and a skipped or filtered-out test is a failed FINAL gate.
+
+### (d) Line-gate sentence reworded (L6; 03-L02 R12-13)
+
+The 2026-09-26 item (2) parenthetical "(03-L02's own line gate covers them)"
+is true only for `task551PaginatedClients.test.ts`, which 03-L02 fence
+`line-count-1` names (03-L02 :2096). The 03-L02 fence names
+`task551PaginatedClientsSlots.test.ts` in no `line-count` command (untruncated
+count over 03-L02 `line-count-1`..`-3`, :2096-2116: 0). Replacement sentence
+(see "Superseded sentences" (d1)):
+
+"This leaf never writes them; they stay out of this leaf's allowlist and its
+`line-count` command. `task551PaginatedClients.test.ts` is covered by the
+03-L02 fence `line-count-1`; `task551PaginatedClientsSlots.test.ts` is bound
+by the R10-09 STOP rule and the repository line gate until 03-L02 item (g)
+lands (a 03-L02 `line-count` command names it)."
+
+### (e) Cross-check with TASK-551-03-L02 R12-02
+
+03-L02 Round 12 item R12-02 restates the C17 v6 09-L04 row with the same
+content as this note and note 2: constraint (1) qualified by note 2 (c)
+(same-tab local delivery under the current scope, including the
+no-persistent-scope state, is never dropped; a stale-scope local event is
+dropped for every handler); five re-open items (note 2 (e)); the three
+cross-owner FINAL inputs of item (a); the (d) STOP triggers = every
+body-mandated storage/scope rule (item (b)); the non-traceable-red carve-out;
+the (c) test shape in `cacheBusHardening.test.ts` (item (c)). If the two
+records ever differ, this file governs this leaf's FINAL and the difference
+is reported to the orchestrator.
+
+### Superseded sentences (quoted verbatim)
+
+Line numbers are HEAD `b98ed8d9` numbering.
+
+- (a1) Note 2 item (b), replacement sentence (:1527-1528; the replacement
+  quote spans :1525-1528), superseded:
+  "The two 03-L02 paginated-client suites are the only read-only
+  cross-owner FINAL gate inputs; 03-L02 is their single writer."
+  - Replacement: the item (a) replacement sentence (three read-only
+    cross-owner FINAL inputs).
+- (a2) Note 2 item (b) (:1534-1535), superseded:
+  "No other read-only
+  cross-owner test input exists at INITIAL or FINAL."
+  - Replacement: "No read-only cross-owner test input exists at INITIAL;
+    at FINAL there are exactly the three named in item (a) of the 2026-09-27
+    note 3."
+- (a3) Note 2 "Superseded sentences" (b) replacement record (:1653-1654),
+  superseded:
+  "The two 03-L02 paginated-client suites are the only read-only cross-owner
+  FINAL gate inputs; 03-L02 is their single writer."
+  - Replacement: the item (a) replacement sentence.
+- (b1) Note 2 item (d), trigger fragment (:1566-1568), superseded:
+  "under a change this leaf's body
+  mandates — the scoped cacheBus event shape (:287-290), the v3 storage key
+  (:260-261) or the v3 envelope (:262-265) —"
+  - Replacement: "under a change this leaf's body mandates — any rule S1-S12
+    of item (b) of the 2026-09-27 note 3 (:156-159 with :166-170, :174-176,
+    :232-298) —"; for the query-budget suite, rule Q1 (:300-348).
+- (b2) Note 2 item (d) item 1, receipt field (:1572), superseded:
+  "(event shape, v3 key or envelope)"
+  - Replacement: "(its trigger id S1-S12 or Q1 and the rule's name)"
+    (item (b)).
+- (b3) Note 2 item (e) (:1615-1618), superseded:
+  "03-L02 suites seed and observe persisted slots only through that API by
+  logical key (TASK-551-03-L02 R11-06), never through a raw physical
+  `localStorage` key, so the v3 physical-key/envelope change stays transparent
+  to them."
+  - Replacement: "03-L02 suites seed and observe persisted slots only through
+    that API by logical key (TASK-551-03-L02 R11-06), never through a raw
+    physical `localStorage` key: they are seeded through the same API; any
+    red caused by a body rule is a (d) STOP." (item (b)). The rest of the
+    :1618-1621 paragraph (the `writeStorageCacheEnvelope` statement) stays
+    binding.
+- (d1) 2026-09-26 section item (2) (:1401-1403), superseded:
+  "This
+  leaf never writes them; they stay out of this leaf's allowlist and its
+  `line-count` command (03-L02's own line gate covers them)."
+  - Replacement: the item (d) replacement sentence.
+
+Superseded quote count: 7.
+
+### Family inventory
+
+No task file is added, renamed or removed; no occurrence is added; the
+envelope fence is untouched this round. The family preflight stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.

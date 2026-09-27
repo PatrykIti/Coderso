@@ -3096,3 +3096,188 @@ Anchors are HEAD `a3d46bf1` lines (= fourth-note-tree lines).
     re-binding and must land no earlier than the TASK-551-10-L01 mirror."
     → It keeps item 0's re-binding intact (the rule-7 item-12 done-check)
     and must land no earlier than the TASK-551-10-L01 mirror rows above.
+
+## Dated Contract Corrections — 2026-09-27 (sixth note: rule-7 checks, shared module heading, eslint configs, item-0 line-gate rationale, labels)
+
+**Authority and scope.** This append-only note implements orchestrator
+decision **Addendum L8** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum L) in full, and records **Addendum L3** for this file. It cites
+**Addendum J2** (item 0) and **Addendum J3** (the corrected script split)
+and does not re-decide any of them. It corrects the fifth note directly
+above ("the fifth note"). Naming: "Addendum Jn", "Addendum Kn" and
+"Addendum Ln" always name orchestrator decisions; the fifth note's own
+verified facts are cited as "fifth-note fact Kn" and the fourth note's as
+"fourth-note fact Jn". This note's facts are S1-S6. Every anchor was
+re-read at HEAD `b98ed8d9` (nothing executed except the read-only counts
+and gates named here). This round changes no source, test or migration
+byte and makes NO fence edit: the fence stays `:1023-1179`.
+`**Status:**` is unchanged (`⏳ To Do`). Everything in the first to fifth
+notes that is not quoted under "Superseded sentences (sixth note)" stays
+binding. This note contains no code fence and no dispatch literal.
+
+**Anchor rule.** No line above this note moves, so a bare anchor into THIS
+file is a HEAD `b98ed8d9` line. Commit `b98ed8d9` only appended the fifth
+note (`:2824-3098`) to this file, so every line `:1-2823` equals the
+`a3d46bf1` line the fifth note cites. `scripts/task-551-online-indexes.ts`
+is byte-identical from `a3d46bf1` to `b98ed8d9`, so script anchors are
+unchanged. Deployment-suite legs are cited by title, never by bare line
+(fifth-note Anchor rule).
+
+### Verified facts (read at `b98ed8d9`)
+
+- **S1 — item 0 has landed (Addendum J2; Addendum K2).** Between
+  `a3d46bf1` and `b98ed8d9`, `git diff --stat` over `scripts/`, `tests/`
+  and `core/` names one file:
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts`
+  (+32/−8, net +24). `wc -l` goes 3,513 → 3,537. The suite has 49 `test(`
+  legs at both commits and 0 `testIfDb(` legs. The leg title count
+  (`grep -c 'exactly the ten owned test files'`) is 1, and the fifth-note
+  item-0 awk check prints 3. The landed 3,537 equals the fifth note's
+  restated suite total (3,467 content + 70 header), so the fifth-note
+  deployment-suite budgets stand as written.
+- **S2 — ESLint configs.** Outside `node_modules` the worktree has two
+  ESLint config files, both at the repo root: `eslint.config.mjs` (59 lines)
+  and `.eslintrc.cjs` (33 lines). Untruncated counts: `grep -c no-cycle`
+  = 0 and `grep -c 'import/'` = 0 in each file. Neither `package.json` nor
+  `core/package.json` has an `eslintConfig` key. The installed ESLint is
+  9.39.5 (flat config).
+- **S3 — the rule-7 needles.** Module specifiers in this repo are written
+  with double quotes (`.prettierrc` has `"singleQuote": false`; the HEAD
+  script imports `from "./task-551-pg-stat-interval"`). On a scratch sample,
+  `task-551-online-indexes(\.ts)?"` matches `"./task-551-online-indexes"`
+  and `"./task-551-online-indexes.ts"` and does not match
+  `"./task-551-online-indexes-shared"` or the CLI usage text
+  `bun scripts/task-551-online-indexes.ts status`. Each of the three
+  needles below counts 0 on the HEAD script, whose only
+  `task-551-online-indexes` occurrence is the `:1` doc block, where `.ts`
+  is followed by a space, not a quote (`:1` stays in the entry).
+- **S4 — split rule 6 (Addendum L3).** Fifth-note superseded item 9
+  already quotes split rule 6 (`:2638-2643`) verbatim, including
+  `contract.includes(envelopeArgv)`, and replaces it with the structural
+  re-binding. No further rule-6 text is owed.
+- **S5 — the `:2593` heading.** `:2593` reads
+  "**Rollout script (the shared module only because the balance needs it).**"
+  and is not among the fifth-note quotes, although the fifth note makes the
+  shared module required (`:2990-2991`).
+- **S6 — label literals.** Before this note, the literals "V7-7 step 8" and
+  "E3 check 4" occur only on `:2513`, `:2721`, `:2906-2907`, `:3049-3051`
+  and `:3091-3092`, every time inside quotation marks. This note adds them
+  only inside quotation marks.
+
+### Split rule 7 — import checks extended (Addendum L8)
+
+These three checks replace the fifth-note "No import of the entry" bullet
+(superseded item 2 below). They are binding and run with rule 7's fast
+gates on the FINAL item-12 assignment, so they are re-run after any rule-2
+cluster move. Each needle is extension-tolerant (with or without `.ts`) and
+counts value imports, `import type`, `export … from` re-exports and dynamic
+`import("…")` alike, because each writes the specifier followed by a
+double quote. A check passes only when every named file exists and prints
+0; `grep -c` then exits 1. A missing file (exit 2) is a failure, never a
+pass.
+
+1. Neither `-catalog.ts` nor `-rollout.ts` imports the entry:
+   `grep -cE 'task-551-online-indexes(\.ts)?"' scripts/task-551-online-indexes-catalog.ts scripts/task-551-online-indexes-rollout.ts`
+   prints 0 for each file.
+2. `-catalog.ts` does not import `-rollout.ts` (the back edge that would
+   close a cycle with the fifth-note fact K3 direction):
+   `grep -cE 'task-551-online-indexes-rollout(\.ts)?"' scripts/task-551-online-indexes-catalog.ts`
+   prints 0.
+3. `-shared.ts` imports none of `-catalog.ts`, `-rollout.ts` or the entry:
+   `grep -cE 'task-551-online-indexes(-catalog|-rollout)?(\.ts)?"' scripts/task-551-online-indexes-shared.ts`
+   prints 0.
+
+With these three checks, every edge that split rule 3 forbids has a
+mechanical check, because no lint rule catches an import cycle (S2). The
+allowed edges (`-catalog.ts` → `-shared.ts`; `-rollout.ts` → `-shared.ts`
+and `-catalog.ts`; the entry → all three) match none of these needles. The
+fifth-note item-12 done-check (the awk + `grep -c -E` over
+`COMMANDED_TEST_PATHS`, printing 3) is unchanged and stays binding.
+
+### Script table heading (Addendum L8; Addendum J3)
+
+The fourth-note heading `:2593` is superseded (item 1 below): the shared
+module is required, because it holds `Task551Artifacts` (Addendum J3). The
+fifth-note script table governs its rows.
+
+### Fifth-note fact K1 restated (Addendum L8)
+
+Fifth-note fact K1's conclusion stands, and its evidence sentence now names
+both config files (S2; superseded item 3 below). `eslint.config.mjs` and
+`.eslintrc.cjs` each have 0 `no-cycle` and 0 `import/` matches, so no
+ESLint config in the worktree enables an import-cycle rule, and rule 7's
+lint gate would not catch a cycle. The split rule-7 import checks above
+catch it.
+
+### Item 0 — landing record and line-gate rationale (Addendum L8; Addendum J2)
+
+- **What landed.** Item 0 is an in-place re-binding of one existing leg
+  ("the contract's validation battery commands exactly the ten owned test
+  files", in the `argv contract` `describe`) plus the `COMMANDED_TEST_PATHS`
+  constant it reads (S1). It adds no leg, removes none, and changes no
+  production, fence or other test byte: the suite has 49 `test(` legs before
+  and after, and it grew by +24 lines (3,513 → 3,537).
+- **Why ahead of the item-12 split.** Root `AGENTS.md` (File Size and
+  Modularity) requires a legacy file above 1,000 lines to be split "before
+  adding further behavior". Item 0 adds no behaviour to the suite: it moves
+  an existing static assertion from archived-prose matching to the live
+  envelope. It landed ahead of item 12 under **Addendum J2**, because until
+  then the leg stayed green without proving the live
+  `migration-and-index-tests` argv. The +24 lines are included in the
+  fifth-note budgets (S1).
+- **Closure line gate.** The 05-L01 closure line gate is measured from the
+  verified TASK-551 pre-family baseline commit that the orchestrator
+  records (the `<pre-family baseline>` of TASK-551-03-L02 R2-35), through
+  the final working tree. It is never measured from `a3d46bf1`, `b98ed8d9`
+  or any other intermediate commit, so committing item 0 neither resets
+  nor narrows it. The deployment suite and the rollout script are touched
+  files in that range, so the gate fails until R1 item 12 leaves every file
+  of both families ≤ 1,000 physical lines. R1 item 12 therefore stays a
+  precondition of 05-L01 closure (**O2**), and the item-12 receipt records
+  `wc -l` for all five suite files and all four script files against the
+  fifth-note budgets.
+
+### Labels (Addendum L8)
+
+The fifth note's superseded item 2 replacement drops its occurrence list
+(superseded item 4 below). It now reads: the literals "V7-7 step 8" and
+"E3 check 4" occur in this file only inside quotation marks, never as a
+live label. That holds at HEAD (S6) and for this note.
+
+### Split rule 6 (Addendum L3)
+
+Split rule 6 is disposed by the fifth note's superseded item 9, which quotes
+`:2638-2643` verbatim and replaces it with the structural re-binding, so this
+note adds no rule-6 text.
+
+### Superseded sentences (sixth note; verbatim, with replacements)
+
+Anchors are HEAD `b98ed8d9` lines.
+
+1. `:2593` (fourth-note script table heading) — "**Rollout script (the
+   shared module only because the balance needs it).**" → **Rollout script
+   (the shared module is required, Addendum J3).** The fifth-note script
+   table governs its rows.
+2. `:3020-3022` (fifth-note split rule 7, first bullet) — "No import of the
+   entry (value or type):
+   `grep -c 'task-551-online-indexes"' scripts/task-551-online-indexes-catalog.ts scripts/task-551-online-indexes-rollout.ts`
+   prints 0 for each file." → The three checks of "Split rule 7 — import
+   checks extended" above (entry import from `-catalog.ts`/`-rollout.ts`;
+   `-catalog.ts` → `-rollout.ts`; any family import from `-shared.ts`),
+   each with the extension-tolerant needle and a 0 count. The fifth-note
+   second bullet (the item-12 done-check) is not superseded.
+3. `:2864-2866` (fifth-note fact K1, last sentence) — "No ESLint config in
+   the worktree enables an import-cycle rule (`eslint.config.mjs` is the
+   only config; untruncated `grep -c no-cycle` = 0), so rule 7's gates
+   would not catch it." → No ESLint config in the worktree enables an
+   import-cycle rule: the two root configs `eslint.config.mjs` and
+   `.eslintrc.cjs` each have 0 `no-cycle` and 0 `import/` matches
+   (untruncated `grep -c`; S2), so rule 7's lint gate would not catch it.
+   The sixth-note rule-7 import checks do.
+4. `:3052-3053` (the parenthetical in fifth-note superseded item 2's
+   replacement) — "(the fourth note's fact J7 and Labels bullet, and this
+   note's quotes of those two sentences)" → removed, and the preceding
+   "only inside quotes" becomes "only inside quotation marks". Item 2's
+   replacement therefore reads: The literals "V7-7 step 8" and "E3 check 4"
+   occur in this file only inside quotation marks, never as a live label.

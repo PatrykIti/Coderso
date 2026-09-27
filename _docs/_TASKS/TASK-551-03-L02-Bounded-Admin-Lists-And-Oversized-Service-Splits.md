@@ -12350,3 +12350,665 @@ No new allowlisted path is needed. One JSON fence. **Size (R6-06 stop
 rule).** This file is 875,272 bytes after the Round-11 fence edit
 and append (`wc -c`), below the 1,048,576-byte cap with the 200-byte closure
 headroom.
+
+## Dated Contract Corrections — 2026-09-27 (Round 12: T16 sentinel keys, 09-L04 row, landing-check proof fields, filters, export list, anchors; append-only)
+
+Source:
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round12-dispositions.md`
+(R12-01..R12-14 over the Round-11 auditors a1 and a2 of workflow
+`wf_75d02a03-d77`; audited HEAD `b98ed8d9c42f2a8aa9f386799e90336ab8c55f66`,
+with Round 11 committed) and the orchestrator decisions L1, L2, L4, L5, L6
+and L10 (Addendum L, with K4 of Addendum K) in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+This section applies R12-01..R12-14 and re-decides nothing. **This section
+wins** over every earlier part where they differ. It makes NO in-place edit:
+the Workflow Dispatch Envelope fence (`:1441-2173`), "Validation Commands"
+and every earlier line stay byte-identical.
+
+**Line numbers (the `b98ed8d9` anchor rule, R12-09).** Every bare `:NNNN`
+anchor in this section that is not tied to another named file in the same
+sentence is a line of this file at `b98ed8d9`. Round 11
+replaced three fence lines and inserted none, so `b98ed8d9` numbering equals
+`a3d46bf1` numbering for `:1-11594`, and the Round-11 section is
+`:11595-12352`. This round only appends, so the numbering is also the
+numbering after this round; nothing shifts, here or in any earlier section.
+Anchors into other task files are lines of those files at `b98ed8d9`. Code
+and test anchors (`*.ts`, `*.tsx`) were re-read on 2026-09-27 at
+`b98ed8d9`; the symbol stays authoritative wherever a line drifts. Every
+sentence this round supersedes is quoted verbatim under "Superseded sentences
+(Round 12)" (text authoritative; a hard line wrap inside a quote is rendered
+as one space). Everything not quoted there stays binding.
+
+### R12-01 — T16 positive control and order (L2)
+
+The Round-11 sentinel (R11-06, T16 assertion (1)) recorded "the one
+`setItem` entry" and required exactly one. After the 09-L04 FINAL v3 change a
+single write touches the resource key AND the per-scope owned-key index
+(09-L04 `:270-272`), and the v3 physical key embeds the scope digest and
+`e<authEpoch>` (09-L04 `:260-261`), so a sentinel written before an
+epoch-advancing setup step would record a stale key. Both points are fixed
+here per L2. Quotes 1, 2, 4, 6 and 7.
+
+**T16 assertion (1), restated** (replaces the R11-06 restatement; with
+R11-08): "(1) no write to the family's persisted slot. The test keeps a
+`Storage` stub whose `setItem` calls are logged. It learns every storage key
+the slot write touches through the API, never by building one. The cell runs
+in this fixed order:
+
+1. **Setup.** The cell's setup, including any registered reset, any
+   `advanceAdminCacheInstallationAuthority()` or other epoch or scope
+   advance, and the read-then-expire
+   (`vi.setSystemTime(Date.now() + cacheTtlMs.list + 1)`).
+2. **Sentinel.** It writes a sentinel value with
+   `writeLocalCache(cacheKeys.<family key>, sentinel)` and records the key of
+   EVERY `setItem` log entry that write produced (at `b98ed8d9` one entry,
+   the resource key; after the 09-L04 FINAL v3 change the resource key plus
+   the owned-key index key, or whatever set the module writes). If the
+   sentinel write logs no entry, the cell fails (a positive control; a
+   filter that can match nothing never passes silently). It then removes the
+   sentinel with `clearLocalCache(cacheKeys.<family key>)`.
+3. **Baseline.** The log length, taken after the sentinel clear and
+   immediately before the mutation (R11-08).
+4. **Mutation.** After it, no log entry beyond the baseline carries ANY
+   recorded key.
+
+`removeItem` is not counted, because reading an expired slot removes it
+(`storageCache.ts:65-67`)." Assertions (2) and (3) stand.
+
+- **Why the order holds under v3.** The sentinel is written under the same
+  scope digest and auth epoch as the mutation, because every setup step that
+  can change them runs before it and nothing runs between the baseline and
+  the mutation. The recorded keys are therefore the keys the mutation would
+  write.
+- **`entriesAllList` cell (R10-02, `:10712-10720`).** Its "no `setItem`" pin
+  is implemented through the restated assertion (1), with the
+  `cacheKeys.entriesAllList` keys learned by the sentinel, never by a filter
+  on the logical key. Its other pins (the all-list accessor returns `null`;
+  the next non-forced default all-list first-page read issues exactly one
+  list GET) stand.
+- **Red handling (L2).** The suites are seeded through the same API as
+  production writes; any red caused by a body rule of 09-L04 is a (d) STOP
+  (C17 v6 Round-12 amendments, item 3 (v)). "Transparent" is withdrawn
+  (quotes 2 and 4).
+
+### R12-02 — C17 v6 09-L04 row (L1, L2, L6)
+
+Executed under "C17 v6 — Round-12 amendments (2026-09-27)" below, item 3. The
+row names constraint (1) as qualified by 09-L04 note 2 (c), the five re-open
+items, the three cross-owner FINAL inputs (L1), the widened (d) STOP trigger
+set (L2), the K4 carve-out and the (c) regression-test shape (09-L04 note 3,
+L6). Quotes 3 and 8.
+
+### R12-03 — 06-L03 landing check: the G1-mirror section and the proof fields
+
+The 06-L03 section "Dated Contract Corrections — 2026-09-25 (06-L02 R7 G1
+mirror: page-family whole-family floor; append-only)" (06-L03 `:749`) is a
+re-open under the R11-05 definition: it was written after the 2026-09-16
+landing, it re-baselines a landed test (D3,
+`tests/integration/server/task551RetentionJobService.test.ts`), and it names
+its own receipt addendum (06-L03 `:929-931`). It is **covered by the R1-e
+addendum**: R1-e gate 3 amends G1-mirror D6 gate 2 by adding
+`DB_LOCK_TIMEOUT_MS=15000` (06-L03 `:1259-1260`) and re-runs the same test
+file on the same owner map, so one dated R1-e receipt addendum closes both
+sections when it carries every proof field below. Quote 18.
+
+**Restated 06-L03 row** (replaces the R11-05 06-L03 landing-check cell; the
+"Enforced by" cell stays "orchestrator only"):
+
+"receipt check on `_docs/_workflows/_smoke/task-551/impl-06-l03.json` (named
+by 06-L03 `:930`, `:1272`); `verdict` `SINGLE_ADMITTED_GATES_GREEN` (the
+SINGLE landing of 2026-09-16: necessary, not sufficient); AND the recorded
+closure of both open 06-L03 re-opens, the G1 mirror (`:749`) and R1 (`:934`)
+with its A8 amendment (`:1625`), by ONE dated R1-e receipt addendum in the
+tracked receipt, committed after the landing commit, that carries all of the
+proof fields (a)-(c)."
+
+The proof fields. 06-L03 names the content, not JSON key names; the W0
+receipt records the addendum key and the commit that added it, and a missing
+field means NOT landed:
+
+- **(a) G1 mirror (06-L03 `:929-931`).** For
+  `tests/integration/server/task551RetentionJobService.test.ts`: final
+  bytes, line count and sha256; the 06-L02 G4 zero-collateral precondition
+  count; the results of D6 gates 1-3 (06-L03 `:915-924`) in their R1-e form
+  (gate 2 with `DB_LOCK_TIMEOUT_MS=15000`).
+- **(b) R1-e (06-L03 `:1270-1274`).** Final bytes, line count and sha256 of
+  every touched file; the gate 1-6 results with per-file pass, fail and skip
+  counts; the G4 precondition count; the 02-L02 re-open reference it landed
+  on; and, in place of the R1-d deferral target, the 06-L02 R9 reference it
+  landed on (A2, 06-L03 `:1413-1414`).
+- **(c) A8 (06-L03 `:2043-2046`).** The A8 files (bytes, lines, sha256); the
+  per-file counts of A8-h gates 2-3 in both forms; `coldStatePolicy` in the
+  06-L02 R13-1 shape.
+
+Observed at `b98ed8d9` (informational): the receipt keys are `task`,
+`leaf`, `leafTitle`, `capturedAt`, `closedAt`, `headAtAdmission`, `verdict`,
+`verdictQualification`, `allowlist`, `gates`, `contractCorrections`,
+`postAudit`, `inventoryDebt` and `honestyNotes`, with no addendum, so the
+row is **NOT landed** (as in Round 11). INITIAL W0 and its capture stay
+blocked on it.
+
+### R12-04 — R11-04 filters: `types` and `q`
+
+The R11-04 general rule's filter list gains `types` and `q` (the media filter
+set at `:428`: `q,types[],folderId(null|uuid),tags[],alt(any|missing|present),from,to`).
+Restated (replaces quote 14): "Where the leaf moves a filter server-side
+(folder, tags, alt, date, `types`, `q`), the stub answers each filtered read
+with the seeded rows that match its filters (`q` as defined at `:428`); the
+stub matches a read by URL pathname and parses its query string."
+
+**Row 14, `media-restyle.test.tsx:162-182`** ("folder rail click re-filters
+the grid"; its "Documents" kind filter, value `document` at
+`core/admin/ui/media/MediaFolderRail.tsx:161`, becomes a server-side `types`
+read after the leaf). Added to the row-14 adaptation (quote 15):
+`mediaFetch(rows)` answers a `/admin/api/media` read that carries `types` with
+the seeded rows the leaf's server-side `types` filter selects (here only the
+"Spec doc" record, `mimeType` `application/pdf`, `:166`; the image "Pic",
+`:165`, is excluded), and a read without filters with every seeded row. The
+`endsWith("/media")` test of `:110` cannot see a query-string read, so the
+adapted stub parses the URL. `:177-178` stand.
+
+### R12-05 — R11-03 table: present-branch rows complete
+
+The R11-03 row "present branch, seeded" (`:11773`) is restated (quote 11):
+
+| File | Lines | Class | Outcome |
+|---|---|---|---|
+| `entriesClientMutationReconciliation.test.ts` | `:73`, `:150`, `:217`; `:163`, `:230`; the present-branch half of `:88-89` (`:88` and `:89` with `cacheState === "present"`) | present branch, seeded (before or after the mutation) | stand |
+
+The row `:88-90 (absent branch)` (R10-05) keeps the absent half of `:88` and
+`:90`. With this row the table lists every list-accessor hit of
+`entriesClientMutationReconciliation.test.ts` (untruncated `grep -n
+"getCached[A-Za-z]*("`: 35 hits; `:293` is the detail accessor
+`getCachedEntryDetail`); the "four entries absent-slot pins" count stands.
+
+### R12-06 — R11-06 export list, subset and scope
+
+- **The export list** (replaces quote 5) is the one 09-L04 note 2 (e) lists
+  (09-L04 `:1596-1604`): the 13 value exports `getLocalStorage` (`:29`),
+  `getSessionStorage` (`:34`), `readStorageCache` (`:39`),
+  `writeStorageCache` (`:80`), `clearStorageCache` (`:91`), `readLocalCache`
+  (`:97`), `writeLocalCache` (`:103`), `clearLocalCache` (`:106`),
+  `readSessionCache` (`:109`), `writeSessionCache` (`:115`),
+  `clearSessionCache` (`:118`), `createMemoryBackedStorageCache` (`:121`) and
+  `createMemoryBackedLocalCache` (`:165`), plus the types `StorageLike`
+  (`:1`), `CacheValidator` (`:2`) and `MemoryBackedStorageCache` (`:16`)
+  (`core/admin/utils/storageCache.ts`; untruncated `grep -n "^export"`: 16
+  lines). 09-L04 FINAL keeps every name and the logical meaning of `key`.
+- **The subset 03-L02 suites use.** Only the local-storage subset:
+  `writeLocalCache`, `readLocalCache`, `clearLocalCache`,
+  `createMemoryBackedLocalCache`, and the three types. **Grounding
+  correction:** the dispositions record also lists `readStorageCacheEnvelope`;
+  that name is module-private (`storageCache.ts:49`, no `export`, used at
+  `:45` and `:143`), so it is not part of the API and no 03-L02 suite imports
+  it.
+- **Scope additions.** These raw physical-key list-slot seeds hold the
+  pre-C9-v2 envelope `{ value, savedAt }`, which the versioned slot turns into
+  a miss (R8-07). Each becomes a C9 v2 versioned slot written through
+  `writeLocalCache(cacheKeys.<family key>, <the client's persisted first
+  page>)` by logical key, or through a helper that delegates to it, and joins
+  the R11-06 scope:
+  - `tests/vitest/ui/media-library.test.tsx:181-200`
+    (`cacheKeys.mediaList`, in the test `:175-212`);
+  - `tests/vitest/admin/entriesClient.test.ts:495-498`
+    (`cacheKeys.entriesAllList`), `:604-607` (`cacheKeys.entriesList("blog")`)
+    and `:655-658` (`cacheKeys.entriesAllList`).
+
+  Raw seeds of detail keys (`entriesClient.test.ts:843-846`,
+  `entriesClientReadAuthority.test.ts:191`, `:300`,
+  `entriesClientMutationReconciliation.test.ts:286-292`) are not list slots;
+  the R11-06 rule "A raw line that 03-L02 leaves untouched is not re-opened by
+  this clause" applies to them.
+- **`media-library.test.tsx:175-212`, "Not affected", qualified** (replaces
+  quote 16): it is not affected by H1 only (static render; H1 renders
+  hydrated rows at once, so "Loading assets" stays absent); its seed
+  `:181-200` owes the R8-07 / R11-06 wire-form change above, and `:203-204`
+  stand.
+
+### R12-07 — R11-01 wording
+
+Restated (replaces quotes 9 and 10): "Every allowlisted Vitest suite runs in
+at least one W3/INITIAL command; `admin-pagination-vitest-1/-2` hold 124 + 31
+paths; `tests/vitest/pages/page-editor-host-contract.test.ts` (allowlist
+`:1770`) runs only in `w0-revision-vitest` (`:1896-1902`; waves W0, W3,
+INITIAL closure, `:1180`)." Checked by parsing the fence at `b98ed8d9`: 156
+allowlisted `tests/vitest/**/*.test.ts(x)` paths; every one except
+`page-editor-host-contract.test.ts` is in `admin-pagination-vitest-1` or
+`-2`, and that one is in `w0-revision-vitest` (occurrence `initial`,
+`:2164`). The Round-2 command-table cell `:4315` reads, after Round 11 and
+this item: "every allowlisted Vitest suite except
+`page-editor-host-contract.test.ts` (`w0-revision-vitest`) (124 + 31
+paths)". No execution gap existed.
+
+### R12-08 — Envelope record (Round 11) corrections
+
+- `tests/vitest/admin/entriesClientRevisions.test.ts` is **allowlisted**
+  (`:1716`; in `admin-pagination-vitest-2`, `:1931`, and `w2-client-vitest`,
+  `:1997`); R11-03 scanned it read-only. It leaves the "Outside the
+  envelope" list (quote 23).
+- `tests/integration/server/route-response-headers.test.ts` (`:1786`, named by
+  the R11-05 08-L03 row) is **forbidden and consumed only** (quote 22).
+- `tests/vitest/admin/customScreensEntryOverridesClient.test.ts` stays
+  outside the fence (scanned only).
+
+### R12-09 — Anchors
+
+The quoted text governs wherever these differ; nothing else changes.
+
+- R11-04 H1: `:6834` (the H1 row; `:6833` is the table separator) and
+  `:7156-7157` (quote 13).
+- Round-11 quote 8: `:10944` ("**Grep result (no further pins).**"; `:10943`
+  is blank) and `:10950-10951` (quote 19).
+- Every bare anchor in this section follows the `b98ed8d9` rule stated at
+  the top of this section.
+
+### R12-10 — R11-05 09-L04 row reason
+
+The reason in the R11-05 09-L04 row (quote 17) becomes: "no open re-open of
+INITIAL (no dated section written after the INITIAL landing commit amends
+INITIAL)". The 2026-09-24 sections "(mirror of TASK-551-07-L01 round-2)"
+(09-L04 `:809`) and "(INITIAL FAZA-0 dispositions)" (09-L04 `:837`, which
+does amend INITIAL) were added by `e7ce7d78`, an ancestor of the landing
+commit `ae6bea8a` (`git merge-base --is-ancestor e7ce7d78 ae6bea8a` exits
+0); the 2026-09-26 and 2026-09-27 sections amend FINAL only. The row's
+outcome (satisfied) is unchanged.
+
+### R12-11 — Wording (INFO)
+
+- Of the eight UI files that name the entries list accessors outside the four
+  entries files, five do so inside `vi.mock` factories and three through
+  `vi.spyOn(entriesClient, "getCachedEntries").mockReturnValue([])`
+  (`tests/vitest/ui/support/customScreenEditorPageHarness.tsx:498`,
+  `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx:427`,
+  `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx:305`).
+  The outcome is the same: 0 real call sites, out of scope (quote 12).
+- The wire-form obligation for `media-library.test.tsx:181-200` is R8-07
+  plus R11-06, named in R12-06.
+
+### R12-12 — Media picker: a closed picker without a selection issues no read (L4)
+
+**Picker consumer rule** (joins the R4-06 view → mode table row for the
+media picker, `:6205`, and the R11-04 picker rows). `core/admin/ui/media/MediaPicker.tsx`
+mounts its `useBoundedAdminList` (`append`) list read only while the dialog
+is open or a selection must be resolved, as HEAD gates its read
+(`MediaPicker.tsx:97-99`: no read when `!isOpen && selectedIds.length === 0`).
+A closed picker without a selection mounts no list hook and issues no media
+read of any URL.
+
+- **`tests/vitest/ui/media-picker.test.tsx:129-148`** ("MediaPicker stays
+  idle while closed without a selection", 0 calls to `/admin/api/media`,
+  `:143`) **stands** unchanged and joins the R11-04 "Not affected (checked)"
+  list with this rule.
+- **The default read URL is exactly `/admin/api/media`.** The serializer
+  returns "" for default first-page filters (`:3401`), so the files'
+  exact-string counters (`String(call.input) === "/admin/api/media"`,
+  `:143`, `:247`) match the default first-page read; a count mismatch fails
+  closed.
+- **Row 4 (`media-picker.test.tsx:231-252`).** Its deferred Response answers
+  ONLY the list read. A by-ids or detail read the leaf's picker issues for
+  the selected id gets its own stub (returning the seeded row), never the
+  list deferred. The same holds for every R11-04 test with a selection (rows
+  3 and 8). The rest of row 4 stands (exactly 1 list call, counted with the
+  file's own filter).
+- **Grounding note.** L4 (a) says the picker mounts the list hook "only when
+  OPEN". Row 4 (a closed picker with `value="asset-1"`) expects one forced
+  list read, and L4 (b) keeps that read. So the rule above keeps HEAD's
+  selection gate, and it covers exactly the case the `:129-148` test pins
+  (closed, no selection).
+
+### R12-13 — Line gate for the Slots suite
+
+`tests/vitest/admin/task551PaginatedClientsSlots.test.ts` is bound by the
+R10-09 STOP rule (≤ 1,000 lines; `wc -l` at every gate that touches it) and
+by the repository line gate (`bash .claude/scripts/line-gate.sh
+<pre-family baseline>`) until a 03-L02 `line-count` command names it. Adding
+it to a `line-count` command is owed to the W0 fence edit, together with the
+"Validation Commands" regeneration (Round-11 follow-up (d)); this round makes
+no fence edit. 09-L04 note 3 (L6) rewords its sentence (09-L04
+`:1402-1403`, "(03-L02's own line gate covers them)") to "the R10-09 STOP
+rule and the repository line gate" until that edit lands. Quote 21.
+
+### R12-14 — Handoffs
+
+See "Handoffs (Round 12)" below.
+
+### C17 v6 — Round-12 amendments (2026-09-27)
+
+This dated heading amends C17 v6 (`:10574-10665`) as already amended by "C17
+v6 — Round-11 amendments (2026-09-27)" (`:11991-12027`); it replaces
+neither. The 10-L02 rule
+(`TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md:1628-1633`)
+is unchanged: the closure writer greps 03-L02 for every `C17 v` heading,
+copies C17 v6 with both amendment headings applied, and applies C17 v4
+bullets only where C17 v6 leaves them standing.
+
+1. **Preamble sentence (added to R11-09).** "On equal dates and an equal
+   `v` number, the later round governs: apply the Round-11 amendments, then
+   the Round-12 amendments."
+2. **Item 7 (e), added closure-record notes (no `ADMIN_CACHE` delta):** the
+   T16 sentinel records every key its write touches, in the order setup,
+   sentinel, baseline, mutation (R12-01); the 06-L03 landing check names the
+   G1-mirror section and the R1-e proof fields (R12-03); 03-L02 suites use
+   only the local-storage subset of the storageCache API (R12-06); a closed
+   media picker without a selection issues no read (R12-12).
+3. **TASK-551-09-L04 row (replaces Round-11 amendments item 3 in full, and
+   through it the C17 v6 09-L04 paragraph `:10654-10659`).** "The executable
+   spec R10-13 as amended by Rounds 11 and 12, carried out in 09-L04 by its
+   own writer (notes 1-3):
+   (i) **Consumer constraints.** The five items: 09-L04 note 1 item (1)
+   (synchronous local delivery, own-sourceId drop, media-folder emissions,
+   reset-owned 03-L02 module-level state) plus constraint (5) of note 2 (e)
+   (the stable storageCache API by logical key). Constraint (1) is qualified
+   by 09-L04 note 2 (c): same-tab local delivery under the tab's current
+   scope/epoch pair, including the no-persistent-scope state, is never
+   dropped; a stale-scope local event is dropped for every local handler,
+   never for some only; the scope/epoch filter otherwise applies only to
+   remote events. A FINAL change to any of the five re-opens 03-L02 R7-02,
+   R7-06 and R8-04 and follows the (d) procedure.
+   (ii) **Fence.** The in-place `final-admin-cache-tests` fence edit adds
+   both paginated-client suites; both run whole.
+   (iii) **No graph edge.** The ordering is enforced by the Addendum J1
+   ancestor path; 03-L02:final is a dead-end sibling, ordered before
+   09-L04:final by node order only.
+   (iv) **Cross-owner FINAL inputs: three, read-only.** The two 03-L02
+   paginated-client suites (03-L02 is their single writer) and
+   `tests/integration/runtime/public-site-cache-query-budget.test.ts`
+   (09-L01 is its single writer; it runs in the 09-L04 FINAL Bun lanes
+   `memory-security-settings-tests` and `redis-security-settings-tests`).
+   The settings-read assertions the 09-L04 body wants there are an owed
+   09-L01 mirror (L1).
+   (v) **(d) STOP.** The trigger set, in the trigger sentence and in the
+   receipt field alike, is every Admin Browser Contract storage/scope rule the
+   09-L04 body mandates (09-L04 `:158-159`, `:174-176`, `:232-298`,
+   including the persistent-scope safe miss `:240`, `:247-248`, the v3 key and
+   envelope `:260-265`, and the per-scope owned-key index `:270-272`), with
+   the scoped cacheBus event shape (`:287-290`) inside it. If a cross-owner
+   input goes red (or reports a skipped or filtered-out test) under such a
+   change, FINAL stops and reports; the fix is a pre-disposed consumer re-run
+   owed to that input's writer (03-L02 for its two suites, 09-L01 for the
+   query-budget test), never a silent re-baseline and never a dilution of the
+   body rule. The 03-L02 suites are seeded through the same API as production
+   writes; any red caused by a body rule is a (d) STOP. K4 carve-out: a red
+   not traceable to a body-mandated change is an ordinary 09-L04 FINAL gate
+   failure, fixed in 09-L04's own allowlisted source.
+   (vi) **Storage API (J6 (e)).** The 13 exports and three types of
+   `core/admin/utils/storageCache.ts` keep their names and the logical
+   meaning of `key` across the v3 change; 03-L02 suites seed and observe
+   persisted slots only through the local-storage subset (R11-06, R12-06).
+   (vii) **(c) regression tests.** The shape lives in 09-L04's allowlisted
+   `tests/vitest/admin/cacheBusHardening.test.ts` (09-L04 note 3): a positive
+   leg (null persistent scope or an unhashed development entry: a local emit
+   reaches every local handler) and a negative leg (a stale-scope local event
+   reaches no handler).
+   (viii) The cacheBus handler-order item is not owed (H7)."
+4. **TASK-551-10-L02.** Nothing further is owed beyond copying C17 v6 as
+   amended by both headings.
+
+### Superseded sentences (Round 12)
+
+Each quote is verbatim at its `b98ed8d9` anchor (text authoritative; a hard
+wrap is one space). The replacement is the named Round-12 item.
+
+1. R11-06, T16 assertion (1) as restated (`:11936-11945`): "It learns the
+   slot's storage key through the API, never by building it: before the
+   baseline, it writes a sentinel value with `writeLocalCache(cacheKeys.<family
+   key>, sentinel)`, records the key of the one `setItem` entry that write
+   produced, and removes the sentinel with `clearLocalCache(cacheKeys.<family
+   key>)`. If the sentinel write logs no entry, or more than one, the cell
+   fails (a positive control; a filter that can match nothing never passes
+   silently). The baseline (log length) is taken after the cell's setup and
+   immediately before the mutation (R11-08). After the mutation, no log entry
+   beyond the baseline carries the recorded key." → R12-01 (every key
+   recorded, at least one entry, the order setup → sentinel → baseline →
+   mutation).
+2. R11-06 (`:11946-11949`): "At `a3d46bf1` the recorded key equals the
+   logical key (`writeStorageCache` writes `key` as given,
+   `storageCache.ts:80-89`); after the 09-L04 FINAL v3 change it is whatever
+   the module writes, and the assertion still holds." → R12-01 (L2: seeded
+   through the same API; any red caused by a body rule is a (d) STOP).
+3. R11-06, 09-L04 red handling (`:11950-11954`): "If either 03-L02
+   paginated-client suite goes red under a change the 09-L04 body mandates
+   (event shape, v3 key or envelope), 09-L04 FINAL stops and reports; the fix
+   is a pre-disposed consumer re-run owed to 03-L02, which adapts its own
+   suite within this contract and re-runs it; it is never a silent
+   re-baseline by 09-L04." → R12-02 (C17 v6 Round-12 amendments item 3 (v):
+   the trigger set is every body-mandated storage/scope rule; K4 carve-out).
+4. R11-06 Clause (`:11898-11900`): "So the 09-L04 FINAL v3 physical-key and
+   envelope change (09-L04 consumer constraint (5), J6 (e)) stays transparent
+   to 03-L02 suites." → R12-01 ("So 03-L02 suites are seeded through the same
+   API as production writes; any red caused by a 09-L04 body rule is a (d)
+   STOP.").
+5. R11-06 API names (`:11905-11911`): "The binding API is the export list at
+   `a3d46bf1`: `readStorageCache` (`:39`), `writeStorageCache` (`:80`),
+   `clearStorageCache` (`:91`), `readLocalCache` (`:97`), `writeLocalCache`
+   (`:103`), `clearLocalCache` (`:106`), `createMemoryBackedStorageCache`
+   (`:121`) and `createMemoryBackedLocalCache` (`:165`), with the types
+   `StorageLike`, `CacheValidator` and `MemoryBackedStorageCache`." → R12-06
+   (the 13 exports of 09-L04 note 2 (e); 03-L02 uses the local-storage
+   subset). The next sentence ("09-L04 may add exports …") stands.
+6. R10-02, `entriesAllList` cell (`:10717`): "It pins: no `setItem` for
+   `cacheKeys.entriesAllList`;" → R12-01 (the pin runs through the restated
+   assertion (1) with sentinel-learned keys); the rest of the cell stands.
+7. Stands (Round 11) (`:12185-12187`): "R10-02, except quotes 13 and 14 (the
+   emission and no-emission setup rules, assertions (2) and (3), the
+   `entriesAllList` cell and the template code stand);" → R12-01 (the
+   `entriesAllList` cell stands except its `setItem` pin, quote 6).
+8. C17 v6 — Round-11 amendments, item 3 (`:12012-12025`): "3.
+   **TASK-551-09-L04 row (replaces the C17 v6 09-L04 paragraph at
+   `:10654-10659` where quote 5 differs).** "The executable spec R10-13 as
+   amended by Round 11: the consumer constraints; the in-place
+   `final-admin-cache-tests` fence edit that adds both paginated-client
+   suites; no graph edge (the ordering is transitively enforced by the
+   ancestor path of Addendum J1; 03-L02:final is a dead-end sibling, ordered
+   before 09-L04:final by node order only); both files run whole. J6 (d): if
+   either 03-L02 suite goes red under a change the 09-L04 body mandates
+   (event shape, v3 key or envelope), FINAL stops and reports, and the fix is
+   a pre-disposed consumer re-run owed to 03-L02, never a silent re-baseline.
+   J6 (e): the storageCache API (read, write and clear by logical key through
+   `cacheKeys`) stays stable across the v3 physical-key change, and 03-L02
+   suites seed and observe persisted slots only through it (R11-06). The
+   cacheBus handler-order item is not owed (H7)."" → R12-02 ("C17 v6 —
+   Round-12 amendments (2026-09-27)" item 3).
+9. R11-01 (`:11643-11644`): "**Every allowlisted Vitest suite is again in
+    `admin-pagination-vitest-1/-2`** (124 + 31 paths)." → R12-07.
+10. Superseded sentences (Round 11), quote 4's replacement (`:12098-12099`):
+    "→ R11-01: "every allowlisted Vitest suite (124 + 31 paths)"." → R12-07
+    ("every allowlisted Vitest suite except `page-editor-host-contract.test.ts`
+    (`w0-revision-vitest`) (124 + 31 paths)").
+11. R11-03 table (`:11773`): "| `entriesClientMutationReconciliation.test.ts`
+    | `:73`, `:150`, `:217` | present branch, seeded | stand |" → R12-05.
+12. R11-03 table (`:11778`): "0 call sites (eight UI files name the
+    accessors only inside `vi.mock` factories)" → R12-11 (five inside
+    `vi.mock` factories, three through `vi.spyOn(...).mockReturnValue`; 0
+    real call sites).
+13. R11-04 (`:11788`): "R5 H1 (`:6833`, `:7156`)" → R12-09 (`:6834`,
+    `:7156-7157`).
+14. R11-04 (`:11797-11799`): "Where the leaf moves a filter server-side
+    (folder, tags, alt, date), the stub answers each filtered read with the
+    seeded rows that match its filters;" → R12-04 (`types` and `q` added; the
+    stub parses the URL).
+15. R11-04 row 14, adaptation cell (`:11816`): "`mediaFetch(rows)` returns the
+    rows the test seeds; each named test passes its seed;" → R12-04 (plus
+    the `types` filtered-read clause for `:162-182`); the rest of the cell
+    stands.
+16. R11-04 (`:11819-11820`): "Not affected (checked): `media-library.test.tsx:175-212`
+    (static render; H1 renders hydrated rows at once, so "Loading assets"
+    stays absent);" → R12-06 (not affected by H1 only; the `:181-200` seed
+    owes the wire-form change).
+17. R11-05 table, 09-L04 row (`:11864`): "no open re-open of INITIAL (every
+    09-L04 dated section amends FINAL only)" → R12-10.
+18. R11-05 table, 06-L03 row (`:11867`): "AND the closure of the open re-open
+    "Dated Contract Corrections — 2026-09-25 (re-open R1: first real DB
+    execution; append-only)" (`:934`) with its A8 amendment: the dated R1
+    addendum the orchestrator appends to the receipt (06-L03 `:1270-1274`),
+    which also records the A8 files (06-L03 `:2043-2046`, "the R1-e receipt
+    addendum"), committed after the landing commit" → R12-03 (both re-opens,
+    the G1 mirror `:749` included; proof fields (a)-(c)).
+19. Superseded sentences (Round 11), quote 8 anchor (`:12114`): "8. R10-05
+    "Grep result" (`:10943`, `:10949-10950`):" → R12-09 (`:10944`,
+    `:10950-10951`); the quoted text and its replacement stand.
+20. Handoffs (Round 11), orchestrator (c) (`:12259-12261`): "(c) The J3 leg
+    (J2): the standalone test-only 05-L01 edit ("item 0") to
+    `tests/integration/server/task551OnlineIndexDeployment.test.ts` before
+    item 12 needs its implementer; it is not a 03-L02 item." → "Handoffs
+    (Round 12)" orchestrator (c) (item 0 landed, K2; committed in
+    `b98ed8d9`).
+21. Handoffs (Round 11), orchestrator (g) (`:12272-12274`): "(g) The fence
+    `line-count-1` still does not name the Slots suite; the R10-09 STOP rule
+    relies on the implementer's `wc -l` and the repository line gate (I1).
+    Still owed." → R12-13 (bound by the R10-09 STOP rule and the repository
+    line gate until a 03-L02 `line-count` command names it; owed to the W0
+    fence edit together with (d)).
+22. Envelope record (Round 11) (`:12334-12335`): "**Forbidden and consumed
+    only:** `core/admin/services/cachePolicy.ts` (`:1774`; `cacheKeys`)." →
+    R12-08 (plus `tests/integration/server/route-response-headers.test.ts`,
+    `:1786`).
+23. Envelope record (Round 11) (`:12336-12340`): "**Outside the envelope
+    (read-only anchors; none is in the fence):** `core/admin/utils/storageCache.ts`
+    (09-L04-owned); `tests/vitest/admin/entriesClientRevisions.test.ts` and
+    `tests/vitest/admin/customScreensEntryOverridesClient.test.ts` (scanned
+    only);" → R12-08 (`entriesClientRevisions.test.ts` is allowlisted,
+    `:1716`, scanned read-only; the rest of the list stands).
+
+Superseded quote count: 23.
+
+**Stands** (non-exhaustive reminders):
+
+- Round 11 except quotes 1-23 of this list; in particular R11-02,
+  R11-03 (its two named pins (a) and (b), the scan commands and every other
+  table row), R11-04 (every row, with R12-04 and R12-12 added), R11-05 (the
+  rule, the receipt-check definition and every other row cell), R11-06 (the
+  Clause except its last sentence, the scope list, the R8-06 (1)
+  restatements and the red-handling bullet as replaced by R12-02), R11-07,
+  R11-08, R11-09 (with the Round-12 preamble sentence added), R11-10 and
+  R11-11;
+- the Round-11 Security rows, Handoffs (except (c) and (g)) and Envelope
+  record (except quotes 22 and 23);
+- C17 v6 and its Round-11 amendments items 1, 2 and 4.
+
+### Security Contract rows (Round 12)
+
+No route, schema, auth, RBAC, CSRF or rate-limit change. Endpoint visibility,
+the auth model and rate-limit buckets stay as in Rounds 2-11.
+
+- **Test seeds go through the production write path (L2).** Every 03-L02
+  suite is seeded through the same storageCache API as production writes, so
+  the 09-L04 FINAL scope, deployment and authentication-epoch partitioning
+  applies to test seeds exactly as to production. Any red caused by a 09-L04
+  body rule (every Admin Browser Contract storage/scope rule, including the
+  persistent-scope safe miss, the v3 key and envelope and the per-scope
+  owned-key index) is a (d) STOP, never a silent pass and never a dilution of
+  the rule. A red not traceable to a body rule is an ordinary 09-L04 FINAL
+  failure (K4).
+- **T16 cannot pass vacuously (R12-01).** The sentinel write must log at
+  least one `setItem`, every key it touches is recorded, and it runs under
+  the same scope and epoch as the mutation.
+- **Same-tab delivery under the current scope (09-L04 note 2 (c), K4).** A
+  local event under the current scope, including the no-persistent-scope
+  state, reaches every local handler; a stale-scope local event reaches none.
+  03-L02's invalidation relies on the first and is protected by the second.
+- **W0 readiness is fail-closed (R12-03).** The 06-L03 row needs the R1-e
+  proof fields for both open re-opens; a missing field means NOT landed. The
+  W0 receipt holds commit ids, receipt paths, `verdict` values, addendum key
+  names and sha256 values only; `.env` values are never read into a receipt
+  or a prompt.
+- **Closed picker (R12-12).** A closed media picker without a selection
+  issues no media read, so mounting a form field never fetches the library.
+
+### Handoffs (Round 12)
+
+- **TASK-554.** Unchanged: no file edit and no re-open.
+- **TASK-551-10-L02.** Owed through C17 v6 as amended by the Round-11 and
+  Round-12 amendment headings (row update only), in 10-L02's next
+  append-only section. No 10-L02 rule changes.
+- **TASK-551-09-L04 (another writer's file).** Its note 3 (L6), written by
+  its own writer in this round: L1 (the third cross-owner FINAL input), L2
+  (the widened (d) trigger set and "seeded through the same API"), the (c)
+  regression-test shape in `tests/vitest/admin/cacheBusHardening.test.ts`,
+  the line-gate sentence reworded (R12-13), and its anchors. 03-L02 records
+  the same decisions (R12-01, R12-02, R12-13) and edits nothing in 09-L04.
+- **TASK-551-09-L01 (owed mirror; orchestrator follow-up).** The settings-read
+  assertions the 09-L04 body wants in
+  `tests/integration/runtime/public-site-cache-query-budget.test.ts` (L1);
+  09-L01 is the writer and the (d) re-run owner of that file.
+- **TASK-551-10-L01.** The owed-mirror bundle (L10, J9) has its writer in
+  this round (the 05-L01 and 05-L03 paths, the 09-L04
+  `final-admin-cache-tests` mirror 13 → 15 paths, the land-order bounds).
+  03-L02 edits nothing there; Round-11 orchestrator (b) is taken by that
+  writer.
+- **TASK-551-11.** Nothing owed. Round 12 adds no fence path, no argv token
+  and no contract evidence path.
+- **TASK-551-01-L01.** Unchanged. Round 12 adds no server statement.
+- **Other task files citing 03-L02 lines.** Round 12 shifts no line.
+- **Orchestrator.**
+  - (a) INITIAL capture stays blocked until every landing check (R11-05 as
+    amended by R12-03 and R12-10) passes and is recorded in the W0 receipt,
+    together with the three R8-09 commands. At `b98ed8d9` the 06-L03 row
+    does not pass.
+  - (b) Taken by the 10-L01 writer this round (L10).
+  - (c) Closed: item 0 landed (K2) and is committed in `b98ed8d9`.
+  - (d) The "Validation Commands" regeneration from the fence and the Slots
+    suite's `line-count` entry (R12-13) are owed to the W0 fence edit, as
+    authorized in-place edits, never hand patches.
+  - (e) Relocation follow-up unchanged; it now also covers
+    `03-l02-round12-dispositions.md` (N = 12; untracked at `b98ed8d9`).
+    Until the records move, R4-10 gloss 2 (`:6424`) classifies them at W0.
+  - (f) Closed (Round 11).
+  - (g) Merged into (d) (R12-13).
+  - (h) The restated `owned-module-consumers-bun` precondition (R8-10) and
+    the R6-06 stop rule (size below) stand.
+
+### Envelope record (Round 12)
+
+**No fence edit.** The envelope fence (`:1441-2173`) is byte-identical to
+`b98ed8d9`; this round only appends this section. `git diff -U0 HEAD --
+<this file>` prints exactly one hunk, the append hunk after `:12352`, and no
+removed line. The line shift is 0: the fence stays `:1441-2173`, the
+allowlist `:1450-1771` (322), `forbiddenPaths` `:1774-1825` (52),
+`dependencies` `:1827`, and every earlier section keeps its line numbers.
+Counts unchanged: commands 34; occurrences `initial` (30 command ids,
+`dependsOn` `TASK-551-09-L04:initial`) and `final` (11 ids, `dependsOn`
+`TASK-551-08-L03:final`); `admin-pagination-vitest-1` 128 tokens, 124 paths,
+`minimum` 124; `admin-pagination-vitest-2` 35 tokens, 31 paths, `minimum` 31.
+The family preflight
+(`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md:1173`, last argument
+`$(git rev-parse HEAD)`) run on the appended tree prints
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`,
+and `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null
+test ./tests/unit/workflows/dispatchContractCaps.test.ts
+./tests/unit/workflows/task551AuthorAudit.test.ts` passes (21 pass, 0 fail).
+
+**Paths this round names** (fence lines at `b98ed8d9`; checked by exact
+match inside `:1450-1825`):
+
+- **Allowlisted:** `core/admin/ui/media/MediaPicker.tsx` (`:1513`);
+  `tests/vitest/admin/task551PaginatedClients.test.ts` (`:1571`),
+  `task551PaginatedClientsSlots.test.ts` (`:1572`),
+  `entriesClientMutationReconciliation.test.ts` (`:1638`),
+  `entriesClient.test.ts` (`:1640`), `entriesClientRevisions.test.ts`
+  (`:1716`); `tests/vitest/ui/media-library.test.tsx` (`:1614`),
+  `media-picker.test.tsx` (`:1625`),
+  `tests/vitest/ui/support/customScreenEditorPageHarness.tsx` (`:1709`);
+  `tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`
+  (`:1660`), `custom-screen-task-540-flow.test.tsx` (`:1665`),
+  `media-restyle.test.tsx` (`:1668`);
+  `tests/vitest/pages/page-editor-host-contract.test.ts` (`:1770`).
+- **Forbidden and consumed only:** `core/admin/services/cachePolicy.ts`
+  (`:1774`; `cacheKeys`); `tests/integration/server/route-response-headers.test.ts`
+  (`:1786`; the R11-05 08-L03 row).
+- **Outside the envelope (read-only anchors; none is in the fence):**
+  `core/admin/utils/storageCache.ts` (09-L04-owned);
+  `core/admin/ui/media/MediaFolderRail.tsx` (the "Documents" kind value);
+  `tests/integration/runtime/public-site-cache-query-budget.test.ts`
+  (09-L01-owned); `tests/vitest/admin/cacheBusHardening.test.ts`
+  (09-L04-owned); `tests/vitest/admin/customScreensEntryOverridesClient.test.ts`
+  (scanned only); the task files of TASK-551-06-L03, 09-L04, 10-L01, 10-L02
+  and 11; the receipt `_docs/_workflows/_smoke/task-551/impl-06-l03.json`;
+  the dispositions records, including `03-l02-round12-dispositions.md`
+  (orchestrator evidence).
+
+No new allowlisted path is needed; every path named is allowlisted or
+forbidden-read-only where it is inside the fence. One JSON fence. **Size
+(R6-06 stop rule).** This file was 875,272 bytes at `b98ed8d9` and is
+914,615 bytes after this append (`wc -c`), below the 1,048,576-byte cap
+with the 200-byte closure headroom.

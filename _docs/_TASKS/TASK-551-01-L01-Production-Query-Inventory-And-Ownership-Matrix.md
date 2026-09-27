@@ -5741,3 +5741,272 @@ The quoted text is authoritative for what is superseded.
 - `:2957` (**V3-4** class-D row): "| D. Ungated (DB-free by construction) | `task551OnlineIndexDeployment` (verdict in **V2-6**) | none | must PASS | must PASS |".
   Replaced by the **V10-3** class-D row. The **V3-4** count sentence and
   the blocking rule stay.
+
+### Amendment v11 (2026-09-27)
+
+Recorded at HEAD `b98ed8d9` from orchestrator decision **L7**, with **K2**
+and **K3** (Addenda K and L of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`).
+They were taken on the Round-11 / fix4 audit results (`wf_75d02a03-d77`).
+The dispositions decide; this section records them as contract text and
+does not re-decide them. Every anchor into this file, into the 05-L01 and
+05-L03 task files and into source was re-read at this tree. Line anchors
+into this file are HEAD `b98ed8d9` lines; v11 is appended after the last
+of them, so none of them moves. v11 is append-only. It supersedes earlier
+text only where **V11-5** quotes a sentence verbatim with its current line.
+Every clause not quoted there stays binding. No fence byte of this file
+changes, and no source or test file changes. No environment file was read
+for this amendment. In this section **Kn** and **Ln** (bold) are Addendum K
+and Addendum L items.
+
+#### V11-1 Static list grows to 31 entries (L7; K3; disposes V10-8)
+
+The four test paths of **V10-3** join the **V2-3** static list as amended
+by **V3-1**. Each is named by its owner's first ```` ```json ```` fence,
+read at this tree:
+
+| Path | Named by (fence field; owner) |
+| --- | --- |
+| `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts` | `allowlist`, and the `migration-and-index-tests` `argv` and `positiveDiscovery.paths` (TASK-551-05-L01, fourth note, fence amendment 2) |
+| `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts` | `allowlist`, and the `migration-and-index-tests` `argv` and `positiveDiscovery.paths` (TASK-551-05-L01, fourth note, fence amendment 2) |
+| `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts` | `allowlist`, and the `migration-and-index-tests` `argv` and `positiveDiscovery.paths` (TASK-551-05-L01, fourth note, fence amendment 2) |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts` | `allowlist`, and the `rollback-authority-schema-test` `argv` and `positiveDiscovery.paths` (TASK-551-05-L03, Item N2-3) |
+
+Each path matches `LANE_TEST_FILE`, carries the `task551` token, sits under
+the `tests/integration/server` lane root and is not one of the nine
+`TASK551_PLANNED_BUN_TEST_PATHS` (resolved at this tree by importing
+`tests/perf/fixtures/task551QueryInventory.ts`). None of the four is a file
+on disk at this tree.
+
+**Placement (UTF-16 code-unit order).** `-` (U+002D) sorts before `.`
+(U+002E). So each split test path sorts immediately before its original
+path, and the three deployment parts sort as `-catalog`, `-evidence`,
+`-rollout`. The new rows, with their v11 numbers:
+
+| # | Path | Contracted via (owner) | On disk at `b98ed8d9` |
+| --- | --- | --- | --- |
+| 14 | `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts` | allowlist + argv + test-paths (TASK-551-05-L01) | no |
+| 15 | `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts` | allowlist + argv + test-paths (TASK-551-05-L01) | no |
+| 16 | `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts` | allowlist + argv + test-paths (TASK-551-05-L01) | no |
+| 25 | `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts` | allowlist + argv + test-paths (TASK-551-05-L03) | no |
+
+**Renumbering.** Entries 1-13 keep their numbers. Old entry 14
+(`task551OnlineIndexDeployment`) becomes 17. Old entries 15-21 become
+18-24. Old entry 22 (`task551SolutionKitRollbackAuthoritySchema`) becomes
+26. Old entries 23-27 become 27-31. The paths, owners and on-disk flags of
+the old entries do not change. The list therefore has 31 entries: 17 on
+disk and 14 declared-but-absent. The historical five are entries 10, 21
+and 29-31. The two TASK-551-03-L02 suites are still entries 1 and 5. The
+four class-E suites of **V4-4** are entries 27
+(`task551DatabaseCachePerformanceGate`), 2 (`task551ServerCacheFaultMatrix`),
+3 (`task551TwoProcessRedisSmoke`) and 28 (`task551ServerCacheSecurityGate`).
+
+**The list, restated in order (31 entries; byte-exact).**
+
+1. `tests/integration/routes/task551BoundedAdminLists.test.ts`
+2. `tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts`
+3. `tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts`
+4. `tests/integration/server/task551ActionExecutionStore.test.ts`
+5. `tests/integration/server/task551AdminWriteConcurrency.test.ts`
+6. `tests/integration/server/task551AppendHeavyRetention.test.ts`
+7. `tests/integration/server/task551AssistantDocsCandidateQuery.test.ts`
+8. `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`
+9. `tests/integration/server/task551ConcurrencyConstraints.test.ts`
+10. `tests/integration/server/task551DatabaseLifecycle.test.ts`
+11. `tests/integration/server/task551DatabaseLifecycleRealDb.test.ts`
+12. `tests/integration/server/task551DedicatedSessionGuards.test.ts`
+13. `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`
+14. `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts`
+15. `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts`
+16. `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts`
+17. `tests/integration/server/task551OnlineIndexDeployment.test.ts`
+18. `tests/integration/server/task551RetentionJobService.test.ts`
+19. `tests/integration/server/task551RevisionConcurrency.test.ts`
+20. `tests/integration/server/task551RevisionRetention.test.ts`
+21. `tests/integration/server/task551RuntimeEntrypoints.test.ts`
+22. `tests/integration/server/task551SchemaMigrationParity.test.ts`
+23. `tests/integration/server/task551SearchRankedQueries.test.ts`
+24. `tests/integration/server/task551SearchVectorMigration.test.ts`
+25. `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts`
+26. `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+27. `tests/perf/task551DatabaseCachePerformanceGate.test.ts`
+28. `tests/security/task551ServerCacheSecurityGate.test.ts`
+29. `tests/unit/workflows/task551AuthorAudit.test.ts`
+30. `tests/unit/workflows/task551EvidenceContract.test.ts`
+31. `tests/unit/workflows/task551WorkflowContracts.test.ts`
+
+**Verification (2026-09-27, DB-free, read-only, at `b98ed8d9`).** The
+**V3-1** derivation was re-run: the first ```` ```json ```` fence of every
+`TASK-551*.md` file; its `allowlist`, every command `argv` and every
+`test-paths` discovery; filtered by the **V2-5** predicates and the
+`scripts/bun-lane-classify.ts:62-73` lane roots. It yields exactly the 31
+paths above, in that order. No other path is derived.
+`DECLARED_NOT_YET_ALLOWLISTED` stays `[]`, because every new entry is
+already named by its owner's fence. The TASK-551-10-L01 mirror (Addendum
+**L10**) may name the same paths in the 10-L01 fence. A path named by
+several fences is still one entry, and its owner stays the leaf whose
+`allowlist` holds it (**V10-3**).
+
+**`bunLane.ts` edit (V2-4, still the single writer).** The frozen
+`TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` holds the 31 paths above,
+byte-exact and in order. Nothing else in **V2-4** changes. The **V2-8**
+projection grows by four lines, to about 385. `contractedPathCount` stays
+the length read from the tree at the time of the run (31 once this list
+lands); **V2-5** case 2 still pins no count. At this tree the constant
+(`scripts/task551QueryInventory/bunLane.ts:37-43`) still holds only the
+historical five. The list of **V2-3**, with its **V3-1** and **V11-1**
+growth, lands with the 01-L01 source edit. v11 changes that edit's target
+list; it edits no source now.
+
+- **Unchanged.** Classes, maps, owners and join timing stay as **V10-3**
+  records them. Joining the static list is not joining the manifest. Each
+  path gets a manifest row only once it is on disk, under the ordinary
+  **V3-4** and **V5-2** rules. The two support modules are not test paths
+  and join no list.
+
+#### V11-2 Growth-rule state (V3-2) for the four paths
+
+- **Mirror met.** The **V3-2** item 1 mirror for these four paths is
+  **V11-1** (**K3**). The **V3-2** list "Owed additions at this tree" gains
+  two items:
+  - **TASK-551-05-L01 (fourth note, fence amendment 2).** The three
+    deployment parts get their mirror through **V11-1**.
+  - **TASK-551-05-L03 (Item N2-3).** The static suite gets its mirror
+    through **V11-1**.
+- **V10-8 disposed.** The **V10-8** observation is decided by **K3** and
+  **L7**. v11 adds the four entries.
+- **Observation (not decided here).** **V3-2** item 1 also puts the
+  membership suite in the naming leaf's own gate set (the **V4-3**
+  leaf-side command). A count-only grep for `task551BunLaneMembership`
+  finds 0 matches in the 05-L01 task file and 0 in the 05-L03 task file at
+  this tree. Neither **K3** nor **L7** disposes that part. The **V4-3**
+  command passes only once the 01-L01 source edit carries **V2-5** cases 1
+  and 8 with this list. Routed to the orchestrator.
+
+#### V11-3 Item-12 done-check reworded (L7; K2)
+
+- **Fact (from source at HEAD; the check was executed read-only).** Item
+  0 landed at `b98ed8d9` (**K2**). `COMMANDED_TEST_PATHS` in
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts` holds the
+  ten `migration-and-index-tests` paths, the three split paths among them.
+  The 05-L01 fifth-note rule-7 awk form (under
+  `### R1 item 12 split — script table corrected; budgets restated (Addendum J3)`,
+  "Item-12 done-check (Addendum J2)") already prints 3 at this tree, before
+  item 12. awk reports the missing `-support.ts` operand on stderr. No split
+  test path is a file on disk; the three names occur only inside the item-0
+  constant.
+- **Rule.** From item 0 on, the `grep -c` = 3 check (**V10-4**, and the
+  05-L01 rule-7 form) only guards retention. It shows that the three split
+  paths are still in `COMMANDED_TEST_PATHS` and are declared once (a second
+  declaration prints 6). It is never evidence that item 12 has landed. No
+  receipt, `handoffs[]` entry or closure note cites it as landing evidence.
+- **Landing evidence for item 12 (all three required).**
+  1. The three split test paths
+     `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts`,
+     `…-rollout.test.ts` and `…-evidence.test.ts` exist on disk as files.
+  2. The **V3-4** class-D PASS runs: for each of the three split paths, the
+     owner-map run and the map-free run both PASS, with 0 failed and 0
+     skipped (the **V10-3** class-D row; a skip in either run blocks).
+  3. The 05-L01 fifth-note rule-7 awk form, run over the original suite and
+     `tests/integration/server/task551OnlineIndexDeployment-support.ts` on
+     the item-12 tree, prints 3.
+- **Unchanged.** The other **V10-4** rules stand: from item 0 on, the J3
+  pass is envelope evidence, and no expected-red row is recorded. v11 adds
+  no FINAL step and no handoff row. Item 12 stays outside **V8-8** step 7
+  and outside `### Handoff rows for 01-L01 v8`.
+
+#### V11-4 Anchors (L7)
+
+- **V9-4 quote anchors.** The **V9-4** "Quote anchors" bullet lists the
+  **V7-10** quote for `:4155` as `:4768-4770`. The quoted fragment starts
+  on `:4769`, so the anchor is `:4769-4770`, as **V10-5** already records
+  for **V9-8**. The quote is in **V11-5**.
+- **V10-9 O5 bullet: anchor kept at `:5229-5232` (L7 re-anchor not
+  applied).** **L7** directs re-anchoring this bullet to `:5230-5232`.
+  Re-read at `b98ed8d9` (and identical at `a3d46bf1`), `:5229` reads
+  "worker branches and the O3 branch. O5 (class-A suite", and `:5230`
+  begins with "`task551RevisionConcurrency`, whose DB legs skip". The quoted
+  sentence begins on `:5229`, so `:5229-5232` is correct. A `:5230-5232`
+  anchor would drop the quote's opening words. The line the audit read as
+  `:5229` ("mirrors it (**H3**). The FINAL lane-runner run proves the five
+  05-L01") is `:5228`. The V10-9 bullet is not superseded. This is
+  routed to the orchestrator as a correction of the **L7** record.
+
+#### V11-5 Superseded sentences (v11)
+
+Quoted verbatim with their current lines (line breaks folded to spaces).
+The quoted text is authoritative for what is superseded.
+
+**v3 sentences and v3 replacement texts.**
+
+- `:2845-2846` (**V3-1**, count sentence): "The list therefore has 27
+  entries: 17 on disk and 10 declared-but-absent." Replaced by: 31
+  entries, 17 on disk and 14 declared-but-absent (**V11-1**).
+- `:2846-2847` (**V3-1**): "The historical five are now entries 10, 18,
+  and 25-27." Replaced by: entries 10, 21 and 29-31 (**V11-1**).
+- `:2854` (**V3-1** verification): "This yields exactly the 27 paths above
+  in that order." Replaced by: at `b98ed8d9` the derivation yields exactly
+  the 31 paths of **V11-1**, in that order.
+- `:2858-2860` (**V3-1**): "The frozen
+  `TASK551_CONTRACTED_NONPLANNED_LANE_TEST_PATHS` holds the 27 paths above,
+  byte-exact and in order." Replaced by: it holds the 31 paths of
+  **V11-1**, byte-exact and in order.
+- `:2860-2862` (**V3-1**): "**V2-8** now projects `bunLane.ts` at about 381
+  lines; the membership test projection is unchanged." Replaced by: about
+  385 lines (**V11-1**); the membership test projection is unchanged.
+- `:2866` (**V3-1** receipt, fragment): "(27 when v3 lands)". Replaced by:
+  (31 when the **V11-1** list lands). The rest of the sentence stays.
+- `:2910-2911` (**V3-2**): "They are ALREADY static entries 23, 2, 3, and
+  24 (v2 entries 22, 2, 3, and 23) as declared-but-absent, so v3 adds no row
+  for them." Replaced by: they are static entries 27, 2, 3 and 28
+  (**V11-1** numbering), declared-but-absent; no row is added for them.
+- `:2914-2915` (**V3-2**): "**No other leaf** names an unlisted `task551`
+  Bun-lane path at this tree (derivation in **V3-1**)." Replaced by: at
+  `b98ed8d9`, 05-L01 and 05-L03 name the four **V11-1** paths, mirrored by
+  **V11-1**; no other leaf names an unlisted `task551` Bun-lane path
+  (derivation in **V11-1**).
+- `:3012` (**V3-6** replacement for `:2292`): "Replaced by: exact, 27
+  entries (**V3-1**)." Replaced by: exact, 31 entries (**V11-1**).
+- `:3016-3017` (**V3-6** replacement for `:2323-2325`): "Replaced by: 17 on
+  disk, 10 declared-but-absent (the nine named in v2 plus
+  `task551DedicatedSessionGuards`)." Replaced by: 17 on disk, 14
+  declared-but-absent (the ten of **V3-1** plus the four of **V11-1**).
+- `:3023` (**V3-6** replacement for `:2351`): "Replaced by: the 27 paths of
+  **V2-3** as amended by **V3-1**." Replaced by: the 31 paths of **V2-3** as
+  amended by **V3-1** and **V11-1**.
+- `:3045` (**V3-6** replacement for `:2674-2675`): "Replaced by: static
+  entries 25-27." Replaced by: static entries 29-31.
+- `:3050-3051` (**V3-6** replacement for `:2758-2759`): "Replaced by:
+  widened to the 27 paths of **V2-3** as amended by **V3-1**." Replaced by:
+  widened to the 31 paths of **V2-3** as amended by **V3-1** and **V11-1**.
+- `:3052-3053` (**V3-6** replacement for `:2766-2767`): "Replaced by:
+  static entries 10, 18, and 25-27." Replaced by: static entries 10, 21 and
+  29-31.
+
+**v4 table cell.**
+
+- `:3351` (**V4-4** class-E row, Suites cell): "`tests/perf/task551DatabaseCachePerformanceGate.test.ts` (static entry 23), `tests/integration/runtime/task551ServerCacheFaultMatrix.test.ts` (2), `tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts` (3), `tests/security/task551ServerCacheSecurityGate.test.ts` (24)".
+  Replaced by the same four paths with static entries 27, 2, 3 and 28
+  (**V11-1**). The other cells of the row stay.
+
+**v9 sentence.**
+
+- `:5272-5273` (**V9-4** "Quote anchors", fragment): "**V9-8** adds the
+  verbatim quotes v8 omitted (`:3561`, `:4565`, `:4568`, `:4768-4770`)."
+  Replaced by: the same list with `:4769-4770` in place of `:4768-4770`
+  (**V11-4**). The rest of the bullet stays.
+
+**v10 sentences.**
+
+- `:5597-5599` (**V10-4**): "The mechanical item-12 done-check stays as
+  **J2** states it: `grep -c` of the three split paths in
+  `COMMANDED_TEST_PATHS` is 3." Replaced by **V11-3**: that check guards
+  retention only; item-12 landing evidence is the three split paths on
+  disk, the **V3-4** class-D PASS runs and the 05-L01 fifth-note rule-7 awk
+  form.
+- `:5668-5669` (**V10-8**, fragment): "The **V3-1** static list (27
+  entries) holds none of them". Replaced by: the **V11-1** static list (31
+  entries) holds all four.
+- `:5672-5673` (**V10-8**): "Routed to the orchestrator. This amendment adds
+  no static-list entry." Replaced by: decided by **K3** and **L7**; v11 adds
+  the four entries (**V11-1**, **V11-2**).

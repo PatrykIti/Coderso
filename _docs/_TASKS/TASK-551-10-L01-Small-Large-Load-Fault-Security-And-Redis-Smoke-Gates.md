@@ -1269,9 +1269,9 @@ Playwright client environment.
     {
       "id": "migration-and-plan-tests",
       "lane": "bun-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts", "tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"],
       "environmentProfile": "task551-db-migration-test",
-      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"], "minimum": 1 }
+      "positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts", "tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"], "minimum": 14 }
     },
     {
       "id": "online-indexes-rollout-forward-first",
@@ -1819,3 +1819,275 @@ are post-edit.
   02-L02's default Bun suite. That sentence describes receipt pins and is not
   a command, so it is not rewritten. The RealDb leg is run through the
   commands above.
+
+## Dated Contract Corrections — 2026-09-27 (05-L01 / 05-L03 / 09-L04 consumer mirror; append-only section with an in-place fence edit)
+
+This section writes the owed TASK-551-10-L01 mirror bundle (Addendum
+**L10**, which executes **J9** and **I3** (a)-(c); `minimum` per **L4** (c))
+from `_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+One surface was edited in place: the `migration-and-plan-tests` command in
+the Workflow Dispatch Envelope `json` fence, so that the fence stays one
+strictly parseable JSON document for the TASK-551 dispatch preflight. Every
+other change is made here, append-only. The sentences and literal blocks
+quoted under "Superseded sentences" keep their original bytes above and are
+superseded from this date. Everything not quoted stays binding.
+
+### Verified facts (read at HEAD `b98ed8d9`; sibling anchors are HEAD line numbers)
+
+- The four split test paths, as named by their owners:
+  - 05-L01 fourth note, "Fence amendment 2" (O6) and the item-12 split
+    table (05-L01 `:2531-2592`), and the fifth note's "TASK-551-10-L01 mirror
+    row" (`:3029-3041`):
+    `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts`,
+    `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts`,
+    `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts`,
+    in that order after `tests/integration/server/task551OnlineIndexDeployment.test.ts`.
+    `tests/integration/server/task551OnlineIndexDeployment-support.ts` is not
+    a test path and is in no argv or path list.
+  - 05-L03 note 2, Item N2-3 (05-L03 `:1380-1427`; split row `:1387`), and
+    note 3, Item N3-5 (`:1696-1721`):
+    `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts`,
+    after `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+    (the 05-L03 fence order). `…Schema-support.ts` is not a test path and is
+    in no argv or path list.
+- The 09-L04 `final-admin-cache-tests` command (09-L04 `:725-735`) has 15
+  paths: the thirteen this leaf mirrors, then
+  `tests/vitest/admin/task551PaginatedClients.test.ts`, then
+  `tests/vitest/admin/task551PaginatedClientsSlots.test.ts`, with
+  `"minimum": 15`. 09-L04 note (4) (`:1453-1469`) names this owed mirror.
+  09-L04 `occurrences[initial].commandIds` (`:798`) and
+  `occurrences[final].commandIds` (`:803`) equal the lists quoted at
+  `:1499-1502` of this file, byte for byte.
+- None of the six paths above exists on disk or in the index at HEAD
+  `b98ed8d9`. The four split paths are created by 05-L01 R1 item 12 and the
+  05-L03 split edit. The two paginated-client suites are created by
+  TASK-551-03-L02.
+- Before this edit, `migration-and-plan-tests` (`:1270-1276`) had 13 argv
+  tokens, ten `positiveDiscovery.paths` and `"minimum": 1`. The validation
+  command list's `bun test` block (`:1062-1071`) had the same ten paths.
+- No 10-L01 sentence pins "13-path". An untruncated
+  `grep -n 'thirteen\|13-path'` over this file finds only `:1498` and
+  `:1522`.
+
+### Item 1 — `migration-and-plan-tests` fence edit (in place; L10, J9, L4 (c))
+
+- `argv` (`:1272`) and `positiveDiscovery.paths` (`:1274`) gain the four
+  split paths. The original paths are kept, and each split part follows its
+  original: `…SolutionKitRollbackAuthoritySchema-static.test.ts` directly
+  after `…SolutionKitRollbackAuthoritySchema.test.ts`, and `…-catalog`,
+  `…-rollout`, `…-evidence` directly after
+  `…OnlineIndexDeployment.test.ts`. Both keys hold the same 14 paths in
+  the same order:
+  1. `tests/integration/server/task551SchemaMigrationParity.test.ts`
+  2. `tests/integration/server/task551SearchVectorMigration.test.ts`
+  3. `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`
+  4. `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+  5. `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts`
+  6. `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`
+  7. `tests/integration/server/task551OnlineIndexDeployment.test.ts`
+  8. `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts`
+  9. `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts`
+  10. `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts`
+  11. `tests/perf/database-index-write-overhead.test.ts`
+  12. `tests/perf/database-explain-plans.test.ts`
+  13. `tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`
+  14. `tests/integration/server/task551ConcurrencyConstraints.test.ts`
+- `argv` goes from 13 to 17 tokens (`bun`, `--env-file=/dev/null`, `test`,
+  then the 14 paths), well below the 128-token literal-argv cap.
+- `minimum` goes from 1 to 14, the full path count (**L4** (c)). Discovery is
+  fail-closed, so every split part must be discovered. This is the rule the
+  2026-09-25 revision-suite amendment applied to its edited commands, and
+  the one 05-L01 (`minimum` 10) and 05-L03 (`minimum` 2) apply to their own
+  split commands. It replaces the "10-L01's own rule (today 1)" wording that
+  05-L01's fifth-note mirror row and 05-L03 Item N3-5 left open.
+- Every other key is byte-identical: `schema`, `taskId`, `parent`,
+  `allowlist`, `forbiddenPaths`, `dependencies`, the command's `id`, `lane`
+  and `environmentProfile`, every other command, and `occurrences`. The
+  fence still has 31 commands, and `occurrences[single].commandIds` still
+  lists 31 ids. No command or occurrence is added. The JSON parses. The two
+  edited lines keep their line numbers, so the in-place edit shifts no line
+  (line shift 0 for `:1-1821`).
+- The split paths are not added to `allowlist` or `forbiddenPaths`. This
+  leaf only runs them, as it already does for the original paths, which are
+  in neither list.
+
+### Item 2 — Exact Validation Commands `bun test` block restated (J9)
+
+The block at `:1062-1071` is superseded (quoted below) and restated with the
+same 14 paths in the envelope order:
+
+```bash
+bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
+  tests/integration/server/task551SearchVectorMigration.test.ts \
+  tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts \
+  tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts \
+  tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts \
+  tests/integration/server/task551IndexAndConstraintCatalog.test.ts \
+  tests/integration/server/task551OnlineIndexDeployment.test.ts \
+  tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts \
+  tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts \
+  tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts \
+  tests/perf/database-index-write-overhead.test.ts \
+  tests/perf/database-explain-plans.test.ts \
+  tests/perf/task489-solution-kit-run-predecessor-plans.test.ts \
+  tests/integration/server/task551ConcurrencyConstraints.test.ts
+```
+
+It keeps its position in "Exact Validation Commands": after the
+schema-facade `bun test` block (`:1060-1061`) and before the first
+`rollout-forward` line (`:1072`). Every other line of that list stays
+binding.
+
+### Item 3 — 09-L04 `final-admin-cache-tests` mirror, 13 → 15 paths (I3 (c), 09-L04 note (4))
+
+- The FINAL vitest command in the `TASK-551-09-L04:` block under "Exact
+  TASK-551-09 Owner Command Manifests" (`:998-1010`) is superseded (quoted
+  below) and restated with the fifteen paths in the 09-L04 envelope order:
+
+```bash
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/storageCache.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts \
+  tests/vitest/admin/readThroughCache.test.ts \
+  tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheRefresh.test.ts \
+  tests/vitest/admin/admin-cache-identity.test.ts \
+  tests/vitest/admin/read-through-cache-generation.test.ts \
+  tests/vitest/admin/admin-cache-client-authority-matrix.test.ts \
+  tests/vitest/admin/authClient.test.ts \
+  tests/vitest/authUi/authClient.test.ts \
+  tests/vitest/ui/admin-auth-identity.test.tsx \
+  tests/vitest/admin/admin-cache-authority.test.ts \
+  tests/vitest/admin/task551PaginatedClients.test.ts \
+  tests/vitest/admin/task551PaginatedClientsSlots.test.ts
+```
+
+- It keeps its position in that block: after the
+  `# FINAL gate, after both adoption receipts and TASK-551-09-L03:` comment
+  (`:997`) and before `set -a && source .env && set +a` (`:1011`). Every
+  other line of the `TASK-551-09-L04:` block (`:989-1039`) stays binding,
+  including the FINAL `wc -l` command. 09-L04's `line-count` argv
+  (`:790`) names neither paginated-client suite, so there is nothing to
+  mirror there.
+- **Digest.** The 09-L04 owner-receipt SHA-256 digest (`:783-784`) is
+  derived at closure from the `TASK-551-09-L04:` block with this restated
+  FINAL vitest command in place of `:998-1010`. Canonicalization is
+  unchanged: the `env` launcher and its `NAME=value` prefixes are stripped,
+  which gives the 09-L04 envelope argv
+  `["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", …15 paths]`.
+  The thirteen-path bytes at `:998-1010` can never match a fifteen-path
+  09-L04 FINAL receipt.
+- The source-of-truth summary (`:1497-1502`) now reads "command
+  `final-admin-cache-tests` (fifteen paths)". Its two `commandIds` lists
+  (`:1499-1502`) stay binding; they were verified unchanged above.
+- The Round-2 FINAL-vitest record (`:1520-1524`) keeps its "before" half as
+  history. Its "after" half is replaced: the direct env-free runner followed
+  by the fifteen `final-admin-cache-tests` paths in the envelope's exact
+  order (the twelve paths of Round 1, then
+  `tests/vitest/admin/admin-cache-authority.test.ts`, then
+  `tests/vitest/admin/task551PaginatedClients.test.ts`, then
+  `tests/vitest/admin/task551PaginatedClientsSlots.test.ts`).
+- The Round-1 "with twelve paths" record (`:1509-1513`) describes a
+  historical state and is not a path-count pin, so it is not superseded.
+
+### Item 4 — Land-order bounds (L10; J7, J9; 05-L01 fifth note; 05-L03 N3-5; 09-L04 note (4))
+
+| Part | Carries | Land-order bound |
+| --- | --- | --- |
+| 05-L01 | Item 1 paths 8-10 in `argv` and `positiveDiscovery.paths`, `minimum` 14, and the Item 2 block | no later than 05-L01 R1 item 12 |
+| 05-L03 | Item 1 path 5 in `argv` and `positiveDiscovery.paths`, `minimum` 14, and the Item 2 block | no later than the 05-L03 split edit (Item N2-3) |
+| 09-L04 | the Item 3 FINAL vitest command and the `:1498` / `:1522-1524` restatements | no later than the 09-L04 FINAL dispatch |
+
+- All three parts are written in this one section and edit. At HEAD
+  `b98ed8d9` none of the three bounding events has happened (none of the
+  six new paths exists), so every bound is met as soon as this section is on
+  the tree.
+- **Undispatchable until the files exist (intended).** Until all four split
+  paths exist, `migration-and-plan-tests` cannot pass: `bun test` gets
+  missing paths, and `minimum` 14 cannot be discovered. The restated 09-L04
+  FINAL vitest command likewise needs both paginated-client suites. This is
+  fail-closed by design. It is not a defect to work around with a lower
+  `minimum` or a shorter list. In the parent graph, `TASK-551-10-L01:single`
+  (parent `:1006`) depends on `TASK-551-01-L01:final` (`:1005`), which
+  depends on `TASK-551-09-L04:final` (`:1004`). `TASK-551-05-L01:single`
+  (`:983`) and `TASK-551-05-L03:single` (`:984`) come earlier in the parent
+  node order, which is the total land order (**J1**). So on the dispatch
+  tree every path already exists.
+
+### Item 5 — Family inventory and line shift
+
+- No task file is added, renamed or removed, and no command or occurrence is
+  added. The family preflight literal
+  (`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md:1173`), with its last
+  argument set to the current HEAD, prints
+  `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`
+  on this tree, unchanged.
+- Line shift: the in-place fence edit replaces two lines with two lines
+  (shift 0), and this section is appended after `:1821`. Every anchor at or
+  before `:1821` in this file and in sibling task files is unchanged.
+
+### Superseded sentences (verbatim, line breaks shown as single spaces; superseded from this date)
+
+1. `:1497-1498` (2026-09-24 09-L04 INITIAL FAZA-0 mirror, "Source of
+   truth"): "**Source of truth.** The 09-L04 Workflow Dispatch Envelope:
+   command `initial-authority-test`, command `final-admin-cache-tests`
+   (thirteen paths), and …". Replacement: the same sentence with
+   "(fifteen paths)". The rest of the sentence (`:1499-1502`) stays
+   binding.
+2. `:1520-1524` (same mirror, Round 2): "FINAL vitest: before,
+   `bun run test:vitest -- <twelve paths>`; after,
+   `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run`
+   followed by the thirteen `final-admin-cache-tests` paths in the
+   envelope's exact order (the twelve previous paths, then
+   `tests/vitest/admin/admin-cache-authority.test.ts`)." Replacement: Item 3,
+   fourth bullet. The "before" half stays as history.
+3. `:998-1010` (Exact TASK-551-09 Owner Command Manifests,
+   `TASK-551-09-L04:` block, FINAL vitest command), verbatim:
+
+```text
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null node_modules/vitest/vitest.mjs run tests/vitest/admin/storageCache.test.ts \
+  tests/vitest/admin/cacheBusHardening.test.ts \
+  tests/vitest/admin/readThroughCache.test.ts \
+  tests/vitest/admin/cacheBus.test.ts \
+  tests/vitest/admin/cacheBusCorrelation.test.ts \
+  tests/vitest/admin/cacheRefresh.test.ts \
+  tests/vitest/admin/admin-cache-identity.test.ts \
+  tests/vitest/admin/read-through-cache-generation.test.ts \
+  tests/vitest/admin/admin-cache-client-authority-matrix.test.ts \
+  tests/vitest/admin/authClient.test.ts \
+  tests/vitest/authUi/authClient.test.ts \
+  tests/vitest/ui/admin-auth-identity.test.tsx \
+  tests/vitest/admin/admin-cache-authority.test.ts
+```
+
+   Replacement: the Item 3 command.
+4. `:1062-1071` (Exact Validation Commands, `bun test` block), verbatim:
+
+```text
+bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
+  tests/integration/server/task551SearchVectorMigration.test.ts \
+  tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts \
+  tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts \
+  tests/integration/server/task551IndexAndConstraintCatalog.test.ts \
+  tests/integration/server/task551OnlineIndexDeployment.test.ts \
+  tests/perf/database-index-write-overhead.test.ts \
+  tests/perf/database-explain-plans.test.ts \
+  tests/perf/task489-solution-kit-run-predecessor-plans.test.ts \
+  tests/integration/server/task551ConcurrencyConstraints.test.ts
+```
+
+   Replacement: the Item 2 block.
+
+### Superseded fence values (verbatim; HEAD `b98ed8d9` bytes, leading indentation removed)
+
+`migration-and-plan-tests` `argv` (`:1272`):
+
+```text
+"argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"],
+```
+
+`migration-and-plan-tests` `positiveDiscovery` (`:1274`):
+
+```text
+"positiveDiscovery": { "kind": "test-paths", "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts", "tests/perf/database-explain-plans.test.ts", "tests/perf/task489-solution-kit-run-predecessor-plans.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts"], "minimum": 1 }
+```

@@ -1752,3 +1752,39 @@ is unchanged.
    only the original path." Replacement: the same sentence with
    `TASK-551-05-L01-Schema-Split-Indexes-And-Concurrency-Constraints.md:1080`
    (Item N3-6).
+
+## Dated Contract Corrections — 2026-09-27 (note 4: FK count, trigger-name order qualifier)
+
+This note writes out orchestrator disposition **L9** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum L). It does not re-decide it. It is append-only and makes no fence
+edit. A bare cite of this file is a line at HEAD `b98ed8d9`; this note adds
+lines only after `:1754`, so no earlier line moves. Every earlier sentence
+stays binding except those quoted under "Superseded sentences" below.
+
+**Item N4-1 — seven FKs (L9).** Seven FKs reference
+`solution_kit_install_runs.id` from the authority tables, all created by the
+transactional `core/db/migrations/0081_task551_search_indexes_constraints_outbox.sql`
+at `:157`, `:158`, `:159` (progress), `:161`, `:162` (evidence), `:163` and
+`:165` (owners). Read at `b98ed8d9`, each is an `ADD CONSTRAINT … REFERENCES
+"public"."solution_kit_install_runs"("id"…)`. Not counted: `:160` (references
+the evidence table), `:164` (references `users`) and `:166` (the self FK).
+Only the count word changes; N2's creation order and N3-1's facts stand.
+
+**Item N4-2 — trigger-name order qualifier (L9).** The replacement for Item
+N3-1's replacement sentence is: "RESTRICT triggers on one table fire in
+trigger-name order (`RI_ConstraintTrigger_a_<oid>`); name order equals oid
+(creation) order for these same-migration constraints only while their oids
+have the same decimal width (**H5**)." The safeguard is the unchanged
+fail-closed rule: a different constraint name in the part-1 run is a finding
+for the orchestrator and is never re-baselined (Item N3-1, Item N2-2).
+
+### Superseded sentences (verbatim, line breaks shown as single spaces; superseded from this date)
+
+1. `:1253-1258` (note 2, N2): "Six FKs reference `solution_kit_install_runs.id` from the authority tables in the transactional 0081, in this creation order: progress `:157`, `:158`, `:159`; evidence `:161` (single-column `source_run_id`) and `:162` (`plan_fk`); owners `:163` (single-column `source_run_id`) and `:165` (`source_identity_fk`)."
+   Replacement: the same sentence with "Seven FKs" (Item N4-1).
+2. `:1642-1646` (note 3, Item N3-1): "The six FKs that reference `solution_kit_install_runs.id` from the authority tables are created by one migration, the transactional `core/db/migrations/0081_task551_search_indexes_constraints_outbox.sql` (`:157-159`, `:161`, `:162`, `:163`, `:165`)."
+   Replacement: the same sentence with "The seven FKs" and the list
+   (`:157`, `:158`, `:159`, `:161`, `:162`, `:163`, `:165`) (Item N4-1).
+3. `:1639-1642` (note 3, Item N3-1, replacement sentence): "RESTRICT triggers on one table fire in trigger-name order (`RI_ConstraintTrigger_a_<oid>`), which is creation order for these same-migration constraints (**H5**)."
+   Replacement: Item N4-2.
