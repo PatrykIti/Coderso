@@ -5425,3 +5425,319 @@ The quoted text is authoritative for what is superseded.
 - `:3561` (**V5-2** row): "| `tests/integration/server/task551ConcurrencyConstraints.test.ts` | B | TASK-551-05-L01 | `M-ambient` |".
   Replaced by: map cell `M-ambient` (blocked, **V8-5**), as **V8-5** states.
   Class and owner are unchanged.
+
+### Amendment v10 (2026-09-27)
+
+Recorded at HEAD `a3d46bf1` from orchestrator decisions **J2** and **J4**
+(a)-(f), with **J9** and Addendum I3 (a), (b) and (d) for the owed mirrors
+(Addenda I and J of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`).
+They were taken on the Round-10 / fix3 audit results (`wf_b7515c81-866`).
+The dispositions decide; this section records them as contract text and does
+not re-decide them. Every anchor into this file, into source and into
+committed task text was re-read at this tree. Owner texts are cited by
+heading and item, never by a bare line, except where a quoted row is copied
+byte-for-byte. The 05-L03 third note (**J7**), the 05-L01 script-split
+correction (**J3**) and the 05-L01 item 0 (**J2**) are being written by
+their own writers in this round and are cited by Addendum item only. v10 is
+append-only. It supersedes v9 (and the earlier clauses v9 kept) only where
+**V10-9** quotes a sentence verbatim with its current line. Every clause not
+quoted there stays binding. No fence byte of this file changes, and no
+source or test file changes. No environment file was read for this
+amendment. In this section **Jn** (bold, or bare in a heading) is an
+Addendum J item. "The J3 leg" and "fact J4" name the verified facts J3 and
+J4 of the 05-L01 fourth note (``### Verified facts (read at `c237e05d`)``),
+not Addendum items.
+
+#### V10-1 SolutionKit post-join row and blocked row (J4 (a))
+
+- **Post-join row (V8-7 table).** The 05-L03 post-join row replaces the
+  **V8-7** row "SolutionKit, after joining" (`:4987`, quoted in **V10-9**).
+  It is copied byte-for-byte from 05-L03
+  `### Handoff rows for 01-L01 v9 (row texts; 01-L01's writer copies them)`,
+  the row under "Post-join row (**V8-7** table, replacing the first note's
+  **V7-4** row; insert as written)":
+
+| Suite | Lane prediction | Cause (anchor) | Clears when |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` and `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts` | absent while their **V7-3** row stands; after joining, expected green: the static suite in every schema, and the original path in worker schemas through the Item 2 worker branches; a red is a finding | online members `…_source_position_key`, `…_source_key`, `…_apply_owners_active_idx`, `…_active_rollback_source_idx` are never in `bun_worker_*` (first note L3); worker branches at `:1979`, `:2016`, `:2062` | Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped. |
+
+- **Anchors of that row.** The v9 sentences after the superseded
+  "stays" sentence (`:5287-5290`, from "Its anchors" on) stay binding and
+  now apply to this row. Its anchors `:1979`, `:2016` and `:2062` are lines
+  of the unsplit suite at this tree. Under 05-L03 Item N2-3 the live
+  `testIfDb` legs stay in the original path, so after the split they
+  denote the same SQLSTATE 23505 legs there.
+- **Blocked row, restated (replaces the V9-5 SolutionKit row).** The
+  statement now names the `-static` path. Both split test paths are absent
+  from the manifest while the one SolutionKit row stands:
+
+| Suite | Lane prediction | Cause (anchor) | Clears when |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` and `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts` (TASK-551-05-L03) | absent from the manifest (BLOCKED), both paths, under the one blocked row of **V9-6** | result shape (**V7-3**); before O3, the 23505 legs expect online unique members (Addendum E2) | Clears when: 05-L03 Items 1 and 2 landed; O-L03-2 landed (`constraint_name` reader and the probe-before-evidence restrict leg); O-L03-1 split landed with import stability; every split test path is in the V5-1 part-1 set and passes under `M-fixture` with 0 failed, 0 skipped. |
+
+- **Unchanged.** The row is still ONE blocked row, owner TASK-551-05-L03,
+  handoff reason
+  `result-shape:tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`
+  (**V9-6**). The `-static` path adds no blocked row and no handoff reason.
+  The **V9-2** count stays seven. The support module
+  `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-support.ts`
+  is not a test path (05-L03 Item N2-3) and has no row of any table here.
+
+#### V10-2 Catalog/parity prediction after joining restored (J4 (b), Option 1)
+
+This row replaces the **V9-5** catalog/parity row. Only the lane
+prediction changes. The cause and "Clears when" cells are the **V9-5**
+cells, byte-for-byte.
+
+| Suite | Lane prediction | Cause (anchor) | Clears when |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`, `tests/integration/server/task551SchemaMigrationParity.test.ts` | absent from the manifest while their **V5-6** rows stand; after joining expected green in worker schemas; a red is a finding | in a `bun_worker_*` session schema the online-index leg asserts zero manifest members (05-L01 `### R2 — Online indexes in worker schemas (D8 with D6 (ii); answers 01-L01 V5-5 (a))`, R2.1 as refined) | join per `### Handoff rows for 01-L01 v8`, rows 1 and 2 (**V8-5**); their worker branches are proven in the FINAL lane-runner run (row 8; **V8-4**), where any non-zero `exit` blocks (**V8-8** step 11) |
+
+- **Why the withdrawal does not apply after joining.** 05-L01 withdrew its
+  first-note prediction "until every item lands and the part-1 rows are
+  receipts" (05-L01 second note,
+  `### Superseded sentences (first note; verbatim, with replacements)`,
+  item 13). A suite joins only when its row of
+  `### Handoff rows for 01-L01 v8` (rows 1 and 2) has cleared: every listed
+  item has landed and the part-1 row is a `pass` receipt (**V8-5**). So the
+  withdrawal condition has ended by the time the prediction applies.
+- This matches the **V7-10** replacement text at `:4676-4677`, whose
+  fragment on `:4677` reads "a Catalog/Parity red after joining is a
+  finding". That text stays binding.
+  Under the **V8-7** lead-in, a joined catalog or parity red in an interim
+  lane run is a finding, not an expected red. **V8-8** step 11 is unchanged.
+
+#### V10-3 O8: class-D and map rows for the split test paths (J4 (c); I3 (d))
+
+This disposes the 05-L01 fourth-note observation **O8**
+(`### Observation for orchestrator disposition (not decided here)`) and
+covers the 05-L03 `-static` path in the same way. The test paths are the
+three deployment-suite parts of the 05-L01 fourth note
+(`### R1 item 12 split — approved paths, budgets and rules (H6)`) and the
+05-L03 static suite (05-L03 Item N2-3).
+
+- **V3-4 class-D row, restated (replaces `:2957`).**
+
+| Class | Suites (of the 21 v1 **Defect** rows) | Gate (verified anchor) | Owner-map run (step 2) | Map-free run (step 3) |
+| --- | --- | --- | --- | --- |
+| D. Ungated (DB-free by construction) | `task551OnlineIndexDeployment` (verdict in **V2-6**); once on disk, its split parts `task551OnlineIndexDeployment-catalog`, `task551OnlineIndexDeployment-rollout` and `task551OnlineIndexDeployment-evidence` (05-L01 R1 item 12) and `task551SolutionKitRollbackAuthoritySchema-static` (05-L03 Item N2-3) | none | must PASS | must PASS |
+
+- The header is the **V3-4** header. The added suites are not v1
+  **Defect** rows; they join by the **V3-4** rule that the to-be-added set
+  is recomputed at gate time.
+- **Basis (from the owner texts; not executed).** The three deployment
+  parts receive whole `describe` blocks of the DB-free suite, with no leg
+  dropped or weakened (05-L01 split rule 2). Each imports its fixtures only
+  from the support module, which declares no `test` or `describe` (split
+  rule 4). The static suite holds the static legs `:1015-1632`, which make
+  no `db`/`hasDb` call (05-L03 N3), and it never imports `core/db/client`
+  (05-L03 Item N2-3). Its DB-free run passes 14 tests with 0 skipped (05-L03
+  `### Gates for the implementer (fast; replaces the first note's list for this edit)`).
+- **Classification.** These rows are the expected verdicts. The grep at
+  join time still fixes the gating class (**V3-4**; kept by **V9-6** and
+  **V9-7**). A different grep result is reported to the orchestrator as a
+  finding. The **V3-4** blocking rule applies unchanged: a skip in either run
+  of a class-D suite blocks.
+- **V5-2 map rows (additive; paths that join the set later).**
+
+| Suite | Class | Owner (allowlist) | Map |
+| --- | --- | --- | --- |
+| `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts` | D | TASK-551-05-L01 | `M-ambient` |
+| `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts` | D | TASK-551-05-L01 | `M-ambient` |
+| `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts` | D | TASK-551-05-L01 | `M-ambient` |
+| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts` | D | TASK-551-05-L03 | `M-fixture` (blocked, **V7-3**; under the one SolutionKit row, **V9-6**) |
+
+- **Owners and maps.** Each owner is the leaf whose fence `allowlist` holds
+  the path: 05-L01 `## Workflow Dispatch Envelope` (fence amendment 2) and
+  05-L03 `## Workflow Dispatch Envelope` (Item N2-3). The map follows the
+  owner by the **V5-2** rule: `M-ambient` for 05-L01, whose suites read only
+  `DATABASE_URL`, and `M-fixture` for 05-L03 (**V5-2** decisions, **V9-6**).
+  The original paths keep their rows: the deployment suite D/`M-ambient`,
+  the SolutionKit suite B/`M-fixture` (blocked, **V7-3**).
+- **Support modules.** `tests/integration/server/task551OnlineIndexDeployment-support.ts`
+  and `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-support.ts`
+  are not test files. They do not match `LANE_TEST_FILE` (`:2399`) and
+  register no test. They have no class,
+  no map, no part-1 or map-free row and no manifest row.
+- **Counts and timing.** None of the four test paths is on disk at this tree
+  (count 0 in `tests/integration/server` and in
+  `tests/bun-lane-manifest.json`). The **V5-2** count (21: 9 A, 9 B, 2 C,
+  1 D) and the **V3-4** count describe this tree and stay. The deployment
+  parts join when R1 item 12 creates them. The static suite joins with the
+  05-L03 split edit and clears only under the **V9-6** Shared literal.
+  Each joined path's receipt carries `gatingClass: "ungated"` (**V3-4**
+  receipt).
+
+#### V10-4 The deployment suite's J3 leg until item 0 lands (J2; J4 (d))
+
+- **Fact (from source at HEAD; not executed).** At HEAD `a3d46bf1` the J3
+  leg of `tests/integration/server/task551OnlineIndexDeployment.test.ts`
+  ("the contract's validation battery commands exactly the seven owned test
+  files") asserts `contract.includes(envelopeArgv)` over the seven
+  `COMMANDED_TEST_PATHS`. On the 05-L01 task file, that seven-path argv
+  literal now occurs only in the ```text block under
+  ``### Superseded fence values (verbatim; HEAD `c237e05d` bytes)``. The live
+  fence argv of `migration-and-index-tests` has ten paths.
+- **Decision recorded (J2).** Item 0 is a standalone test-only 05-L01 edit
+  that lands before R1 item 12. It makes the J3 leg parse the ```json block
+  under 05-L01 `## Workflow Dispatch Envelope`, compare the
+  `migration-and-index-tests` argv structurally with the ten live paths
+  (`COMMANDED_TEST_PATHS` holds the ten; the leg title says "ten"), and check
+  the validation command against the fourth note's restated ten-path
+  command. Owner TASK-551-05-L01. This file does not write it.
+- **Rule.** Until item 0 lands, the deployment suite's J3 pass is not
+  evidence of the live envelope. No receipt cites it as envelope evidence:
+  no part-1 or map-free row, no FINAL lane-runner result, no `handoffs[]`
+  entry and no closure note. The class-D requirement is unchanged: the suite
+  must PASS in both runs (**V3-4**), and that pass counts only as the
+  suite's own verdict. No expected-red row is recorded (**J2** replaces the
+  I4 alternative).
+- After item 0 lands (its **J2** gates: the DB-free run of the suite and
+  eslint on the file), the J3 pass is envelope evidence again. The
+  mechanical item-12 done-check stays as **J2** states it: `grep -c` of the
+  three split paths in `COMMANDED_TEST_PATHS` is 3.
+
+#### V10-5 Anchors and pending owner texts (J4 (e))
+
+- **V9-8 quote anchor.** The **V9-8** quote of the **V7-10** replacement
+  text for `:4155` is anchored at `:4769-4770`, not `:4768-4770`: the quoted
+  fragment starts on `:4769`. The quoted text and its replacement are
+  unchanged.
+- **V7-3 owner cells, by heading.** The three **V7-3** owner cells cite
+  fence lines by heading from now on (quotes in **V10-9**):
+  - outbox row: TASK-551-05-L01 (`allowlist`, 05-L01
+    `## Workflow Dispatch Envelope`);
+  - perf row: TASK-551-05-L01 (`allowlist`, 05-L01
+    `## Workflow Dispatch Envelope`);
+  - SolutionKit row: TASK-551-05-L03 (`allowlist`, 05-L03
+    `## Workflow Dispatch Envelope`; 05-L01 holds it in `forbiddenPaths`,
+    05-L01 `## Workflow Dispatch Envelope`).
+  The other cells of those rows stay.
+- **02-L02 R11 item (pending; not yet written).** The 02-L02 R11 item
+  `lane-worker-dedicated-schema-binding` is not an owner text written in the
+  v9 round. A count-only grep of the 02-L02 task file finds 0 matches for
+  `R11` and 0 for `schema-binding` at this tree. It is cited as "02-L02 R11
+  `lane-worker-dedicated-schema-binding` (pending; not yet written)"
+  (**H1**, Addendum F9). The **V9-1** (c) F-leg is what that item will pin
+  once written, not existing contract. The **V8-3** hazard, the **V8-8**
+  step 8a STOP and the **V8-10** `handoffs[]` entry are unchanged.
+
+#### V10-6 Owed mirrors: TASK-551-10-L01 fence and validation list (J4 (e), J9; I3 (a), (b))
+
+This table replaces the **V9-7** owed-mirror row and disposes its
+observation (Addendum I3 (b)).
+
+| Owed mirror | Owner | Content | Land-order bound | Follow-up |
+| --- | --- | --- | --- | --- |
+| TASK-551-10-L01 `## Workflow Dispatch Envelope` and `## Exact Validation Commands` (05-L01 O6, widened; **H6**, I3 (a)) | TASK-551-10-L01 (its own writer; not the 05-L01 writer, not this file) | Command `migration-and-plan-tests`: its `argv` and its `positiveDiscovery.paths` gain `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts`, `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts` and `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts`; its `minimum` is set under 10-L01's own rule; the `bun test` list of `## Exact Validation Commands` names the same three paths. | no later than the 05-L01 R1 item 12 change (05-L01 fourth note, `### O6 — disposed and widened (H6)`) | orchestrator follow-up (**J9**) |
+| the same two 10-L01 places (05-L03 note 2; I3 (b)) | TASK-551-10-L01 (its own writer) | The same `argv`, `positiveDiscovery.paths`, `minimum` and validation `bun test` list gain `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts`. | no later than the 05-L03 split edit (Item N2-3) | orchestrator follow-up (**J9**) |
+
+- Neither support module is a test path. Neither enters an `argv` or a
+  `positiveDiscovery.paths` list (05-L01 fourth note, fact J4: discovery paths
+  must be `tests/**.test.ts(x)` paths that also appear in `argv`).
+- This file records the rows only. The split paths join the **V5-2** list by
+  the ordinary rule, with the expected rows of **V10-3**.
+
+#### V10-7 O5 wording (J4 (f))
+
+- **O5, restated.** O5 (class-A suite `task551RevisionConcurrency`, whose
+  DB legs skip in the lane) is checked landed at **V8-8** step 7; the O5
+  worker-schema branch is not executed before closure. No executing leg is
+  required before closure (**J4** (f)).
+- The suite's **V5-1** part-1 row runs in `public` (**V5-4** check 4,
+  **V8-6**), so it proves only the suite's non-worker branch. It is not O5
+  evidence. A green lane run is never O5 evidence (**V9-3**, kept).
+- The **V8-4** closing condition (item 3: the 06-L02 R15 edit has landed)
+  and the **V8-4** **Proof** bullet are unchanged. The parent fix 4 mirrors
+  this wording through its own writer (**J8**). This file does not edit it.
+
+#### V10-8 Observation for orchestrator disposition (not decided here)
+
+- **V3-2 static-list mirror for the four split test paths.** **V3-2** item 1
+  requires that a leaf which names a NEW `task551`-named Bun-lane test path
+  in its fence records, in the same correction, a dated 01-L01 amendment
+  that adds that exact path to the static list. The three deployment parts
+  are named in the 05-L01 fence (`allowlist`, and the
+  `migration-and-index-tests` `argv` and `positiveDiscovery.paths`). The
+  static suite is named in the 05-L03 fence (`allowlist`, and the
+  `rollback-authority-schema-test` `argv` and `positiveDiscovery.paths`).
+  Each path matches `LANE_TEST_FILE`, carries the `task551` token, sits
+  under the `tests/integration/server` lane root and is not planned (a
+  count-only grep of `tests/perf/fixtures/task551QueryInventory.ts` finds
+  0). So the **V2-5** case-1 derivation yields all four paths. The **V3-1**
+  static list (27 entries) holds none of them, so case 1 would report
+  `missing-from-static:` for each, and case 8 would report each once it is
+  on disk. Neither the 05-L01 fourth note nor the 05-L03 second note records
+  the mirror, and **J4** does not dispose it. Routed to the orchestrator.
+  This amendment adds no static-list entry.
+
+#### V10-9 Superseded sentences (v10)
+
+Quoted verbatim with their current lines (line breaks folded to spaces).
+The quoted text is authoritative for what is superseded.
+
+**v9 sentences.**
+
+- `:5152-5153` (v9 preamble, fragment of `:5150-5154`): "the 02-L02 R11 item
+  `lane-worker-dedicated-schema-binding` (**H1**, Addendum F9)". Replaced
+  by: "02-L02 R11 `lane-worker-dedicated-schema-binding` (pending; not yet
+  written)" (**V10-5**). It is not an owner text written in the v9 round.
+  The rest of the sentence stays.
+- `:5189` (**V9-1** (c)): "The R11 F-leg pins two outcomes." Replaced by:
+  the R11 F-leg, once written, pins two outcomes (**V10-5**). The rest of
+  the bullet stays.
+- `:5229-5232` (**V9-3**): "O5 (class-A suite `task551RevisionConcurrency`,
+  whose DB legs skip in the lane) is proven only by the landed 06-L02 R15
+  edit, checked at **V8-8** step 7, plus that suite's **V5-1** part-1
+  evidence." Replaced by the **V10-7** O5 bullet: checked landed at
+  **V8-8** step 7; the O5 worker-schema branch is not executed before
+  closure. The next sentence stays.
+- `:5283` (**V9-5** catalog/parity row, lane-prediction fragment): "once
+  joined, no prediction from source (05-L01 withdrew its first-note
+  prediction until every item has landed and the part-1 rows are receipts:
+  second note, `### Superseded sentences (first note; verbatim, with
+  replacements)`, item 13)". Replaced by the **V10-2** row: "after joining
+  expected green in worker schemas; a red is a finding".
+- `:5285` (**V9-5** SolutionKit row, first two cells): "| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts` (TASK-551-05-L03) | absent from the manifest (BLOCKED) |".
+  Replaced by the **V10-1** blocked row, which names both split test paths.
+  The cause and "Clears when" cells stay.
+- `:5287` (**V9-5**): "The **V8-7** row "SolutionKit, after joining"
+  stays." Replaced by the **V10-1** post-join row. The next two sentences
+  stay and apply to that row.
+- `:5323` (**V9-7** row, Content cell): "The 10-L01 fence also names `tests/integration/server/task551OnlineIndexDeployment.test.ts` (command `migration-and-plan-tests`: `argv` and `positiveDiscovery`). The O6 `migration-and-index-tests` argv/positiveDiscovery edit that the 05-L01 fourth note approves (**H6**) is owed there as a mirror for the deployment-suite split paths."
+  Replaced by the **V10-6** rows (`argv`, `positiveDiscovery.paths`,
+  `minimum`, the validation `bun test` list, and the land-order bound).
+- `:5328-5332` (**V9-7** observation): "**Observation (not decided here).**
+  The same 10-L01 `migration-and-plan-tests` `argv` and `positiveDiscovery`
+  also name
+  `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`,
+  whose O-L03-1 split **H5** approves. **H5** records only the 05-L03 fence
+  amendment. Routed to the orchestrator." Replaced by: decided by Addendum
+  I3 (b) and **J9**; the owed mirror is the second **V10-6** row.
+- `:5406` (**V9-8** anchor): "`:4768-4770` (**V7-10**, replacement text
+  for `:4155`)". Replaced by `:4769-4770` (**V10-5**). The quote and its
+  replacement stay.
+
+**v8 table row.**
+
+- `:4987` (**V8-7** row): "| `tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts`, after joining | expected green in worker schemas through its O3 branch; a red is a finding | before O3, its 23505 legs (`:1979`, `:2016`, `:2062`) expect online unique members that no `bun_worker_*` schema has (Addendum E2) | not in the red set once joined |".
+  Replaced by the **V10-1** post-join row (05-L03, byte-for-byte).
+
+**v7 table cells.**
+
+- `:4391` (**V7-3** outbox row, Owner cell): "TASK-551-05-L01
+  (`allowlist`, `TASK-551-05-L01…md:1060`)". Replaced by the **V10-5**
+  heading anchor.
+- `:4392` (**V7-3** perf row, Owner cell): "TASK-551-05-L01 (`allowlist`,
+  `:1064`)". Replaced by the **V10-5** heading anchor.
+- `:4393` (**V7-3** SolutionKit row, Owner cell): "TASK-551-05-L03
+  (`allowlist`, `TASK-551-05-L03…md:802`; 05-L01 holds it in
+  `forbiddenPaths`, `TASK-551-05-L01…md:1073`)". Replaced by the **V10-5**
+  heading anchors.
+
+**v3 table row.**
+
+- `:2957` (**V3-4** class-D row): "| D. Ungated (DB-free by construction) | `task551OnlineIndexDeployment` (verdict in **V2-6**) | none | must PASS | must PASS |".
+  Replaced by the **V10-3** class-D row. The **V3-4** count sentence and
+  the blocking rule stay.

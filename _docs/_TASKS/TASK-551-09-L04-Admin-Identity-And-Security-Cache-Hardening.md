@@ -1472,3 +1472,224 @@ Anchors verified by untruncated grep at HEAD `c237e05d`: TASK-551-10-L01
 
 No task file is added, renamed or removed; no occurrence is added. The family
 preflight stays `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+## Dated Contract Corrections — 2026-09-27 (consumer mirror note 2: chain correction, cross-owner exception, scope filter reconciliation, STOP rule, storage API constraint)
+
+Source: orchestrator decision Addendum J, item J6 (a)-(f), with J1 for the
+chain
+(`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`)
+and TASK-551-03-L02 Round 11 item R11-06
+(`.../audit-evidence/03-l02-round11-dispositions.md`), after the Round-10 /
+fix3 audits `wf_b7515c81-866`. This section is append-only. It wins over the
+body, the 2026-09-24 sections and the 2026-09-26 consumer-mirror section
+wherever they differ, for the FINAL occurrence only; INITIAL is unchanged.
+Everything not quoted under "Superseded sentences" below stays binding.
+
+Anchor rule: line references to this file use HEAD `a3d46bf1` numbering
+unless a reference is explicitly labelled `c237e05d`. This round makes no
+in-place edit: the envelope fence, the Testing Requirements command block and
+every earlier line are byte-identical to HEAD `a3d46bf1`, so no line shifts.
+Parent references (`TASK-551_Scalable_Database_Query_And_Cache_Optimization.md`)
+use HEAD `a3d46bf1` numbering as well.
+
+### (a) Ordering chain corrected (J1)
+
+The 2026-09-26 section item (2) wrote the parent graph as a linear chain that
+passes through `TASK-551-03-L02:final`. That edge does not exist. In the
+parent `### Canonical Workflow Dispatch Graph (v1)`,
+`TASK-551-03-L02:final` (parent :997) depends on `TASK-551-08-L03:final`, and
+`TASK-551-03-L03:single` (parent :998) also depends on
+`TASK-551-08-L03:final`; no occurrence depends on `TASK-551-03-L02:final`
+(untruncated `grep -c '"dependsOn": \["TASK-551-03-L02:final"\]'` on the
+parent file: 0). `TASK-551-03-L02:final` is therefore a dead-end sibling.
+
+The ancestor path that enforces this leaf's FINAL ordering after
+`TASK-551-03-L02:initial` is, verbatim per Addendum J1:
+
+`03-L02:initial (:992) → 07-L02 → 08-L01 → 08-L02 → 08-L03:final (:996) → 03-L03 (:998) → 04-L01 → 04-L02 → 09-L01 → 09-L02 → 09-L03 → 09-L04:final (:1004)`
+
+`TASK-551-03-L02:final` precedes `TASK-551-09-L04:final` only through node
+order (parent :964, "node order is the total **product** land order"), not
+through a `dependsOn` edge. No FINAL requirement of this leaf depends on
+`TASK-551-03-L02:final` having landed: both paginated-client suites exist
+from `TASK-551-03-L02:initial`. The Addendum I2 decision stays binding: NO
+explicit edge is added, the envelope `dependencies` and the `final`
+occurrence `dependsOn` stay byte-identical, and the parent graph is not
+edited. Addendum I2's "linear chain" wording is an orchestrator record,
+corrected by J1 there, not in this file.
+
+### (b) Cross-owner FINAL gate exception (Exclusive Ownership)
+
+Replacement for the body sentence quoted under "Superseded sentences" (b):
+
+"This leaf is the sole TASK-551 writer of `cacheRefresh.test.ts`; it preserves
+the existing refresh behavior while adopting the scoped cacheBus/read-through
+contract. The two 03-L02 paginated-client suites are the only read-only
+cross-owner FINAL gate inputs; 03-L02 is their single writer."
+
+The two suites are `tests/vitest/admin/task551PaginatedClients.test.ts` and
+`tests/vitest/admin/task551PaginatedClientsSlots.test.ts` (the last two paths
+of the `final-admin-cache-tests` argv, :729). This leaf runs them whole and
+never creates, edits, skips, filters or re-baselines them; they stay outside
+this leaf's closed allowlist and its `line-count` command. No other read-only
+cross-owner test input exists at INITIAL or FINAL.
+
+### (c) Scope/epoch filtering reconciled with consumer constraint (1)
+
+The body's cacheBus filter (:287-290) and the 2026-09-26 item (1)
+"Synchronous local delivery" constraint (:1337-1342) are reconciled as
+follows; both quoted sentences are restated as amended under "Superseded
+sentences" (c):
+
+- **Same-tab local delivery under the CURRENT scope is never dropped.** A
+  `broadcastCacheEvent` call made under the tab's current scope/epoch pair
+  still delivers synchronously, inside the call, to every local handler, with
+  `origin` `"local"` and `options.operationToken` passed through unchanged.
+  The current scope is the scope digest and auth epoch the tab holds at
+  delivery time, including the no-persistent-scope state; "unknown scope" is
+  never a reason to drop a local event.
+- **The scope/epoch filter applies only to** (i) remote events (the
+  BroadcastChannel and the `storage`-event fallback), where a mismatched
+  deployment/scope, a prior epoch or an unknown scope is ignored, and (ii)
+  stale-scope local events: a local emission stamped with, or bound through its
+  captured installation token/epoch to, a scope/epoch pair that is no longer
+  current when delivery happens (for example an async mutation completion that
+  started before an identity transition). A stale-scope local event is dropped
+  for every local handler; it is never delivered to some handlers only.
+- The own-sourceId drop for remote deliveries (2026-09-26 item (1)) and the
+  statement that handler ORDER is not a constraint are unchanged.
+
+### (d) STOP-and-report rule for the 03-L02 suites
+
+If either `tests/vitest/admin/task551PaginatedClients.test.ts` or
+`tests/vitest/admin/task551PaginatedClientsSlots.test.ts` goes red (or
+reports a skipped or filtered-out test) under a change this leaf's body
+mandates — the scoped cacheBus event shape (:287-290), the v3 storage key
+(:260-261) or the v3 envelope (:262-265) — FINAL STOPS and reports:
+
+1. FINAL does not land. Its receipt records the STOP with the failing suite
+   path, the failing test names, the mandated change that caused the red
+   (event shape, v3 key or envelope) and the body anchor that mandates it.
+2. The fix is a pre-disposed consumer re-run owed to TASK-551-03-L02: the
+   03-L02 writer adapts its own suite within the 03-L02 contract (R11-06
+   seeding rule; item (e) below) and re-runs it; this leaf's FINAL resumes
+   only after that 03-L02 receipt is recorded.
+3. This leaf never edits, skips, filters, weakens or silently re-baselines a
+   03-L02 suite, and never reverts or dilutes the body-mandated change to make
+   a 03-L02 suite pass.
+
+A red that is not traceable to a body-mandated change is not covered by this
+rule: it is an ordinary FINAL gate failure fixed in this leaf's own allowlisted
+source under the normal fix-the-source rule. A FINAL change to any constraint
+of the 2026-09-26 item (1) as amended by item (e) still re-opens
+TASK-551-03-L02 R7-02, R7-06 and R8-04; this STOP rule is the procedure that
+re-open follows.
+
+### (e) Consumer constraint (5): stable storageCache API by logical key
+
+The 2026-09-26 item (1) list gains a fifth binding constraint:
+
+- **(5) Stable storageCache API by LOGICAL key.** The API contract of
+  `core/admin/utils/storageCache.ts` — read/write/clear by LOGICAL key, where
+  the logical key comes from `cacheKeys`
+  (`core/admin/services/cachePolicy.ts:28`) — stays stable across the FINAL
+  v3 physical-key change. Exports verified at HEAD `a3d46bf1`: types
+  `StorageLike` (:1), `CacheValidator` (:2) and `MemoryBackedStorageCache`
+  (:16, members `read`, `readStorageFirst`, `peekFresh`, `write`, `clear`);
+  `getLocalStorage` (:29), `getSessionStorage` (:34); `readStorageCache`
+  (:39), `writeStorageCache` (:80), `clearStorageCache` (:91);
+  `readLocalCache` (:97), `writeLocalCache` (:103), `clearLocalCache` (:106);
+  `readSessionCache` (:109), `writeSessionCache` (:115), `clearSessionCache`
+  (:118); `createMemoryBackedStorageCache` (:121) and
+  `createMemoryBackedLocalCache` (:165). FINAL keeps every name, and the
+  meaning of the `key` argument as the logical `cacheKeys` key, and applies
+  the `coderso:admin-cache:v3:<deploymentDigest>:<scopeDigest>:e<authEpoch>:<boundedResourceKey>`
+  mapping (:260-261) and the v3 envelope (:262-265) inside the module, never
+  in a caller. FINAL may add exports (for example the three limit constants,
+  :266-269); it must not rename, remove or re-type an existing export or turn
+  its `key` argument into a physical key. Whether a persistent slot is
+  visible under a given scope (for example a safe miss when the persistent
+  scope is null, :240, :247-248) stays governed by the body; a 03-L02 red
+  caused by that rule is a (d) STOP case, not a (5) violation.
+
+03-L02 suites seed and observe persisted slots only through that API by
+logical key (TASK-551-03-L02 R11-06), never through a raw physical
+`localStorage` key, so the v3 physical-key/envelope change stays transparent
+to them. R11-06 names `writeStorageCacheEnvelope`; no such export exists at
+HEAD `a3d46bf1` (untruncated `grep -rln writeStorageCacheEnvelope core tests
+_docs/_TASKS`: 0 files); for this leaf the binding API is the export list
+above, and this leaf adds no export of that name.
+
+### (f) I4 round-2 quote anchor
+
+The 2026-09-26 section item (3) cited the I4 round-2 quote one line short. The
+quoted text starts with "The FINAL" and ends with "`final-admin-cache-tests`
+argv", which is HEAD `c237e05d` :1168-1172 (HEAD `a3d46bf1` :1170-1174). The
+quoted text, its replacement and the 2026-09-26 anchor rule are otherwise
+unchanged.
+
+### Superseded sentences (quoted verbatim)
+
+Each quoted sentence below is superseded or amended as stated; its
+replacement is the item named. Line numbers are HEAD `a3d46bf1` numbering.
+
+- (a) 2026-09-26 section item (2), "Ordering" bullet (:1404-1408), superseded
+  (the bullet's first sentence, "Ordering: this leaf's FINAL runs after
+  `TASK-551-03-L02:initial`.", and the rest of the bullet from "Per Addendum
+  I2" onward stay binding):
+  "The
+  ordering is transitively enforced by the parent graph chain (parent :992 →
+  :1004): `TASK-551-03-L02:initial` (:992) → 07-L02 → 08-L01 → 08-L02 →
+  08-L03:final → 03-L02:final → 03-L03 → 04-L01 → 04-L02 → 09-L01 → 09-L02 →
+  09-L03 → `TASK-551-09-L04:final` (:1004)."
+  - Replacement: item (a) of this section (the J1 ancestor path;
+    `TASK-551-03-L02:final` is a dead-end sibling ordered by node order only).
+- (b) Exclusive Ownership (:103-105), superseded:
+  "This leaf is the sole TASK-551 writer of `cacheRefresh.test.ts`; it preserves the
+  existing refresh behavior while adopting the scoped cacheBus/read-through
+  contract. No read-only cross-owner test exception remains."
+  - Replacement: item (b) of this section (the first sentence is restated
+    unchanged; "No read-only cross-owner test exception remains." becomes
+    "The two 03-L02 paginated-client suites are the only read-only cross-owner
+    FINAL gate inputs; 03-L02 is their single writer.").
+- (c1) Admin Browser Contract (:287-290), amended:
+  "CacheBus events carry schema, deployment digest, auth-generation nonce, scope
+  digest and auth epoch;
+  any mismatched deployment/scope, prior epoch or unknown scope is ignored. The
+  raw incarnation never enters the event; its binding is proven by scope digest."
+  - As amended: "CacheBus events carry schema, deployment digest,
+    auth-generation nonce, scope digest and auth epoch; a remote event
+    (BroadcastChannel or `storage` fallback) with a mismatched
+    deployment/scope, a prior epoch or an unknown scope is ignored, and a
+    stale-scope local event is dropped for every local handler; same-tab local
+    delivery under the current scope is never dropped. The raw incarnation
+    never enters the event; its binding is proven by scope digest." (item (c)).
+- (c2) 2026-09-26 section item (1), "Synchronous local delivery" bullet
+  (:1337-1340), amended:
+  "`broadcastCacheEvent`
+  (`core/admin/utils/cacheBus.ts:131-154`) delivers to every local handler
+  synchronously inside the call, with `origin` `"local"` and the caller's
+  `options.operationToken` passed through unchanged (`:151-153`)."
+  - As amended: the same sentence, qualified "for every event emitted under
+    the tab's current scope/epoch pair; a stale-scope local event is dropped
+    for every local handler" (item (c)). The bullet's second sentence
+    (`localHandlers.add(handler)`, `:157`) is unchanged.
+- (e) 2026-09-26 section item (1), re-open sentence (:1359-1361), amended:
+  "A 09-L04 FINAL change to any of the four items above re-opens TASK-551-03-L02
+  R7-02, R7-06 and R8-04 (cite: 03-L02 `### C17 v6` and R10-13); it is not a
+  local 09-L04 edit."
+  - As amended: "any of the four items above" reads "any of the five items
+    (the four above plus constraint (5), item (e) of the 2026-09-27 section)";
+    the re-open follows the item (d) STOP-and-report procedure.
+- (f) 2026-09-26 section item (3) (:1420), superseded:
+  "I4 round-2 (HEAD :1168-1171), superseded:"
+  - Replacement: "I4 round-2 (HEAD `c237e05d` :1168-1172; HEAD `a3d46bf1`
+    :1170-1174), superseded:" (item (f)).
+
+Superseded or amended quote count: 6.
+
+### Family inventory
+
+No task file is added, renamed or removed; no occurrence is added; the
+envelope fence is untouched this round. The family preflight stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.

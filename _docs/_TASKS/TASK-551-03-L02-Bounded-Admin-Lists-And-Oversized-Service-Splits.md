@@ -1928,12 +1928,12 @@ foreign write targets even when a literal validation command reruns them.
     {
       "id": "admin-pagination-vitest-2",
       "lane": "vitest",
-      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/ui/users-roles.test.tsx", "tests/vitest/ui/use-screen-related-entries.test.tsx", "tests/vitest/admin/entriesClientRevisions.test.ts", "tests/vitest/customScreens/relatedEntryResolver.test.ts", "tests/vitest/ui/page-editor-revision-history.test.tsx", "tests/vitest/ui/post-editor-media-controls.test.tsx", "tests/vitest/ui/users-roles-extraction.test.tsx", "tests/vitest/ui/menu-design-editor-responsive.test.tsx", "tests/vitest/ui/menu-design-editor-nav-levels.test.tsx", "tests/vitest/ui/menu-design-editor-dropdown-bar.test.tsx", "tests/vitest/ui/users-roles-page-pagination-wave.test.tsx", "tests/vitest/ui/use-screen-related-entries-ids.test.tsx", "tests/vitest/ui/entry-field-renderer-relation-ids-wave.test.tsx", "tests/vitest/ui/page-editor-shell-revisions-wave.test.tsx", "tests/vitest/ui/page-editor-v2-authoring-revisions-flow.test.tsx", "tests/vitest/ui/entry-list-pagination-wave.test.tsx", "tests/vitest/ui/page-editor-v2-persistence-revisions-flow.test.tsx", "tests/vitest/ui/detail-template-editor-revisions.test.tsx", "tests/vitest/ui/media-library-mutation-pagination-wave.test.tsx", "tests/vitest/pages/task-539-page-editor-media-controls.test.ts", "tests/vitest/admin/mediaClientListEnvelope.test.ts", "tests/vitest/ui/forms-component-list-wave.test.tsx", "tests/vitest/admin/entriesClientPagination.test.ts", "tests/vitest/ui/page-editor-insertion-media-flow.test.tsx", "tests/vitest/ui-integration/custom-screen-task-540-list-flow.test.tsx", "tests/vitest/ui/site-settings.test.tsx", "tests/vitest/ui-integration/settings-general-site-restyle.test.tsx", "tests/vitest/ui/custom-screen-list-view.test.ts", "tests/vitest/ui/page-editor-settings-flow.test.tsx", "tests/vitest/ui/menu-item-form.test.tsx"],
+      "argv": ["bun", "--env-file=/dev/null", "node_modules/vitest/vitest.mjs", "run", "tests/vitest/ui/users-roles.test.tsx", "tests/vitest/ui/use-screen-related-entries.test.tsx", "tests/vitest/admin/entriesClientRevisions.test.ts", "tests/vitest/customScreens/relatedEntryResolver.test.ts", "tests/vitest/ui/page-editor-revision-history.test.tsx", "tests/vitest/ui/post-editor-media-controls.test.tsx", "tests/vitest/ui/users-roles-extraction.test.tsx", "tests/vitest/ui/menu-design-editor-responsive.test.tsx", "tests/vitest/ui/menu-design-editor-nav-levels.test.tsx", "tests/vitest/ui/menu-design-editor-dropdown-bar.test.tsx", "tests/vitest/ui/users-roles-page-pagination-wave.test.tsx", "tests/vitest/ui/use-screen-related-entries-ids.test.tsx", "tests/vitest/ui/entry-field-renderer-relation-ids-wave.test.tsx", "tests/vitest/ui/page-editor-shell-revisions-wave.test.tsx", "tests/vitest/ui/page-editor-v2-authoring-revisions-flow.test.tsx", "tests/vitest/ui/entry-list-pagination-wave.test.tsx", "tests/vitest/ui/page-editor-v2-persistence-revisions-flow.test.tsx", "tests/vitest/ui/detail-template-editor-revisions.test.tsx", "tests/vitest/ui/media-library-mutation-pagination-wave.test.tsx", "tests/vitest/pages/task-539-page-editor-media-controls.test.ts", "tests/vitest/admin/mediaClientListEnvelope.test.ts", "tests/vitest/ui/forms-component-list-wave.test.tsx", "tests/vitest/admin/entriesClientPagination.test.ts", "tests/vitest/ui/page-editor-insertion-media-flow.test.tsx", "tests/vitest/ui-integration/custom-screen-task-540-list-flow.test.tsx", "tests/vitest/ui/site-settings.test.tsx", "tests/vitest/ui-integration/settings-general-site-restyle.test.tsx", "tests/vitest/ui/custom-screen-list-view.test.ts", "tests/vitest/ui/page-editor-settings-flow.test.tsx", "tests/vitest/ui/menu-item-form.test.tsx", "tests/vitest/admin/task551PaginatedClientsSlots.test.ts"],
       "environmentProfile": "none",
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/vitest/ui/users-roles.test.tsx", "tests/vitest/ui/use-screen-related-entries.test.tsx", "tests/vitest/admin/entriesClientRevisions.test.ts", "tests/vitest/customScreens/relatedEntryResolver.test.ts", "tests/vitest/ui/page-editor-revision-history.test.tsx", "tests/vitest/ui/post-editor-media-controls.test.tsx", "tests/vitest/ui/users-roles-extraction.test.tsx", "tests/vitest/ui/menu-design-editor-responsive.test.tsx", "tests/vitest/ui/menu-design-editor-nav-levels.test.tsx", "tests/vitest/ui/menu-design-editor-dropdown-bar.test.tsx", "tests/vitest/ui/users-roles-page-pagination-wave.test.tsx", "tests/vitest/ui/use-screen-related-entries-ids.test.tsx", "tests/vitest/ui/entry-field-renderer-relation-ids-wave.test.tsx", "tests/vitest/ui/page-editor-shell-revisions-wave.test.tsx", "tests/vitest/ui/page-editor-v2-authoring-revisions-flow.test.tsx", "tests/vitest/ui/entry-list-pagination-wave.test.tsx", "tests/vitest/ui/page-editor-v2-persistence-revisions-flow.test.tsx", "tests/vitest/ui/detail-template-editor-revisions.test.tsx", "tests/vitest/ui/media-library-mutation-pagination-wave.test.tsx", "tests/vitest/pages/task-539-page-editor-media-controls.test.ts", "tests/vitest/admin/mediaClientListEnvelope.test.ts", "tests/vitest/ui/forms-component-list-wave.test.tsx", "tests/vitest/admin/entriesClientPagination.test.ts", "tests/vitest/ui/page-editor-insertion-media-flow.test.tsx", "tests/vitest/ui-integration/custom-screen-task-540-list-flow.test.tsx", "tests/vitest/ui/site-settings.test.tsx", "tests/vitest/ui-integration/settings-general-site-restyle.test.tsx", "tests/vitest/ui/custom-screen-list-view.test.ts", "tests/vitest/ui/page-editor-settings-flow.test.tsx", "tests/vitest/ui/menu-item-form.test.tsx"],
-        "minimum": 30
+        "paths": ["tests/vitest/ui/users-roles.test.tsx", "tests/vitest/ui/use-screen-related-entries.test.tsx", "tests/vitest/admin/entriesClientRevisions.test.ts", "tests/vitest/customScreens/relatedEntryResolver.test.ts", "tests/vitest/ui/page-editor-revision-history.test.tsx", "tests/vitest/ui/post-editor-media-controls.test.tsx", "tests/vitest/ui/users-roles-extraction.test.tsx", "tests/vitest/ui/menu-design-editor-responsive.test.tsx", "tests/vitest/ui/menu-design-editor-nav-levels.test.tsx", "tests/vitest/ui/menu-design-editor-dropdown-bar.test.tsx", "tests/vitest/ui/users-roles-page-pagination-wave.test.tsx", "tests/vitest/ui/use-screen-related-entries-ids.test.tsx", "tests/vitest/ui/entry-field-renderer-relation-ids-wave.test.tsx", "tests/vitest/ui/page-editor-shell-revisions-wave.test.tsx", "tests/vitest/ui/page-editor-v2-authoring-revisions-flow.test.tsx", "tests/vitest/ui/entry-list-pagination-wave.test.tsx", "tests/vitest/ui/page-editor-v2-persistence-revisions-flow.test.tsx", "tests/vitest/ui/detail-template-editor-revisions.test.tsx", "tests/vitest/ui/media-library-mutation-pagination-wave.test.tsx", "tests/vitest/pages/task-539-page-editor-media-controls.test.ts", "tests/vitest/admin/mediaClientListEnvelope.test.ts", "tests/vitest/ui/forms-component-list-wave.test.tsx", "tests/vitest/admin/entriesClientPagination.test.ts", "tests/vitest/ui/page-editor-insertion-media-flow.test.tsx", "tests/vitest/ui-integration/custom-screen-task-540-list-flow.test.tsx", "tests/vitest/ui/site-settings.test.tsx", "tests/vitest/ui-integration/settings-general-site-restyle.test.tsx", "tests/vitest/ui/custom-screen-list-view.test.ts", "tests/vitest/ui/page-editor-settings-flow.test.tsx", "tests/vitest/ui/menu-item-form.test.tsx", "tests/vitest/admin/task551PaginatedClientsSlots.test.ts"],
+        "minimum": 31
       }
     },
     {
@@ -11591,3 +11591,762 @@ orchestrator ran them, and this writer re-ran them on 2026-09-26:
 No other NEW allowlisted path is needed. One JSON fence. **Size (R6-06 stop
 rule).** This file is 821,180 bytes after the Round-10 fence edit and append
 (`wc -c`), below the 1,048,576-byte cap with the 200-byte closure headroom.
+
+## Dated Contract Corrections — 2026-09-27 (Round 11: slots suite argv, no graph edge, entries and media pins complete, fail-closed landing checks, storage API seeding; append-only)
+
+Source:
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round11-dispositions.md`
+(R11-01..R11-12 over the Round-10 auditors a1 and a2 of workflow
+`wf_b7515c81-866`, plus the n1 finding cited by R11-06; audited HEAD
+`a3d46bf12a4f8157b02a476ab9288a514e41158f`, with Round 10 committed) and the
+orchestrator decisions I1, I2 (Addendum I) and J1, J2, J5, J6 and J9
+(Addendum J) in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+This section applies R11-01..R11-12 and re-decides nothing. **This section
+wins** over every earlier part where they differ. It makes exactly ONE
+in-place edit: the R11-01 fence edit to the command
+`admin-pagination-vitest-2` (three lines replaced in place). "Validation
+Commands" and every other earlier line stay byte-identical.
+
+**Line numbers.** Every bare `:NNNN` anchor in this section is a line of this
+file at `a3d46bf1`. The R11-01 edit replaces three lines and inserts none, so
+the `a3d46bf1` numbering is also the numbering of the file after this round;
+nothing shifts, here or in any earlier section. (Round-10 anchors keep their
+own `c237e05d` rule: add 1 to any Round-10 anchor ≥ `:1572`.) Code and test
+anchors (`*.ts`, `*.tsx`) were re-read on 2026-09-27 at `a3d46bf1`; the
+symbol stays authoritative wherever a line drifts. Every sentence this round
+supersedes is quoted verbatim under "Superseded sentences (Round 11)" (text
+authoritative; a hard line wrap inside a quote is rendered as one space).
+Everything not quoted there stays binding.
+
+### R11-01 — The Slots suite joins `admin-pagination-vitest-2` (I1)
+
+**Decision (I1; executed here).** `tests/vitest/admin/task551PaginatedClientsSlots.test.ts`
+joins the command `admin-pagination-vitest-2` (id `:1929`): it is appended as
+the last element of `argv` (`:1931`) and of `positiveDiscovery.paths`
+(`:1935`), and `minimum` rises by one (`:1936`, 30 → 31). After the edit the
+command has 35 argv tokens (4 runner tokens + 31 paths), 31 discovery paths
+and `minimum` 31; every discovery path appears verbatim in `argv` (R8-10).
+`admin-pagination-vitest-1` (`:1918-1927`; 128 argv tokens, 124 paths,
+`minimum` 124) stays byte-identical, because the dispatch validator caps a
+literal argv at 128 tokens
+(`_docs/_workflows/lib/task-551-dispatch-envelope.mjs:100`). The allowlist
+entry (`:1572`) and the Round-10 `w2-client-vitest` edit (`:1997`,
+`:2001-2002`) stand.
+
+- **Where the suite runs now.** At the W2 gate through `w2-client-vitest`
+  (R10-09), and in W3 and at INITIAL closure through `admin-pagination-vitest-2`
+  (its waves, "Validation Commands" `:1198`: "W3, INITIAL closure"; the
+  occurrence `initial` lists it, `:2164`). The Round-10 W3 gap is closed:
+  R10-09 "Held" (its last two sentences) and Handoffs (Round 10) orchestrator
+  (f) are quoted as superseded (quotes 1 and 2).
+- **Every allowlisted Vitest suite is again in `admin-pagination-vitest-1/-2`**
+  (124 + 31 paths). The Round-2 scope cell at `:4315` is quoted (quote 4).
+- **Grounding note.** The dispositions record also names "the Round-10
+  Envelope-record sentences that describe the partial state" and "the
+  R10-13/C17 v6 sentence naming the W3 gap". An untruncated scan of
+  `:10529-11593` for `W3` finds exactly two lines, `:11137` (R10-09 "Held")
+  and `:11489` (orchestrator (f)), both quoted here. The Envelope record
+  (Round 10) states the partial state only in its `admin-pagination-vitest-1`
+  table row ("content unchanged (held by the argv cap, R10-09)"), which stays
+  true, and in its hunk-count sentence, which R11-10 corrects (quote 17). No
+  C17 v6 or R10-13 sentence names a W3 gap; C17 v6 item 7 (e) is amended
+  under "C17 v6 — Round-11 amendments (2026-09-27)" below.
+- **Line gate.** The fence `line-count-1` (`:2096-2101`) still names only
+  `task551PaginatedClients.test.ts`; R11-01 authorizes no line-count edit. The
+  R10-09 STOP rule (both files ≤ 1,000 lines, `wc -l` at every gate that
+  touches them) stands, and the orchestrator item (g) stays owed ("Handoffs
+  (Round 11)").
+- **"Validation Commands"** (`:1111-1374`) is behind the fence for
+  `admin-pagination-vitest-2` (quote 3): its `:1198` summary and its argv
+  line (`:1201`) lack the path. By its own rule the fence wins
+  (`:1113-1117`); the section is regenerated from the fence by the authorized
+  in-place edit at W0 ("Handoffs (Round 11)", orchestrator (d)), never
+  hand-patched.
+
+### R11-02 — No graph edge; the ordering is enforced by the ancestor path (J1)
+
+Round 10 named an explicit edge, `TASK-551-03-L02:initial` in the `dependsOn`
+of the 09-L04 `final` occurrence (C17 v6 `:10656-10657`; R10-13 item 3
+`:11187-11189`). I2 withdrew that edge, and J1 corrected the chain I2 gave.
+Both Round-10 sentences are quoted as superseded (quotes 5 and 6). Restated
+verbatim from Addendum J1:
+
+> The parent graph is NOT a linear chain: `TASK-551-03-L03:single` depends on
+> `TASK-551-08-L03:final` (parent :998), and no occurrence depends on
+> `TASK-551-03-L02:final` (:997; a dead-end sibling). The ancestor path that
+> enforces the ordering is `03-L02:initial (:992) → 07-L02 → 08-L01 → 08-L02
+> → 08-L03:final (:996) → 03-L03 (:998) → 04-L01 → 04-L02 → 09-L01 → 09-L02 →
+> 09-L03 → 09-L04:final (:1004)`. 03-L02:final precedes 09-L04:final only
+> through node order (parent :964, the total land order), not through an
+> edge.
+
+(Parent anchors are lines of
+`_docs/_TASKS/TASK-551_Scalable_Database_Query_And_Cache_Optimization.md` at
+`a3d46bf1`, re-read on 2026-09-27: `:964` "node order is the total
+**product** land order", `:992`, `:996`, `:997`, `:998` and `:1004` as named;
+an untruncated count of `"TASK-551-03-L02:final"]` as a `dependsOn` target
+is 0.) So `TASK-551-09-L04:final` runs after `TASK-551-03-L02:initial`
+through edges, and after `TASK-551-03-L02:final` through node order only. No
+parent graph edit, no 03-L02 `dependencies` change and no 09-L04 `dependsOn`
+change is owed. The 09-L04 FINAL gate runs both 03-L02 paginated-client
+suites whole (R10-13 items 1, 2 and 4 stand).
+
+### R11-03 — Entries absent-slot pins, complete (MEDIUM; a1, a2)
+
+R10-05 named two pins and claimed that the rest of the entries suites needed
+nothing. Two more tests read a type slot that HEAD's `?? []` synthesis
+(`core/admin/services/entriesClient.ts:321`, `mergeSummaryIntoCurrentList`,
+reached by every upsert mutation through `publishSuccessfulEntryMutation`
+`:367-377` and by the forced detail read `getEntryCached` `:658`) creates
+from nothing. Under R9-01 a patch into a `null` slot installs nothing, and
+under R9-07 the default-filter accessor reads the persisted slot only, so
+both go red. They are named here as intended contract changes under R9-01;
+R8-07's "Each keeps its assertion values and event counts" does not bind
+them. The R10-05 "no further pins" claim for the entries suites is quoted as
+superseded (quotes 7 and 8). The R10-05 search over the pages, forms, booking
+and detail-pages suites stands (a1 re-verified it).
+
+**(a) `tests/vitest/admin/entriesClient.test.ts:689-748`** ("updateEntryMetadata
+round-trips visibility/hasPassword and never caches accessPassword";
+allowlisted `:1640`). The test starts with `resetCaches("blog")` (`:720`),
+which seeds nothing (`tests/vitest/admin/support/entriesClientTestHarness.ts:47-50`:
+`clearEntriesCache(typeSlug)` plus `clearAllEntriesCache()`), and then reads
+the list row the synthesis created (`:735-738`). Its `:738` is the security
+assertion that `accessPassword` never lands on a cached list row, so the
+change keeps that assertion meaningful:
+
+1. **Seeded variant (the existing test).** Before `updateEntryMetadata`, seed
+   a versioned `entriesList("blog")` default first-page slot in the client's
+   persisted wire form (`isPersistedFirstPage`, R9-01), holding one row for
+   `entry-1` with `visibility: "public"` and `hasPassword: false`, through
+   the storageCache API by logical key (R11-06). The mutation patches that
+   existing slot as at HEAD (a merge into the existing row). Then `:735-738`
+   stand as written: the first row of the default accessor has
+   `visibility: "password"`, `hasPassword: true` and no `accessPassword`
+   property. The send-only assertions on the request body (`:726-727`) and on
+   the detail cache (`:729-733`) stand.
+2. **Null-slot variant (new test in the same file).** The same stub and the
+   same `updateEntryMetadata` call after `resetCaches("blog")` with no seed.
+   It asserts the send-only body (`accessPassword` in the request body),
+   the detail-cache assertions of `:729-733` (visibility, `hasPassword`, no
+   `accessPassword` on the cached detail), and that the default-filter
+   accessor (HEAD `getCachedEntries("blog")`) returns `null` after the
+   mutation. It asserts no list row, because none may exist.
+
+**(b) `tests/vitest/admin/entriesClientReadAuthority.test.ts:254-284`** ("a
+rejected newer list leaves an older detail request publishable";
+allowlisted `:1639`). `resetCaches(typeSlug)` (`:267`) leaves no slot; the
+newer list read rejects (`:269-272`); the older forced detail read (`:268`)
+then resolves (`:275-276`), and at HEAD its `mergeSummaryIntoCurrentList` creates
+the slot `["entry-target"]`. `:277`
+`expect(getCachedEntries(typeSlug)?.map((entry) => entry.id)).toEqual(["entry-target"])`
+becomes: the default-filter accessor for `typeSlug` returns `null`. `:278`
+(the detail cache holds "Detail survives", the subject of the test) and
+`:273` (the pending detail promise is shared) stand. No list-GET count is
+added: the stub answers every list URL with the one rejected deferred
+(`:262-263`).
+
+**Untruncated scan (2026-09-27, `a3d46bf1`).** Commands: `grep -n
+"getCached[A-Za-z]*(" tests/vitest/admin/entriesClient.test.ts
+tests/vitest/admin/entriesClientMutationReconciliation.test.ts
+tests/vitest/admin/entriesClientReadAuthority.test.ts
+tests/vitest/admin/entriesClientRevisions.test.ts
+tests/vitest/admin/support/entriesClientTestHarness.ts` (no `head`; the four
+files are every `tests/vitest/admin/*entries*.test.ts` file), `grep -n
+"entriesList\|entriesAllList\|getItem(\|listEntriesCached(\|listAllEntriesCached("`
+over the same files, and `grep -rn "getCachedEntries(\|getCachedAllEntries(" tests/`.
+Every list-accessor hit, by class:
+
+| File | Lines | Class | Outcome |
+|---|---|---|---|
+| `entriesClient.test.ts` | `:506` | absent slot after `duplicateEntry` | R10-05 (stands) |
+| `entriesClient.test.ts` | `:735-738` | absent slot after `updateEntryMetadata` | **(a)** above |
+| `entriesClient.test.ts` | `:499`, `:507` | all-list: seeded (`:495-498`), then `null` after the own mutation | stand (R10-04 keeps `:507` true) |
+| `entriesClient.test.ts` | `:559` | slot written by the forced list read `:555` | stands |
+| `entriesClient.test.ts` | `:804` | all-list written by the forced read `:798` | stands |
+| `entriesClientReadAuthority.test.ts` | `:277` | absent slot after a forced detail read | **(b)** above |
+| `entriesClientReadAuthority.test.ts` | `:233-244` | final slot written by the list completion (server rows plus settled authority); a detail that settles first into the absent slot installs nothing under R9-01 | stand |
+| `entriesClientReadAuthority.test.ts` | `:317`, `:392`, `:438`, `:488` | already `null` | stand |
+| `entriesClientReadAuthority.test.ts` | `:396`, `:408`, `:441`, `:453`, `:491`, `:504`, `:521`, `:534` | list reads only, no patch | stand |
+| `entriesClientMutationReconciliation.test.ts` | `:88-90` (absent branch) | absent slot after an upsert mutation | R10-05 (stands) |
+| `entriesClientMutationReconciliation.test.ts` | `:73`, `:150`, `:217` | present branch, seeded | stand |
+| `entriesClientMutationReconciliation.test.ts` | `:165`, `:232` | absent branch, already `null` | stand |
+| `entriesClientMutationReconciliation.test.ts` | `:99-104`, `:179-183`, `:239`, `:328-348`, `:391-395` | read after an older in-flight list read settles | not absent-slot pins (R10-05); the R8-03/R8-04 STOP-and-report rule (`:10088-10089`, c237e05d numbering) governs any other change |
+| `entriesClientMutationReconciliation.test.ts` | `:431`, `:466`, `:473`, `:496`, `:501`, `:506`, `:543`, `:549`, `:571`, `:576`, `:581` | list reads only, no patch | stand |
+| `entriesClientRevisions.test.ts` | `:89`, `:157-158` | revision and detail accessors; no list slot | out of scope |
+| `tests/` outside these four files | — | 0 call sites (eight UI files name the accessors only inside `vi.mock` factories) | out of scope |
+
+`tests/vitest/admin/customScreensEntryOverridesClient.test.ts` matches
+`*Entr*` but not `*entries*`; it reads no entries list accessor. So the
+entries absent-slot pins are exactly four: the two R10-05 pins and (a), (b).
+If any other entries assertion fails only because no slot was synthesized,
+the implementer STOPs and reports; it does not re-baseline.
+
+### R11-04 — Media hydrated-start pins, complete (MEDIUM; a1)
+
+R5 H1 (`:6833`, `:7156`): every hydrated start on `useBoundedAdminList` is
+followed by one forced first-page read, and a start that is not hydrated
+issues one non-forced read. The media library results and the media picker
+both run on the hook in `append` mode (view → mode table, `:6205`). A test
+that seeds the media slot with `writeMediaCache` and whose `/media` stub
+returns other rows (or that has no stub) therefore renders the stub's rows
+after the forced read, or an error. The adaptation, unless a line says
+otherwise: **the `/media` stub returns the seeded rows** (the same records),
+so the flow is deterministic after the forced read, and every assertion
+stands. Where the leaf moves a filter server-side (folder, tags, alt, date),
+the stub answers each filtered read with the seeded rows that match its
+filters; that is the owning-section C9 v2 wire-form adaptation of the stub
+(R8-07), not a new behaviour. The quoted R10-03 (ii) exception sentence is
+superseded (quote 9).
+
+Affected tests (untruncated `grep -n "writeMediaCache\|endsWith(\"/media\")"`
+over every `writeMediaCache` user under `tests/`, 2026-09-27):
+
+| # | Test (file:lines) | HEAD stub vs seed | Adaptation |
+|---|---|---|---|
+| 1 | `tests/vitest/ui/media-library.test.tsx:306-360` "MediaLibraryPage keeps selection active without a Select toggle" (the dispositions record cites `:306-349`) | stub "Network hero" (`:313`), seed "Cached hero" (`:318`) | the stub returns `[mediaRecord({ title: "Cached hero" })]`; every assertion stands, including the `Select Cached hero` selection flow (`:332`, `:339`) |
+| 2 | `tests/vitest/ui/media-picker.test.tsx:150-192` "MediaPicker dialog has a shared description …" | no stub; seed "Shared media asset" | install a `/media` stub returning the seeded row (restore `fetch` in `finally`); assertions stand |
+| 3 | `media-picker.test.tsx:194-229` "MediaPicker applies trigger/remove chrome overrides …" | stub `[]` (`:197`), seed "Removable asset" | the stub returns the seeded row, so the selected item and its remove button survive the forced read; assertions stand |
+| 4 | `media-picker.test.tsx:231-252` "MediaPicker resolves selected media from cache without fetching media" | stub "Network asset" (`:238`), seed "Picker cached asset"; `:247` pins 0 media calls | an H1 pin, adapted as R10-03 (ii): retitle it (for example "MediaPicker renders the cached selection at once, then revalidates once"); the stub returns a deferred; before it resolves, "Picker cached asset" is rendered and "Loading selected media" is not; exactly 1 media list call, counted with the file's own filter (the forced read); resolve the deferred with the seeded row, flush, and "Picker cached asset" is still rendered. `:247` (`toHaveLength(0)`) is withdrawn |
+| 5-7 | `media-picker.test.tsx:254-301`, `:303-331`, `:333-368` (the three accept-wildcard tests) | no stub; seeded rows | install a `/media` stub returning the seeded rows; the dialog-text assertions stand |
+| 8 | `tests/vitest/ui/entry-field-relation-option-identity.test.tsx:155-202` "selected media roots expose every asset identity …" | no stub; two seeded records (`:159`) | install a stub returning the two seeded records for the picker's first-page read (and for any by-ids read the leaf's picker issues for the selected ids); assertions stand |
+| 9 | `tests/vitest/ui/media-library-page-wave.test.tsx:64-91` StorageQuotaCard progress bar | seed "Alpha" at 2 GB (`:66`), stub "Alpha" at the default size (`:76`) | the stub returns the seeded record (2 GB); assertions stand |
+| 10-13 | `media-library-page-wave.test.tsx:121-171` (folder rail), `:173-214` (tags), `:216-252` (alt), `:254-297` (date) | stub `[]` (`:136`, `:185`, `:228`, `:267`), seeded rows | the stub returns the seeded rows (filtered reads: the matching seeded rows); every grid, badge and POST assertion stands |
+| 14 | `tests/vitest/ui-integration/media-restyle.test.tsx` `mediaFetch` (`:104-112`) and its users `:121-148`, `:150-160`, `:162-182`, `:184-196`, `:247-264` | `mediaFetch()` returns `[]` for `/media`; each test seeds rows; the comment `:104-105` says a seeded cache makes no `/media` call | `mediaFetch(rows)` returns the rows the test seeds; each named test passes its seed; `:198-209` passes `[]`; the comment is rewritten to the H1 behaviour (one forced read after a hydrated start); assertions stand. `:211-245` mounts no library view and is unaffected |
+| 15 | `tests/vitest/ui/media-library-mutation-retry-wave.test.tsx:282-398` "delete failure preserves both folder filters …" | seed "In Parent" and "Unfiled" (`:293-296`), stub `[]` (`:314`) | the stub returns the seeded rows (folder-filtered reads: the matching rows); the H1 read and the R10-03 forced reads on its `mediaFolders` events then keep the rows; every assertion stands, including `deletes` 2 and `folderGets` 3 |
+
+Not affected (checked): `media-library.test.tsx:175-212` (static render; H1
+renders hydrated rows at once, so "Loading assets" stays absent);
+`media-library.test.tsx:214-240` and `:242-273` (R10-03 (ii) and (i));
+`media-library-page-wave.test.tsx:93-119` and `:299-354` (the stub returns
+the seeded record) and `:356-412` (seed `[]`, list GET `[]`); every other
+test of `media-library-mutation-retry-wave.test.tsx` and all of
+`media-library-load-retry-wave.test.tsx` (seed `[]`, stub `[]`). The helper
+`tests/vitest/ui/mediaLibraryTestUtils.tsx:44-49` (`writeMediaCache`) and the
+three local copies (`media-picker.test.tsx:38-43`,
+`entry-field-relation-option-identity.test.tsx:82-87`,
+`media-restyle.test.tsx:53-58`) take the C9 v2 versioned wire form (R8-07)
+and write through the storageCache API (R11-06). Every file named in this
+item is allowlisted: `media-library.test.tsx` `:1614`,
+`mediaLibraryTestUtils.tsx` `:1615`, `media-library-mutation-retry-wave.test.tsx`
+`:1617`, `media-library-page-wave.test.tsx` `:1618`, `media-picker.test.tsx`
+`:1625`, `entry-field-relation-option-identity.test.tsx` `:1652`,
+`media-restyle.test.tsx` `:1668`. If an adapted test still fails for a reason
+other than the H1 read, the R8-03/R8-04 STOP-and-report rule applies.
+
+### R11-05 — W0 landing checks are fail-closed (MEDIUM; a1; LOW a2)
+
+**Rule (added to R10-07).** A header Dependency (`:9-11`) whose task file has
+an OPEN dated re-open is not landed until that re-open's closure is recorded
+in the dependency's tracked receipt, either as an addendum field or by the
+re-open's R-e commit that adds it. A re-open is a dated section of the
+dependency's task file, written after its landing commit, that changes landed
+code or tests and names a receipt addendum for its own closure. A `SINGLE` or
+`INITIAL` verdict of the original landing is necessary but never sufficient
+when such a section exists. The R10-07 receipt check (`git ls-files
+--error-unmatch <receipt>` exits 0, and `git log --diff-filter=A
+--format=%H -- <receipt>` prints exactly one commit, the landing commit) and
+"A leaf's `**Status:**` line is never a readiness signal" stand. Each row now
+pins the verdict it accepts.
+
+**Restated landing-check table** (replaces the R10-07 table `:11050-11057`;
+its 06-L03 row is quoted as quote 10, and the other rows gain their verdict
+pin and re-open status without contradicting their Round-10 cells; the
+columns "Landing check" and "Enforced by" are binding, "Observed at
+`a3d46bf1`" is informational, read by this writer on 2026-09-27 with the
+commands above and `python3 -c 'import json; …'` over the receipt keys):
+
+| Dependency (header `:9-11`) | Landing check | Enforced by | Observed at `a3d46bf1` (informational) |
+|---|---|---|---|
+| TASK-554 | `TASK-554_Post_Metadata_Publish_RBAC_Hardening.md:8` reads `**Status:** ✅ Done` (a closed board task; the only Status-based check) | orchestrator | ✅ Done: satisfied |
+| TASK-551-08-L03 INITIAL | receipt check on `_docs/_workflows/_smoke/task-551/impl-08-l03-initial.json`; `verdict` `INITIAL_READY_FOR_OWNER_REVIEW`, ACCEPTED as landed for 03-L02's purpose on the strength of 08-L03 `:612` ("INITIAL (landed) is unchanged.") and the tracked `tests/integration/server/route-response-headers.test.ts` (`git ls-files --error-unmatch` exits 0); no open re-open of INITIAL (the 08-L03 dated section amends only FINAL, `:612`) | orchestrator; the 03-L02 fence names only `TASK-551-08-L03:final` (`dependencies` `:1827`; occurrence `final` `dependsOn` `:2168`) | landing commit `62438e4ecc13e8309b4641cf6f5afaa1b9a93bc1` (also the commit that added the test file); `verdict` as accepted; satisfied. The receipt's failed `lens-tests` outcome carrying a HIGH (`lensOutcomes`) is an 08-L03 owner item, not a 03-L02 gate |
+| TASK-551-09-L04 INITIAL | receipt check on `_docs/_workflows/_smoke/task-551/impl-09-l04-initial.json` (the 09-L04 fence occurrence `initial`, 09-L04 `:796` at `a3d46bf1`; `:794` in the R10-07 table is `c237e05d` numbering); `verdict` `INITIAL_ADMITTED_GATES_GREEN`; no open re-open of INITIAL (every 09-L04 dated section amends FINAL only) | the dispatch graph (`TASK-551-09-L04:initial`: `dependencies` `:1827`, occurrence `initial` `dependsOn` `:2163`) and the orchestrator | landing commit `ae6bea8ac9afea8a2e68cf6fd403ac2ffc5ddc36`; `verdict` as required; satisfied |
+| TASK-551-03-L01 | receipt check on `_docs/_workflows/_smoke/task-551/impl-03-l01.json` (named by 03-L01 `:448`, `:754`); `verdict` `SINGLE_ADMITTED_GATES_GREEN`; the 03-L01 dated section "Dated Contract Corrections — 2026-09-24 (03-L02 FAZA-0 dependency; append-only)" (`:432`, K1-K8) changes landed code and names its receipt addendum (`:754-756`), so it is a re-open under the rule above: the receipt must also carry the addendum field `reopen_2026-09-25_K1_K8` | orchestrator only | landing commit `801334e2b09e5e4924475421f7a414c81d95a531`; `verdict` as required; the field `reopen_2026-09-25_K1_K8` is present (added by `9c5b6666`); satisfied |
+| TASK-551-05-L02 | receipt check on `_docs/_workflows/_smoke/task-551/impl-05-l02.json` (fields `task` `TASK-551-05-L02`, `occurrence` `single`); `verdict` `SINGLE_ADMITTED_GATES_GREEN`; no re-open (the task file has no `## Dated` section; `grep -c -i "re-open\|reopen"` = 0) | orchestrator only | landing commit `741b8b98d01de5db954ce14aa22612a4c0a0590d`; `verdict` as required; satisfied |
+| TASK-551-06-L03 | receipt check on `_docs/_workflows/_smoke/task-551/impl-06-l03.json` (named by 06-L03 `:930`, `:1272`); `verdict` `SINGLE_ADMITTED_GATES_GREEN` (the SINGLE landing of 2026-09-16: necessary, not sufficient); AND the closure of the open re-open "Dated Contract Corrections — 2026-09-25 (re-open R1: first real DB execution; append-only)" (`:934`) with its A8 amendment: the dated R1 addendum the orchestrator appends to the receipt (06-L03 `:1270-1274`), which also records the A8 files (06-L03 `:2043-2046`, "the R1-e receipt addendum"), committed after the landing commit | orchestrator only | landing commit `8f73a0f8398e69f9b86f8e0e4fbffa4a0a657a33`; `verdict` `SINGLE_ADMITTED_GATES_GREEN`; the receipt's keys are `task` … `honestyNotes` with no R1 addendum; **NOT landed**. INITIAL W0 and its capture stay blocked on this row (Addendum G3 order: 06-L03 R1/A8 → 01-L01 → 03-L02 W0-W4) |
+
+- **03-L01 grounding note.** The dispositions record says 03-L01 has no
+  re-open (grep 0). The word count holds (`grep -c -i "re-open\|reopen"` over
+  the 03-L01 task file is 0), but its tracked receipt labels the K1-K8
+  correction a re-open (`reopen_2026-09-25_K1_K8`), and that correction
+  changed landed code. The row above therefore also requires the recorded
+  closure. At `a3d46bf1` the field is present, so the observed outcome is
+  the same as the record's (satisfied); the check is only stricter.
+- **What a missing closure means.** A row that fails blocks INITIAL W0 and
+  its capture exactly as R10-07 states ("INITIAL W0 and its capture are
+  blocked until every header Dependency (`:9-11`) passes its landing check
+  below"). A capture taken earlier is void and is not a re-capture.
+- **W0 receipt.** It records, per row, the receipt path, the landing commit,
+  the pinned `verdict` and, for 03-L01 and 06-L03, the re-open closure
+  evidence (field name and the commit that added it), at the INITIAL
+  `preWaveCommit`, together with the three R8-09 commands (R9-04 table). The
+  "Observed" column above is not capture evidence.
+- The R10-07 notes on the fences ("None of the fences of 03-L01, 05-L02 or
+  06-L03 names a receipt path …") and the kept R8-09 `preWaveCommit` sentence
+  stand.
+
+### R11-06 — Persisted slots are seeded and observed only through the storageCache API (MEDIUM; n1; J6 (e))
+
+**Clause.** Every 03-L02 suite seeds and observes persisted slots ONLY
+through the storageCache API by LOGICAL key: the exports of
+`core/admin/utils/storageCache.ts` (read, write and clear by the logical key
+from `cacheKeys`, `core/admin/services/cachePolicy.ts`), the client's own
+slot cache (for example a `createMemoryBackedLocalCache` instance built on a
+`cacheKeys.*` key), or a shared test harness that delegates to them. A test
+never seeds with a raw `localStorage.setItem(<key>, JSON.stringify(...))`,
+never reads a slot with a raw `getItem`, and never builds a physical key. So
+the 09-L04 FINAL v3 physical-key and envelope change (09-L04 consumer
+constraint (5), J6 (e)) stays transparent to 03-L02 suites.
+
+- **API names (grounding).** The dispositions record names
+  `writeStorageCacheEnvelope`; no export of that name exists at `a3d46bf1`
+  (untruncated `grep -rln writeStorageCacheEnvelope core tests _docs/_TASKS`:
+  0 files). The binding API is the export list at `a3d46bf1`:
+  `readStorageCache` (`:39`), `writeStorageCache` (`:80`),
+  `clearStorageCache` (`:91`), `readLocalCache` (`:97`), `writeLocalCache`
+  (`:103`), `clearLocalCache` (`:106`), `createMemoryBackedStorageCache`
+  (`:121`) and `createMemoryBackedLocalCache` (`:165`), with the types
+  `StorageLike`, `CacheValidator` and `MemoryBackedStorageCache`. 09-L04 may
+  add exports but must not rename or re-type them (its constraint (5)).
+- **Scope.** The clause binds every seed or observation that 03-L02 writes or
+  adapts: all of `tests/vitest/admin/task551PaginatedClients.test.ts` and
+  `tests/vitest/admin/task551PaginatedClientsSlots.test.ts`, and, in the
+  allowlisted suites, every seed or slot read changed by the C9 v2 / C11 /
+  C12 wire-form adaptations (R8-07), R10-03, R10-05, R11-03 and R11-04
+  (including the four `writeMediaCache` helpers named in R11-04 and the raw
+  `storage.setItem(cacheKeys.entriesList(...), ...)` seeds of
+  `entriesClientMutationReconciliation.test.ts:66-72`, `:137-149`,
+  `:210-216` and `:279-285` (list slots; `:286-292` seeds a detail key),
+  which R8-07 already turns into versioned slots). A raw line that 03-L02 leaves untouched is not re-opened by this
+  clause.
+- **R8-06 (1), restated** (replaces quote 11): "After
+  `advanceAdminCacheInstallationAuthority()`, the test seeds a versioned
+  first-page slot for the default filters through the storageCache API by
+  logical key (for example `writeLocalCache(cacheKeys.<family key>, <the
+  client's persisted first page>)`), in the client's persisted wire form."
+  The rest of R8-06 (1) stands.
+- **R8-06 (1), detail-pages cell, restated** (replaces quote 12): "the test
+  seeds the global slot and the per-content-type slot for `ct` through the
+  storageCache API by logical key (`cacheKeys.detailPagesList` and
+  `cacheKeys.detailPagesListByContentType(ct)`)." The rest of the cell
+  stands.
+- **T16 assertion (1), restated** (replaces quote 13; with R11-08): "(1) no
+  write to the family's persisted slot. The test keeps a `Storage` stub whose
+  `setItem` calls are logged. It learns the slot's storage key through the
+  API, never by building it: before the baseline, it writes a sentinel value
+  with `writeLocalCache(cacheKeys.<family key>, sentinel)`, records the key of
+  the one `setItem` entry that write produced, and removes the sentinel with
+  `clearLocalCache(cacheKeys.<family key>)`. If the sentinel write logs no
+  entry, or more than one, the cell fails (a positive control; a filter that
+  can match nothing never passes silently). The baseline (log length) is
+  taken after the cell's setup and immediately before the mutation (R11-08).
+  After the mutation, no log entry beyond the baseline carries the recorded
+  key. `removeItem` is not counted, because reading an expired slot removes
+  it (`storageCache.ts:65-67`)." Assertions (2) and (3) stand. At
+  `a3d46bf1` the recorded key equals the logical key (`writeStorageCache`
+  writes `key` as given, `storageCache.ts:80-89`); after the 09-L04 FINAL v3
+  change it is whatever the module writes, and the assertion still holds.
+- **09-L04 red handling (J6 (d)).** If either 03-L02 paginated-client suite
+  goes red under a change the 09-L04 body mandates (event shape, v3 key or
+  envelope), 09-L04 FINAL stops and reports; the fix is a pre-disposed
+  consumer re-run owed to 03-L02, which adapts its own suite within this
+  contract and re-runs it; it is never a silent re-baseline by 09-L04. The
+  C17 v6 09-L04 row gains this text ("C17 v6 — Round-11 amendments
+  (2026-09-27)" below).
+
+### R11-07 — The pages template's changed-only guard is a tightening over HEAD (LOW; a1, a2)
+
+At HEAD only `mergeCachedPageIntoList` has the changed-only guard
+(`core/admin/services/pagesClient.ts:172-177`). `updateCachedPageStatus`
+(`:183-192`) writes whenever a list exists (`if (current)`, `:185-186`), and
+`removeCachedPage` (`:194-199`) writes whenever a list exists (`:197-198`);
+both refresh `savedAt` even when nothing changed. Routing both through the
+R10-02 `patchPagesFirstPageSlot` template (the `stored === null` return and
+the changed-only guard) is an intended TIGHTENING over HEAD, not HEAD parity:
+a status patch or remove whose id is absent writes nothing. A status patch
+of a present row builds a new object and writes, as at HEAD. The Round-10
+comment claiming HEAD parity (quote 14) and the R9-01 comment keeping the
+HEAD `if (current)` guards (quote 15) are superseded. The same tightening
+applies to every slot-bearing client that follows the template (R10-02). It
+is fail-safe: a no-op patch never extends a slot's freshness window
+("Security Contract rows (Round 10)", "Patch writes"). No existing pin
+depends on the HEAD no-op write (a1).
+
+### R11-08 — T16 baseline (LOW; a1)
+
+The `setItem` spy or log baseline of T16 assertion (1) is taken after the
+cell's setup (the registered reset, or the read and the
+`vi.setSystemTime(Date.now() + cacheTtlMs.list + 1)` expiry) and immediately
+before the mutation. A setup read that writes the family key therefore never
+counts. See the restated assertion under R11-06.
+
+### R11-09 — C17 tie-break
+
+On equal dates the highest `v` number governs. (10-L02 `:1630-1633` selects
+"the highest dated" `C17 v` heading, and C17 v5 and C17 v6 share the date
+2026-09-26.) The sentence joins the C17 v6 preamble through the dated heading
+below; 10-L02 needs no rule change (R11-12).
+
+### C17 v6 — Round-11 amendments (2026-09-27)
+
+This dated heading amends C17 v6 (`:10574-10665`); it does not replace it.
+Under the unchanged 10-L02 rule (`TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md:1628-1633`)
+the closure writer greps 03-L02 for every `C17 v` heading and starts from the
+highest dated one, which is this heading: it copies C17 v6 with the
+amendments below applied, and applies C17 v4 bullets only where C17 v6 leaves
+them standing.
+
+1. **Preamble sentence (R11-09).** "On equal dates the highest `v` number
+   governs."
+2. **Item 7 (e), added closure-record notes (no `ADMIN_CACHE` delta):** the
+   Slots suite also runs in W3 and at INITIAL closure through
+   `admin-pagination-vitest-2` (R11-01); the entries absent-slot pins named
+   by R10-05 and R11-03 (four in total) and the media hydrated-start
+   adaptations of R11-04 change by name; W0 landing checks pin a verdict per
+   dependency and require every open re-open's recorded closure (R11-05);
+   03-L02 suites seed and observe persisted slots only through the
+   storageCache API by logical key (R11-06); a pages-template patch whose
+   items do not change writes nothing, which is a tightening over HEAD for
+   the status and remove patches (R11-07).
+3. **TASK-551-09-L04 row (replaces the C17 v6 09-L04 paragraph at
+   `:10654-10659` where quote 5 differs).** "The executable spec R10-13 as
+   amended by Round 11: the consumer constraints; the in-place
+   `final-admin-cache-tests` fence edit that adds both paginated-client
+   suites; no graph edge (the ordering is transitively enforced by the
+   ancestor path of Addendum J1; 03-L02:final is a dead-end sibling, ordered
+   before 09-L04:final by node order only); both files run whole. J6 (d): if
+   either 03-L02 suite goes red under a change the 09-L04 body mandates
+   (event shape, v3 key or envelope), FINAL stops and reports, and the fix is
+   a pre-disposed consumer re-run owed to 03-L02, never a silent re-baseline.
+   J6 (e): the storageCache API (read, write and clear by logical key through
+   `cacheKeys`) stays stable across the v3 physical-key change, and 03-L02
+   suites seed and observe persisted slots only through it (R11-06). The
+   cacheBus handler-order item is not owed (H7)."
+4. **TASK-551-10-L02.** Nothing further is owed beyond copying C17 v6 as
+   amended here.
+
+### R11-10 — Envelope-record wording and the Round-10 completeness claim (LOW; a1, a2)
+
+- **Hunk count, Round 10 (corrects quote 17).** Re-run on 2026-09-27:
+  `git diff c237e05d a3d46bf1 -- <this file> | grep '^@@'` prints two fence
+  hunks (`@@ -1569,6 +1569,7 @@`, `@@ -1993,12 +1994,12 @@`) plus the append
+  hunk (`@@ -10524,3 +10525,1069 @@`); with `-U0` it prints three fence hunks
+  (`@@ -1571,0 +1572 @@`, `@@ -1996 +1997 @@`, `@@ -2000,2 +2001,2 @@`) plus
+  the append hunk. So Round 10 made "two fence hunks with default context
+  (three with `-U0`) plus the append hunk". The removed-lines statement of
+  that sentence (the three replaced `w2-client-vitest` lines) stands.
+- **Completeness (corrects quote 16).** R10-16's claim that every Round 1-9
+  sentence changed by Round 10 was quoted is not accurate. The three
+  changed-but-unquoted sentences a2 named (journal `wf_b7515c81-866`, result
+  of `audit a2`) are quoted here as quotes 18-20, each with its Round-10
+  replacement: the R8-03 T8 "the slot stays" sentence (R10-04 clears the
+  `entriesAllList` slot, R10-06 resets the blackouts slot), the R9-01
+  template comment naming `entriesAllList` and "booking ×4" (the R10-02
+  comment already names the entries per slug and three booking families), and
+  the W2 gate's "17 paths" (18 after R10-09). "This section wins" remains the
+  precedence rule for anything a list misses.
+
+### R11-11 — Anchors (INFO; a1, a2)
+
+The symbol and quoted text govern wherever these differ; nothing else
+changes.
+
+- R10-03 (a): the `retryCalls` assertion of the `:926` test is
+  `media-library-mutation-retry-wave.test.tsx:940` (`:939` is
+  `await flushEffects()`); quote 21.
+- Round-10 quote 1 cites the Round-9 subsection as `:10277-10307` while R10-01
+  and C17 v6 cite `:10277-10308` (both `c237e05d` numbering). Both denote the
+  same subsection: `:10307` is its last text line and `:10308` the blank line
+  after it (checked with `git show c237e05d:<this file>`). No quote is
+  needed.
+- The 09-L04 fence occurrence `initial` cited as `:794` in the R10-07 table
+  is `c237e05d` numbering; at `a3d46bf1` it is 09-L04 `:796` (used in the
+  R11-05 table). Likewise R10-13 item 3's 09-L04 `:800` (withdrawn, R11-02)
+  is `:802` at `a3d46bf1`.
+- The Round-10 notes used `:1826` for `dependencies` and `:2167` for the
+  `final` occurrence's `dependsOn` in `c237e05d` numbering; at `a3d46bf1` they
+  are `:1827` and `:2168` (the `final` occurrence spans `:2167-2169`).
+
+### R11-12 — Handoffs
+
+See "Handoffs (Round 11)" below.
+
+### Superseded sentences (Round 11)
+
+Each quote is verbatim at its `a3d46bf1` anchor (text authoritative; a hard
+wrap is one space). The replacement is the named Round-11 item.
+
+1. R10-09 "Held" (`:11135-11141`): "The new suite runs at the W2 gate and at
+   INITIAL closure through `w2-client-vitest` (waves `:1234`), but not in the
+   W3 run of `admin-pagination-vitest-1`. Where the path goes instead (for
+   example `admin-pagination-vitest-2`, `:1928`, which has 34 argv tokens) is
+   an orchestrator decision ("Handoffs (Round 10)", orchestrator (f)); this
+   section does not take it." → R11-01 (the suite runs at W2 through
+   `w2-client-vitest` and in W3 and at INITIAL closure through
+   `admin-pagination-vitest-2`; the rest of "Held" stands).
+2. Handoffs (Round 10), orchestrator (f) (`:11488-11491`): "(f) Decide the
+   home of `tests/vitest/admin/task551PaginatedClientsSlots.test.ts` in the
+   W3/INITIAL-closure vitest run: `admin-pagination-vitest-1` cannot take it
+   under the 128-token argv cap (R10-09 "Held"). Until then the suite runs
+   through `w2-client-vitest` only." → R11-01 (decided by I1, executed by
+   the fence edit).
+3. Validation Commands, `admin-pagination-vitest-2` (`:1198`): "`minimum` 30,
+   argv 34 tokens" → R11-01: `minimum` 31, argv 35 tokens (the fence wins,
+   `:1113-1117`; the argv line `:1201` lacks the path until the section is
+   regenerated, "Handoffs (Round 11)" orchestrator (d)).
+4. Round-2 command table (`:4315`): "every allowlisted Vitest suite (124 + 30
+   paths)" → R11-01: "every allowlisted Vitest suite (124 + 31 paths)".
+5. C17 v6, TASK-551-09-L04 paragraph (`:10656-10657`):
+   "`TASK-551-03-L02:initial` in 09-L04's FINAL `dependsOn`;" → R11-02 (no
+   graph edge; the J1 ancestor path) and "C17 v6 — Round-11 amendments
+   (2026-09-27)" item 3.
+6. R10-13 item 3 (`:11187-11189`): "3. **Adds `TASK-551-03-L02:initial`** to
+   the `dependsOn` of the 09-L04 `final` occurrence (09-L04 `:800` at
+   `c237e05d`). No cycle: 03-L02 `initial` depends on 09-L04 `initial`." →
+   R11-02 (withdrawn by I2; the ordering is enforced by the J1 ancestor path
+   and node order).
+7. R10-05 (`:10918-10920`): "R9-01 retires the HEAD `?? []` synthesis for
+   entries (`entriesClient.ts:321`), and two existing pins read a type slot
+   that the patch used to create from nothing." → R11-03 (four pins: the two
+   R10-05 pins, `entriesClient.test.ts:689-748` and
+   `entriesClientReadAuthority.test.ts:254-284`).
+8. R10-05 "Grep result" (`:10943`, `:10949-10950`): "**Grep result (no
+   further pins).**" and "The only other hits already assert `null` or seed
+   the slot first, so they stay green unmodified:" → R11-03 for the entries
+   suites (untruncated scan table); the pages, forms, booking and
+   detail-pages part of that paragraph stands.
+9. R10-03 (ii) (`:10839-10840`): "is withdrawn for `:234-235` only; it stands
+   for every other assertion." → R11-04 (also withdrawn for
+   `media-library.test.tsx:306-360`, whose stub returns the seeded row; it
+   stands for every other assertion of that file).
+10. R10-07 table, 06-L03 row (`:11057`): "| TASK-551-06-L03 | receipt check
+    on `_docs/_workflows/_smoke/task-551/impl-06-l03.json` (named by 06-L03
+    `:930`, `:1272`), whose `verdict` is `SINGLE_ADMITTED_GATES_GREEN` |
+    orchestrator only | tracked; landing commit
+    `8f73a0f8398e69f9b86f8e0e4fbffa4a0a657a33`; verdict as required |" →
+    R11-05 (the SINGLE verdict is necessary, not sufficient; the R1/A8
+    re-open closure must be recorded; not landed at `a3d46bf1`).
+11. R8-06 (1) (`:9120-9122`): "After `advanceAdminCacheInstallationAuthority()`,
+    the test seeds a versioned first-page slot for the default filters
+    through `Storage`, in the client's persisted wire form." → R11-06
+    (through the storageCache API by logical key).
+12. R9-02, R8-06 (1) detail-pages cell (`:10025-10026`): "the test seeds the
+    global slot and the per-content-type slot for `ct` through `Storage`." →
+    R11-06 (through the storageCache API by logical key).
+13. R10-02 T16 assertion (1) (`:10706-10709`): "(1) no `setItem` call for the
+    family list key; a `Storage` `setItem` spy (or the stub's `setItem` log)
+    is filtered by key, and `removeItem` is not counted, because reading an
+    expired slot removes it (`storageCache.ts:65-67`);" → R11-06 and R11-08
+    (the storage key learned through the API with a positive control; the
+    baseline taken immediately before the mutation).
+14. R10-02 template comment (`:10744-10745`): "// So the no-op cases are
+    exactly HEAD's: an author-less row that is not in the page (HEAD
+    :165-168), a status patch // or remove whose id is absent." → R11-07 (the
+    author-less case is HEAD's; the status and remove no-op cases are an
+    intended tightening over HEAD).
+15. R9-01 code comment (`:9941`): "// updateCachedPageStatus and
+    removeCachedPage keep their HEAD `if (current)` guards (:185, :197) over
+    the versioned slot." → R11-07 (both run through the R10-02 template: the
+    `stored === null` return plus the changed-only guard).
+16. R10-16 (`:11160-11162`): "Every superseded Round 1-9 sentence changed by
+    Round 10 is quoted verbatim under "Superseded sentences (Round 10)", and
+    "This section wins" is retained." → R11-10 (three further sentences
+    quoted as quotes 18-20; "This section wins" stays).
+17. Envelope record (Round 10) (`:11503-11506`): "The diff of this file
+    against `c237e05d` outside this appended section is exactly three hunks,
+    all inside the fence;" → R11-10 ("two fence hunks with default context
+    (three with `-U0`) plus the append hunk"; the removed-lines clause that
+    follows stands).
+18. R8-03 T8 (`:8954-8957`): "Own emission: the slot stays (`getCached*()` in
+    `"hydrate"` returns the patch, and a non-forced default first-page read is
+    served by the patched slot, except posts, whose first page fetches because
+    the marker no longer matches);" → R10-04 and R10-06 (the slot stays except
+    the `entriesAllList` slot, which an own entries mutation clears, and the
+    blackouts slot, which a blackouts create or delete resets; each then
+    fetches on the next non-forced default first-page read); the rest of the
+    T8 cell stands.
+19. R9-01 code comment (`:9942`): "// Entries (per slug and entriesAllList),
+    forms, booking ×4, media and detail pages (each key) follow the same
+    shape;" → R10-02 comment (`:10746-10747`: entries per slug, forms, booking
+    resources/services/reservations, media and detail pages); the
+    `entriesAllList` slot is cleared (R10-04) and blackouts reset (R10-06).
+20. W2 gate row (`:5748-5749`): "which lists only pure client suites (17
+    paths, profile `none`):" → R10-09 (18 paths: the list below it gains
+    `task551PaginatedClientsSlots` after `task551PaginatedClients`).
+21. R10-03 (a) (`:10846-10847`): "`:926` counts no media list GET: its
+    `retryCalls` records only `"POST reorder"` and `"GET folders"` (`:939`)."
+    → R11-11 (`:940`).
+
+**Stands** (non-exhaustive reminders):
+
+- R10-01 and C17 v6, except quote 5, as amended by "C17 v6 — Round-11
+  amendments (2026-09-27)";
+- R10-02, except quotes 13 and 14 (the emission and no-emission setup
+  rules, assertions (2) and (3), the `entriesAllList` cell and the template
+  code stand);
+- R10-03 except quotes 9 and 21 (items (i) and (ii), the re-anchored steps
+  and the enumeration stand);
+- R10-04 and R10-06 as written;
+- R10-05 except quotes 7 and 8 (its two named pins and the pages, forms,
+  booking and detail-pages search stand);
+- R10-07 except quote 10 (the rule, the receipt-check definition and the
+  notes stand; the table is restated by R11-05);
+- R10-08, R10-10, R10-11, R10-12, R10-14 and R10-15;
+- R10-09 except quote 1 (the split, the STOP rule, the `w2-client-vitest`
+  edit and the rest of "Held" stand);
+- R10-13 except quote 6 (items 1, 2 and 4 stand);
+- the Round-10 Security rows, Handoffs and Envelope record except quotes 2
+  and 17;
+- R8-06 (1) except quotes 11 and 12; R8-03 except quote 18; R9-01 except
+  quotes 15 and 19 (and the Round-10 quotes); every R8-07 pin not named by
+  R10-05, R11-03 or R11-04.
+
+### Security Contract rows (Round 11)
+
+No route, schema, auth, RBAC, CSRF or rate-limit change. Endpoint visibility,
+the auth model and rate-limit buckets stay as in Rounds 2-10.
+
+- **Test fixtures seed through the storageCache API (R11-06).** Every 03-L02
+  suite seeds and observes persisted slots only through the storageCache API
+  by logical key (`cacheKeys`), never through a raw physical `localStorage`
+  key, so the 09-L04 FINAL v3 key and envelope (scope, deployment and
+  authentication-epoch partitioning) apply to test seeds exactly as to
+  production writes. No test builds or embeds a physical key. A seed that the
+  v3 scope rules turn into a safe miss makes the 03-L02 suite red and is a
+  J6 (d) STOP case, never a silent pass (the T16 positive control, R11-06).
+- **Send-only password (R11-03).** `accessPassword` never lands on a cached
+  entry detail or on a cached list row. The seeded variant proves the list
+  row half on the only path that still writes a list row after a mutation
+  (a patch of an existing versioned slot); the null-slot variant proves that
+  no list row is created at all.
+- **W0 readiness is fail-closed (R11-05).** A dependency with an open
+  re-open is not landed until its closure is recorded in its tracked
+  receipt. The W0 receipt keeps commit ids, receipt paths, `verdict` values
+  and addendum field names only; `.env` values are never read into a
+  receipt or a prompt.
+- **Patch writes (R11-07).** The Round-10 row ("A no-op patch writes
+  nothing, so it never extends a slot's freshness window") now also covers
+  status and remove patches whose id is absent, which HEAD wrote.
+- **Media view.** The Round-10 row stands. R11-04 changes test stubs only.
+
+### Handoffs (Round 11)
+
+- **TASK-554.** Unchanged: no file edit and no re-open.
+- **TASK-551-10-L02.** Owed through C17 v6 as amended by "C17 v6 —
+  Round-11 amendments (2026-09-27)" (the tie-break sentence added), in
+  10-L02's next append-only section. Nothing else is owed, and no 10-L02 rule
+  changes.
+- **TASK-551-09-L04 (another writer's file).** Per J6: its note 2 runs in
+  this writer round (J1 chain, the cross-owner FINAL gate exception, scope
+  filtering, the J6 (d) STOP rule, the J6 (e) storage API constraint); 03-L02
+  records the same decisions (R11-02, R11-06) and edits nothing in 09-L04.
+  With R11-01, the 09-L04 statement that the `admin-pagination-vitest-*`
+  fences own both paginated-client suites is true.
+- **TASK-551-11.** Nothing owed. Round 11 adds one bare `tests/` path to one
+  more 03-L02 fence command (no `./` site, R8-10) and no contract evidence
+  path; the 128-token argv cap (`task-551-dispatch-envelope.mjs:100`) is
+  consumed, not changed.
+- **TASK-551-01-L01.** Unchanged. Round 11 adds no server statement.
+- **Other task files citing 03-L02 lines.** Round 11 shifts no line.
+- **Orchestrator.**
+  - (a) INITIAL capture stays blocked until every R11-05 landing check passes
+    (at `a3d46bf1` the 06-L03 row does not) and is recorded in the W0
+    receipt, together with the three R8-09 commands.
+  - (b) The TASK-551-10-L01 owed-mirror bundle (J9, I3): argv,
+    `positiveDiscovery.paths`, `minimum` and the validation command list for
+    the 05-L01 and 05-L03 paths, with their land-order bounds.
+  - (c) The J3 leg (J2): the standalone test-only 05-L01 edit ("item 0") to
+    `tests/integration/server/task551OnlineIndexDeployment.test.ts` before
+    item 12 needs its implementer; it is not a 03-L02 item.
+  - (d) "Validation Commands" (`:1111-1374`) is behind the fence for
+    `w2-client-vitest` (Round-10 quote 35), `admin-pagination-vitest-2`
+    (quote 3) and the allowlist count (Round-10 quote 34). The regeneration
+    from the fence is owed to the W0 edit, as an authorized in-place
+    regeneration, never a hand patch.
+  - (e) Relocation follow-up unchanged; it now also covers
+    `03-l02-round11-dispositions.md` (N = 11; untracked at `a3d46bf1`). Until
+    the records move, R4-10 gloss 2 (`:6424` at `a3d46bf1`) classifies them
+    at W0.
+  - (f) Closed by R11-01 (the Slots suite's W3/INITIAL-closure home).
+  - (g) The fence `line-count-1` still does not name the Slots suite; the
+    R10-09 STOP rule relies on the implementer's `wc -l` and the repository
+    line gate (I1). Still owed.
+  - (h) The restated `owned-module-consumers-bun` precondition (R8-10) and
+    the R6-06 stop rule (size below) stand.
+
+### Envelope record (Round 11)
+
+**The in-place fence edit (R11-01).** The only edit outside this appended
+section. The JSON stays valid, and every key other than the three edited
+values is byte-identical (`schema`, `taskId`, `parent`, `allowlist`,
+`forbiddenPaths`, `dependencies`, `occurrences` and every other command,
+including `admin-pagination-vitest-1`). Checked on 2026-09-27 by parsing both
+fences (`a3d46bf1` and the edited file): after removing the new path from
+`argv` and `positiveDiscovery.paths` and restoring `minimum` 30, the two
+parses are equal.
+
+| Change | Line (`a3d46bf1` = after) |
+|---|---|
+| `admin-pagination-vitest-2` `argv`: `tests/vitest/admin/task551PaginatedClientsSlots.test.ts` appended after `tests/vitest/ui/menu-item-form.test.tsx` (34 → 35 tokens) | `:1931` (line replaced) |
+| `admin-pagination-vitest-2` `positiveDiscovery.paths`: the same append (30 → 31 paths) | `:1935` (line replaced) |
+| `admin-pagination-vitest-2` `positiveDiscovery.minimum` 30 → 31 | `:1936` (line replaced) |
+
+**Hunks and line shift.** `git diff HEAD -- <this file> | grep '^@@'` prints
+one fence hunk with default context (`@@ -1928,12 +1928,12 @@`), two with
+`-U0` (`@@ -1931 +1931 @@`, `@@ -1935,2 +1935,2 @@`), plus the append hunk.
+The only removed lines are the three replaced lines above. No line is
+inserted or deleted inside the fence, so the line shift is 0: the fence stays
+`:1441-2173`, the allowlist `:1450-1771` (322), `forbiddenPaths`
+`:1774-1825` (52), `dependencies` `:1827`, and every later section keeps its
+line numbers.
+
+**Counts after the edit.** Allowlist 322 (no duplicate), `forbiddenPaths` 52,
+commands 34, occurrences `initial` (30 command ids, `dependsOn`
+`TASK-551-09-L04:initial`) and `final` (11 ids, `dependsOn`
+`TASK-551-08-L03:final`). `admin-pagination-vitest-2`: `argv` 35 tokens, 31
+paths, `minimum` 31, and every path appears verbatim in `argv`.
+`admin-pagination-vitest-1`: 128 tokens, 124 paths, `minimum` 124
+(unchanged). The family preflight
+(`TASK-551-11-Workflow-Audit-And-Evidence-Sidecar.md:1173`, last argument
+`$(git rev-parse HEAD)`) run on the edited tree prints
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`,
+and `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null
+test ./tests/unit/workflows/dispatchContractCaps.test.ts
+./tests/unit/workflows/task551AuthorAudit.test.ts` passes (21 pass, 0 fail).
+
+**Paths this round names** (fence lines at `a3d46bf1`):
+
+- **Allowlisted:** `core/admin/services/pagesClient.ts` (`:1480`),
+  `entriesClient.ts` (`:1482`); `core/admin/ui/media/MediaPicker.tsx`
+  (`:1513`; the media picker view of R11-04); `tests/vitest/admin/task551PaginatedClients.test.ts`
+  (`:1571`), `task551PaginatedClientsSlots.test.ts` (`:1572`),
+  `entriesClientMutationReconciliation.test.ts` (`:1638`),
+  `entriesClientReadAuthority.test.ts` (`:1639`), `entriesClient.test.ts`
+  (`:1640`), `support/entriesClientTestHarness.ts` (`:1717`);
+  `tests/vitest/ui/media-library.test.tsx` (`:1614`),
+  `mediaLibraryTestUtils.tsx` (`:1615`),
+  `media-library-load-retry-wave.test.tsx` (`:1616`; cited read-only),
+  `media-library-mutation-retry-wave.test.tsx` (`:1617`),
+  `media-library-page-wave.test.tsx` (`:1618`), `media-picker.test.tsx`
+  (`:1625`), `entry-field-relation-option-identity.test.tsx` (`:1652`);
+  `tests/vitest/ui-integration/media-restyle.test.tsx` (`:1668`).
+- **Forbidden and consumed only:** `core/admin/services/cachePolicy.ts`
+  (`:1774`; `cacheKeys`).
+- **Outside the envelope (read-only anchors; none is in the fence):**
+  `core/admin/utils/storageCache.ts` (09-L04-owned);
+  `tests/vitest/admin/entriesClientRevisions.test.ts` and
+  `tests/vitest/admin/customScreensEntryOverridesClient.test.ts` (scanned
+  only); the parent task file; the task files of
+  TASK-554, TASK-551-03-L01, 05-L02, 06-L03, 08-L03, 09-L04, 10-L02 and 11;
+  the five receipts under `_docs/_workflows/_smoke/task-551/`
+  (`impl-03-l01.json`, `impl-05-l02.json`, `impl-06-l03.json`,
+  `impl-08-l03-initial.json`, `impl-09-l04-initial.json`);
+  `_docs/_workflows/lib/task-551-dispatch-envelope.mjs` (the argv cap); the
+  dispositions records, including `03-l02-round11-dispositions.md`
+  (orchestrator evidence).
+
+No new allowlisted path is needed. One JSON fence. **Size (R6-06 stop
+rule).** This file is 875,272 bytes after the Round-11 fence edit
+and append (`wc -c`), below the 1,048,576-byte cap with the 200-byte closure
+headroom.

@@ -104,7 +104,7 @@ const snapshotTables = (): Json =>
       )
     ) as Json
   ).tables as Json;
-/** All seven commanded test paths of the contract's single test battery. */
+/** All ten commanded test paths of the contract's single test battery. */
 const COMMANDED_TEST_PATHS: readonly string[] = [
   "tests/integration/server/task551SchemaMigrationParity.test.ts",
   "tests/integration/server/task551SearchVectorMigration.test.ts",
@@ -112,6 +112,9 @@ const COMMANDED_TEST_PATHS: readonly string[] = [
   "tests/integration/server/task551IndexAndConstraintCatalog.test.ts",
   "tests/integration/server/task551ConcurrencyConstraints.test.ts",
   "tests/integration/server/task551OnlineIndexDeployment.test.ts",
+  "tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts",
+  "tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts",
+  "tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts",
   "tests/perf/database-index-write-overhead.test.ts",
 ];
 /** Pins every needle into the runner's CURRENT bytes with a readable label. */
@@ -307,18 +310,39 @@ describe("task551 online index deployment: argv contract", () => {
         .admissionMode
     ).toBe("external");
   });
-  test("the contract's validation battery commands exactly the seven owned test files", () => {
+  test("the contract's validation battery commands exactly the ten owned test files", () => {
     const contract = contractSource();
-    const envelopeArgv = `"argv": ["bun", "--env-file=/dev/null", "test", ${COMMANDED_TEST_PATHS.map((testPath) => `"${testPath}"`).join(", ")}]`;
+    // Structural check: parse the live dispatch envelope (the first ```json fence after its
+    // heading), so archived or superseded prose can never satisfy it.
+    const headingAt = contract.indexOf("\n## Workflow Dispatch Envelope\n");
+    expect(headingAt, "the dispatch envelope heading exists").toBeGreaterThan(-1);
+    const fenceOpen = contract.indexOf("```json\n", headingAt);
+    expect(fenceOpen, "the dispatch envelope json fence exists").toBeGreaterThan(headingAt);
+    const bodyStart = fenceOpen + "```json\n".length;
+    const fenceClose = contract.indexOf("\n```", bodyStart);
+    expect(fenceClose, "the dispatch envelope json fence is closed").toBeGreaterThan(bodyStart);
+    const envelope = JSON.parse(contract.slice(bodyStart, fenceClose)) as {
+      commands: readonly { id: string; argv: unknown; positiveDiscovery?: { paths?: unknown } }[];
+    };
+    const battery = envelope.commands.filter(
+      (command) => command.id === "migration-and-index-tests"
+    );
+    expect(battery.length, "exactly one migration-and-index-tests command").toBe(1);
+    expect(battery[0]?.argv, "the dispatch envelope argv is --env-file=/dev/null").toEqual([
+      "bun",
+      "--env-file=/dev/null",
+      "test",
+      ...COMMANDED_TEST_PATHS,
+    ]);
+    expect(
+      battery[0]?.positiveDiscovery?.paths,
+      "positive discovery names every test path in order"
+    ).toEqual(COMMANDED_TEST_PATHS.filter((testPath) => testPath.endsWith(".test.ts")));
     const rolloutArgv =
       '"argv": ["bun", "--env-file=/dev/null", "scripts/task-551-online-indexes.ts", "rollout-forward", "--receipt", ".tmp/task551-migration-receipt.json", "--admission-mode", "offline-single"]';
     expect(
       contract.includes(`bun test ${COMMANDED_TEST_PATHS.join(" ")}`),
-      "the validation command lists all seven paths in order"
-    ).toBe(true);
-    expect(
-      contract.includes(envelopeArgv),
-      "the dispatch envelope argv is --env-file=/dev/null"
+      "the validation command lists all ten paths in order"
     ).toBe(true);
     expect(
       contract.includes('"tests/integration/server/task551OnlineIndexDeployment.test.ts",'),

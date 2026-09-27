@@ -1498,3 +1498,27 @@ steps use 01-L01 v8 numbering (**V8-8**). Every sentence not quoted stays bindin
 - :1450-1454 "01-L01 v8 (owner) inserts a FINAL step between V7-7 steps 8 and 9: "`lane-worker-dedicated-schema-binding` decided and landed, else STOP", and applies the E1 (d) V7-4 row change for `tests/integration/runtime/preRetentionVacuum.test.ts`." → item 2.
 - :1457 "- 05-L01 R2, R2.2 and R2.3 (owner TASK-551-05-L01; handoff row `:1866`);" → item 3 (the three items stay; only the anchor changes).
 - :1463-1464 "01-L01 v8 owns the matching V7-7 step 8 rewrite and the 7/8 order; the FINAL lane-runner run is the proof." → item 4.
+
+## Dated Contract Corrections — 2026-09-27 (fix note 4; append-only)
+
+Source: dispositions Addendum J (J1, J4 (f), J8), same file as above. It edits
+nothing above; the graph fence and the family inventory are unchanged. Every
+sentence not quoted stays binding.
+
+1. **SolutionKit clearing (J8).** The O3 suite of fix note 2 item 4
+   (`task551SolutionKitRollbackAuthoritySchema.test.ts`, owner TASK-551-05-L03)
+   stays one blocked row and clears only when the 01-L01 V9-6 Shared literal is met.
+2. **O5 wording (J4 (f)).** O5 (class-A suite; its DB legs skip in the lane) is
+   checked landed at V8-8 step 7; the O5 worker-schema branch is not executed
+   before closure. The FINAL lane run proves the five 05-L01 branches and O3.
+3. **Graph ordering (J1).** No occurrence depends on `TASK-551-03-L02:final`
+   (:997). `TASK-551-09-L04:final` (:1004) follows 03-L02 through the ancestor
+   path `03-L02:initial` (:992) → 07-L02 → 08-L01 → 08-L02 → `08-L03:final`
+   (:996) → `03-L03:single` (:998) → 04-L01 → 04-L02 → 09-L01 → 09-L02 → 09-L03
+   → `09-L04:final`; `03-L02:final` precedes it only through node order, the
+   total product land order (:964), not through an edge.
+
+### Superseded sentences
+
+- :1459-1460 "`task551SolutionKitRollbackAuthoritySchema.test.ts` (owner TASK-551-05-L03, its own dated note; the suite stays BLOCKED on the B1 row until then);" → item 1 (only "stays BLOCKED on the B1 row until then" changes).
+- :1488-1490 "The FINAL lane run proves the five 05-L01 branches and the O3 branch; O5 (class-A suite, DB legs skip in the lane) is proven only by the landed 06-L02 R15 edit checked at V8-8 step 7 plus its part-1 evidence." → item 2.

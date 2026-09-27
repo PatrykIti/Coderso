@@ -2821,3 +2821,278 @@ is not a `json` fence.
         "paths": ["tests/integration/server/task551SchemaMigrationParity.test.ts", "tests/integration/server/task551SearchVectorMigration.test.ts", "tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts", "tests/integration/server/task551IndexAndConstraintCatalog.test.ts", "tests/integration/server/task551ConcurrencyConstraints.test.ts", "tests/integration/server/task551OnlineIndexDeployment.test.ts", "tests/perf/database-index-write-overhead.test.ts"],
         "minimum": 1
 ```
+
+## Dated Contract Corrections — 2026-09-27 (fifth note: script split rule-3/rule-5 fix, item 0 J3 re-binding, done-checks, anchors)
+
+**Authority and scope.** This append-only note implements orchestrator
+decisions **Addendum J2** and **Addendum J3** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum J) in full, and the 05-L01 share of **Addendum J9** (with the
+mirror columns of **Addendum J4** (e)). It does not re-decide them. It
+corrects the fourth note directly above ("the fourth note"). "Addendum Jn"
+always names an orchestrator decision; the fourth note's own verified facts
+"J1"-"J8" are cited as "fourth-note fact Jn". This note's facts are K1-K8.
+Every anchor was re-read at HEAD `a3d46bf1` (nothing executed except the
+read-only counts and gates named here). This round changes no source, test
+or migration byte and makes NO fence edit: the fence stays `:1023-1179`.
+`**Status:**` is unchanged (`⏳ To Do`). Everything in the first to fourth
+notes that is not quoted under "Superseded sentences (fifth note)" stays
+binding. This note contains no code fence and no dispatch literal.
+
+**Anchor rule.** No line above this note moves, so a bare anchor into THIS
+file is a HEAD `a3d46bf1` line, which equals the fourth-note-tree line (the
+fourth note's own Anchor rule is unchanged). `scripts/task-551-online-indexes.ts`
+and `tests/integration/server/task551OnlineIndexDeployment.test.ts` are
+byte-identical from `c237e05d` to `a3d46bf1` (`git diff --stat` over
+`scripts/` and `tests/` is empty), so the fourth note's HEAD spans into both
+still hold, and script anchors below are those HEAD lines. Deployment-suite
+anchors below are HEAD `a3d46bf1` lines; item 0 shifts that file, so after
+item 0 a consumer cites its legs by title, never by bare line.
+
+### Verified facts (read at `a3d46bf1`)
+
+- **K1 — rule-3 cycle in the fourth-note script table.** The cluster
+  `:2021-2072` (the `// --- Reserved session` header `:2021`,
+  `let reservedPool` `:2022`, `leaseGuard` `:2024`, `poisonLease` `:2025`,
+  `endPoolOnce` `:2028`, `openReservedSession` `:2033`, `takeAdvisoryLock`
+  `:2049`, `releaseAdvisoryLock` `:2060`, `closeReserved` `:2064-2072`) is
+  used by two functions that the fourth-note table places in `-rollout.ts`:
+  `runReservedBegin` (`:662`, `poisonLease();` `:691`) and
+  `applyBoundTransactionalMigration` (`:951`, `reservedPool` `:959`,
+  `poisonLease();` and `await endPoolOnce();` `:969-970`). The table puts
+  the cluster in the CLI entry, so `-rollout.ts` would have to import the
+  entry, which split rule 3 forbids. No ESLint config in the worktree
+  enables an import-cycle rule (`eslint.config.mjs` is the only config;
+  untruncated `grep -c no-cycle` = 0), so rule 7's gates would not catch it.
+- **K2 — rule-5 pin crossing.** The suite pin
+  `runnerBetween("export function assertArtifactsReproduced", "// --- Receipt")`
+  (suite `:2106`) spans script `:464` to `:502`. The fourth-note table puts
+  `:350-501` in `-catalog.ts` and `:502` in `-rollout.ts`, so the span
+  would cross a file boundary (a split defect under rule 5). Both needles
+  are unique in the script (`grep -c -F` = 1 each).
+- **K3 — dependency direction under the corrected assignment.** A
+  declaration-level cross-reference scan of the corrected table below
+  (top-level declarations per span; comments included, so it
+  over-approximates) finds: `-catalog.ts` uses `-shared.ts` only;
+  `-rollout.ts` uses `-shared.ts` and `-catalog.ts` (`readReceiptRow`,
+  `relationExists`, `tokenizeSqlFragment`; plus `Task551Artifacts`, which
+  moves to `-shared.ts`); the entry uses all three. No reference runs from
+  `-shared.ts` to any other part, from `-catalog.ts` to `-rollout.ts` or
+  the entry, or from `-rollout.ts` to the entry. The graph
+  `-shared.ts` ← `-catalog.ts` ← `-rollout.ts` ← entry is acyclic.
+- **K4 — `Task551Artifacts`.** The interface is `:351-364` (14 lines),
+  inside the resolution span `:350-501`. It is used by the catalog
+  (`:378`, `:466`, `:2176`, `:2219`), the rollout part (`:925`, `:953`,
+  `:1001`) and the entry (`:2369`). In `-shared.ts` every user imports it
+  in one direction.
+- **K5 — every `runnerBetween` pair stays inside one file** under the
+  corrected table: `:1414`-`:1476` (rollout), `:2764`-`:2790` (entry),
+  `:464`-`:502` (catalog), `:1647`-`:1661` (catalog), `:2830`-`:2933`
+  (entry), `:2095`-`:2126` (catalog), `:2524`-`:2830` (entry). These are
+  the script lines of the needle pairs at suite `:1337`, `:1434`, `:2106`,
+  `:2390`, `:3160`, `:3260`, `:3321-3325`.
+- **K6 — the J3 leg at HEAD.** The leg "the contract's validation battery
+  commands exactly the seven owned test files" (suite `:310-349`, in the
+  `argv contract` `describe`) matches `bun test <seven paths>` and the
+  one-line argv string with `contract.includes`. On this file both are
+  satisfied by archived text: `:953` and the ```` ```text ```` block of
+  "Superseded fence values (verbatim; HEAD `c237e05d` bytes)" (`:2819`,
+  `:2820`). `COMMANDED_TEST_PATHS` (`:108-116`, seven paths) is used only by
+  that leg. The suite has 49 `test(` legs and 0 `testIfDb(` legs. The same
+  leg also asserts that the text contains the generic migration tool name
+  exactly once; this note does not add that name.
+- **K7 — anchors.** `clearSeeded` is at
+  `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts:235-237`
+  (fourth-note fact J6 says `:234-236`). The literals "V7-7 step 8" and
+  "E3 check 4" occur in this file, before this note, only on `:2513` and
+  `:2721`, both times inside the fourth note's own quotation marks.
+- **K8 — the 10-L01 consumer.** The TASK-551-10-L01 command
+  `migration-and-plan-tests` (`:1270`) names only
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts` in its
+  `argv` (`:1272`) and `positiveDiscovery.paths` (`:1274`, `minimum` 1),
+  and its `## Exact Validation Commands` `bun test` list names only that
+  path (`:1067`). (Cited by task only; the 10-L01 writer owns those lines.)
+
+### Item 0 — the J3 leg re-bound now, test-only (Addendum J2)
+
+Item 0 is a standalone TEST-ONLY 05-L01 edit that lands NOW, in this round,
+before R1 item 12. It is not part of item 12, of the R1/R2/R3 test-only
+change or of the five-file edit, and it needs no split path on disk (the
+leg reads only this contract's text).
+
+- **Write surface.** Exactly one file:
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts` (already
+  in the fence `allowlist`). No source, fence, contract or other test byte.
+- **`COMMANDED_TEST_PATHS`** becomes the ten `migration-and-index-tests`
+  test paths in fence argv order: the six original deployment-battery paths
+  up to and including `tests/integration/server/task551OnlineIndexDeployment.test.ts`,
+  then `…-catalog.test.ts`, `…-rollout.test.ts`, `…-evidence.test.ts`, then
+  `tests/perf/database-index-write-overhead.test.ts`. Its doc comment says
+  "ten".
+- **The leg** keeps its place in the `argv contract` `describe` and is
+  titled "the contract's validation battery commands exactly the ten owned
+  test files". Its envelope check is structural:
+  1. find the heading line `## Workflow Dispatch Envelope` (matched with a
+     newline on both sides) and fail if it is absent;
+  2. take the first ```` ```json ```` fence after it, slice to that fence's
+     closing ```` ``` ````, fail if either is absent, and `JSON.parse` the
+     slice (a parse error fails the leg);
+  3. select `commands` with `id === "migration-and-index-tests"` and assert
+     exactly one;
+  4. assert its `argv` deep-equals `["bun", "--env-file=/dev/null", "test",
+     ...COMMANDED_TEST_PATHS]` (label "the dispatch envelope argv is
+     --env-file=/dev/null").
+  The same leg may also deep-compare `positiveDiscovery.paths` with the ten
+  paths and `minimum` with 10 (a strengthening). The old
+  `contract.includes(envelopeArgv)` string check is removed, because the
+  structural check replaces it; no archived prose can satisfy the new one.
+- **The `:953` check** stays a text check: `contract.includes` of
+  `bun test ` followed by `COMMANDED_TEST_PATHS` joined with single spaces,
+  with a label that says "ten". It is satisfied by the fourth note's restated
+  command (the one bullet under "**Validation command (restated for the
+  split; replaces `:953`).**"), not by `:953` or `:2819`.
+- **Everything else in the leg** (the static-allowlist, `rollout-forward`,
+  `rollout-forward-idempotence`, `status` and prohibition-sentence checks)
+  stays byte-identical. No other leg changes.
+- **Gates (fast; repo root).** `./node_modules/.bin/eslint --max-warnings=0`
+  on the file; the DB-free run
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test ./tests/integration/server/task551OnlineIndexDeployment.test.ts`
+  with 49 pass, 0 fail, 0 skip (the suite has no DB leg; the count is
+  unchanged, because the leg is edited in place); `wc -l`;
+  `git diff --check`; and the item-0 check: `awk '/COMMANDED_TEST_PATHS[^=]*= \[/,/^\];/' tests/integration/server/task551OnlineIndexDeployment.test.ts | grep -c -E 'task551OnlineIndexDeployment-(catalog|rollout|evidence)\.test\.ts'`
+  prints 3 (it prints 0 at HEAD) and
+  `grep -c 'exactly the ten owned test files' tests/integration/server/task551OnlineIndexDeployment.test.ts`
+  prints 1.
+- **Evidence rule.** Until item 0 has landed, no receipt cites the J3 leg
+  as evidence for the live envelope (01-L01 v10 records this). From item 0
+  on, the leg is green on the unsplit tree AND proves the live
+  `migration-and-index-tests` argv.
+
+### R1 item 12 split — script table corrected; budgets restated (Addendum J3)
+
+**Rollout script (replaces the fourth note's script table rows).** Spans are
+HEAD script lines. "Content" excludes the file's own import header.
+"Budget" is the planning ceiling for the whole file (header, re-exports and
+the in-place UNIQUE literal included); every budget is ≤ the 1,000-line
+gate. The allowance is budget minus content.
+
+| Path | Holds (HEAD spans) | Content (arithmetic) | Budget (allowance) |
+| --- | --- | --- | --- |
+| `scripts/task-551-online-indexes-shared.ts` | the fourth-note session-free layer `:49-327`; the session-free L02 pre-decision interval decoder `:1693-1858`; the `Task551Artifacts` interface `:351-364` | 445 + 14 = 459 | ≤ 540 (81) |
+| `scripts/task-551-online-indexes-catalog.ts` | journal-driven artifact resolution `:350-501` without `:351-364`; receipt mirror and CAS `:502-602`; canonical member gate `:1026-1299`; touched-table measurement, data conflicts and classification `:1605-1692`; online members, journal cleanup and final catalog gate `:2073-2315` | 757 − 14 + 101 = 844 | ≤ 950 (106) |
+| `scripts/task-551-online-indexes-rollout.ts` | reserved Drizzle adapter and GUC set/reset `:603-750`; phase-4 guard, receipt insert, guarded apply and recovery `:751-1025`; admission, quiescence and disk gates `:1300-1604`; reserved session and lease `:2021-2072` | 829 − 101 + 52 = 780 | ≤ 880 (100) |
+| `scripts/task-551-online-indexes.ts` | CLI argv `:328-349`; health ceilings, preflight digest and recheck `:1859-2020`; receipt seeding and member state `:2316-2445`; release, autoscaling, write-cost and reverse authorization `:2446-2523`; the commands, `main` and the `import.meta.main` guard `:2524-2959`; import-stable re-exports | 880 − 52 = 828 | ≤ 960 (132) |
+
+Span sizes: `:351-364` = 14, `:502-602` = 101, `:2021-2072` = 52. The
+content sums to 459 + 844 + 780 + 828 = 2,911 lines, plus the 48-line HEAD
+header, which gives 2,959 (unchanged). The entry gets the widest allowance
+because it imports from all three parts (about 56 intra-family names by the
+K3 scan) and carries one `export *` line per part. The shared module is now
+required (it holds `Task551Artifacts`); the fourth note's "not created"
+option no longer applies. Import direction (K3):
+`-catalog.ts` imports `-shared.ts` only; `-rollout.ts` imports `-shared.ts`
+and `-catalog.ts`; the entry imports all three.
+
+**Deployment suite (budgets restated; assignment unchanged).** Content is
+the fourth-note HEAD content plus item 0's net delta as observed on the
+in-flight item-0 tree at writing (+3 in the shared fixtures, +21 in the J3
+leg; the item-0 receipt's own `wc -l` governs).
+
+| Path | Content (arithmetic) | Budget (allowance) |
+| --- | --- | --- |
+| `tests/integration/server/task551OnlineIndexDeployment.test.ts` | 751 + 21 = 772 | ≤ 870 (98) |
+| `tests/integration/server/task551OnlineIndexDeployment-catalog.test.ts` | 783 | ≤ 890 (107) |
+| `tests/integration/server/task551OnlineIndexDeployment-evidence.test.ts` | 861 | ≤ 960 (99) |
+| `tests/integration/server/task551OnlineIndexDeployment-rollout.test.ts` | 853 | ≤ 950 (97) |
+| `tests/integration/server/task551OnlineIndexDeployment-support.ts` | 195 + 3 = 198 | ≤ 320 (122) |
+
+The content sums to 3,443 + 24 = 3,467 lines, plus the 70-line header,
+which gives 3,537 (the in-flight item-0 `wc -l`).
+
+**Split rule 5 under the corrected table.** The pin
+`runnerBetween("export function assertArtifactsReproduced", "// --- Receipt")`
+now lies wholly in `-catalog.ts` (`:464` and `:502`, K2), and every other
+pair stays in one file (K5). A writer who moves a cluster under rule 2 must
+re-check every pair of K5 against the final assignment.
+
+**Split rule 7 — added checks (binding; run with rule 7's fast gates).**
+
+- No import of the entry (value or type):
+  `grep -c 'task-551-online-indexes"' scripts/task-551-online-indexes-catalog.ts scripts/task-551-online-indexes-rollout.ts`
+  prints 0 for each file.
+- Item-12 done-check (Addendum J2):
+  `awk '/COMMANDED_TEST_PATHS[^=]*= \[/,/^\];/' tests/integration/server/task551OnlineIndexDeployment.test.ts tests/integration/server/task551OnlineIndexDeployment-support.ts | grep -c -E 'task551OnlineIndexDeployment-(catalog|rollout|evidence)\.test\.ts'`
+  prints 3, wherever the split puts `COMMANDED_TEST_PATHS` (a second
+  declaration would print 6). The J3 leg stays in the original suite path
+  with its "ten" title, and item 12 changes none of its assertions.
+
+### TASK-551-10-L01 mirror row (Addendum J9; with Addendum J4 (e))
+
+This restates the fourth note's "O6 — disposed and widened" owed mirror as
+one row. It is written by the 10-L01 writer only, never by 05-L01.
+
+| 10-L01 target | Carries | Land-order bound |
+| --- | --- | --- |
+| `## Workflow Dispatch Envelope`, command `migration-and-plan-tests` (K8) | `argv` and `positiveDiscovery.paths`: the three split test paths `…-catalog.test.ts`, `…-rollout.test.ts`, `…-evidence.test.ts` next to `tests/integration/server/task551OnlineIndexDeployment.test.ts`; `minimum`: stated explicitly in the mirror note under 10-L01's own rule (today 1); `-support.ts` in no argv or path list | no later than R1 item 12 |
+| `## Exact Validation Commands`, the `bun test` list (K8) | the same three split test paths | no later than R1 item 12 |
+
+R1 item 12 lands no earlier than both rows. Item 0 does not depend on
+them.
+
+### Superseded sentences (fifth note; verbatim, with replacements)
+
+Anchors are HEAD `a3d46bf1` lines (= fourth-note-tree lines).
+
+1. `:2511-2512` (fourth-note fact J6) — "`clearSeeded` (`:234-236`) is one
+   `delete … where event_key like 'seed-%'`." → `clearSeeded`
+   (`:235-237`) is one `delete … where event_key like 'seed-%'`.
+2. `:2513-2514` (fourth-note fact J7) — "The literals "V7-7 step 8" and
+   "E3 check 4" occur 0 times in this file (untruncated `grep -c`)." → The
+   literals "V7-7 step 8" and "E3 check 4" occur in this file only inside
+   quotes (the fourth note's fact J7 and Labels bullet, and this note's
+   quotes of those two sentences), never as a live label.
+3. `:2567-2573` (Fence amendment 2, "Static pin (J3)") — "The
+   pre-amendment argv literal is quoted verbatim, on one line, under
+   "Superseded fence values" below, as every superseded value is. The J3
+   leg therefore stays green on the unsplit tree, but it no longer proves
+   the live envelope. The item-12 change re-binds it (split rule 6 below).
+   This note deliberately does not restate the amended argv as one literal
+   line, so the re-bound leg can match only the fence." → The pre-amendment
+   argv literal stays quoted verbatim under "Superseded fence values", as
+   every superseded value is. Item 0 (fifth note) re-binds the J3 leg now,
+   before item 12: it parses the ```` ```json ```` fence under
+   `## Workflow Dispatch Envelope` and compares the
+   `migration-and-index-tests` argv structurally, so the leg stays green on
+   the unsplit tree AND proves the live envelope, and no quoted literal can
+   satisfy it.
+4. `:2598` (script table, shared row) — "| `scripts/task-551-online-indexes-shared.ts` | the session-free layer: error codes, budgets, closed constants, grammars, state sets, shared types, `fail`/`values`/`sqlText` `:49-327`; the session-free L02 pre-decision interval decoder `:1693-1858` | 445 | ≤ 520 |"
+   → the `-shared.ts` row of the fifth-note script table.
+5. `:2599` (script table, catalog row) — "| `scripts/task-551-online-indexes-catalog.ts` | journal-driven artifact resolution `:350-501`; canonical member gate `:1026-1299`; touched-table measurement, data conflicts and classification `:1605-1692`; online members, journal cleanup and final catalog gate `:2073-2315` | 757 | ≤ 860 |"
+   → the `-catalog.ts` row of the fifth-note script table.
+6. `:2600` (script table, rollout row) — "| `scripts/task-551-online-indexes-rollout.ts` | receipt mirror and CAS `:502-602`; reserved Drizzle adapter and GUC set/reset `:603-750`; phase-4 guard, receipt insert, guarded apply and recovery `:751-1025`; admission, quiescence and disk gates `:1300-1604` | 829 | ≤ 930 |"
+   → the `-rollout.ts` row of the fifth-note script table.
+7. `:2601` (script table, entry row) — "| `scripts/task-551-online-indexes.ts` | CLI argv `:328-349`; health ceilings, preflight digest and recheck `:1859-2020`; reserved session and lease `:2021-2072`; receipt seeding and member state `:2316-2445`; release, autoscaling, write-cost and reverse authorization `:2446-2523`; the commands, `main` and the `import.meta.main` guard `:2524-2959`; import-stable re-exports | 880 | ≤ 980 |"
+   → the entry row of the fifth-note script table.
+8. `:2604-2606` — "If the writer's balance fits the three E3 script names
+   without it, the shared module is not created, and the item-12 receipt
+   says so." → The shared module is required: it holds `Task551Artifacts`
+   (Addendum J3).
+9. `:2638-2643` (split rule 6) — "The J3 leg stays in the original suite
+   path. `COMMANDED_TEST_PATHS` becomes the ten amended argv paths, in argv
+   order, and the leg's title and label say "ten". It asserts
+   `contract.includes(envelopeArgv)` for the ten-path argv (which only the
+   fence contains) and `bun test <ten paths>` (the restated validation
+   command below). This re-binding is part of the item-12 done-check." →
+   The J3 leg stays in the original suite path. Item 0 (fifth note) has
+   already re-bound it (ten paths, "ten" title, structural argv check,
+   `bun test <ten paths>`). Item 12 keeps it unchanged, and the rule-7
+   item-12 done-check (fifth note) proves that the three split paths are
+   still in `COMMANDED_TEST_PATHS`.
+10. `:2721` (Labels) — ""V7-7 step 8" and "E3 check 4" do not occur here
+    (**J7**)." → "V7-7 step 8" and "E3 check 4" occur here only inside
+    quotes, never as a live label (fourth-note fact J7 as amended in
+    item 2 above).
+11. `:2791-2792` (fourth-note replacement 7) — "It carries the J3
+    re-binding and must land no earlier than the TASK-551-10-L01 mirror."
+    → It keeps item 0's re-binding intact (the rule-7 item-12 done-check)
+    and must land no earlier than the TASK-551-10-L01 mirror rows above.

@@ -1618,3 +1618,137 @@ the fence `dependencies` still reads `TASK-551-05-L01:single`.
     `:1015-1632`).
 18. HEAD `:1183-1184` (first note, O-L03-2): "This note does not decide
     it." Replacement: decided by **H5**; see Items N2-1 and N2-2.
+
+## Dated Contract Corrections — 2026-09-27 (note 3: trigger-order wording, anchors, labels, mirror bound)
+
+This note writes out orchestrator disposition **J7** and, for the 10-L01
+mirror bundle, **J9** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum J). It does not re-decide them. It is append-only and makes no
+fence edit: the dispatch envelope (`:793-861`) is byte-identical to HEAD
+`a3d46bf1`. Every earlier sentence of this file stays binding except those
+quoted under "Superseded sentences" below.
+
+**Anchors in this note.** A bare cite of this file in this note is a line
+at HEAD `a3d46bf1`. Note 2's fence amendment is already applied there, and
+this note adds lines only after `:1620`, so no earlier line moves. Cites of
+other files name the file.
+
+### Items
+
+**Item N3-1 — trigger-order wording (J7).** The replacement sentence for
+note 2, N2 (`:1259`) is: "RESTRICT triggers on one table
+fire in trigger-name order (`RI_ConstraintTrigger_a_<oid>`), which is creation order for these same-migration constraints
+(**H5**)." The six FKs that
+reference `solution_kit_install_runs.id` from the authority tables are
+created by one migration, the transactional
+`core/db/migrations/0081_task551_search_indexes_constraints_outbox.sql`
+(`:157-159`, `:161`, `:162`, `:163`, `:165`). This is a wording correction,
+with no behaviour change:
+
+- The rest of N2 stays binding. So do the Item N2-2 code comment ("created
+  before … and would fire first"; "precedes") and the expected constraint
+  name `solution_kit_starter_apply_owners_source_run_id_solution_kit_install_runs_id_fk`.
+- A different name in the part-1 run is still a finding for the
+  orchestrator. The implementer never re-baselines it (Item N2-2).
+
+**Item N3-2 — the anchor rule starts at `N ≥ 803` (J7).** The replacement
+for the anchor rule's second and third sentences (`:1231-1232`) is: "A cite
+of this file at a HEAD `c237e05d` line `:N` with `N ≥ 803` is now at
+`:N+2`. Lines `:1-802` keep their numbers; line `:802` (the original path
+in `allowlist`) gained only its trailing comma."
+
+- Evidence: `git diff -U0 c237e05d a3d46bf1 -- <this file>` has the hunks
+  `@@ -802 +802,3 @@`, `@@ -816 +818 @@`, `@@ -820,2 +822,2 @@` and
+  `@@ -1216,0 +1219,402 @@`.
+- HEAD `c237e05d` `:803`, the closing `],` of `allowlist`, is now `:805`.
+  The earlier rule left it unmapped.
+- The rest of the anchor rule stays binding: first-note and note-2 cites of
+  this file are HEAD `c237e05d` lines unless marked "now", and test anchors
+  are suite lines at HEAD `c237e05d`.
+
+**Item N3-3 — the owners' primary key cite is a 0081 line (J7).** The
+replacement for Item N2-5's first bullet (`:1451-1452`) is: "Two owners on
+ONE `source_run_id` are refused by the owners' primary key
+`solution_kit_starter_apply_owners_source_run_id_pk`
+(`core/db/migrations/0081_task551_search_indexes_constraints_outbox.sql:99`,
+23505), and the active index never decides." Under the anchor rule, the
+bare `:99` pointed at a suite line. The fact and the second bullet are
+unchanged.
+
+**Item N3-4 — the V5-5 (a) share row's "Consumed at" cell (J7).** In note 2's
+handoff table (`:1495`), the "Consumed at" cell names both FINAL steps that
+read the row. **V8-8** step 7 checks that the owner item has landed. The
+row's "Clears when" condition is met by the FINAL lane-runner run, which is
+**V8-8** step 11
+(`TASK-551-01-L01-Production-Query-Inventory-And-Ownership-Matrix.md`,
+V8-8 FINAL table, steps 7 and 11). The replacement row (copy verbatim; only
+the last cell differs from `:1495`):
+
+| Handoff reason (copy verbatim) | Delivered by | Clears when | Consumed at |
+| --- | --- | --- | --- |
+| **V5-5 (a)** owner item, 05-L03 share (**O3**, **E2**) | 05-L03 first note Item 2, in the original path | the three worker branches (`:1979`, `:2016`, `:2062`) pass in the FINAL lane-runner run | V8-8 step 7 (landed check) and the FINAL lane-runner run (V8-8 step 11); not an initial precondition |
+
+The `result-shape:` row (`:1494`), the Shared literal, the clearing rule
+and the post-join row (`:1501`) are unchanged. Placing the post-join row
+in 01-L01 belongs to 01-L01 v10 (**J4** (a)), not to this file.
+
+**Item N3-5 — the 10-L01 owed mirror: full bundle and land-order bound
+(J7, J9).** The replacement for note 2's first "Consequences" bullet
+(`:1526-1530`, first and third sentences) is:
+
+- The TASK-551-10-L01 `migration-and-plan-tests` command
+  (`## Workflow Dispatch Envelope`, now
+  `TASK-551-10-L01-Small-Large-Load-Fault-Security-And-Redis-Smoke-Gates.md:1270`)
+  names only the original path. This holds for its `argv` (`:1272`), its
+  `positiveDiscovery.paths` (`:1274`, which has `"minimum": 1`) and its
+  validation command list (`## Exact Validation Commands`, the `bun test`
+  block `:1062-1071`, original path at `:1065`).
+- The owed mirror adds
+  `tests/integration/server/task551SolutionKitRollbackAuthoritySchema-static.test.ts`
+  to the `argv`, to `positiveDiscovery.paths` and to the validation command
+  list, and restates `minimum` under 10-L01's own rule.
+- It is one bundle with the 05-L01 deployment split paths (**J9**; 05-L01
+  fourth note, O6 widening). The 10-L01 writer writes it, never 05-L03. It
+  is pending and not yet written.
+- **Land-order bound.** The 05-L03 part of the mirror lands no later than
+  the 05-L03 split edit (Item N2-3). The 05-L01 part keeps its own bound,
+  which is no later than 05-L01 item 12.
+
+The bullet's second sentence ("After the split, that gate would run the
+live legs but not the static suite.") and fourth sentence ("It is the same
+shape as the O6 widening in **H6**.") stay binding.
+
+**Item N3-6 — the 05-L01 `forbiddenPaths` anchor (J7).** In note 2's
+second "Consequences" bullet (`:1531`), the 05-L01 cite `:1077` becomes
+`TASK-551-05-L01-Schema-Split-Indexes-And-Concurrency-Constraints.md:1080`.
+That line holds the original path; the 05-L01 fourth note's `+3` shift
+moved it. The rest of the bullet (optional hardening for the 05-L01 writer)
+is unchanged.
+
+### Superseded sentences (verbatim, line breaks shown as single spaces; superseded from this date)
+
+1. `:1259` (note 2, N2): "RESTRICT triggers on one table fire in creation
+   order (**H5**)." Replacement: Item N3-1.
+2. `:1231-1232` (note 2, anchor rule): "A cite of this file at a HEAD line
+   `:N` with `N ≥ 804` is now at `:N+2`." Replacement: Item N3-2.
+3. `:1232` (note 2, anchor rule): "Lines `:1-801` do not move."
+   Replacement: Item N3-2.
+4. `:1451-1452` (note 2, Item N2-5, first bullet): "Two owners on ONE
+   `source_run_id` are refused by the owners' primary key (`:99`, 23505),
+   and the active index never decides." Replacement: Item N3-3.
+5. `:1495` (note 2, handoff table, the V5-5 (a) share row, "Consumed at"
+   cell): "FINAL only (**V8-8** step 7); not an initial precondition".
+   Replacement: Item N3-4's row.
+6. `:1526-1527` (note 2, Consequences, 10-L01 bullet): "**TASK-551-10-L01
+   fence.** Its `argv` and `positiveDiscovery.paths`
+   (`TASK-551-10-L01…md:1272`, `:1274`) name only the original path."
+   Replacement: Item N3-5.
+7. `:1529` (note 2, Consequences, 10-L01 bullet): "This is an owed mirror
+   for the 10-L01 writer." Replacement: Item N3-5, which adds the bundle
+   and the land-order bound.
+8. `:1531-1532` (note 2, Consequences, 05-L01 bullet):
+   "**TASK-551-05-L01 `forbiddenPaths`** (`TASK-551-05-L01…md:1077`) names
+   only the original path." Replacement: the same sentence with
+   `TASK-551-05-L01-Schema-Split-Indexes-And-Concurrency-Constraints.md:1080`
+   (Item N3-6).
