@@ -3539,3 +3539,31 @@ Anchors are HEAD `0d28d915` lines (line breaks folded to spaces).
 12. `:3097` (fragment of the fifth-note superseded item 11 replacement) —
     "(the rule-7 item-12 done-check)" → (the rule-7 item-12 retention
     guard).
+
+## Dated Contract Corrections — 2026-09-27 (eighth note: nine-file wc, comment rule)
+
+**Authority and scope.** This append-only note implements orchestrator
+decision **Addendum P6** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+and re-decides nothing else. No source, test, migration or fence byte
+changes; `**Status:**` stays `⏳ To Do`. Anchors are HEAD `9d27d93d` lines.
+Everything in the first to seventh notes not quoted below stays binding.
+
+- **Nine-file line check (last R1 item-12 fast gate).** `wc -l` runs on all
+  nine item-12 files and each prints ≤ 1,000; a missing file or a count
+  above 1,000 is red. Suite (five):
+  `tests/integration/server/task551OnlineIndexDeployment.test.ts`,
+  `…-catalog.test.ts`, `…-rollout.test.ts`, `…-evidence.test.ts` and
+  `…-support.ts`. Script (four): `scripts/task-551-online-indexes.ts`,
+  `…-catalog.ts`, `…-rollout.ts` and `…-shared.ts`.
+- **Comment rule (split rule 7).** New or moved headers and comments in the
+  split files never write a family module name directly followed by a
+  double quote, single quote or backquote. A non-zero rule-7 count caused by
+  a comment is fixed by rewording the comment, never by widening the needle.
+
+**Superseded sentences (eighth note; verbatim, line breaks folded).**
+
+1. `:2648` (fourth-note split rule 7) — "and `wc -l` on all seven files." →
+   and `wc -l` on all nine item-12 files (the nine-file line check above).
+2. `:3391-3392` (seventh note, gate order step (6)) — "(6) `wc -l` on all
+   seven files." → (6) the nine-file line check above.

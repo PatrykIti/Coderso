@@ -2133,3 +2133,23 @@ never a digest input. The other three manifest blocks and the canonicalization a
    Replacement: the same sentence, where the `TASK-551-09-L04:` literal is the one Item 2 defines.
 3. `:783-784` (amended): "Canonicalize these blocks to argv arrays and compare their SHA-256 digests with the four ordered owner
    receipts." Replacement: the same sentence, with "these blocks" read through Item 2 for `TASK-551-09-L04:`.
+
+## Dated Contract Corrections — 2026-09-27 (note 3: green re-open receipt)
+
+This note implements Addendum **P4** from `_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+It is append-only, edits no fence, and uses HEAD `9d27d93d` line numbers. Everything in note 2 not quoted below stays binding.
+
+### Superseded sentence (verbatim, line breaks shown as single spaces; superseded from this date)
+
+1. `:2113-2114` (note 2, Item 1 (3)): "3. **The 09-L01 post-FINAL re-open "09-L01 settings-read assertions"** (**N5**): its
+   receipt is recorded after `TASK-551-09-L04:final` (`:1004`)." Replacement: Item 1 (3) below.
+
+### Item 1 (3) — Green re-open receipt (replaces the quoted item; P4, N5)
+
+3. **A GREEN receipt of the 09-L01 post-FINAL re-open "09-L01 settings-read assertions"** (**N5**), recorded after
+   `TASK-551-09-L04:final` (`:1004`). GREEN means all of: (a) `public-memory-cache-tests` and `public-redis-cache-tests` each
+   exit 0 with 0 failed, 0 skipped and 0 todo (the 09-L01 zero-skip rule,
+   `TASK-551-09-L01-Warm-Public-Read-Models-And-Zero-Query-Hits.md:1116`); (b) the settings-read assertions are present in the
+   suite (the receipt names the appended tests); (c) the `line-count` result and the repo-root ESLint exit on the suite both
+   pass (09-L01 `:1078-1080`). A recorded red, STOP or partial re-open receipt does not satisfy Item 1; it blocks dispatch
+   exactly like a missing record.

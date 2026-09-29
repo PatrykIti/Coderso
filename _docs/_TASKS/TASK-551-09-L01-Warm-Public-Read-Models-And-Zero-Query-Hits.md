@@ -1188,3 +1188,59 @@ Superseded quote count: 3.
 No task file is added, renamed or removed; no occurrence is added; the
 envelope fence is untouched this round. The family preflight stays
 `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+## Dated Contract Corrections — 2026-09-27 (note 2: settings statement identity, per-version name sets, consumer re-run form)
+
+Source: Addendum P item P3 (`.../audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`),
+applying N5. Append-only; line numbers are HEAD `9d27d93d`. It wins over every
+earlier section where they differ; everything not quoted below stays binding.
+
+- **Statement identity.** "The settings statement" is the single `settings`
+  SELECT keyed `security.settings` issued from `getSecuritySettings`
+  (`core/services/settings/securitySettings.ts:806-809`). The suite's
+  complete-request counter (:140, :614) keys every statement by its TASK-551-02-L02
+  fingerprint: the closed-registry `QueryFingerprintKey` (02-L02 :222-228,
+  :255-264; value = SHA-256 of the normalized statement shape, never SQL or
+  binds). The settings statement is `task551_current_1055`
+  (`core/db/queryFingerprintRegistry.ts:62`; inventory row
+  `tests/perf/fixtures/task551QueryInventory.ts:26732-26756`, source line 806).
+  `databaseTelemetry` observes only opted-in callers (02-L02 :494), so an absent
+  sink cell is never read as a count of 0.
+- **At `TASK-551-09-L01:single` and every consumer re-run.** The count of
+  `task551_current_1055` is asserted as 0 or 1 (process cache); every other
+  statement's count is asserted exactly. Total-count upper bounds and table-wide
+  (for example "any `settings` statement") exclusions are forbidden.
+- **At the item (b) re-open.** Exactly 1 of `task551_current_1055` for a safe
+  warm hit (N5), with every other statement exact as above.
+- **Name sets M and R.** They are fixed per landed version of the suite: at
+  `single`, at each consumer re-run and at the re-open, which re-baselines them.
+  Per-file pass/skip/todo counts come from a per-file run recorded in the
+  receipt (`bun --env-file=/dev/null test tests/integration/runtime/public-site-cache-query-budget.test.ts`
+  under the command's `environmentProfile`, no name filter), because the
+  multi-file commands (:863-882) report aggregates.
+- **Consumer re-run form (item (a)).** An adapted assertion takes the "Proof at
+  `TASK-551-09-L01:single`" form as corrected here; the settings-read assertions
+  stay absent until the re-open.
+
+Superseded sentences (verbatim, HEAD `9d27d93d`):
+
+- (a) :1032-1034: "It may only
+  replace an assertion that depended on the removed process-level settings
+  cache (`securitySettings.ts` :226-227, :804) with its item (b) form."
+  Replacement: "It may only replace such an assertion with the corrected
+  'Proof at `TASK-551-09-L01:single`' form."
+- (b-1) :1084-1086: "Until the re-open lands, the suite
+  asserts the non-settings part of each budget over the complete-request
+  instrumentation." Replacement: as above, per statement identity, exact.
+- (b-2) :1090-1092: "The count of the
+  `getSecuritySettings` DB statement is neither asserted as 1 nor as 0, and
+  no test calls `resetSecuritySettingsCache` to produce it." Replacement: the
+  count of `task551_current_1055` is asserted as 0 or 1; no test calls
+  `resetSecuritySettingsCache`.
+- (c) :1127-1128: "The
+  per-backend registered test-name sets (memory M, Redis R, R including every
+  two-process leg the suite hosts) are fixed." Replacement: fixed per landed
+  version, re-baselined by the re-open.
+
+Superseded quote count: 4. No fence edit; the family preflight stays
+`{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.

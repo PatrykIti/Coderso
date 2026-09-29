@@ -810,6 +810,7 @@ categories described in the file-ownership contract.
     "tests/integration/server/task551DatabaseLifecycle.test.ts",
     "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts",
     "tests/integration/server/task551DedicatedSessionGuards.test.ts",
+    "tests/integration/server/task551DedicatedMaintenanceSeam.test.ts",
     "tests/integration/server/task551RuntimeEntrypoints.test.ts",
     "tests/perf/database-pg-stat-interval.test.ts"
   ],
@@ -831,11 +832,11 @@ categories described in the file-ownership contract.
       "id": "database-lifecycle-test",
       "lane": "bun-test",
       "environmentProfile": "task551-db-test",
-      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551DedicatedSessionGuards.test.ts"],
+      "argv": ["bun", "--env-file=/dev/null", "test", "tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551DedicatedSessionGuards.test.ts", "tests/integration/server/task551DedicatedMaintenanceSeam.test.ts"],
       "positiveDiscovery": {
         "kind": "test-paths",
-        "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551DedicatedSessionGuards.test.ts"],
-        "minimum": 3
+        "paths": ["tests/integration/server/task551DatabaseLifecycle.test.ts", "tests/integration/server/task551DatabaseLifecycleRealDb.test.ts", "tests/integration/server/task551DedicatedSessionGuards.test.ts", "tests/integration/server/task551DedicatedMaintenanceSeam.test.ts"],
+        "minimum": 4
       }
     },
     {
@@ -4439,3 +4440,301 @@ Audit A = agent `a5bc5987b5abf2b17`; audit B = agent `a8c8b9ae5db9039f0`.
 | B-L8 R8.10 destroy-timing note stale under R9.2 | LOW | Fixed: `:3258-3262` extended (R10.14) — D-8 |
 | B-I1 06-L03 "A4" id ambiguous | INFO | Orchestrator: same as A-I2 (Addendum C2, D-9) |
 | B-I2 `:900-945` fake rows unspecified | INFO | Fixed: rows follow `OWNER_LOCK` (R10.10) — D-8 |
+
+## Dated Contract Corrections — 2026-09-27 (re-open R11: R10 audit closure, lane-worker schema binding, abort-after-grant; append-only)
+
+Append-only. R11 closes the R10 conformity audit — r10a, agent `a59fe5fe4ff107ac0` (journal
+`wf_14885132-56b`): 0 HIGH, 2 MEDIUM, 1 LOW, 2 INFO; r10b never returned (Addendum G1: not re-run;
+the audit pair over the R11/R15/A8-k output covers the adversarial lens) — and implements Addendum
+F9 in full plus H1 (the restated E1 (a)). Decisions live in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md` (F1-F9, H1,
+D-1-9, E1-E2, G1 as cited); R11 does not re-decide them. R11 amends R10 (R10.1-R10.15) and, through
+R10, R9, R8 and R7. Where R11 and R10 disagree, R11 wins; R10 otherwise stands. No earlier byte is
+edited.
+
+- The Guards split fence edit IS made in this round, pre-authorized by F9 (b): inside the `json`
+  fence only, the `allowlist` gains `tests/integration/server/task551DedicatedMaintenanceSeam.test.ts`
+  (19 entries, no duplicates), the `database-lifecycle-test` command's `argv` and
+  `positiveDiscovery.paths` gain it, and `minimum` is `3` → `4`. Every other key is byte-identical;
+  `python3 json.loads` validates; the family preflight literal
+  (TASK-551-11 `:1173`, last argument `git rev-parse HEAD`) prints exactly
+  `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}` at HEAD
+  `9d27d93d` — no new occurrence.
+- Line shift: the fence edit inserts one line at `:813` (working tree). Every anchor at or after
+  HEAD `:813` that an earlier section quotes reads +1 in the working tree (e.g. R10.14's
+  `:3417-3811` quotes read `:3418-3812`); anchors at or before HEAD `:812` are unchanged. The R11
+  quotes below use working-tree lines.
+- Anchors were grounded on 2026-09-27 against `/home/coder/project/Coderso-551` at HEAD
+  `9d27d93d`. The worktree was dirty in sibling task files (one writer per file), the untracked
+  11-reopen evidence and the orchestrator audit records. `scripts/bun-lane-worker-url.ts` (173
+  lines) was clean. `.env` facts are count-only (H1). Line numbers are anchors, not contract.
+
+### R11.1 — Abort after the grant (F9 (a), D-2; closes r10a-M1)
+
+- Finding (r10a-M1, verified): in the R10.3 pseudocode an abort that fires after
+  `semaphore.acquire` grants the slot but before `onAbort` is registered is observed by nobody —
+  the acquire's own abort listener is gone once the grant settles, and `addEventListener` on an
+  already-aborted signal never fires. The seam then constructs the client and awaits `ready`
+  unwatched, for up to `DEDICATED_OPEN_DEADLINE_MS`, and the later forced-only drain adds up to
+  `DEDICATED_DRAIN_DEADLINE_MS` — about 8,500 ms, breaking the binding "settles within
+  `DEDICATED_DRAIN_DEADLINE_MS` of the abort from any point" (R10.3; restated for 06-L02 in
+  R10.12). Simplest trigger: a free slot with the caller aborting in the same synchronous tick
+  (the F21a-1 pattern).
+- Rule: the seam re-checks the signal synchronously after the R9.3 re-check and before `open`:
+  `if signal.aborted: slot.release(); throw dedicated_database_session_lost` — zero factory calls,
+  zero statements, no registry entry. Position is pinned by F9; the rejected alternative (an
+  `if signal.aborted: onAbort()` after `addEventListener`) is unnecessary, because between the new
+  check and `addEventListener` the seam runs only synchronous code (`open`, `registry.add`), so
+  `signal.aborted` cannot flip there; any abort after the listener is registered fires `onAbort`.
+- `onAbort` requests a forced-only drain on every path (F9):
+  `onAbort = () => session.drainWithin("signal", clock.now() + DEDICATED_DRAIN_DEADLINE_MS,
+  { forcedOnly: true })`. The `{ forcedOnly }` argument stays notation (R10.3); the behaviour is
+  binding: an abort observed while `ready` is pending, between `ready` and `execute`, or during
+  `execute` never takes the graceful step. D-2 (c) therefore holds from `ready` through
+  settlement, not only at the `finally` (which keeps `forcedOnly: signal.aborted`).
+- Bound: the abort-after-grant rejection settles in the grant's microtask chain — no timer is
+  involved — so the R10.3 bound holds with margin and the r10a-M1 scenario cannot occur. The
+  R10.12 06-L02 abort-bound restatement stands unchanged.
+
+Seam pseudocode (replaces the R10.3 block at `:3983-4007`; unchanged lines keep their R10
+meaning):
+
+```text
+runDedicatedMaintenanceStatement({ signal, statementTimeoutMs, statement }):
+  fence()                                            // R8.4 close fence FIRST: session_lost, zero calls, zero slots
+  assertStatementBound(statementTimeoutMs)           // R10.5: safe integer in [1, 120_000], else bound_invalid
+  if signal.aborted: throw dedicated_database_session_lost        // zero factory calls, zero slots
+  target = resolveDedicatedSessionTarget()           // R7.2 matrix + R10.6 env map + R11.3 worker rule; unavailable, zero calls
+  effectiveMs = clamp(statementTimeoutMs, effectiveDedicatedStatementBoundMs(), 120_000)
+  slot = await semaphore.acquire(POOL_ACQUISITION_DEADLINE_MS, signal)
+                                                     // entry: closeState check (R10.4); abort: waiter removed,
+                                                     // session_lost (R10.3 a); deadline: database_pool_reserve_timeout
+  if closeState !== "open": slot.release(); throw dedicated_database_session_lost   // R9.3
+  if signal.aborted: slot.release(); throw dedicated_database_session_lost          // R11.1: abort-after-grant
+                                                     // zero factory calls, zero statements, no registry entry
+  { session, ready } = open(depsFor({ statementTimeoutMs: effectiveMs }), target)  // sync throw: slot.release(); unavailable
+  registry.add(session)                              // same tick as the re-check (R9.3, R9.4)
+  onAbort = () => session.drainWithin("signal", clock.now() + DEDICATED_DRAIN_DEADLINE_MS, { forcedOnly: true })
+                                                     // R11.1: forced only on EVERY path (D-2 c from `ready` on)
+  signal.addEventListener("abort", onAbort, { once: true })       // R10.3 b
+  try:
+    await ready                                      // R10.4 race: unavailable, or session_lost after a drain
+    return await session.execute(statement, signal)  // exactly ONE execute: autocommit, no begin, no set_config
+  finally:
+    signal.removeEventListener("abort", onAbort)
+    try: await session.cancelActiveAndRollback("lease_release", { forcedOnly: signal.aborted })
+                                                     // R7.4 drain; joins a running drain (R8.4); R10.3 c
+    catch: contained
+    registry.delete(session); slot.release()         // exactly once on every path
+```
+
+- F27 sub-leg `abort-after-grant` (Guards split file; fake clock): the leg calls the seam with a
+  free slot — its first await is the semaphore acquire, so the grant is resolved — and aborts the
+  signal in the same synchronous tick as the call (the F21a-1 pattern). The seam rejects
+  `dedicated_database_session_lost` in the grant's microtask chain, well before `t0 + 4_500`, with
+  zero factory calls; the caller statement is never issued; the slot is released;
+  `dedicatedSessionSemaphoreStateForTests()` — read before any re-arm — reports
+  `{ free: maintenancePoolMax, waiters: 0 }`; the registry is empty.
+- The R10.13 R8.8 list gains `abort-after-grant` (R11.5).
+
+### R11.2 — Guards split: pre-authorized fence edit, hosting and budgets (F9 (b); closes r10a-L1)
+
+- Finding (r10a-L1, verified): `task551DedicatedSessionGuards.test.ts` does not exist yet; it must
+  hold roughly 60 cases plus a fake client, a fake control client and a fake clock under the
+  800-line hard cap, so the R8.4/R10 STOP rule would very likely fire mid-implementation in
+  land-order step 1.
+- Hosting (F9): the new Bun-lane file
+  `tests/integration/server/task551DedicatedMaintenanceSeam.test.ts` hosts F27 with every sub-leg
+  (including the R10 `sqlstate`, `abort-slot-wait`, `abort-ready-pending` and the R11.1
+  `abort-after-grant`), F21a-1, F21a-2 (plus the never-settles variant) and F21a-3, and the F25
+  URL pins — now including the R11.3 binding pins. It follows the R7.8 conventions (airtight
+  `DATABASE_URL=postgresql://127.0.0.1:1/none`, factories through
+  `setDatabaseClientRuntimeForTests`, fake client/control/clock, no fixed sleeps).
+  `task551DedicatedSessionGuards.test.ts` keeps everything else (F1-F26 except the F25 URL pins,
+  F21b-F21e, the F21c variant, the F18 overlap leg, the F2/F4 variant).
+- Budgets: both files stay at or under 1,000 physical lines (the repository line gate). The Guards
+  file keeps its stricter 800-line hard cap; the seam file's cap is 1,000 lines and it has no
+  separate 800 cap. The R8.4 STOP rule stands for the Guards file; the seam file's equivalent rule
+  is its 1,000-line cap: if the landing would push either file past its cap, the implementer STOPS
+  and reports — the split is not self-service extended and no leg moves between the files without
+  an orchestrator note. Because the hosting decision and the fence `minimum: 4` are made up front,
+  the 800-line STOP never fires in step 1.
+- Fence edit (made this round, recorded in the preamble): allowlist + `database-lifecycle-test`
+  `argv` + `positiveDiscovery.paths` (+`minimum` 3 → 4); JSON validated; family preflight
+  41/11/29/33 at HEAD `9d27d93d`; one inserted line at `:813` (shift rule in the preamble).
+
+### R11.3 — `lane-worker-dedicated-schema-binding` (F9 (c); E1 as restated by H1 — NOT E1 (a) as written)
+
+- Grounding (verified): `buildWorkerDatabaseUrl` (`scripts/bun-lane-worker-url.ts:56-66`) appends
+  `options=<url-encoded "-csearch_path=bun_worker_<i>">` to the direct URL, with `&` when the URL
+  already carries a query; the worker env map (`:155-158`) sets `DATABASE_URL` to that worker URL,
+  keeps `DATABASE_DIRECT_URL` at the bare direct URL, and sets
+  `BUN_TEST_WORKER_INDEX: String(workerIndex)`. The root `.env` `DATABASE_DIRECT_URL` already
+  carries a query (H1: 1 line matches `?`, 1 matches `sslmode`; count-only greps, never values),
+  so every worker URL has ≥ 2 query keys and a `%3D`-encoded value. H1: E1 (a) as written
+  ("a query whose only key is `options`") would reject the binding target; R11 is written from H1.
+- Guard exception (one, named `lane-worker-dedicated-schema-binding`, in BOTH builders): the R10.7
+  guard rejects a target URL whose query contains a guarded key. The exception rescues exactly the
+  `options`-present case when ALL of the following hold; otherwise the R10.7 rejection stands
+  unchanged (`database_maintenance_session_unavailable`, zero clients, only the bounded code —
+  never the URL or the value). A query with no guarded key builds normally, as today.
+  1. `options` is the only GUARDED key present (the R10.7 guarded-key list is unchanged; unguarded
+     keys such as `sslmode` stay allowed as today). At most one `options` key; a repeated
+     `options` key rejects.
+  2. The URL-decoded `options` value (the same single URL-decode the query parser applies) matches
+     `^-csearch_path=bun_worker_(\d+)$`.
+  3. `BUN_TEST_WORKER_INDEX` is set, matches `^\d+$` (a missing or non-numeric value rejects), and
+     the captured `<n>` equals it as a decimal string (`String(<n>) === BUN_TEST_WORKER_INDEX`).
+     Zero-padded captures therefore reject (fail-closed): the session must bind to the schema this
+     worker provisioned (`bun_worker_${BUN_TEST_WORKER_INDEX}`), and a `01`-style capture names a
+     different schema even when numerically equal. Builder-produced URLs always carry canonical
+     decimal, so provisioned workers are unaffected.
+  Production never sets `BUN_TEST_WORKER_INDEX`, so the exception is inactive there and the guard
+  behaves exactly as R10.7 wrote it. The builders read the variable from `process.env` at check
+  time; Guards legs set and restore it per leg.
+- Target rule (E1 (b)): under R7.2's `off + primary` row (`:2017`), when `BUN_TEST_WORKER_INDEX`
+  is set the dedicated target takes the worker `DATABASE_URL` — the verified non-pooled URL
+  carrying the `options` query — instead of the bare `DATABASE_DIRECT_URL`, so dedicated and
+  control sessions bind to `bun_worker_<n>`. Fail-closed: there is NO fallback to
+  `DATABASE_DIRECT_URL` under this rule; if the worker `DATABASE_URL` does not verify as
+  non-pooled, the resolver rejects `database_maintenance_session_unavailable` (a wrong-schema bind
+  is worse than a refusal). The variable is read from the same env map the resolver consults
+  (R7.2 `:2033-2034` overlay rule), so R10.6's `databaseDirectUrl?` set-or-delete overlay keeps
+  working unchanged. The `transaction + primary`, `direct` and `session` rows are unchanged.
+- F-leg pins (E1 (c); F25-family URL pins in the seam file, plus one F27-style target pin):
+  - accepted: `<direct-url>?sslmode=require&options=-csearch_path%3Dbun_worker_3` with
+    `BUN_TEST_WORKER_INDEX=3` builds in both builders (two keys, encoded value; one concrete
+    `<n>` pinned).
+  - rejected: the same URL with any other `options` value (any value failing the regex, e.g.
+    `-csearch_path=public`); worker-shaped `options` without `BUN_TEST_WORKER_INDEX`;
+    worker-shaped `options` with a mismatched or zero-padded index; a URL that also carries
+    `statement_timeout` (the only-guarded-key condition fails even when the `options` pair is
+    valid).
+  - target pin (F27-style, seam file): the fake factory records its `target`. With the worker
+    variable set and both URLs present (override `databaseUrl` = a verified non-pooled worker-URL
+    placeholder, `databaseDirectUrl` = a bare direct placeholder), the factory receives the worker
+    URL; without the worker variable it receives the direct URL (today's rule, R10.6).
+- No re-baseline: every existing F23/F25/F27 leg and every RD leg runs without
+  `BUN_TEST_WORKER_INDEX`, so the exception and the target rule are inactive for them.
+
+### R11.4 — RD13 SQL: D-8 superseded by R10.8 (F9 (d); records r10a-I1)
+
+- Addendum D-8's RD13 sentence (dispositions file `:168`) — "two `select pg_backend_pid() as pid,
+  backend_start::text as started, current_setting('statement_timeout') as setting` seam calls
+  return `"60000"` with differing `(pid, started)` pairs" — is SUPERSEDED by R10.8 (`:4183-4184`):
+  the two seam calls read `(select setting from pg_settings where name = 'statement_timeout')` and
+  `backend_start::text` from `pg_stat_activity`. `current_setting('statement_timeout')` is never
+  reinstated in this leaf, its tests or its handoffs (R10.1 documents why: `current_setting`/`SHOW`
+  render units, `pg_settings.setting` returns base units).
+- Scope of the supersession: ONLY the `statement_timeout` read. The R8.7 guard's separate seam call
+  `select current_setting('client_min_messages') as level` (R10.8 `:4177`) stands — it reads a
+  different parameter and was re-added by R10.8 itself. The `withDedicatedDatabaseSession`
+  follow-up execute returning `setting === String(<the run's L01 statement bound>)` stands.
+
+### R11.5 — Land order (F9 (e); extends R10.13)
+
+- Step 0 reads "before any 02-L02 R7-R11 code dispatch" (was "R7-R10").
+- Step 1 becomes: "02-L02 R7 + R8 + R9 code, including the R9.1 seam, as amended by R10 and R11 —
+  the seam code lands with the R11.2 split file (the fence `minimum: 4` covers it)".
+- The R8.8 list gains `abort-after-grant` and the R11.3 binding pins on top of the R10 list.
+- Steps 2-6 are unchanged. 06-L03 A8-k cites step 0 as "R7-R10" (F7); that citation reads as this
+  extended step 0 through R10.13 — no 06-L03 edit is made here.
+
+### R11.6 — Handoffs and cross-file notes (this leaf edits none of these files)
+
+- **TASK-551-06-L02 R15** (F2, F8): the R14 abort bound ("settles within
+  `DEDICATED_DRAIN_DEADLINE_MS` of the abort from any point"; 06-L02 `:4916-4918`) is strengthened,
+  not changed, by R11.1 — the same-tick case now rejects immediately. F2's abort path (adapter maps
+  the rejection; the pure loop logs `{ family, code }` once and throws
+  `retention_pre_vacuum_aborted`) is unaffected: the R11.1 rejection maps to `lost` like every
+  other abort rejection.
+- **TASK-551-06-L03 A8-k** (F1, F7): the D-1 parity finding (r10a-M2) is disposed by F1 — the flat
+  shape and the names `PreRetentionSeamFailure` / `toPreRetentionSeamFailure` win; A8-k supersedes
+  J5's `PreRetentionVacuumRejection` / `mapSeamRejection`; "02-L02 R10.2 needs no edit" stands.
+  A8-k's J3 citation of step 0 reads "R7-R11" through R11.5.
+- **TASK-551-01-L01 v9** (H1): drops v8's "already satisfy (a)" claim (`:4866-4868`) and mirrors
+  the R11.3 wording; the FINAL STOP step for `lane-worker-dedicated-schema-binding` clears only
+  when this leaf's step-1 code lands (R11.5).
+- r10b never returned (G1): recorded; the R10 scope's adversarial lens is covered by the audit
+  pair over the R11/R15/A8-k output, not by a re-run.
+
+### R11.7 — Finding → disposition (R10 audit)
+
+Audit r10a = agent `a59fe5fe4ff107ac0` (journal `wf_14885132-56b`): 0 HIGH, 2 MEDIUM, 1 LOW,
+2 INFO. r10b never returned (Addendum G1).
+
+| Finding | Sev | Disposition |
+|---|---|---|
+| r10a-M1 abort after the grant is observed by nobody; the bound could reach ~8,500 ms | MEDIUM | Fixed: post-re-check `signal.aborted` check, forced-only `onAbort` on every path, F27 `abort-after-grant`, R8.8 list + land order (R11.1, R11.5) — F9 (a) |
+| r10a-M2 D-1 shape/mapper names and the abort path disagree across 06-L02/06-L03 | MEDIUM | Orchestrator (F1): flat shape + `PreRetentionSeamFailure`/`toPreRetentionSeamFailure` win; 06-L03 A8-k supersedes J5; "02-L02 R10.2 needs no edit" stands (R11.6) |
+| r10a-L1 Guards file ~60 cases under the 800 cap; STOP likely mid-step-1 | LOW | Fixed: split pre-authorized, fence edited this round, hosting and budgets stated, `minimum: 4` (R11.2) — F9 (b) |
+| r10a-I1 R10.8's RD13 SQL departs from D-8 (correctly) | INFO | Recorded: D-8's `current_setting('statement_timeout')` superseded by R10.8, never reinstated; the `client_min_messages` guard call stands (R11.4) — F9 (d) |
+| r10a-I2 wrong seed path in the mandate; optional J3 re-point | INFO | Recorded: the contract path stands (`:813`, `:2400`); the J3 re-point is absorbed by F7's A8-k, which cites R10.13 directly (R11.6) |
+
+### R11.8 — Superseded sentences (quoted; line = working-tree anchor after the R11 fence edit)
+
+Quotes keep the source line breaks; list-markup dashes and indentation are collapsed. Everything
+not quoted below stays binding.
+
+R7:
+
+- `:2017` "| `off + primary` | `resolveSessionDatabaseTarget("dedicated_database_session")`: `DATABASE_DIRECT_URL` when set, else a verified non-pooled `DATABASE_URL` |". Extended: with
+  `BUN_TEST_WORKER_INDEX` set, the worker `DATABASE_URL` takes precedence and there is no fallback
+  to `DATABASE_DIRECT_URL` (R11.3, E1 (b)).
+- `:2400-2401` "The DB-free suite is `tests/integration/server/task551DedicatedSessionGuards.test.ts`. Its path is
+  unchanged, it stays in the Bun lane, and its hard cap is 800 lines." Extended: the
+  seam file joins it as a second Bun-lane suite with a 1,000-line cap (R11.2).
+
+R8:
+
+- `:2989-2990` "If these legs would push the Guards file past its 800-line cap, the implementer STOPS and
+  reports: a new test path needs a fence edit plus the family preflight." Extended: the
+  seam-hosted legs live in the split file under its own 1,000-line cap, so this STOP cannot fire
+  for them in step 1 (R11.2).
+
+R9:
+
+- `:3394-3396` "The Workflow Dispatch Envelope `json` fence is NOT edited. The one new export lives in
+  `core/db/client.ts`; every new leg lives in `task551DedicatedSessionGuards.test.ts` or
+  `task551DatabaseLifecycleRealDb.test.ts`, which the fence already lists." Now: the fence IS
+  edited by R11.2 (pre-authorized) and the split file is a third leg host.
+
+R10:
+
+- `:3906-3908` "The Workflow Dispatch Envelope `json` fence is NOT edited. Every export added here lives in
+  `core/db/client.ts`. Every new leg lives in `task551DedicatedSessionGuards.test.ts` or
+  `task551DatabaseLifecycleRealDb.test.ts`, and the fence already lists both files." Now: the
+  fence IS edited by R11.2 (pre-authorized) and the split file is a third leg host.
+- `:3909-3911` "The R8.4 STOP rule covers every Guards leg and sub-leg added here. If they would push the Guards
+  file past its 800-line cap, the implementer STOPS and reports. A new test path needs a fence
+  edit plus the family preflight." Now R11.2: the seam-hosted legs carry the split
+  file's 1,000-line cap; the 800-line STOP never fires in step 1.
+- `:3970-3973` "(c) After `ready`: an abort during `execute` keeps R7.4 (`execute` rejects `session_lost` at
+  once and poisons the session). When `signal.aborted` holds at the `finally`, the drain skips the
+  graceful step and runs forced only. The internal flag or parameter that carries this is the
+  implementer's choice; the behaviour is binding." Extended: the forced-only
+  drain starts at `onAbort`, so D-2 (c) holds between `ready` and `execute` too (R11.1).
+- `:3981` "Seam pseudocode (replaces R9.1 `:3473-3492`; unchanged lines keep their R9 meaning):", with
+  `:3984` "runDedicatedMaintenanceStatement({ signal, statementTimeoutMs, statement }):",
+  `:3993` "if closeState !== "open": slot.release(); throw dedicated_database_session_lost   // R9.3",
+  `:3996` "onAbort = () => session.drainWithin("signal", clock.now() + DEDICATED_DRAIN_DEADLINE_MS)" and
+  the closing fence `:4007` — the R10.3 seam pseudocode block. Now the R11.1 block (the block is
+  replaced in full; unchanged lines keep their R10 meaning).
+- `:4150-4154` "`createDedicatedClientOptions` and `createControlClientOptions` throw
+  `database_maintenance_session_unavailable` (zero clients) when the target URL's query contains
+  any of `statement_timeout`, `lock_timeout`, `idle_in_transaction_session_timeout`,
+  `application_name`, `client_connection_check_interval` or `options`. The check runs after the
+  existing empty-URL check and before any option is built." Extended: the one named exception
+  `lane-worker-dedicated-schema-binding` (R11.3, H1).
+- `:4258-4259` "0. the 02-L01 dated note (docs, R9.10 / D7, as corrected by R10.11), before any 02-L02 R7-R10 code
+  dispatch;" Now: "R7-R11" (R11.5).
+- `:4260-4261` "1. 02-L02 R7 + R8 + R9 code, including the R9.1 seam, as amended by R10 (R10 amends that same
+  code and lands with it);" Now R11.5 (amended by R10 and R11, landing with the split
+  file).
+- `:4272-4275` "The R8.8 table gains the F27 sub-legs `sqlstate`, `abort-slot-wait` and `abort-ready-pending`,
+  the F27 builder `0`/`120_001` pins, the `effectiveDedicatedStatementBoundMs` pin, the two pooled
+  legs and the URL-query pin, the F25 URL-query pins, the re-pinned F21a-1 and F21a-2 (plus the
+  never-settles variant), and F21a-3."
+  Extended: `abort-after-grant` and the R11.3 binding pins (R11.1, R11.3, R11.5).
+
+Everything not quoted above stays binding.

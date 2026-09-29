@@ -5405,3 +5405,467 @@ Audit A (`af02748558c10e64b`: 0 HIGH, 3 MEDIUM, 8 LOW, 2 INFO) and audit B
 | B-L7 receipt `skip` narrow; no budget field | LOW | Closed by R14-7 (D-7) |
 | B-L8 R13-4 (e) anchors stale (as A-L8) | LOW | Closed by R14-6 (f) (D-7) |
 | B-L9 scheduler-ordering leg has no injection seam | LOW | Closed by R14-6 (g): 06-L03 A8 states the R9.9 fake-factory mechanism (D-7) |
+
+### R14 amendments (R15, 2026-09-27)
+
+This subsection is append-only. Nothing above it is edited. It amends R14
+after the R14 contract audit r14a (agent `a5173b3988ba3578f`: reported
+0 HIGH, 3 MEDIUM, 5 LOW — the findings list 4 LOW and 1 INFO). The second R14
+lens (r14b) never returned and was not re-run (dispositions G1: Addendum F
+was built on the 4/6 returned auditors — both 06-L03 A8 lenses, the R14 and
+R10 conformity lenses — and this section's own audit pair covers the
+adversarial lenses r14b would have run). Where an item below quotes an
+earlier sentence, the item wins and the quoted sentence is read as replaced;
+R15-13 lists every quote. Everything not quoted stays binding. Anchors into
+this file are current line numbers; R15 starts after `:5407`, so no earlier
+line moves. Anchors into TASK-551-02-L02 were recorded at the R14 grounding
+and re-verified at this one: the R15 grounding is 2026-09-27 against HEAD
+`9d27d93d` plus the concurrent working tree, in which the 02-L02 F9
+Guards-split fence edit inserts one line at 02-L02 `:813`, so every 02-L02
+anchor at or after `:814` sits one line lower than its R14-grounding value.
+Both values are given where the difference matters.
+
+The orchestrator decisions for this round are Addendum F of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+— F8 is this file's scope and F1-F5 are its wording — read with H1 (the
+restated E1 (a) exception), D-4, E2 (O5) and G1 as cited. They are cited by
+those labels and are not re-decided here.
+
+R15 does not touch the Workflow Dispatch Envelope fence (`:321-438`),
+`**Status:**` or `**Changelog:**`. It edits no json or sh fence, and none is
+needed: the R15-8 test file is already in the `allowlist` (entry 8) and in
+the `revision-concurrency-and-budget-tests` argv and `positiveDiscovery.paths`
+(position 1). It changes no expected test count.
+
+#### R15-1 (MEDIUM) — One identifier pair, one shape (F1, r14a M1)
+
+The binding pair is the flat shape and the R14-1 names; nothing else joins
+the contract:
+
+```text
+PreRetentionSeamFailure = Readonly<{
+  kind: "unavailable" | "lost" | "bound_invalid" | "reserve_timeout" | "sqlstate" | "other";
+  sqlstate?: "57014" | "55P03";          // present only when kind === "sqlstate"
+}>;
+toPreRetentionSeamFailure(error: unknown): PreRetentionSeamFailure
+```
+
+- Both names are exported by the lazy-deps module
+  `core/services/maintenance/preRetentionVacuum.ts` (06-L03-owned; this leaf
+  cites the contract and owns no such file). The pure module keeps the type's
+  definition ownership and the classification over the closed input (R14-1
+  stands: it never sees a raw seam rejection); the export surface is F1's.
+- The R14-1 **Mapping** block (`:4852-4861`) is the behaviour of
+  `toPreRetentionSeamFailure`, unchanged; its owner-code comments stand, and
+  `maintenanceStatementBoundInvalid` arrives with 02-L02 R9.1 as its comment
+  says.
+- R14-3's binding-list mention "`toPreRetentionSeamFailure` (R14-1)"
+  (`:4978`) is correct as written; no supersession.
+- Cross-file: 06-L03 A8-k supersedes A8-j J5's
+  `PreRetentionVacuumRejection` / `mapSeamRejection` (06-L03 `:2204-2213`).
+  02-L02 R10.2 needs no edit (F1).
+
+#### R15-2 (MEDIUM) — Abort path (F2, r14a M2)
+
+On abort the contract is exactly: the lazy-deps adapter maps the seam
+rejection through `toPreRetentionSeamFailure`; the pure loop logs the mapped
+closed code once, as `{ family, code }`; the loop then throws
+`new Error("retention_pre_vacuum_aborted")`; the raw error never leaves the
+adapter; the scheduler maps that single rejection value to its `aborted`
+outcome (`retentionScheduler.ts:531`, the R14-2 bullet that stands). Nothing
+else is thrown on the abort path.
+
+- The R14-1 classification table's first row ("any kind, with
+  `signal.aborted` | the abort propagates (checked FIRST)") stands; under
+  this item its propagation value is the throw above, after the single
+  `{ family, code }` log.
+- The R14-8 replacement for `:4246-4248` stays readable under this contract:
+  its "logs that rejection code" is the single `{ family, code }` log and its
+  "re-throws the run's abort" is the `retention_pre_vacuum_aborted` throw.
+- Cross-file: J9 step 5 narrows to that single rejection value (never "either
+  the raw seam rejection or `retention_pre_vacuum_aborted`"); A8-b
+  `:1718-1719` and J5 `:2238` are superseded in 06-L03 by A8-k. R14-6 (b)
+  stands.
+
+#### R15-3 (MEDIUM) — Failure-code strings (F3, r14a M3)
+
+The pure module `preRetentionVacuumPlan.ts` owns its OWN pre-step codes. The
+closed set adds exactly:
+
+```text
+retention_pre_vacuum_session_lost     // kind "lost"
+retention_pre_vacuum_bound_invalid    // kind "bound_invalid"
+retention_pre_vacuum_reserve_timeout  // kind "reserve_timeout"
+retention_pre_vacuum_error            // kind "other"
+retention_pre_vacuum_aborted          // the abort throw (R15-2)
+```
+
+- The pure loop maps input kinds to pre-step codes; the lazy-deps layer maps
+  owner codes to the flat input (F1). The four failure codes carry the
+  R14-1 table's `lost`, `bound_invalid`, `reserve_timeout` and `other`
+  outcomes; the abort literal is the R15-2 thrown value, logged once as
+  `{ family, code }` before the throw.
+- No owner literal in the pure module: no `DATABASE_CLIENT_ERROR_CODES`
+  string (or any other `core/db/client.ts` literal) appears in it, and no
+  test pins equality between a pure-module literal and an owner constant.
+  The Bun test pins the owner-code → kind mapping instead (through
+  `toPreRetentionSeamFailure`; the test file imports the real owner codes —
+  the R14-1 **Tests** sentence stands) and adds the kind → pre-step-code
+  mapping. R14-1's clause "its only literals are the two PostgreSQL SQLSTATE
+  values of the input type and its own closed log codes" (`:4868-4871`)
+  stands, with "named by 06-L03 A8" there read as "named by this item
+  (Addendum F3)".
+- The `unavailable` and `sqlstate` kinds keep the closed outcome classes
+  already pinned (skip: maintenance session unavailable for the rest of the
+  run; `57014` statement timeout; `55P03` `skipped_concurrent`). F3 renames
+  nothing that exists.
+- Cross-file: J5 `:2248-2251` and `:2261` are superseded in 06-L03 by A8-k
+  (no owner `failed` codes in the pure module, no equality pin).
+
+#### R15-4 (LOW) — Preconditions, threshold, reserve pin, timeouts (F5, r14a L7)
+
+1. **Zero enabled families.** The enabled-family set is resolved first (the
+   same normalization the plan uses, R12-3). When it is empty the pre-step
+   logs nothing and makes zero seam calls; the plan still runs. This precedes
+   every precondition. `interval_too_short` "logged once per run"
+   (`:5040-5041`) stands, qualified by this rule: it logs only when at least
+   one family is enabled.
+2. **General threshold.** The run-level budget precondition is
+   `maxRunMs >= 2 × (floorMs + CALL_OVERHEAD_MS)`. The R14-4 precondition
+   line, claim bullet, residual row and receipt fragment that carry the old
+   `2 × floorMs` form are superseded (R15-13). Below the threshold the
+   per-call check also records `budget_exhausted` for every family with zero
+   seam calls.
+3. **Vitest boundary pair** (the R14-4 fake-clock test passes
+   `CALL_OVERHEAD_MS = 12_500`):
+   `maxRunMs = 2 × (floorMs + 12_500) − 1` → every enabled family
+   `budget_exhausted`, zero calls; `maxRunMs = 2 × (floorMs + 12_500)` → the
+   pre-step proceeds. 55,000 at the default 15,000 ms floor
+   (`core/db/databaseConfig.ts:296`).
+4. **Input object.** The pre-step input is R14-4's
+   `{ now: Date, signal, intervalMs, maxRunMs }`, binding as written;
+   `runStartedAt = now.getTime()` is computed inside the loop (the R14-4
+   pseudocode stands). J6's `runStartedAtMs` input form is superseded in
+   06-L03 by A8-k (F5). The J8/J11 "R14 as landed differs → STOP" rule
+   reduces to arithmetic-only: after this item the STOP covers the threshold
+   arithmetic above, not the input object or the log placement.
+5. **Reserve pin.** `CALL_OVERHEAD_MS === 12_500` is pinned in
+   `tests/integration/runtime/preRetentionVacuum.test.ts` leg 2 through a
+   lazy-deps export of the constant from
+   `core/services/maintenance/preRetentionVacuum.ts` (the R14-4 sentence
+   "The Bun test pins `CALL_OVERHEAD_MS === 12_500`" reads with that export
+   path). The Vitest test keeps passing `12_500` to the pure loop.
+6. **Per-test timeout.** The `preRetentionVacuum.test.ts` DB legs 3 and 4
+   (the VACUUM leg and the abort leg) take the per-test timeout `60_000`
+   (the R1-b4 convention, 06-L03 `:1332`).
+7. **Observer cap.** The R14-6 (e) abort-leg observer is bounded by a
+   10,000 ms cap counted from the pre-step call (reaching the cap fails the
+   leg), on top of the 50 ms poll interval. 06-L03 J9 step 3 restates the
+   same cap; its audit-time 5,000 ms form is superseded there (F5).
+8. **Constants' module (F5, verified).** The three `DEDICATED_*` constants
+   (`DEDICATED_OPEN_DEADLINE_MS` 4,000, `DEDICATED_STATEMENT_GRACE_MS`
+   2,000, `DEDICATED_DRAIN_DEADLINE_MS` 4,500) are exported by
+   `core/db/dedicatedDatabaseSession.ts` per the 02-L02 R7 constant table
+   (`:2339-2350` at the R14 grounding, `:2340-2351` at this one). Verified
+   at this tree by grep: the name `DEDICATED_OPEN_DEADLINE_MS` occurs zero
+   times under `core/`, `scripts/`, `tests/`, `packages/` and `store/` — the
+   module is created by the 02-L02 R7 code (land-order step 1, 02-L02
+   R10.13), and the 02-L02 table is the authoritative naming until then.
+   `POOL_ACQUISITION_DEADLINE_MS = 2_000` exists at
+   `core/db/queryTelemetry.ts:347`.
+
+#### R15-5 (LOW) — R10 reconciliation (F8, r14a L4)
+
+02-L02 R10 has landed. R14's D-number citations of R10 read as citations of
+that landed text.
+
+- The R10 section anchors (audit-time, with this grounding's value in
+  parentheses; the +1 shift is the preamble's): R10.2 `:3936-3955`
+  (`:3937-3956`; heading `### R10.2 — 55P03 is not a loss; SQLSTATE rethrow
+  (D-1)`, the closed-mapping text `:3945-3950` / `:3946-3951`), R10.3
+  `:3957-4021` (`:3958-4022`; the (a)/(b)/(c) phases `:3962-3976` /
+  `:3963-3977`, pseudocode `:3983-4006` / `:3984-4007`), R10.5 `:4099-4127`
+  (`:4100-4128`; the bound rule `:4101-4127` / `:4102-4128`), R10.12
+  `:4223-4253` (`:4224-4254`), R10.13 `:4255-4274` (`:4256-4275`; the
+  land-order list, step 3 "06-L02 R8-R14;" at `:4262` / `:4263`). The R14-3
+  **R9.1 anchors** (`:3406-3564`) stand and shift the same +1.
+- `:4453` (R13-3 prerequisite 1) reads `before "06-L02 R8-R14"` — the
+  superseded fragment and its replacement are in R15-13.
+- `:4816-4818` and `:4997` are superseded (R15-13): R14 no longer says the
+  02-L02 file "has no R10 text" and no longer cites R10 "by D-number until
+  they land".
+
+#### R15-6 (LOW) — Ordering legs moved; airtight form restated (F8, r14a L6)
+
+The scheduler-ordering legs live in
+`tests/integration/runtime/retentionScheduler.test.ts` (06-L03 A8-j J7: the
+R9.9 fake `dedicatedClientFactory` with command tags under a placeholder
+URL). `preRetentionVacuum.test.ts` keeps no ordering leg. Its airtight form
+is the identifier legs (R13-2, the five-family assertion through the real
+accessor) plus the mapping legs (R14-1 **Tests** as amended by R15-3: the
+owner-code → kind pins and the kind → pre-step-code pins), with the DB legs
+skipping by name. The R13-2 bullets `:4413-4414` and `:4418-4420` are
+superseded (R15-13; the airtight command literal on `:4420` is unchanged),
+and R14-6 (g)'s closing sentence is superseded with them. The J7 mechanism
+citation in R14-6 (g) stands.
+
+#### R15-7 (INFO) — References aligned (F8, F5, r14a I8)
+
+1. **R13-3 prerequisite 1 clamp.** The `:4439-4441` clamp text ("an integer
+   clamped to `[config.statementTimeoutMs, 120_000]`") is superseded by the
+   D-4 rule as restated by R14-3 **Bound** (safe integer; `< 1` or
+   `> 120_000` rejects `database_maintenance_statement_bound_invalid`;
+   `[1, floorMs)` raised to the floor). Quote and replacement in R15-13.
+2. **R14-4 item ranges vs R14-8 quote ranges.** Both are grounded; they
+   differ in granularity, and neither is edited. Alignment: R14-4
+   "`:4334-4344`" is the whole fenced pseudocode block (fence `:4333`,
+   content `:4334-4343`, fence `:4344`), of which R14-8 quotes the
+   load-bearing lines as `:4338-4343`; R14-4 "`:4346-4350`" and
+   "`:4351-4354`" are the two full bullets, of which R14-8 quotes the
+   superseded sentences as `:4347-4350` and `:4351-4353`.
+3. **02-L02 table anchor.** The R14-4 fragment "table at 02-L02
+   `:2338-2349`" (`:5031-5032`) is superseded: the R7 constants table is
+   `:2339-2350` at the R14 grounding (`:2340-2351` at this one), with the
+   constants' module named in R15-4 item 8.
+4. **`:4585`** stays described rather than quoted (a single unambiguous
+   command whose replacement is given verbatim in R14-6 (a)); no change.
+
+#### R15-8 (E2 O5, F8) — Worker-schema branch in the revision-concurrency suite
+
+`tests/integration/server/task551RevisionConcurrency.test.ts` gets one
+test-only edit: the `testIfDb` leg at `:634` ("the unique (page, version)
+constraint is the final guard behind a lock bypass", title at `:635`) gains a
+`current_schema()` worker-schema branch, selected by schema name, never by
+index presence (the 05-L01 R2 rule). Verified grounding: the leg body runs
+`testIfDb(` `:634` through `:693` under `DB_LEG_CEILING_MS = 60_000` (`:130`);
+`page_revisions` has `id uuid PRIMARY KEY` and the `pages`/`users` foreign
+keys (`core/db/migrations/0001_productive_jazinda.sql:32-33`, the CREATE
+TABLE); the only `(page_id, version)` unique guard is the online companion
+member `page_revisions_page_version_idx`
+(`core/db/migrations/0081_task551_online_indexes.sql:11`), which is
+deliberately outside the migration journal, so a worker schema re-migrated
+from the journal never has it (05-L01 R2).
+
+Exact leg shape:
+
+1. At leg start, one schema probe through the lazy `db`:
+   `select current_schema() as schema`; `worker =
+   /^bun_worker_[0-9]+$/.test(schema)`.
+2. **Non-worker branch:** the existing body stands byte-for-byte — the
+   snapshot-anchored repeatable-read allocation, the lock-bypassing direct
+   insert, the database 23505 surfacing as `RevisionConflictError` with the
+   closed conflict code, and exactly one marker row.
+3. **Worker branch** (a `bun_worker_*` session schema; lane worker URLs bind
+   `search_path` through `options=-csearch_path=bun_worker_<n>` — E1 (a) as
+   restated by H1):
+   a. BEFORE any insert, one schema-qualified catalog read (filtered by
+      `schemaname = current_schema()`) asserts the invariant: zero rows for
+      `page_revisions_page_version_idx` in the session schema. The read
+      fails the leg if the member is present (the branch is selected by
+      schema name, so a provisioned schema with a present member fails
+      loudly and re-opens 05-L01 R2).
+   b. The same lock-bypass scenario runs. With the member absent there is no
+      unique guard on `(page_id, version)`: the allocation completes without
+      `RevisionConflictError` (asserted), the bypass row and the allocation
+      row both commit, and the outcome is decided by the remaining owned
+      constraints — the `id` primary key (the two rows carry distinct keys;
+      the duplicate `(page_id, version)` pair is therefore possible in
+      worker schemas) and the `pages`/`users` foreign keys (both rows
+      reference the seeded page and user; nothing orphaned).
+   c. The branch records the limitation through these assertions, never a
+      skip: `(page_id, version)` uniqueness holds only where the online
+      companion ran (the rollout/public schema); the 23505 proof remains the
+      non-worker branch's.
+4. The leg keeps `DB_LEG_CEILING_MS` (the R1-b4 per-test bound).
+
+Bun run forms. Airtight (0 fail; every real-DB leg, including this one,
+skips by name because the `task551-db-test` owner map is absent):
+
+```text
+env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test tests/integration/server/task551RevisionConcurrency.test.ts
+```
+
+Owner-map form: the gate `revision-concurrency-and-budget-tests` argv
+position 1 — the leg executes and the branch follows `current_schema()`. Per
+01-L01 v10 (J4 (f)), no executing leg is required before closure: the O5
+branch is checked landed at the 01-L01 V8-8 step 7 and proven by the landed
+edit plus its part-1 evidence (H3: class-A suite; its DB legs skip in the
+lane). R15 adds this as the second code-scope edit of the round, beside the
+R14-6 (a) `afterAll` option in
+`tests/perf/database-revision-candidate-bounds.test.ts`; that file's edit is
+unchanged.
+
+#### R15-9 (LOW) — R14-5 holder list reworded (F4, r14a L5)
+
+`55P03` (lock timeout, `skipped_concurrent`) comes from another manual
+VACUUM or ANALYZE (normally a concurrent replica's pre-step), a
+`CREATE INDEX CONCURRENTLY`, DDL, an explicit `LOCK` holder, or a
+wraparound-prevention autovacuum (never cancelled by PostgreSQL; a wait on
+it is bounded by `lock_timeout` like any other holder's). The pre-step runs
+on every tick whose interval is at least 600,000 ms; none runs at the 60 s
+minimum interval. The "comes only from" form and the separate parenthetical
+are superseded (R15-13). R14-5's cancellation sentence, cost paragraph and
+the D-5 minimum spacing stand unchanged.
+
+#### R15-10 — Cross-file notes (each belongs to its owner; none is edited here)
+
+- **06-L03 A8-k** supersedes, in 06-L03: J5's
+  `PreRetentionVacuumRejection` / `mapSeamRejection` (`:2204-2213`, F1);
+  A8-b `:1718-1719` and J5 `:2238` (F2); J5 `:2248-2251` and `:2261` (F3);
+  A8-c pseudocode `:1815-1841` → the result-union loop body with
+  `classify(r.rejection, signal)` and a try/catch that lets only
+  `retention_pre_vacuum_aborted` through (F4); A8-b Bound `:1713-1714` →
+  the D-4 rule (F4); A8-d `:1863-1870` → the R15-9 holder list and the
+  600,000 ms spacing, before the 10-L02 runbook note is written (F4);
+  A8-h `:2045` records `coldStatePolicy` in the R14-7 shape (F7); J9 step 3
+  → the 10,000 ms observer cap (F5); J9 step 5 → the single rejection value
+  (F2); J8 step 2 → the general threshold (F5); J6's `runStartedAtMs` input
+  → the R14-4 input object (F5).
+- **02-L02:** R10.2 needs no edit (F1). The R11 F9 Guards-split fence edit
+  is the +1 anchor shift recorded in the preamble.
+- **01-L01:** the O5 wording is J4 (f)'s — "checked landed at V8-8 step 7;
+  the O5 worker-schema branch is not executed before closure"; the parent
+  fix 4 mirrors it (H3).
+
+#### R15-11 — Scope, gates and receipt
+
+- R15 edits no source file. Its only code-scope consequence is the R15-8
+  test-only edit inside the already-allowlisted
+  `tests/integration/server/task551RevisionConcurrency.test.ts`. No fence
+  edit is made or needed; the family inventory stays 41/11/29/33 (verified
+  at the R15 grounding with the TASK-551-11 family preflight literal at
+  `:1173`, last argument `git rev-parse HEAD`).
+- Gates are R13-5 **Gates** as amended by R14-6 (a), plus, when the R15-8
+  edit lands: `./node_modules/.bin/eslint --max-warnings=0
+  tests/integration/server/task551RevisionConcurrency.test.ts`; the R15-8
+  airtight form, 0 fail with the real-DB legs skipping by name; `wc -l` on
+  the touched test file (at or under 1,000) and `git diff --check`.
+- The R14-7 receipt stands with the one fragment superseded in R15-13 (the
+  budget precondition inside the `budget` field).
+
+#### R15-12 — Finding-to-disposition table (R14 audit r14a)
+
+Audit r14a (`a5173b3988ba3578f`); r14b never returned (G1, not re-run):
+
+| finding | severity | disposition |
+|---|---|---|
+| r14a-M1 R14-1 and A8-j J5 give different names/shapes to the closed input and helper | MEDIUM | R15-1 (F1): the flat shape and the R14-1 names win; both exported by the lazy-deps module; A8-k supersedes J5's pair; `:4978` stands; 02-L02 R10.2 needs no edit |
+| r14a-M2 R14 and A8-j disagree on the abort throw and the pre-abort log | MEDIUM | R15-2 (F2): adapter maps, loop logs `{ family, code }` once, throws `retention_pre_vacuum_aborted`, raw error never leaves the adapter; J9 step 5 narrowed; A8-b/J5 superseded in 06-L03 |
+| r14a-M3 owner error strings duplicated in the pure module with an equality pin | MEDIUM | R15-3 (F3): the pure module's own five codes; owner→kind in the lazy-deps layer; kind→code in the loop; no owner literal, no equality pin; J5 `:2248-2251`/`:2261` superseded in 06-L03 |
+| r14a-L4 R14 not reconciled with landed 02-L02 R10 (`:4453`, anchors, "no R10 text") | LOW | R15-5 (F8): `:4453` → R8-R14; R10 anchors recorded; `:4816-4818` and `:4997` superseded |
+| r14a-L5 R14-5 holder list self-contradiction; A8-d stale | LOW | R15-9 (F4): holder list reworded; the A8-d supersession is A8-k's (R15-10) |
+| r14a-L6 ordering leg moved by J7; airtight wording stale; A8-h `:2045` shape | LOW | R15-6 (F8, F7): `:4413-4414`/`:4418-4420` and R14-6 (g)'s closing sentence superseded; the A8-h note is A8-k's (R15-10) |
+| r14a-L7 `2 × floorMs` precondition undecidable; zero-families logging divergence | LOW | R15-4 (F5): general threshold + Vitest boundary pair + zero-enabled-families rule; the J8/J11 STOP reduces to arithmetic-only |
+| r14a-I8 inexact references (ranges, clamp, constants' module, table anchor) | INFO | R15-7 (F8, F5): `:4439-4441` superseded by the D-4 rule; ranges aligned; constants' module named; table anchor corrected |
+
+#### R15-13 — Superseded sentences (quoted; text authoritative)
+
+R13 (`:4156-4796`):
+
+- `:4413-4414` (R13-2 Tests), "the scheduler ordering: the default runner
+  awaits the pre-step to settlement before it calls `runRetentionPlan`;":
+  "the ordering legs live in `tests/integration/runtime/retentionScheduler.test.ts`
+  (06-L03 A8-j J7); this file names no ordering leg;" (R15-6).
+- `:4418-4420` (R13-2 Tests), "Airtight form, which must show 0 fail with the
+  identifier and ordering legs passing and the DB legs skipping by name:
+  `env DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null
+  test tests/integration/runtime/preRetentionVacuum.test.ts`.": "Airtight
+  form, which must show 0 fail with the identifier and mapping legs passing
+  and the DB legs skipping by name: `env
+  DATABASE_URL='postgresql://127.0.0.1:1/none' bun --env-file=/dev/null test
+  tests/integration/runtime/preRetentionVacuum.test.ts`." (the command
+  literal is unchanged; R15-6).
+- `:4439-4441` (R13-3 prerequisite 1), "whose third argument is present-only,
+  an integer clamped to `[config.statementTimeoutMs, 120_000]`, and overrides
+  only the `connection.statement_timeout` startup parameter;": "whose third
+  argument is present-only and follows the D-4 bound rule as restated by
+  R14-3 **Bound** (a safe integer; `< 1` or `> 120_000` rejects
+  `database_maintenance_statement_bound_invalid`; a value in `[1, floorMs)`
+  is raised to the floor), and overrides only the
+  `connection.statement_timeout` startup parameter;" (R15-7 item 1).
+- `:4452-4454` (R13-3 prerequisite 1), "The seam lands WITH the 02-L02 R7/R8
+  code (land-order step 1), before "06-L02 R8-R13" (step 3) and before
+  06-L03 R1.": "The seam lands WITH the 02-L02 R7/R8 code (land-order step
+  1), before "06-L02 R8-R14" (step 3; 02-L02 R10.13, audit-time `:4255-4266`,
+  this grounding `:4256-4267`, step 3 at `:4263`) and before 06-L03 R1."
+  (R15-5; the F8 anchor names `:4453`, where the superseded fragment sits).
+
+R14 (`:4798-5407`):
+
+- `:4816-4818` (R14 preamble), "At grounding time the 02-L02 file ends with
+  R9.14 (`:3874-3893`) and has no R10 text, so R14 cites R10 by its
+  D-number content, never by line.": "02-L02 R10 has landed; R15-5 records
+  the R10 section anchors, and R14's D-number citations read as citations of
+  that landed text." (R15-5).
+- `:4927-4930` (R14-2 **Abort**; the F2 anchor `:4928-4930`, sentence at
+  `:4929-4930`), "No drain outcome, including
+  `dedicated_database_drain_unconfirmed`, ever reaches the pre-step. The
+  pre-step logs that rejection code (closed, via the R14-1 mapping) and
+  re-throws the run's abort.": the first sentence stands; the second reads
+  "On abort the lazy-deps adapter maps the seam rejection through
+  `toPreRetentionSeamFailure` (R14-1); the pure loop logs the mapped code
+  once, as `{ family, code }`, and throws
+  `new Error("retention_pre_vacuum_aborted")`; the raw error never leaves
+  the adapter. The scheduler maps that single rejection value to its
+  `aborted` outcome (R15-2)." (F2).
+- `:4997` (R14-3 **R9.1 anchors**), "R10's additions are cited by D-number
+  until they land.": "R10's additions are anchored by R15-5." (R15-5).
+- `:5013-5015` (R14-4 pseudocode, precondition block),
+  "preconditions (once, before any seam call; each logs one code and skips
+  the whole pre-step):
+  if intervalMs < 600_000:        log interval_too_short;                     go to plan call
+  if maxRunMs < 2 * floorMs:      log budget_exhausted for every enabled family; go to plan call":
+  read as
+  "the enabled-family set is resolved first (the plan's normalizer, R12-3);
+  zero enabled families: no precondition log and zero seam calls; go to plan
+  call
+  preconditions (once, before any seam call; each logs one code and skips
+  the whole pre-step):
+  if intervalMs < 600_000:        log interval_too_short;                     go to plan call
+  if maxRunMs < 2 * (floorMs + CALL_OVERHEAD_MS):
+                                  log budget_exhausted for every enabled family; go to plan call"
+  (R15-4 items 1-2).
+- `:5031-5032` (R14-4), "the three `DEDICATED_*` constants of 02-L02 R7,
+  table at 02-L02 `:2338-2349`": "the three `DEDICATED_*` constants of
+  02-L02 R7, exported by `core/db/dedicatedDatabaseSession.ts` (the 02-L02
+  R7 table, `:2339-2350` audit-time, `:2340-2351` at this grounding;
+  R15-4 item 8, R15-7 item 3)".
+- `:5059-5063` (R14-4 **Claims restated**), "The precondition
+  `maxRunMs >= 2 × floorMs` is necessary but not sufficient. With the
+  reserve, the privilege read fits only when
+  `maxRunMs - planFloorMs - 12_500 >= floorMs` at the first call, that is
+  `maxRunMs >= 55_000` at the default 15,000 ms floor
+  (`core/db/databaseConfig.ts:296`). Below that the per-call check records
+  `budget_exhausted` for every family.": "The deciding precondition is
+  `maxRunMs >= 2 × (floorMs + CALL_OVERHEAD_MS)` — 55,000 at the default
+  15,000 ms floor (`core/db/databaseConfig.ts:296`) with
+  `CALL_OVERHEAD_MS = 12_500`. Below it the per-call check also records
+  `budget_exhausted` for every family with zero seam calls, so the Vitest
+  boundary pair is `maxRunMs = 2 × (floorMs + 12_500) − 1` (every enabled
+  family `budget_exhausted`, zero calls) and
+  `maxRunMs = 2 × (floorMs + 12_500)` (the pre-step proceeds)." (the
+  following 300,000 sentence stands; R15-4 items 2-3).
+- `:5074` (R14-4 residual table), "| any shape where retention runs, with
+  `maxRunMs < 2 × floorMs` | does NOT run; `budget_exhausted` for every
+  enabled family; the plan runs |": "| any shape where retention runs, with
+  `maxRunMs < 2 × (floorMs + CALL_OVERHEAD_MS)` | does NOT run;
+  `budget_exhausted` for every enabled family; the plan runs |" (R15-4
+  item 2).
+- `:5097-5101` (R14-5 **Holders**), "`55P03` (lock timeout,
+  `skipped_concurrent`) comes only from another manual VACUUM or ANALYZE
+  (normally a concurrent replica's pre-step), a `CREATE INDEX CONCURRENTLY`,
+  DDL or an explicit `LOCK` holder. (A wraparound-prevention autovacuum is
+  not cancelled by PostgreSQL; a wait on it is bounded by `lock_timeout`
+  like any other holder's.)": read as R15-9 (F4).
+- `:5191-5192` (R14-6 (g)), "R14 cites it and adds nothing. The airtight
+  form of R13-2 stands.": "R14 cites it and adds nothing. The airtight form
+  is R15-6's: the ordering legs moved to
+  `tests/integration/runtime/retentionScheduler.test.ts` (J7); this file's
+  airtight legs are the identifier and mapping legs." (R15-6).
+- `:5202` (R14-7 receipt, `budget` field), the fragment "runs only when
+  intervalMs >= 600000 and maxRunMs >= 2 * floorMs": "runs only when
+  intervalMs >= 600000 and maxRunMs >= 2 * (floorMs + CALL_OVERHEAD_MS)"
+  (R15-4 item 2).
+
+Superseded count (R15): 14 items, 14 quoted anchors (the `:4927-4930` item
+supersedes one of its two sentences and keeps the other).

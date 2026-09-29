@@ -2239,3 +2239,19 @@ Superseded quote count: 7.
 No task file is added, renamed or removed; no occurrence is added; the
 envelope fence is untouched this round. The family preflight stays
 `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.
+
+## Dated Contract Corrections — 2026-09-27 (consumer mirror note 5: seam scope, parity)
+
+Source: Addendum P, items P5 and P2 (`.../audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`), and TASK-551-03-L02 Round 14 item R14-02. Append-only; wins over note 4 and every earlier section for the FINAL occurrence only. Line numbers are HEAD `9d27d93d`. Everything not quoted below stays binding.
+
+- **(a) Seam scope (P5).** The capture/pass rule binds only the broadcasters this leaf owns: the "L04 FINAL" row of the single-writer matrix (:127) and the utilities in Exclusive Ownership (:39-87). The broadcasters owned by 03-L02 (`TASK-551-03-L02:final`, parent :997; for example `postsClient.ts:6`, which already imports `CacheEventBroadcastOptions`) and 04-L01 stay on the tokenless path (:2108-2110). This leaf never edits them (:91-95). A 03-L02 or 04-L01 receipt that carries no `installationToken` is compliant.
+- **(b) Skip or todo (P2).** A todo in the query-budget suite in either FINAL Bun lane of this leaf is handled exactly like a skip in note 4 (b): a note 2 (d) STOP with TASK-551-09-L01 as the re-run owner. It is never K4.
+- **(c) Parity (P2).** Note 4 (e) parity holds once 03-L02 Round 13 and Round 14 (R14-02, the row (v) skip-or-todo clause for the query-budget suite) both land. Until then, this file governs this leaf's FINAL.
+
+Superseded sentences (quoted verbatim):
+
+- (a1) :2111-2113 "A caller that starts async work captures `captureAdminCacheInstallationToken()` when the work starts and passes it at completion." Replacement: "A broadcaster this leaf owns (item (a)) that starts async work captures `captureAdminCacheInstallationToken()` when the work starts and passes it at completion; 03-L02- and 04-L01-owned broadcasters stay on the tokenless path."
+- (b1) :2055-2056 "A skip that appears in this file in either FINAL Bun lane of this leaf is therefore a breach of the owner's pin." Replacement: "A skip or todo that appears in this file in either FINAL Bun lane of this leaf is therefore a breach of the owner's pin."
+- (c1) :2152 "Parity holds once 03-L02 Round 13 lands." Replacement: the item (c) text.
+
+Superseded quote count: 3. No fence edit; no task file or occurrence is added. The family preflight stays `{"taskFileCount":41,"childTaskCount":11,"leafTaskCount":29,"occurrenceCount":33}`.

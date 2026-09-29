@@ -1834,3 +1834,23 @@ The code and the fail-closed rule (Item N2-2, N4-2) are unchanged.
    Replacement: "So do the Item N5-2 code comment and the expected constraint name `solution_kit_starter_apply_owners_source_run_id_solution_kit_install_runs_id_fk`."
 3. `:1789` (note 4, superseded item 3, anchor): "`:1639-1642` (note 3, Item N3-1, replacement sentence)".
    Replacement: "`:1640-1642` (note 3, Item N3-1, replacement sentence)"; its quote is unchanged.
+
+## Dated Contract Corrections — 2026-09-27 (note 6: V4-3 red handling)
+
+This note writes out orchestrator decision **P7** of
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`
+(Addendum P); it re-decides nothing, is append-only, makes no fence edit and supersedes no
+sentence. A bare cite of this file is a line at HEAD `9d27d93d`; lines `:1-1836` are unchanged.
+
+**Item N6-1 — the V4-3 gate is red at HEAD (P7).** At HEAD `9d27d93d`, each of the two Item
+N5-1 titles occurs 0 times in `tests/integration/server/task551BunLaneMembership.test.ts`
+(count-only grep): the 01-L01 source edit that carries **V2-5** cases 1 and 8 has not landed.
+The Item N5-1 command, run DB-free at HEAD, reports that the regex "matched 0 tests" and
+exits 1. That is red under **V4-3** (fewer than 2 passes), as expected before that source edit.
+
+- **Red handling.** Until that 01-L01 edit lands, the gate is red. The Item N2-3 split writer
+  then records the red with its N6-1 cause (the exact command, exit code and the pass, fail,
+  skip and filtered-out counts) and STOPs before closure; it never edits the membership suite
+  or `bunLane.ts` (both outside the Item N2-3 allowlist). The titles are owned by 01-L01
+  (**V2-5** source edit); a rename is a contract change of 01-L01.
+- The Item N5-1 green rule and the "Where it runs" placement are unchanged.

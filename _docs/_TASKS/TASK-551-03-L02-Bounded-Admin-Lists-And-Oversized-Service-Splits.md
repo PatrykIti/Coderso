@@ -13721,3 +13721,179 @@ forbidden-read-only where it is inside the fence. One JSON fence. **Size
 (R6-06 stop rule).** This file was 914,615 bytes at `0d28d915` and is
 958,844 bytes after this append (`wc -c`), below the
 1,048,576-byte cap with the 200-byte closure headroom.
+
+## Dated Contract Corrections — 2026-09-27 (Round 14, compact: kind filter case (b), query-budget skip clause; append-only)
+
+Source:
+`_docs/_workflows/_smoke/task-551/audit-evidence/03-l02-round14-dispositions.md`
+(R14-01..R14-05 over the Round-13 auditors a1 (0/1/1) and a2 (0/0/2) of
+workflow `wf_5ea11c5a-485`; audited HEAD
+`9d27d93de186e1f6bd2d8ea468400769dcd05707`, with Round 13 committed) and
+Addendum P (P1-P5, P8, P9) in
+`_docs/_workflows/_smoke/task-551/audit-evidence/2026-09-26-r12-v5-r8-dispositions.md`.
+This section applies R14-01..R14-05 and re-decides nothing. **This section
+wins** over every earlier part where they differ. It makes NO in-place edit:
+the envelope fence (`:1441-2173`) and every earlier line stay byte-identical.
+Every bare `:NNNN` anchor here is a line of this file at `9d27d93d` (this
+append shifts nothing; the section starts at `:13724`); code and test anchors
+are file-qualified (R13-07); anchors into other task files name the file.
+Superseded sentences are quoted verbatim under "Superseded sentences (Round
+14)" (a hard wrap is one space); everything not quoted stays binding. Per
+P9 this is the last contract round before W0 unless an audit finds a
+HIGH/MEDIUM; later LOW/INFO go to the W0 receipt.
+
+### R14-01 — Kind filter pinned to case (b) (P1)
+
+Case (a) of R13-04 is withdrawn (quote 1); the remaining R13-04 text reads
+with case (b) as its only case. The MIME-derived kind filters stay
+CLIENT-SIDE over the loaded rows: the rail "Images", "Videos", "Audio" and
+"Documents" (`core/admin/ui/media/MediaFolderRail.tsx:158-162`,
+`MediaLibraryPage.tsx:613`) and the filter-panel kind list (its `types`
+state, `MediaLibraryPage.tsx:622`, holds UI kinds from
+`resolveAdminMediaKind`, `core/admin/ui/media/utils.ts:39-47`), because the
+server `types` domain is `image|file` (`:3374`; `type = ANY(...)`,
+`:2432-2434`) and cannot express a MIME-derived kind. The leaf sends server
+`types` only where the UI means the DB `type` value `image|file`, never as
+a translation of a UI kind. Row 14 (`media-restyle.test.tsx:162-182`):
+`mediaFetch(rows)` returns the seeded rows and reads no `types` parameter;
+the expected visible rows and `media-restyle.test.tsx:177-178` stand. The
+R12-04 general filter list keeps `types` and `q` for the server-side
+filters that exist.
+
+### R14-02 — Row (v): query-budget skip clause (P2)
+
+Applied by "C17 v6 — Round-14 amendments (2026-09-27)" below (quote 2).
+
+### R14-03 — Handoffs (P3, P4, P5)
+
+See "Handoffs (Round 14)".
+
+### R14-04 — INFO bundle deferred; completeness wording (P8)
+
+The five P8 INFO items are deferred to the W0 receipt and change no
+contract text now: the Round-11 C17 preamble "highest dated one"
+(`:11995-11998`); the bare `:129-148` (`:12656`) missing from the R13-07
+mapping (`:13261-13263`; it reads as `media-picker.test.tsx:129-148`); the
+S1 null clause at 09-L04 `:157-159` (row (v) writes 09-L04 `:156-157`,
+`:13364`); the theoretical S1-S12 gap (09-L04 `:177-179`, epoch overflow,
+traces through S1, S2 or S4; `:12901-12902`); and `view.cleanup()` in the
+`finally` of the R13-03 sibling picker test (`:13162-13170`, as in
+`media-picker.test.tsx:144-147`). The Round-13 completeness claim is
+corrected (quote 3): "Every Round 1-12 action-changing sentence this round
+makes untrue is quoted verbatim under "Superseded sentences (Round 13)";
+anchors are in `0d28d915` numbering."
+
+### C17 v6 — Round-14 amendments (2026-09-27)
+
+This dated heading amends C17 v6 (`:10574-10665`) as amended by the
+Round-11 (`:11991-12027`), Round-12 (`:12675-12745`) and Round-13
+(`:13312-13391`) amendment headings; it replaces none of them and carries
+only the row (v) change. Same date, same `v`: the later round governs, so
+the order is Round 11, Round 12, Round 13, then Round 14 (quotes 4-6). The
+10-L02 rule
+(`TASK-551-10-L02-Documentation-Runbooks-And-Family-Closure.md:1628-1633`)
+is unchanged.
+
+1. **TASK-551-09-L04 row, item 3 (v), trigger sentence (replaces quote 2;
+   P2, Addendum N5/N6).** "If a cross-owner input goes red (or reports a
+   skipped or filtered-out test) under a change its trigger set names,
+   FINAL stops and reports; the fix is a pre-disposed consumer re-run owed
+   to that input's writer (03-L02 for its two suites, 09-L01 for the
+   query-budget suite), never a silent re-baseline and never a dilution of
+   the body rule. For the query-budget suite, any skipped or todo test at
+   09-L04 FINAL is a (d) STOP with 09-L01 as re-run owner whatever change
+   caused it, and is never K4; the 03-L02 suites keep the trigger-set
+   rule." The rest of item 3 (v) as replaced by Round 13 stands; its K4
+   carve-out does not reach a query-budget skip or todo. 09-L04 note 4 (e)
+   parity then holds (P2).
+
+### Security Contract rows (Round 14)
+
+No route, schema, auth, RBAC, CSRF or rate-limit change; the Round-13 rows
+stand. The kind filter adds no server read (R14-01). A skip or todo in the
+query-budget suite at 09-L04 FINAL is a (d) STOP with 09-L01 as re-run
+owner (R14-02).
+
+### Handoffs (Round 14)
+
+- **TASK-551-09-L01.** Its note 2, by its own writer (P3): the exact
+  statement identity of the `security.settings` SELECT from
+  `getSecuritySettings` (`core/services/settings/securitySettings.ts:806-809`),
+  M and R fixed per landed suite version, per-file counts. 03-L02 edits
+  nothing there.
+- **TASK-551-09-L04.** Its note 5, by its own writer (P5): the
+  `installationToken` capture/pass rule covers only 09-L04-owned
+  broadcasters; 03-L02-owned broadcasters stay tokenless. 03-L02 edits
+  nothing there.
+- **TASK-551-10-L01.** Its note 3, by its own writer (P4): the 09-L01
+  re-open receipt must be green. 03-L02 edits nothing there.
+- **TASK-551-10-L02 (replaces quote 7).** Owed through C17 v6 as amended by
+  the Round-11 to Round-14 amendment headings in round order, in 10-L02's
+  next append-only section; row update only; the 09-L04 row is copied as
+  amended by the Round-13 and Round-14 headings. No 10-L02 rule changes.
+- **Unchanged.** TASK-554, TASK-551-11 (no fence path, argv token or
+  evidence path), TASK-551-01-L01; no line shifts for other task files.
+- **Orchestrator.** Round-13 items (a)-(h) stand; (e) also covers
+  `03-l02-round14-dispositions.md` (N = 14; untracked at `9d27d93d`).
+
+### Superseded sentences (Round 14)
+
+Each quote is verbatim at its `9d27d93d` anchor.
+
+1. R13-04, row 14 (`:13199-13204`): "(a) If the leaf moves the kind filter
+   server-side, the mapping from UI kind to `types` is owned by the media
+   section (`:2427-2434` and `core/admin/ui/media/utils.ts:39-47`), not by
+   this row; `mediaFetch(rows)` answers a `/admin/api/media` read that
+   carries `types` with the seeded rows that mapping selects, and a read
+   without filters with every seeded row." → R14-01.
+2. C17 v6 — Round-13 amendments, item 3 (v) (`:13377-13382`): "If a
+   cross-owner input goes red (or reports a skipped or filtered-out test)
+   under a change its trigger set names, FINAL stops and reports; the fix
+   is a pre-disposed consumer re-run owed to that input's writer (03-L02
+   for its two suites, 09-L01 for the query-budget suite), never a silent
+   re-baseline and never a dilution of the body rule." → C17 v6 — Round-14
+   amendments, item 1.
+3. Handoffs (Round 13), Completeness (`:13654-13656`): "Every Round 1-12
+   sentence this round makes untrue is quoted verbatim under "Superseded
+   sentences (Round 13)"; anchors are in `0d28d915` numbering." → R14-04.
+4. C17 v6 — Round-13 amendments, preamble (`:13320-13321`): "copies C17 v6
+   with all three amendment headings applied in round order (Round 11, then
+   Round 12, then Round 13)," → "copies C17 v6 with all four amendment
+   headings applied in round order (Round 11, then Round 12, then Round 13,
+   then Round 14),".
+5. C17 v6 — Round-13 amendments, item 1 (`:13325-13327`): ""On equal dates
+   and an equal `v` number, the later round governs: apply the Round-11
+   amendments, then the Round-12 amendments, then the Round-13
+   amendments."" → the same sentence ending "then the Round-13 amendments,
+   then the Round-14 amendments."
+6. C17 v6 — Round-13 amendments, item 4 (`:13389-13391`): ""Nothing further
+   is owed beyond copying C17 v6 as amended by the Round-11, Round-12 and
+   Round-13 amendment headings." 10-L02 copies the 09-L04 row only as
+   amended here." → "Nothing further is owed beyond copying C17 v6 as
+   amended by the Round-11 to Round-14 amendment headings." 10-L02 copies
+   the 09-L04 row only as amended by the Round-13 and Round-14 headings.
+7. Handoffs (Round 13), 10-L02 bullet (`:13621-13625`): "- **TASK-551-10-L02
+   (replaces quote 22).** Owed through C17 v6 as amended by the Round-11,
+   Round-12 and Round-13 amendment headings (same-date rule: the later round
+   governs; apply them in round order), in 10-L02's next append-only
+   section; row update only, and the 09-L04 row is copied only as amended
+   by the Round-13 heading. No 10-L02 rule changes." → "Handoffs (Round
+   14)", 10-L02 bullet.
+
+Superseded quote count: 7 (quotes 4-7 only extend the round order to
+Round 14, R14-02).
+
+### Envelope record (Round 14)
+
+**No fence edit.** The fence (`:1441-2173`) is byte-identical to `9d27d93d`;
+`git diff -U0 HEAD -- <this file>` prints one append hunk after `:13723` and
+no removed line; line shift 0; the Round-13 counts stand. Paths this round
+names: allowlisted `core/admin/ui/media/MediaLibraryPage.tsx` (`:1510`),
+`core/admin/ui/media/utils.ts` (`:1514`),
+`tests/vitest/ui/media-picker.test.tsx` (`:1625`),
+`tests/vitest/ui-integration/media-restyle.test.tsx` (`:1668`); outside the
+fence, read-only anchors: `core/admin/ui/media/MediaFolderRail.tsx`,
+`core/services/settings/securitySettings.ts`, the task files of
+TASK-551-09-L01, 09-L04, 10-L01 and 10-L02, and the dispositions records. No
+new path. **Size (R6-06).** 958,844 bytes at `9d27d93d`; 968,772 bytes
+after this append (`wc -c`), below 1,048,376.
